@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plans | Lumo 22</title>
+    <meta name="description" content="Choose the Lumo 22 plan that fits your business. No setup fees. Cancel anytime.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="landing-page">
+    <nav class="landing-nav">
+        <div class="landing-nav-logo"><a href="/">Lumo 22</a></div>
+        <div class="landing-nav-links">
+            <a href="/#how-it-works">How it works</a>
+            <a href="/#products">Products</a>
+            <a href="/plans">Pricing</a>
+        </div>
+        <a href="/signup" class="landing-nav-cta">Get started</a>
+    </nav>
+
+    <section class="reveal-on-scroll pricing-preview pricing-page" data-anim="fade">
+        <div class="content">
+            <h2>Plans</h2>
+            <p class="pricing-sub">Choose the plan that fits your business. No setup fees. Cancel anytime.</p>
+            <div class="pricing-grid">
+                <div class="pricing-card">
+                    <h3>Starter</h3>
+                    <p class="pricing-desc">For solo businesses and small salons</p>
+                    <div class="pricing-price">£79<span>/month</span></div>
+                    <ul>
+                        <li>Up to 100 enquiries/month</li>
+                        <li>Instant replies to every enquiry</li>
+                        <li>Booking link integration</li>
+                        <li>Basic tracking · 24/7 availability</li>
+                    </ul>
+                    <a href="/signup" class="btn-secondary">Get started</a>
+                </div>
+                <div class="pricing-card featured">
+                    <span class="badge">Most popular</span>
+                    <h3>Standard</h3>
+                    <p class="pricing-desc">Full receptionist replacement</p>
+                    <div class="pricing-price">£149<span>/month</span></div>
+                    <ul>
+                        <li>Up to 300 enquiries/month</li>
+                        <li>Ongoing conversation handling and follow-ups</li>
+                        <li>Booking link integration · Lead tracking</li>
+                        <li>Priority support · 24/7 availability</li>
+                    </ul>
+                    <a href="/signup" class="btn-primary">Get started</a>
+                </div>
+                <div class="pricing-card">
+                    <h3>Premium</h3>
+                    <p class="pricing-desc">For busy clinics and multi-staff teams</p>
+                    <div class="pricing-price">£299<span>/month</span></div>
+                    <ul>
+                        <li>Unlimited enquiries</li>
+                        <li>Multi-channel (email + SMS)</li>
+                        <li>Custom setup · Multiple booking links</li>
+                        <li>Dedicated support · 24/7 availability</li>
+                    </ul>
+                    <a href="/signup" class="btn-secondary">Get started</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="reveal-on-scroll cta-band" data-anim="left">
+        <div class="content">
+            <h2>Ready for a calmer front desk?</h2>
+            <p>Join businesses that reply faster, book more, and spend less time on admin.</p>
+            <a href="/signup" class="btn-primary btn-light">Get started</a>
+        </div>
+    </section>
+
+    <footer class="landing-footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div>
+                    <div class="footer-brand">Lumo 22</div>
+                    <p class="footer-tagline">Lighting the way to better business</p>
+                </div>
+                <div>
+                    <a href="/signup">Get started</a> · <a href="mailto:hello@lumo22.com">Contact</a>
+                </div>
+            </div>
+            <div class="footer-bottom">© Lumo 22. All rights reserved.</div>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/parallax.js') }}"></script>
+</body>
+</html>

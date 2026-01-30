@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - Lumo22</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="form-wrapper">
+            <h1>Create Your Business Account</h1>
+            <p class="subtitle">Start capturing and booking leads automatically</p>
+            
+            <form id="signupForm" class="lead-form">
+                <div class="form-group">
+                    <label for="business_name">Business Name *</label>
+                    <input type="text" id="business_name" name="business_name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">Email Address *</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password *</label>
+                    <input type="password" id="password" name="password" required minlength="6">
+                    <small style="color: #666; font-size: 12px;">Minimum 6 characters</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="service_types">Service Types (one per line)</label>
+                    <textarea id="service_types" name="service_types" rows="4" placeholder="Event Planning&#10;Consultation&#10;Wedding Planning"></textarea>
+                    <small style="color: #666; font-size: 12px;">Enter one service type per line</small>
+                </div>
+                
+                <button type="submit" class="submit-btn" id="submitBtn">
+                    <span class="btn-text">Create Account</span>
+                    <span class="btn-loader" style="display: none;">Creating...</span>
+                </button>
+                
+                <div id="formMessage" class="form-message" style="display: none;"></div>
+                
+                <p style="text-align: center; margin-top: 20px;">
+                    Already have an account? <a href="/login">Login here</a>
+                </p>
+            </form>
+        </div>
+    </div>
+    
+    <script>
+        document.getElementById('signupForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const btnText = submitBtn.querySelector('.btn-text');
+            const btnLoader = submitBtn.querySelector('.btn-loader');
+            const formMessage = document.getElementById('formMessage');
+            
+            btnText.style.display = 'none';
+            btnLoader.style.display = 'inline';
+            submitBtn.disabled = true;
+            formMessage.style.display = 'none';
+            
+            const serviceTypesText = document.getElementById('service_types').value;
+            const serviceTypes = serviceTypesText.split('\n').map(s => s.trim()).filter(s => s);
+            
+            const formData = {
+                business_name: document.getElementById('business_name').value.trim(),
+                email: document.getElementById('email').value.trim(),
+                password: document.getElementById('password').value,
+                service_types: serviceTypes
+            };
+            
+            try {
+                const response = await fetch('/api/business/signup', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    formMessage.className = 'form-message success';
+                    formMessage.innerHTML = 'Account created! Redirecting to dashboard...';
+                    formMessage.style.display = 'block';
+                    
+                    // Save API key
+                    localStorage.setItem('api_key', data.business.api_key);
+                    
+                    // Redirect to dashboard
+                    setTimeout(() => {
+                        window.location.href = '/dashboard';
+                    }, 1500);
+                } else {
+                    formMessage.className = 'form-message error';
+                    formMessage.textContent = data.error || 'Something went wrong. Please try again.';
+                    formMessage.style.display = 'block';
+                }
+            } catch (error) {
+                formMessage.className = 'form-message error';
+                formMessage.textContent = 'Network error. Please check your connection and try again.';
+                formMessage.style.display = 'block';
+            } finally {
+                btnText.style.display = 'inline';
+                btnLoader.style.display = 'none';
+                submitBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

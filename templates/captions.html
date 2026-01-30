@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>30 Days of Social Media Captions | Lumo 22</title>
+  <meta name="description" content="30 days of captions, written for your brand. No daily grind, no generic copy. Done-for-you social content for founders and professionals.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
+</head>
+<body class="lumo-landing">
+  <nav class="lumo-nav lumo-nav-scrolled">
+    <a href="/" class="lumo-nav-logo">Lumo 22</a>
+    <div class="lumo-nav-links">
+      <a href="/captions">Captions</a>
+      <a href="/#front-desk">Front Desk</a>
+      <a href="/plans">Pricing</a>
+    </div>
+    <a href="/#front-desk" class="lumo-nav-cta">Try the concierge</a>
+  </nav>
+
+  <section class="lumo-section" style="padding-top: 8rem;">
+    <div class="lumo-section-header">
+      <p class="lumo-section-label">Paid offer</p>
+      <h1 class="lumo-section-title">30 Days of Social Media Captions</h1>
+      <p class="lumo-section-desc">30 days of captions, written for your brand. No daily grind, no generic copy.</p>
+    </div>
+
+    <div class="lumo-offer-card" style="max-width: 640px; margin: 0 auto;">
+      <p class="lumo-offer-who">30 Days of Social Media Captions is a done-for-you caption system. You answer a short intake form; we write a full month of on-brand captions across five categories—authority, education, personality, soft promotion, and engagement. No daily scramble, no generic filler. Clear, consistent, copy-paste ready.</p>
+
+      <h3>What’s included</h3>
+      <ul class="lumo-offer-includes">
+        <li>Intake form — We capture your business, audience, voice, and goal for the month.</li>
+        <li>30 captions — One per day, structured across Authority, Educational, Brand Personality, Soft Promotion, and Engagement.</li>
+        <li>Single document — Clean, copy-paste friendly. Delivered as Markdown or PDF.</li>
+        <li>Optional: Suggested first-line hooks or visual directions for each caption.</li>
+      </ul>
+
+      <h3>Who it’s for</h3>
+      <p class="lumo-offer-who" style="margin-bottom: 1.5rem;">Founders and solo professionals who post themselves but don’t want to write from scratch every day. Small teams that need consistent social content without hiring a full-time copywriter. Anyone who wants a calm, professional feed—no hype, no emoji overload, no obvious AI tone.</p>
+
+      <h3>What problem it solves</h3>
+      <ul class="lumo-offer-includes">
+        <li><strong>Daily content stress</strong> — You stop staring at a blank box. Each day has a caption ready to use or tweak.</li>
+        <li><strong>Inconsistent voice</strong> — One framework and one writer keep your feed sounding like you.</li>
+        <li><strong>Generic or sales-heavy feeds</strong> — The mix of authority, value, personality, and soft promotion keeps the feed useful and credible, not just promotional.</li>
+      </ul>
+
+      <h3>How it works</h3>
+      <div class="lumo-offer-steps">
+        <div class="lumo-offer-step">
+          <div class="lumo-offer-step-num">01</div>
+          <p>Share your business, audience, and tone.</p>
+        </div>
+        <div class="lumo-offer-step">
+          <div class="lumo-offer-step-num">02</div>
+          <p>We create 30 captions tailored to you.</p>
+        </div>
+        <div class="lumo-offer-step">
+          <div class="lumo-offer-step-num">03</div>
+          <p>Receive your document — copy, edit, post.</p>
+        </div>
+      </div>
+
+      <p class="lumo-offer-turnaround">Turnaround: 3–5 business days.</p>
+      <div class="lumo-offer-price">£97 <span>one-time</span></div>
+      {% if captions_payment_link %}
+      <a href="{{ captions_payment_link }}" class="lumo-btn-primary">Get my 30 days</a>
+      {% else %}
+      <a href="mailto:hello@lumo22.com?subject=30%20Days%20Captions%20Order" class="lumo-btn-primary">Get my 30 days</a>
+      {% endif %}
+    </div>
+  </section>
+
+  <footer class="lumo-footer">
+    <div class="lumo-footer-inner">
+      <div>
+        <a href="/" class="lumo-footer-brand">Lumo 22</a>
+        <p class="lumo-footer-tagline">Smart tools. Quiet confidence.</p>
+      </div>
+      <div class="lumo-footer-links">
+        <a href="/captions">Captions</a>
+        <a href="/#front-desk">Front Desk</a>
+        <a href="/plans">Pricing</a>
+        <a href="mailto:hello@lumo22.com">Contact</a>
+      </div>
+    </div>
+    <div class="lumo-footer-bottom">© Lumo 22. All rights reserved.</div>
+  </footer>
+</body>
+</html>

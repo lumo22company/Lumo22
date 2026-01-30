@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Get Started</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="form-wrapper">
+            <h1>Get Started Today</h1>
+            <p class="subtitle">Fill out the form below and we'll get back to you shortly</p>
+            
+            <form id="leadForm" class="lead-form">
+                <div class="form-group">
+                    <label for="name">Full Name *</label>
+                    <input type="text" id="name" name="name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">Email Address *</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="phone">Phone Number *</label>
+                    <input type="tel" id="phone" name="phone" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="service_type">Service Type *</label>
+                    <input type="text" id="service_type" name="service_type" required placeholder="e.g., Consultation, Event Planning">
+                </div>
+                
+                <div class="form-group">
+                    <label for="message">Tell us about your needs *</label>
+                    <textarea id="message" name="message" rows="5" required placeholder="Please describe what you're looking for, your timeline, budget (if applicable), and any specific requirements..."></textarea>
+                </div>
+                
+                <button type="submit" class="submit-btn" id="submitBtn">
+                    <span class="btn-text">Submit Request</span>
+                    <span class="btn-loader" style="display: none;">Processing...</span>
+                </button>
+                
+                <div id="formMessage" class="form-message" style="display: none;"></div>
+            </form>
+        </div>
+    </div>
+    
+    <script>
+        // Get API key from URL parameter or localStorage
+        const urlParams = new URLSearchParams(window.location.search);
+        let apiKey = urlParams.get('api_key') || localStorage.getItem('api_key');
+        
+        document.getElementById('leadForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (!apiKey) {
+                alert('API key required. Please contact the business for the form link.');
+                return;
+            }
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const btnText = submitBtn.querySelector('.btn-text');
+            const btnLoader = submitBtn.querySelector('.btn-loader');
+            const formMessage = document.getElementById('formMessage');
+            
+            btnText.style.display = 'none';
+            btnLoader.style.display = 'inline';
+            submitBtn.disabled = true;
+            formMessage.style.display = 'none';
+            
+            const formData = {
+                name: document.getElementById('name').value.trim(),
+                email: document.getElementById('email').value.trim(),
+                phone: document.getElementById('phone').value.trim(),
+                service_type: document.getElementById('service_type').value.trim(),
+                message: document.getElementById('message').value.trim(),
+                source: 'web_form'
+            };
+            
+            try {
+                const response = await fetch('/api/capture', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': apiKey
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    formMessage.className = 'form-message success';
+                    let message = 'Thank you! We\'ve received your request and will be in touch shortly.';
+                    
+                    if (data.booking_link) {
+                        message += ` <a href="${data.booking_link}" target="_blank" style="display: block; margin-top: 10px; color: #4CAF50; font-weight: bold;">Book Your Appointment Now →</a>`;
+                    }
+                    
+                    formMessage.innerHTML = message;
+                    formMessage.style.display = 'block';
+                    
+                    document.getElementById('leadForm').reset();
+                } else {
+                    formMessage.className = 'form-message error';
+                    formMessage.textContent = data.error || 'Something went wrong. Please try again.';
+                    formMessage.style.display = 'block';
+                }
+            } catch (error) {
+                formMessage.className = 'form-message error';
+                formMessage.textContent = 'Network error. Please check your connection and try again.';
+                formMessage.style.display = 'block';
+            } finally {
+                btnText.style.display = 'inline';
+                btnLoader.style.display = 'none';
+                submitBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lumo22 - Lead Automation System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .admin-landing {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        .system-overview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin: 40px 0;
+        }
+        .system-card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .system-card h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+        .nav-links {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .nav-link {
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 500;
+        }
+        .nav-link:hover {
+            background: #5568d3;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-landing">
+        <h1>Lumo22 - Lead Automation System</h1>
+        <p style="font-size: 18px; color: #666; margin-bottom: 40px;">
+            AI-powered lead capture, qualification, and booking system for service businesses
+        </p>
+        
+        <div class="system-overview">
+            <div class="system-card">
+                <h3>🎯 The Service</h3>
+                <p>White-label lead automation system you sell to service businesses.</p>
+                <ul style="margin-top: 15px; padding-left: 20px;">
+                    <li>AI-powered lead qualification</li>
+                    <li>Automated booking links</li>
+                    <li>Customizable forms per client</li>
+                    <li>Dashboard for each client</li>
+                </ul>
+                <div class="nav-links">
+                    <a href="/admin/clients" class="nav-link">Manage Clients</a>
+                </div>
+            </div>
+            
+            <div class="system-card">
+                <h3>📧 Outreach System</h3>
+                <p>Find and contact service businesses to sell your system to.</p>
+                <ul style="margin-top: 15px; padding-left: 20px;">
+                    <li>Search for service businesses</li>
+                    <li>Automated email sequences</li>
+                    <li>LinkedIn outreach</li>
+                    <li>Prospect CRM</li>
+                </ul>
+                <div class="nav-links">
+                    <a href="/outreach" class="nav-link">Go to Outreach</a>
+                </div>
+            </div>
+            
+            <div class="system-card">
+                <h3>📊 Your Dashboard</h3>
+                <p>View all leads from all your clients.</p>
+                <ul style="margin-top: 15px; padding-left: 20px;">
+                    <li>All captured leads</li>
+                    <li>Qualification scores</li>
+                    <li>Conversion tracking</li>
+                    <li>Analytics</li>
+                </ul>
+                <div class="nav-links">
+                    <a href="/dashboard" class="nav-link">View Dashboard</a>
+                </div>
+            </div>
+        </div>
+        
+        <div style="margin-top: 40px; padding: 30px; background: #f5f5f5; border-radius: 12px;">
+            <h2>How It Works</h2>
+            <ol style="line-height: 2; margin-top: 20px;">
+                <li><strong>Find Clients:</strong> Use the Outreach system to find service businesses</li>
+                <li><strong>Onboard Clients:</strong> Create a client account and customize their form</li>
+                <li><strong>Client Gets Form:</strong> Each client gets their own white-label lead form</li>
+                <li><strong>Leads Auto-Qualify:</strong> AI scores every lead (0-100)</li>
+                <li><strong>Auto-Booking:</strong> Qualified leads get booking links automatically</li>
+                <li><strong>Track Everything:</strong> View all leads in your dashboard</li>
+            </ol>
+        </div>
+    </div>
+</body>
+</html>

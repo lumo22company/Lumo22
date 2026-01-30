@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activate your AI receptionist | Lumo 22</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .activate-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #f5f5f5; padding: 24px; }
+        .activate-box { max-width: 480px; width: 100%; background: #fff; border-radius: 16px; padding: 48px 40px; box-shadow: 0 8px 32px rgba(0,0,0,0.08); text-align: center; }
+        .activate-page h1 { font-family: 'Inter Tight', sans-serif; font-size: 1.75rem; color: #1a1a1a; margin-bottom: 12px; }
+        .activate-page p { color: #4a4a4a; margin-bottom: 28px; line-height: 1.5; }
+        .activate-page .btn-primary { display: inline-block; padding: 18px 36px; background: #1a1a1a; color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1.05rem; transition: opacity 0.2s; }
+        .activate-page .btn-primary:hover { opacity: 0.9; }
+        .activate-page .back { margin-top: 24px; }
+        .activate-page .back a { color: #666; text-decoration: none; font-size: 0.95rem; }
+        .activate-page .back a:hover { color: #1a1a1a; }
+        .activate-page .no-link { color: #888; font-size: 0.9rem; }
+    </style>
+</head>
+<body class="activate-page">
+    <div class="activate-box">
+        <h1>Activate your AI receptionist</h1>
+        <p>You’ve just experienced how Lumo 22 replies to enquiries. Activate below to get your own digital front desk — no setup calls, just go live.</p>
+        {% if activation_link %}
+        <a href="{{ activation_link }}" class="btn-primary">Activate now</a>
+        {% else %}
+        <p class="no-link">Payment link not configured yet. Add <code>ACTIVATION_LINK</code> to your <code>.env</code> file with your Stripe (or Gumroad) payment link.</p>
+        {% endif %}
+        <p class="back"><a href="/">← Back to Lumo 22</a></p>
+    </div>
+</body>
+</html>

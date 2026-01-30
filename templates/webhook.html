@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webhook Test</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="form-wrapper">
+            <h1>Webhook Integration Test</h1>
+            <p>Test webhook endpoints for third-party integrations</p>
+            
+            <div style="margin: 20px 0;">
+                <h3>Available Webhooks:</h3>
+                <ul>
+                    <li><code>POST /webhooks/typeform</code> - Typeform integration</li>
+                    <li><code>POST /webhooks/zapier</code> - Zapier integration</li>
+                    <li><code>POST /webhooks/generic</code> - Generic webhook</li>
+                </ul>
+            </div>
+            
+            <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h3>Test Generic Webhook</h3>
+                <button onclick="testWebhook()" class="submit-btn">Test Webhook</button>
+                <div id="webhookResult" style="margin-top: 20px;"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        async function testWebhook() {
+            const resultDiv = document.getElementById('webhookResult');
+            resultDiv.innerHTML = 'Testing webhook...';
+            
+            const testData = {
+                name: 'Test Lead',
+                email: 'test@example.com',
+                phone: '+1234567890',
+                service_type: 'Consultation',
+                message: 'This is a test webhook submission',
+                source: 'webhook_test'
+            };
+            
+            try {
+                const response = await fetch('/webhooks/generic', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(testData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div style="color: green; padding: 10px; background: #e8f5e9; border-radius: 4px;">
+                            <strong>Success!</strong><br>
+                            Lead ID: ${data.lead_id || 'N/A'}<br>
+                            Qualification Score: ${data.qualification_score || 'N/A'}<br>
+                            Status: ${data.status || 'N/A'}
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div style="color: red; padding: 10px; background: #ffebee; border-radius: 4px;">
+                            <strong>Error:</strong> ${data.error || 'Unknown error'}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div style="color: red; padding: 10px; background: #ffebee; border-radius: 4px;">
+                        <strong>Network Error:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

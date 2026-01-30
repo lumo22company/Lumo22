@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ client_business_name }} - Get Started</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .client-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .client-logo {
+            max-width: 150px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="form-wrapper">
+            {% if client_business_name %}
+            <div class="client-header">
+                <h1>{{ client_business_name }}</h1>
+                <p class="subtitle">{{ client_tagline or "Get started with your project today" }}</p>
+            </div>
+            {% else %}
+            <h1>Get Started Today</h1>
+            <p class="subtitle">Fill out the form below and we'll get back to you shortly</p>
+            {% endif %}
+            
+            <form id="leadForm" class="lead-form">
+                <div class="form-group">
+                    <label for="name">Full Name *</label>
+                    <input type="text" id="name" name="name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">Email Address *</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="phone">Phone Number *</label>
+                    <input type="tel" id="phone" name="phone" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="service_type">What service are you interested in? *</label>
+                    <select id="service_type" name="service_type" required>
+                        <option value="">Select a service...</option>
+                        {% for service in client_services %}
+                        <option value="{{ service }}">{{ service }}</option>
+                        {% endfor %}
+                        {% if not client_services %}
+                        <option value="Consultation">Consultation</option>
+                        <option value="General Inquiry">General Inquiry</option>
+                        {% endif %}
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="message">Tell us about your project *</label>
+                    <textarea id="message" name="message" rows="5" required placeholder="Please describe what you're looking for, your timeline, budget (if applicable), and any specific requirements..."></textarea>
+                </div>
+                
+                <button type="submit" class="submit-btn" id="submitBtn">
+                    <span class="btn-text">Submit Request</span>
+                    <span class="btn-loader" style="display: none;">Processing...</span>
+                </button>
+                
+                <div id="formMessage" class="form-message" style="display: none;"></div>
+            </form>
+        </div>
+    </div>
+    
+    <script>
+        document.getElementById('leadForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const btnText = submitBtn.querySelector('.btn-text');
+            const btnLoader = submitBtn.querySelector('.btn-loader');
+            const formMessage = document.getElementById('formMessage');
+            
+            // Show loading state
+            btnText.style.display = 'none';
+            btnLoader.style.display = 'inline';
+            submitBtn.disabled = true;
+            formMessage.style.display = 'none';
+            
+            // Collect form data
+            const formData = {
+                name: document.getElementById('name').value.trim(),
+                email: document.getElementById('email').value.trim(),
+                phone: document.getElementById('phone').value.trim(),
+                service_type: document.getElementById('service_type').value,
+                message: document.getElementById('message').value.trim(),
+                source: 'web_form',
+                client_id: '{{ client_id }}' || null
+            };
+            
+            try {
+                const response = await fetch('/api/capture', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    // Success
+                    formMessage.className = 'form-message success';
+                    let message = '{{ client_success_message or "Thank you! We\'ve received your request and will be in touch shortly." }}';
+                    
+                    if (data.booking_link) {
+                        message += ` <a href="${data.booking_link}" target="_blank" style="display: block; margin-top: 10px; color: #4CAF50; font-weight: bold;">Book Your Appointment Now →</a>`;
+                    }
+                    
+                    formMessage.innerHTML = message;
+                    formMessage.style.display = 'block';
+                    
+                    // Reset form
+                    document.getElementById('leadForm').reset();
+                } else {
+                    // Error
+                    formMessage.className = 'form-message error';
+                    formMessage.textContent = data.error || 'Something went wrong. Please try again.';
+                    formMessage.style.display = 'block';
+                }
+            } catch (error) {
+                formMessage.className = 'form-message error';
+                formMessage.textContent = 'Network error. Please check your connection and try again.';
+                formMessage.style.display = 'block';
+            } finally {
+                // Reset button state
+                btnText.style.display = 'inline';
+                btnLoader.style.display = 'none';
+                submitBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

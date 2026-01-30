@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>30 Days Captions — Intake | Lumo 22</title>
+  <meta name="description" content="Complete your intake so we can tailor your 30 days of social media captions.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
+  <style>
+    .intake-page { padding: 6rem 1.5rem 4rem; max-width: 560px; margin: 0 auto; }
+    .intake-page h1 { font-family: var(--font-display); font-size: 1.75rem; margin-bottom: 0.5rem; }
+    .intake-page .sub { color: var(--lum-text-muted); margin-bottom: 2.5rem; }
+    .intake-page label { display: block; font-size: 0.9rem; font-weight: 500; margin-bottom: 0.5rem; color: var(--lum-text); }
+    .intake-page input, .intake-page textarea { width: 100%; padding: 0.75rem 1rem; background: var(--lum-surface-elevated); border: 1px solid var(--lum-border); border-radius: 8px; color: var(--lum-text); font-family: var(--font-body); font-size: 1rem; margin-bottom: 1.25rem; }
+    .intake-page textarea { min-height: 100px; resize: vertical; }
+    .intake-page input::placeholder, .intake-page textarea::placeholder { color: var(--lum-text-subtle); }
+    .intake-page .form-section { margin-bottom: 2rem; }
+    .intake-page .form-section h2 { font-family: var(--font-display); font-size: 1.1rem; color: var(--lum-text-muted); margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .intake-page .btn-submit { display: inline-block; padding: 1rem 2rem; background: var(--lum-gold); color: var(--lum-black); text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1rem; border: none; cursor: pointer; font-family: var(--font-display); }
+    .intake-page .btn-submit:hover { opacity: 0.95; }
+    .intake-page .back { margin-top: 2rem; }
+    .intake-page .back a { color: var(--lum-text-muted); text-decoration: none; font-size: 0.95rem; }
+    .intake-page .back a:hover { color: var(--lum-text); }
+  </style>
+</head>
+<body class="lumo-landing">
+  <nav class="lumo-nav lumo-nav-scrolled">
+    <a href="/" class="lumo-nav-logo">Lumo 22</a>
+    <div class="lumo-nav-links">
+      <a href="/captions">Captions</a>
+      <a href="/#front-desk">Front Desk</a>
+      <a href="/plans">Pricing</a>
+    </div>
+    <a href="/captions" class="lumo-nav-cta">Get my 30 days</a>
+  </nav>
+
+  <main class="intake-page">
+    <h1>30 Days Captions — Intake</h1>
+    <p class="sub">Complete this form so we can tailor your caption set. Your answers shape your voice and structure for the month.</p>
+
+    {% if not intake_token %}
+    <p class="sub" style="margin-top: 1rem;">Use the link from your order email to complete your intake. If you just purchased, check your inbox for a message from us with a personalised link.</p>
+    <p class="back"><a href="/captions">← Back to 30 Days Captions</a></p>
+    {% else %}
+    <div id="intake-success" style="display: none; margin: 2rem 0; padding: 1.5rem; background: var(--lum-surface-elevated); border-radius: 8px;">
+      <p style="margin: 0;">Thanks. We're generating your 30 captions now. You'll receive them by email within a few minutes.</p>
+    </div>
+    <div id="intake-error" style="display: none; margin: 2rem 0; padding: 1.5rem; background: rgba(200,80,80,0.15); border-radius: 8px; color: var(--lum-text);"></div>
+
+    <form id="captions-intake-form" action="#" method="post">
+      <input type="hidden" name="token" id="intake_token" value="{{ intake_token }}">
+      <div class="form-section">
+        <h2>Business</h2>
+        <label for="business_type">What type of business do you run?</label>
+        <input type="text" id="business_type" name="business_type" placeholder="e.g. consultancy, agency, product brand">
+        <label for="offer_one_line">In one sentence, what do you offer and to whom?</label>
+        <textarea id="offer_one_line" name="offer_one_line" placeholder="Your answer"></textarea>
+      </div>
+      <div class="form-section">
+        <h2>Audience</h2>
+        <label for="audience">Who is your primary audience?</label>
+        <input type="text" id="audience" name="audience" placeholder="role, industry, or life stage">
+        <label for="audience_cares">What do they care about most when they land on your content?</label>
+        <textarea id="audience_cares" name="audience_cares" placeholder="Your answer"></textarea>
+      </div>
+      <div class="form-section">
+        <h2>Voice</h2>
+        <label for="voice_words">Choose 3–5 words that describe how you want to sound.</label>
+        <input type="text" id="voice_words" name="voice_words" placeholder="e.g. direct, thoughtful, understated, precise, warm">
+        <label for="voice_avoid">Is there any language or phrasing you want to avoid?</label>
+        <textarea id="voice_avoid" name="voice_avoid" placeholder="Your answer (optional)"></textarea>
+      </div>
+      <div class="form-section">
+        <h2>Platform</h2>
+        <label for="platform">Primary platform for these captions?</label>
+        <input type="text" id="platform" name="platform" placeholder="Instagram / LinkedIn / both / other">
+        <label for="platform_habits">Any platform-specific habits?</label>
+        <input type="text" id="platform_habits" name="platform_habits" placeholder="e.g. shorter on Instagram, longer on LinkedIn (optional)">
+      </div>
+      <div class="form-section">
+        <h2>Goal for this month</h2>
+        <label for="goal">What's the main outcome you want from this 30 days?</label>
+        <textarea id="goal" name="goal" placeholder="e.g. more inquiries, stronger authority, launch visibility"></textarea>
+      </div>
+      <button type="submit" class="btn-submit" id="submit-btn">Send my answers</button>
+    </form>
+
+    <p class="back"><a href="/captions">← Back to 30 Days Captions</a></p>
+    {% endif %}
+  </main>
+
+  {% if intake_token %}
+  <script>
+    document.getElementById('captions-intake-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      var token = document.getElementById('intake_token').value;
+      var payload = {
+        token: token,
+        business_type: document.getElementById('business_type').value.trim(),
+        offer_one_line: document.getElementById('offer_one_line').value.trim(),
+        audience: document.getElementById('audience').value.trim(),
+        audience_cares: document.getElementById('audience_cares').value.trim(),
+        voice_words: document.getElementById('voice_words').value.trim(),
+        voice_avoid: document.getElementById('voice_avoid').value.trim(),
+        platform: document.getElementById('platform').value.trim(),
+        platform_habits: document.getElementById('platform_habits').value.trim(),
+        goal: document.getElementById('goal').value.trim()
+      };
+      var btn = document.getElementById('submit-btn');
+      btn.disabled = true;
+      btn.textContent = 'Sending…';
+      fetch('/api/captions-intake', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(function(r) { return r.json().then(function(j) { return { status: r.status, json: j }; }); })
+      .then(function(result) {
+        if (result.status === 200 && result.json.success) {
+          document.getElementById('captions-intake-form').style.display = 'none';
+          document.getElementById('intake-success').style.display = 'block';
+        } else {
+          document.getElementById('intake-error').textContent = result.json.error || 'Something went wrong. Please try again or email us.';
+          document.getElementById('intake-error').style.display = 'block';
+          btn.disabled = false;
+          btn.textContent = 'Send my answers';
+        }
+      })
+      .catch(function() {
+        document.getElementById('intake-error').textContent = 'Network error. Please try again or email hello@lumo22.com.';
+        document.getElementById('intake-error').style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Send my answers';
+      });
+    });
+  </script>
+  {% endif %}
+</body>
+</html>

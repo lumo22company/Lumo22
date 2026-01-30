@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thank you for your order | Lumo 22</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
+  <style>
+    .thankyou-page { min-height: 80vh; display: flex; align-items: center; justify-content: center; padding: 6rem 1.5rem 4rem; }
+    .thankyou-box { max-width: 480px; text-align: center; }
+    .thankyou-box h1 { font-family: var(--font-display); font-size: 1.75rem; margin-bottom: 1rem; }
+    .thankyou-box p { color: var(--lum-text-muted); line-height: 1.7; margin-bottom: 1.5rem; }
+    .thankyou-box .back { margin-top: 2rem; }
+    .thankyou-box .back a { color: var(--lum-text-muted); text-decoration: none; font-size: 0.95rem; }
+    .thankyou-box .back a:hover { color: var(--lum-text); }
+  </style>
+</head>
+<body class="lumo-landing">
+  <nav class="lumo-nav lumo-nav-scrolled">
+    <a href="/" class="lumo-nav-logo">Lumo 22</a>
+    <div class="lumo-nav-links">
+      <a href="/captions">Captions</a>
+      <a href="/#front-desk">Front Desk</a>
+      <a href="/plans">Pricing</a>
+    </div>
+    <a href="/#front-desk" class="lumo-nav-cta">Try the concierge</a>
+  </nav>
+
+  <main class="thankyou-page">
+    <div class="thankyou-box">
+      <h1>Thanks for your order</h1>
+      <p>We’ve received your payment for 30 Days of Social Media Captions. You’ll get an email from us within a few minutes with a link to complete a short form so we can tailor your captions. Once you submit the form, we'll generate your 30 captions and send them to you by email.</p>
+      <p>If you have any questions, reply to that email or contact hello@lumo22.com.</p>
+      <p class="back"><a href="/">← Back to Lumo 22</a></p>
+    </div>
+  </main>
+</body>
+</html>
