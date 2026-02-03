@@ -1,12 +1,13 @@
 /**
- * Landing page — scroll reveal, nav behavior
+ * Landing page — scroll reveal, nav behavior, hero scroll indicator.
  */
 
 (function () {
   'use strict';
 
   var nav = document.getElementById('lumo-nav');
-  var hero = document.getElementById('lumo-hero');
+  var heroScroll = document.getElementById('lumo-hero-scroll');
+  var scrollHideThreshold = 80;
 
   function easeOutCubic(t) {
     return 1 - Math.pow(1 - t, 3);
@@ -15,6 +16,8 @@
   function handleScroll() {
     var y = window.scrollY || window.pageYOffset;
     if (nav) nav.classList.toggle('scrolled', y > 60);
+    /* Hide "Scroll to explore" once user has started scrolling. */
+    if (heroScroll) heroScroll.classList.toggle('hidden', y > scrollHideThreshold);
 
     document.querySelectorAll('.lumo-reveal[data-reveal]').forEach(function (el) {
       var rect = el.getBoundingClientRect();

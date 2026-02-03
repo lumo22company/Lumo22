@@ -67,7 +67,9 @@
 
       <p class="lumo-offer-turnaround">Turnaround: 3–5 business days.</p>
       <div class="lumo-offer-price">£97 <span>one-time</span></div>
-      {% if captions_payment_link %}
+      {% if use_checkout_redirect %}
+      <a href="/captions-checkout" class="lumo-btn-primary">Get my 30 days</a>
+      {% elif captions_payment_link %}
       <a href="{{ captions_payment_link }}" class="lumo-btn-primary">Get my 30 days</a>
       {% else %}
       <a href="mailto:hello@lumo22.com?subject=30%20Days%20Captions%20Order" class="lumo-btn-primary">Get my 30 days</a>
@@ -79,12 +81,13 @@
     <div class="lumo-footer-inner">
       <div>
         <a href="/" class="lumo-footer-brand">Lumo 22</a>
-        <p class="lumo-footer-tagline">Smart tools. Quiet confidence.</p>
+        <p class="lumo-footer-tagline">Lighting the way to better business</p>
       </div>
       <div class="lumo-footer-links">
         <a href="/captions">Captions</a>
         <a href="/#front-desk">Front Desk</a>
         <a href="/plans">Pricing</a>
+        <a href="/terms">Terms</a>
         <a href="mailto:hello@lumo22.com">Contact</a>
       </div>
     </div>

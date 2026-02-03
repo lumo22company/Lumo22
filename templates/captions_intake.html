@@ -85,6 +85,11 @@
         <label for="goal">What's the main outcome you want from this 30 days?</label>
         <textarea id="goal" name="goal" placeholder="e.g. more inquiries, stronger authority, launch visibility"></textarea>
       </div>
+      <div class="form-section">
+        <h2>Example captions (optional)</h2>
+        <label for="caption_examples">Paste 1–3 example captions you like — from your own posts, competitors, or inspiration. We'll match this style, tone, and structure where relevant.</label>
+        <textarea id="caption_examples" name="caption_examples" placeholder="Paste example captions here (optional)" style="min-height: 140px;"></textarea>
+      </div>
       <button type="submit" class="btn-submit" id="submit-btn">Send my answers</button>
     </form>
 
@@ -107,7 +112,8 @@
         voice_avoid: document.getElementById('voice_avoid').value.trim(),
         platform: document.getElementById('platform').value.trim(),
         platform_habits: document.getElementById('platform_habits').value.trim(),
-        goal: document.getElementById('goal').value.trim()
+        goal: document.getElementById('goal').value.trim(),
+        caption_examples: document.getElementById('caption_examples').value.trim()
       };
       var btn = document.getElementById('submit-btn');
       btn.disabled = true;

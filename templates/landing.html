@@ -1,4 +1,4 @@
-{# LUMO 22 — Premium Marketing Homepage. Assumptions: primary offer = 30 Days Captions; Digital Front Desk = AI intake; price in .lumo-offer-price #}
+{# LUMO 22 — Premium Marketing Homepage. Hero: full-viewport logo + mist. Split: two product panels with parallax. #}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,7 +8,7 @@
   <meta name="description" content="30 days of social media captions for small businesses. An AI-powered front desk that qualifies, routes, and converts.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
 </head>
 <body class="lumo-landing">
@@ -16,20 +16,41 @@
     <a href="/" class="lumo-nav-logo">Lumo 22</a>
     <div class="lumo-nav-links">
       <a href="/captions">Captions</a>
-      <a href="#front-desk">Front Desk</a>
+      <a href="/digital-front-desk">Front Desk</a>
       <a href="/plans">Pricing</a>
     </div>
-    <a href="#front-desk" class="lumo-nav-cta">Try the concierge</a>
+    <a href="/#lumo-split" class="lumo-nav-cta">Explore</a>
   </nav>
 
+  <!-- Hero: full viewport, centered logo only. Mist is densest around logo, fades to black at edges. No parallax. -->
   <section class="lumo-hero" id="lumo-hero" aria-label="Hero">
     <canvas id="lumo-mist-canvas" class="lumo-hero-canvas" aria-hidden="true"></canvas>
     <div class="lumo-hero-content">
-      <h1 class="lumo-hero-headline">Smart tools.<br>Quiet confidence.</h1>
-      <p class="lumo-hero-sub">Social content that converts. An AI concierge that qualifies and routes — so you focus on what matters.</p>
-      <a href="#offer" class="lumo-hero-cta">Explore the offer</a>
+      <h1 class="lumo-hero-logo" id="lumo-hero-logo">Lumo 22</h1>
     </div>
-    <p class="lumo-hero-scroll">Scroll</p>
+    <p class="lumo-hero-scroll" id="lumo-hero-scroll">Scroll to explore <span aria-hidden="true">↓</span></p>
+  </section>
+
+  <!-- Split product section: two equal panels, parallax on scroll. Links to product pages. -->
+  <section class="lumo-split" id="lumo-split" aria-label="Products">
+    <div class="lumo-split-inner">
+      <a href="/digital-front-desk" class="lumo-split-panel lumo-split-left" data-speed="0.08">
+        <div class="lumo-split-panel-bg"></div>
+        <div class="lumo-split-content">
+          <span class="lumo-split-label">Digital Front Desk</span>
+          <h2 class="lumo-split-title">Your virtual receptionist, 24/7</h2>
+          <p class="lumo-split-desc">Replies to every enquiry, qualifies leads, and books appointments — without hiring a receptionist.</p>
+        </div>
+      </a>
+      <a href="/captions" class="lumo-split-panel lumo-split-right" data-speed="-0.06">
+        <div class="lumo-split-panel-bg"></div>
+        <div class="lumo-split-content">
+          <span class="lumo-split-label">30 Days of Social Captions</span>
+          <h2 class="lumo-split-title">A month of copy, written for you</h2>
+          <p class="lumo-split-desc">Done-for-you captions across authority, education, personality, and promotion. Copy, edit, post.</p>
+        </div>
+      </a>
+    </div>
   </section>
 
   <section class="lumo-section lumo-offer lumo-reveal" id="offer" data-reveal>
@@ -42,7 +63,7 @@
     <div class="lumo-offer-card">
       <p class="lumo-offer-who">For small businesses, founders, and creatives who want to post consistently without the writer's block.</p>
 
-      <h3>What’s included</h3>
+      <h3>What's included</h3>
       <ul class="lumo-offer-includes">
         <li>30 ready-to-post captions, one per day</li>
         <li>Adapted to your industry and voice</li>
@@ -68,7 +89,6 @@
       </div>
 
       <p class="lumo-offer-turnaround">Turnaround: 3–5 business days.</p>
-      <!-- PRICE PLACEHOLDER: Change the value below to update pricing -->
       <div class="lumo-offer-price">£97 <span>one-time</span></div>
       <a href="/captions" class="lumo-btn-primary">Get my 30 days</a>
     </div>
@@ -84,7 +104,7 @@
     <div class="lumo-chat-container" id="front-desk-chat">
       <div class="lumo-chat-header">
         <h3>Lumo 22 Concierge</h3>
-        <p>Answer a few questions — we’ll recommend your best next step.</p>
+        <p>Answer a few questions — we'll recommend your best next step.</p>
       </div>
 
       <div class="lumo-chat-messages" id="chat-messages">
@@ -133,11 +153,11 @@
     <div class="lumo-footer-inner">
       <div>
         <a href="/" class="lumo-footer-brand">Lumo 22</a>
-        <p class="lumo-footer-tagline">Smart tools. Quiet confidence.</p>
+        <p class="lumo-footer-tagline">Lighting the way to better business</p>
       </div>
       <div class="lumo-footer-links">
         <a href="/captions">Captions</a>
-        <a href="#front-desk">Front Desk</a>
+        <a href="/digital-front-desk">Front Desk</a>
         <a href="/plans">Pricing</a>
         <a href="mailto:hello@lumo22.com">Contact</a>
       </div>
@@ -145,7 +165,8 @@
     <div class="lumo-footer-bottom">© Lumo 22. All rights reserved.</div>
   </footer>
 
-  <script src="{{ url_for('static', filename='js/mistDark.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/hero-mist.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/split-parallax.js') }}"></script>
   <script src="{{ url_for('static', filename='js/front-desk.js') }}"></script>
   <script src="{{ url_for('static', filename='js/landing.js') }}"></script>
 </body>

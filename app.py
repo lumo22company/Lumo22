@@ -29,7 +29,12 @@ def index():
 @app.route('/captions')
 def captions_page():
     """30 Days of Social Media Captions product page"""
-    return render_template('captions.html', captions_payment_link=Config.CAPTIONS_PAYMENT_LINK)
+    use_checkout_redirect = bool(Config.STRIPE_SECRET_KEY and Config.STRIPE_CAPTIONS_PRICE_ID)
+    return render_template(
+        'captions.html',
+        captions_payment_link=Config.CAPTIONS_PAYMENT_LINK,
+        use_checkout_redirect=use_checkout_redirect,
+    )
 
 @app.route('/captions-intake')
 def captions_intake_page():
@@ -41,6 +46,16 @@ def captions_intake_page():
 def captions_thank_you_page():
     """Thank-you page after Stripe payment (set as redirect URL in Stripe)"""
     return render_template('captions_thank_you.html')
+
+@app.route('/captions-checkout')
+def captions_checkout_page():
+    """Pre-checkout page: agree to T&Cs then continue to Stripe."""
+    return render_template('captions_checkout.html')
+
+@app.route('/terms')
+def terms_page():
+    """Terms & Conditions."""
+    return render_template('terms.html')
 
 @app.route('/plans')
 def plans_page():
@@ -85,12 +100,26 @@ def outreach_dashboard():
 
 @app.route('/activate')
 def activate_page():
-    """Activation page: link from AI email goes here; this page shows the Stripe/payment link"""
-    return render_template('activate.html', activation_link=Config.ACTIVATION_LINK)
+    """Activation page: plan selection, T&Cs, then Stripe/payment link for Digital Front Desk."""
+    return render_template('activate.html', **{
+        'activation_link': Config.ACTIVATION_LINK,
+        'activation_link_starter': getattr(Config, 'ACTIVATION_LINK_STARTER', None),
+        'activation_link_standard': getattr(Config, 'ACTIVATION_LINK_STANDARD', None),
+        'activation_link_premium': getattr(Config, 'ACTIVATION_LINK_PREMIUM', None),
+    })
+
+
+@app.route('/activate-success')
+def activate_success_page():
+    """Thank-you page after Digital Front Desk payment. Set this URL as the success URL in each Stripe Payment Link."""
+    return render_template('activate_success.html')
 
 
 @app.errorhandler(404)
 def not_found(error):
+    # Prefer HTML for browser requests so visitors see a proper page
+    if request.accept_mimetypes.best_match(['text/html', 'application/json']) == 'text/html':
+        return render_template('404.html'), 404
     return jsonify({'error': 'Endpoint not found'}), 404
 
 @app.errorhandler(500)

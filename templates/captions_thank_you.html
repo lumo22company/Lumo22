@@ -4,18 +4,22 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Thank you for your order | Lumo 22</title>
+  <meta name="description" content="Thanks for ordering 30 Days of Social Media Captions. Complete your intake form to receive your captions.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
   <style>
-    .thankyou-page { min-height: 80vh; display: flex; align-items: center; justify-content: center; padding: 6rem 1.5rem 4rem; }
-    .thankyou-box { max-width: 480px; text-align: center; }
-    .thankyou-box h1 { font-family: var(--font-display); font-size: 1.75rem; margin-bottom: 1rem; }
-    .thankyou-box p { color: var(--lum-text-muted); line-height: 1.7; margin-bottom: 1.5rem; }
-    .thankyou-box .back { margin-top: 2rem; }
-    .thankyou-box .back a { color: var(--lum-text-muted); text-decoration: none; font-size: 0.95rem; }
-    .thankyou-box .back a:hover { color: var(--lum-text); }
+    .thankyou-section { padding-top: 8rem; padding-bottom: 4rem; }
+    .thankyou-card { max-width: 520px; margin: 0 auto; padding: 2.5rem; background: var(--lum-card-bg, rgba(255,255,255,0.03)); border-radius: 12px; border: 1px solid var(--lum-border, rgba(255,255,255,0.08)); }
+    .thankyou-card h1 { font-family: var(--font-display); font-size: 1.75rem; margin-bottom: 1rem; }
+    .thankyou-card p { color: var(--lum-text-muted); line-height: 1.7; margin-bottom: 1.25rem; }
+    .thankyou-card .thankyou-cta { margin-top: 1.5rem; display: inline-block; }
+    .thankyou-card .thankyou-back { margin-top: 2rem; }
+    .thankyou-card .thankyou-back a { color: var(--lum-text-muted); text-decoration: none; font-size: 0.95rem; }
+    .thankyou-card .thankyou-back a:hover { color: var(--lum-text); }
+    .thankyou-spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid var(--lum-text-muted); border-top-color: transparent; border-radius: 50%; animation: thankyou-spin 0.8s linear infinite; vertical-align: middle; margin-right: 0.5rem; }
+    @keyframes thankyou-spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body class="lumo-landing">
@@ -29,13 +33,103 @@
     <a href="/#front-desk" class="lumo-nav-cta">Try the concierge</a>
   </nav>
 
-  <main class="thankyou-page">
-    <div class="thankyou-box">
-      <h1>Thanks for your order</h1>
-      <p>We’ve received your payment for 30 Days of Social Media Captions. You’ll get an email from us within a few minutes with a link to complete a short form so we can tailor your captions. Once you submit the form, we'll generate your 30 captions and send them to you by email.</p>
-      <p>If you have any questions, reply to that email or contact hello@lumo22.com.</p>
-      <p class="back"><a href="/">← Back to Lumo 22</a></p>
+  <section class="lumo-section thankyou-section">
+    <div class="lumo-section-header">
+      <p class="lumo-section-label">Order confirmed</p>
+      <h1 class="lumo-section-title">Thanks for your order</h1>
     </div>
-  </main>
+    <div class="thankyou-card" id="thankyou-box">
+      <h1>30 Days of Social Media Captions</h1>
+      <p id="thankyou-message">We've received your payment. One moment — we're preparing your next step…</p>
+      <p id="thankyou-form-link" style="display: none;">
+        <a href="#" id="intake-link" class="lumo-btn-primary thankyou-cta">Continue to your captions form</a>
+        <span id="thankyou-redirect-msg" style="display: block; margin-top: 0.75rem; font-size: 0.9rem; color: var(--lum-text-muted);"></span>
+      </p>
+      <p id="thankyou-email-fallback" style="display: none;">We've also sent a link to your email. Once you submit the form, we'll generate your 30 captions and send them to you.</p>
+      <p id="thankyou-no-session" style="display: none;">Check your email for a link to complete a short form so we can tailor your captions. Once you submit, we'll generate your 30 captions and send them to you by email.</p>
+      <p class="thankyou-back"><a href="/captions">← Back to Captions</a> · <a href="/">Lumo 22 home</a></p>
+    </div>
+  </section>
+
+  <footer class="lumo-footer">
+    <div class="lumo-footer-inner">
+      <div>
+        <a href="/" class="lumo-footer-brand">Lumo 22</a>
+        <p class="lumo-footer-tagline">Lighting the way to better business</p>
+      </div>
+      <div class="lumo-footer-links">
+        <a href="/captions">Captions</a>
+        <a href="/#front-desk">Front Desk</a>
+        <a href="/plans">Pricing</a>
+        <a href="mailto:hello@lumo22.com">Contact</a>
+      </div>
+    </div>
+    <div class="lumo-footer-bottom">© Lumo 22. All rights reserved.</div>
+  </footer>
+
+  <script>
+    (function() {
+      var params = new URLSearchParams(window.location.search);
+      var sessionId = params.get('session_id');
+      var messageEl = document.getElementById('thankyou-message');
+      var formLinkEl = document.getElementById('thankyou-form-link');
+      var intakeLinkEl = document.getElementById('intake-link');
+      var emailFallbackEl = document.getElementById('thankyou-email-fallback');
+      var noSessionEl = document.getElementById('thankyou-no-session');
+
+      if (!sessionId) {
+        messageEl.style.display = 'none';
+        noSessionEl.style.display = 'block';
+        noSessionEl.innerHTML = 'Check your email for a link to complete a short form so we can tailor your captions. Once you submit, we\'ll generate your 30 captions and send them to you by email.<br><br>If you have any questions, contact <a href="mailto:hello@lumo22.com">hello@lumo22.com</a>.';
+        return;
+      }
+
+      var REDIRECT_DELAY_MS = 5000; // Stay on thank-you page 5 seconds before auto-redirect
+      var redirectMsgEl = document.getElementById('thankyou-redirect-msg');
+
+      function showIntake(url) {
+        messageEl.textContent = "Your captions form is ready. Click below to tell us about your business and voice — then we'll generate your 30 captions.";
+        messageEl.style.display = 'block';
+        intakeLinkEl.href = url;
+        formLinkEl.style.display = 'block';
+        emailFallbackEl.style.display = 'block';
+        var secondsLeft = Math.ceil(REDIRECT_DELAY_MS / 1000);
+        var countdown = setInterval(function() {
+          redirectMsgEl.textContent = secondsLeft > 0 ? "We'll take you there in " + secondsLeft + " second" + (secondsLeft === 1 ? "" : "s") + "…" : "";
+          secondsLeft--;
+          if (secondsLeft < 0) clearInterval(countdown);
+        }, 1000);
+        setTimeout(function() {
+          clearInterval(countdown);
+          window.location.href = url;
+        }, REDIRECT_DELAY_MS);
+      }
+
+      function check() {
+        fetch('/api/captions-intake-link?session_id=' + encodeURIComponent(sessionId))
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (data.status === 'ok' && data.intake_url) {
+              showIntake(data.intake_url);
+            }
+          })
+          .catch(function() {});
+      }
+
+      check();
+      var interval = setInterval(function() {
+        fetch('/api/captions-intake-link?session_id=' + encodeURIComponent(sessionId))
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (data.status === 'ok' && data.intake_url) {
+              clearInterval(interval);
+              showIntake(data.intake_url);
+            }
+          })
+          .catch(function() {});
+      }, 2000);
+      setTimeout(function() { clearInterval(interval); }, 30000);
+    })();
+  </script>
 </body>
 </html>

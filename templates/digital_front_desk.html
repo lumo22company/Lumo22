@@ -9,12 +9,23 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
+  <style>
+    .lumo-compare-table { width: 100%; max-width: 720px; margin: 0 auto; border-collapse: collapse; font-size: 0.95rem; }
+    .lumo-compare-table th, .lumo-compare-table td { padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid var(--lum-border); }
+    .lumo-compare-table th { color: var(--lum-text-muted); font-weight: 500; }
+    .lumo-compare-table td { color: var(--lum-text); }
+    .lumo-compare-table th:first-child { width: 40%; }
+    .lumo-compare-table .tick { color: var(--lum-gold); }
+    .lumo-compare-table .add-on { color: var(--lum-text-muted); font-size: 0.9rem; }
+    .lumo-compare-wrap { overflow-x: auto; margin: 2rem 0; }
+    .lumo-addon-note { max-width: 560px; margin: 1.5rem auto 0; padding: 1rem 1.25rem; background: var(--lum-surface-elevated); border-radius: 8px; border: 1px solid var(--lum-border); font-size: 0.9rem; color: var(--lum-text-muted); line-height: 1.5; }
+  </style>
 </head>
 <body class="lumo-landing">
   <nav class="lumo-nav lumo-nav-scrolled">
     <a href="/" class="lumo-nav-logo">Lumo 22</a>
     <div class="lumo-nav-links">
-      <a href="/#offer">Captions</a>
+      <a href="/captions">Captions</a>
       <a href="/#front-desk">Front Desk</a>
       <a href="/plans">Pricing</a>
     </div>
@@ -94,7 +105,6 @@
         <ul class="lumo-offer-includes" style="margin: 1rem 0;">
           <li>Up to 100 enquiries/month</li>
           <li>Instant replies</li>
-          <li>Booking link integration</li>
           <li>24/7 availability</li>
         </ul>
         <a href="/activate" class="lumo-btn-secondary" style="display: block; text-align: center;">Activate now</a>
@@ -108,6 +118,7 @@
           <li>Up to 300 enquiries/month</li>
           <li>Ongoing conversation handling</li>
           <li>Lead tracking</li>
+          <li>Booking configuration included</li>
           <li>Priority support</li>
         </ul>
         <a href="/activate" class="lumo-btn-primary" style="display: block; text-align: center;">Activate now</a>
@@ -119,12 +130,75 @@
         <ul class="lumo-offer-includes" style="margin: 1rem 0;">
           <li>Unlimited enquiries</li>
           <li>Multi-channel (email + SMS)</li>
+          <li>Booking configuration included</li>
           <li>Custom setup</li>
           <li>Dedicated support</li>
         </ul>
         <a href="/activate" class="lumo-btn-secondary" style="display: block; text-align: center;">Activate now</a>
       </div>
     </div>
+
+    <div class="lumo-section-header" style="margin-top: 3rem;">
+      <h2 class="lumo-section-title">Compare plans</h2>
+      <p class="lumo-section-desc">What’s included in each tier.</p>
+    </div>
+    <div class="lumo-compare-wrap">
+      <table class="lumo-compare-table" role="grid">
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th>Starter</th>
+            <th>Standard</th>
+            <th>Premium</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Enquiries per month</td>
+            <td>Up to 100</td>
+            <td>Up to 300</td>
+            <td>Unlimited</td>
+          </tr>
+          <tr>
+            <td>Instant replies</td>
+            <td class="tick">✓</td>
+            <td class="tick">✓</td>
+            <td class="tick">✓</td>
+          </tr>
+          <tr>
+            <td>Booking configuration</td>
+            <td>—</td>
+            <td class="tick">Included</td>
+            <td class="tick">Included</td>
+          </tr>
+          <tr>
+            <td>Ongoing conversation handling</td>
+            <td>—</td>
+            <td class="tick">✓</td>
+            <td class="tick">✓</td>
+          </tr>
+          <tr>
+            <td>Lead tracking</td>
+            <td>—</td>
+            <td class="tick">✓</td>
+            <td class="tick">✓</td>
+          </tr>
+          <tr>
+            <td>Channels</td>
+            <td>Email</td>
+            <td>Email</td>
+            <td>Email + SMS</td>
+          </tr>
+          <tr>
+            <td>Support</td>
+            <td>Email</td>
+            <td>Priority</td>
+            <td>Dedicated</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="lumo-addon-note"><strong>Booking configuration:</strong> We connect your calendar (Calendly, Fresha, or similar) so the front desk can send booking links and confirm appointments. Included from Standard upwards.</p>
   </section>
 
   <section class="lumo-section" style="text-align: center; padding: 4rem 2rem;">
@@ -137,12 +211,13 @@
     <div class="lumo-footer-inner">
       <div>
         <a href="/" class="lumo-footer-brand">Lumo 22</a>
-        <p class="lumo-footer-tagline">Smart tools. Quiet confidence.</p>
+        <p class="lumo-footer-tagline">Lighting the way to better business</p>
       </div>
       <div class="lumo-footer-links">
-        <a href="/#offer">Captions</a>
+        <a href="/captions">Captions</a>
         <a href="/#front-desk">Front Desk</a>
         <a href="/plans">Pricing</a>
+        <a href="/terms">Terms</a>
         <a href="mailto:hello@lumo22.com">Contact</a>
       </div>
     </div>

@@ -177,8 +177,8 @@
       showTyping(function () {
         showResult(
           'Get my 30 days',
-          'mailto:hello@lumo22.com?subject=30%20Days%20Captions%20Order',
-          'Based on what you shared, the 30 Days of Social Captions is a strong fit. You’ll get tailored content for your business. Hit the button to order — we’ll follow up within 24 hours.'
+          '/captions-checkout',
+          'Based on what you shared, the 30 Days of Social Captions is a strong fit. You’ll get tailored content for your business. Hit the button to order — you’ll go through checkout and then complete a short intake form.'
         );
       });
       return;

@@ -36,8 +36,8 @@
   --lum-border: rgba(255, 255, 255, 0.06);
   --lum-glow: rgba(212, 168, 83, 0.12);
   
-  /* Typography */
-  --font-display: 'Inter Tight', -apple-system, sans-serif;
+  /* Typography — refined, x.ai/dayos tone. Tweak font stack here. */
+  --font-display: 'Plus Jakarta Sans', -apple-system, sans-serif;
   --font-body: 'Inter', -apple-system, sans-serif;
   
   /* Spacing */
@@ -49,12 +49,14 @@
   --space-2xl: 5rem;
   --space-3xl: 8rem;
   
-  /* Motion */
+  /* Motion — animation timing. Tweak duration-slow for parallax/scroll feel. */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
   --duration-fast: 0.2s;
   --duration-normal: 0.4s;
   --duration-slow: 0.6s;
+  /* Parallax: panel movement multiplier (used in split-parallax.js data-speed). */
+  --parallax-base: 1;
   
   /* Layout */
   --max-width: 1120px;
@@ -171,9 +173,10 @@ body.lumo-landing {
   transform: translateY(-1px);
 }
 
-/* Hero */
+/* Hero — full viewport, centered logo only. No parallax, no layout shift. */
 .lumo-hero {
   position: relative;
+  height: 100vh;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -192,7 +195,7 @@ body.lumo-landing {
   pointer-events: none;
 }
 
-/* Subtle grain overlay for texture */
+/* Subtle grain overlay */
 .lumo-hero::after {
   content: '';
   position: absolute;
@@ -210,66 +213,138 @@ body.lumo-landing {
   padding: 0 var(--space-lg);
 }
 
-.lumo-hero-headline {
+/* Logo: large, bold, refined. Mist is densest around this (see hero-mist.js). */
+.lumo-hero-logo {
+  font-size: clamp(3rem, 12vw, 6rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
   color: var(--lum-text);
-  margin-bottom: var(--space-md);
+  margin: 0;
   opacity: 0;
-  transform: translateY(24px);
-  animation: lumo-reveal 1s var(--ease-out) 0.2s forwards;
+  animation: lumo-logo-reveal 1.2s var(--ease-out) 0.3s forwards;
 }
 
-.lumo-hero-sub {
-  font-size: clamp(1rem, 2vw, 1.25rem);
-  color: var(--lum-text-muted);
-  max-width: 400px;
-  margin: 0 auto var(--space-xl);
-  opacity: 0;
-  transform: translateY(16px);
-  animation: lumo-reveal 0.9s var(--ease-out) 0.4s forwards;
+@keyframes lumo-logo-reveal {
+  to { opacity: 1; }
 }
 
-.lumo-hero-cta {
-  display: inline-block;
-  padding: 18px 40px;
-  background: var(--lum-text);
-  color: var(--lum-black);
-  text-decoration: none;
-  font-weight: 600;
-  font-size: 1rem;
-  border-radius: 10px;
-  transition: background var(--duration-fast), transform var(--duration-fast), box-shadow var(--duration-normal);
-  opacity: 0;
-  animation: lumo-reveal 0.8s var(--ease-out) 0.6s forwards;
-}
-
-.lumo-hero-cta:hover {
-  background: var(--lum-ivory);
-  transform: translateY(-2px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
-}
-
+/* Scroll indicator — fixed near bottom center, hidden when scroll starts (see landing.js). */
 .lumo-hero-scroll {
   position: absolute;
   bottom: var(--space-xl);
   left: 50%;
   transform: translateX(-50%);
-  font-size: 0.7rem;
-  letter-spacing: 0.2em;
+  z-index: 3;
+  font-size: 0.75rem;
+  letter-spacing: 0.15em;
   text-transform: uppercase;
   color: var(--lum-text-subtle);
-  animation: lumo-float 3s var(--ease-in-out) infinite;
+  transition: opacity 0.5s var(--ease-out), transform 0.5s var(--ease-out);
 }
 
-@keyframes lumo-reveal {
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.lumo-hero-scroll.hidden {
+  opacity: 0;
+  transform: translateX(-50%) translateY(8px);
+  pointer-events: none;
 }
 
 @keyframes lumo-float {
   0%, 100% { transform: translateX(-50%) translateY(0); }
-  50% { transform: translateX(-50%) translateY(8px); }
+  50% { transform: translateX(-50%) translateY(6px); }
+}
+
+.lumo-hero-scroll:not(.hidden) {
+  animation: lumo-float 3s var(--ease-in-out) infinite;
+}
+
+/* ----- Split section: two equal panels, parallax on scroll (section-scoped). ----- */
+.lumo-split {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  background: var(--lum-black);
+  overflow: hidden;
+}
+
+.lumo-split-inner {
+  display: flex;
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* Each panel: 50% width, clickable, hover highlight. Parallax applied via JS (data-speed). */
+.lumo-split-panel {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2xl) var(--space-xl);
+  text-decoration: none;
+  color: inherit;
+  overflow: hidden;
+  transition: background var(--duration-normal) var(--ease-out);
+}
+
+.lumo-split-panel:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.lumo-split-panel-bg {
+  position: absolute;
+  inset: 0;
+  border: 1px solid transparent;
+  transition: border-color var(--duration-fast), box-shadow var(--duration-normal);
+}
+
+.lumo-split-panel:hover .lumo-split-panel-bg {
+  border-color: var(--lum-border);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+
+.lumo-split-content {
+  position: relative;
+  z-index: 1;
+  max-width: 380px;
+  text-align: center;
+  will-change: transform;
+}
+
+.lumo-split-label {
+  display: block;
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--lum-gold);
+  margin-bottom: var(--space-sm);
+}
+
+.lumo-split-title {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 600;
+  color: var(--lum-text);
+  margin-bottom: var(--space-md);
+  line-height: 1.2;
+}
+
+.lumo-split-desc {
+  font-size: 1rem;
+  color: var(--lum-text-muted);
+  line-height: 1.6;
+}
+
+/* Content motion: headings slide opposite directions, text fades. JS applies translate/opacity. */
+.lumo-split-left .lumo-split-content { transform: translate3d(0, 0, 0); }
+.lumo-split-right .lumo-split-content { transform: translate3d(0, 0, 0); }
+
+@media (max-width: 768px) {
+  .lumo-split-inner {
+    flex-direction: column;
+  }
+  .lumo-split-panel {
+    min-height: 50vh;
+  }
 }
 
 /* Section wrapper */

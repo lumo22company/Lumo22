@@ -1,36 +1,164 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Activate your AI receptionist | Lumo 22</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <style>
-        .activate-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #f5f5f5; padding: 24px; }
-        .activate-box { max-width: 480px; width: 100%; background: #fff; border-radius: 16px; padding: 48px 40px; box-shadow: 0 8px 32px rgba(0,0,0,0.08); text-align: center; }
-        .activate-page h1 { font-family: 'Inter Tight', sans-serif; font-size: 1.75rem; color: #1a1a1a; margin-bottom: 12px; }
-        .activate-page p { color: #4a4a4a; margin-bottom: 28px; line-height: 1.5; }
-        .activate-page .btn-primary { display: inline-block; padding: 18px 36px; background: #1a1a1a; color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1.05rem; transition: opacity 0.2s; }
-        .activate-page .btn-primary:hover { opacity: 0.9; }
-        .activate-page .back { margin-top: 24px; }
-        .activate-page .back a { color: #666; text-decoration: none; font-size: 0.95rem; }
-        .activate-page .back a:hover { color: #1a1a1a; }
-        .activate-page .no-link { color: #888; font-size: 0.9rem; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Activate your Digital Front Desk | Lumo 22</title>
+  <meta name="description" content="Choose your plan and activate your AI receptionist. No setup calls, just go live.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
+  <style>
+    .activate-section { padding-top: 6rem; padding-bottom: 4rem; }
+    .activate-intro { max-width: 560px; margin: 0 auto 2.5rem; text-align: center; }
+    .activate-intro h1 { font-family: var(--font-display); font-size: 1.75rem; margin-bottom: 0.75rem; }
+    .activate-intro p { color: var(--lum-text-muted); line-height: 1.6; }
+    .activate-plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem; max-width: 900px; margin: 0 auto 2rem; }
+    .activate-plan { padding: 1.5rem; background: var(--lum-card-bg, rgba(255,255,255,0.03)); border: 1px solid var(--lum-border); border-radius: 12px; cursor: pointer; transition: border-color 0.2s, box-shadow 0.2s; }
+    .activate-plan:hover { border-color: var(--lum-text-subtle); }
+    .activate-plan.selected { border-color: var(--lum-gold); box-shadow: 0 0 0 1px var(--lum-gold); }
+    .activate-plan h3 { font-family: var(--font-display); font-size: 1.1rem; margin-bottom: 0.25rem; }
+    .activate-plan .price { color: var(--lum-gold); font-size: 1.25rem; margin: 0.5rem 0; }
+    .activate-plan .desc { color: var(--lum-text-muted); font-size: 0.9rem; line-height: 1.4; }
+    .activate-tcs { max-width: 520px; margin: 0 auto 1.5rem; padding: 1rem; background: var(--lum-surface-elevated); border-radius: 8px; border: 1px solid var(--lum-border); }
+    .activate-tcs label { display: flex; align-items: flex-start; gap: 0.75rem; cursor: pointer; color: var(--lum-text-muted); font-size: 0.95rem; line-height: 1.5; }
+    .activate-tcs input[type="checkbox"] { margin-top: 0.2rem; flex-shrink: 0; width: 1.1rem; height: 1.1rem; accent-color: var(--lum-gold); }
+    .activate-tcs a { color: var(--lum-gold); text-decoration: none; }
+    .activate-tcs a:hover { text-decoration: underline; }
+    .activate-cta-wrap { text-align: center; }
+    .activate-cta-wrap .btn-disabled { opacity: 0.5; pointer-events: none; cursor: not-allowed; }
+    .activate-cta-wrap .no-link-msg { color: var(--lum-text-muted); font-size: 0.95rem; margin-top: 1rem; }
+    .activate-cta-wrap .no-link-msg a { color: var(--lum-gold); }
+    .activate-back { text-align: center; margin-top: 1.5rem; }
+    .activate-back a { color: var(--lum-text-muted); text-decoration: none; font-size: 0.95rem; }
+    .activate-back a:hover { color: var(--lum-text); }
+  </style>
 </head>
-<body class="activate-page">
-    <div class="activate-box">
-        <h1>Activate your AI receptionist</h1>
-        <p>You’ve just experienced how Lumo 22 replies to enquiries. Activate below to get your own digital front desk — no setup calls, just go live.</p>
-        {% if activation_link %}
-        <a href="{{ activation_link }}" class="btn-primary">Activate now</a>
-        {% else %}
-        <p class="no-link">Payment link not configured yet. Add <code>ACTIVATION_LINK</code> to your <code>.env</code> file with your Stripe (or Gumroad) payment link.</p>
-        {% endif %}
-        <p class="back"><a href="/">← Back to Lumo 22</a></p>
+<body class="lumo-landing">
+  <nav class="lumo-nav lumo-nav-scrolled">
+    <a href="/" class="lumo-nav-logo">Lumo 22</a>
+    <div class="lumo-nav-links">
+      <a href="/captions">Captions</a>
+      <a href="/#front-desk">Front Desk</a>
+      <a href="/plans">Pricing</a>
     </div>
+    <a href="/#front-desk" class="lumo-nav-cta">Try the concierge</a>
+  </nav>
+
+  <section class="lumo-section activate-section">
+    <div class="activate-intro">
+      <h1>Activate your Digital Front Desk</h1>
+      <p>You’ve seen how Lumo 22 replies to enquiries. Choose your plan below and go live — no setup calls required.</p>
+    </div>
+
+    <div class="activate-plans" id="plan-cards">
+      <div class="activate-plan" data-plan="starter" role="button" tabindex="0">
+        <h3>Starter</h3>
+        <p class="price">£79 <span style="font-size: 0.85rem; font-weight: 400; color: var(--lum-text-muted);">/month</span></p>
+        <p class="desc">For solo businesses and small salons. Up to 100 enquiries/month, instant replies, 24/7 availability.</p>
+      </div>
+      <div class="activate-plan" data-plan="standard" role="button" tabindex="0">
+        <h3>Standard</h3>
+        <p class="price">£149 <span style="font-size: 0.85rem; font-weight: 400; color: var(--lum-text-muted);">/month</span></p>
+        <p class="desc">Full receptionist replacement. Up to 300 enquiries/month, ongoing conversation handling, lead tracking, priority support.</p>
+      </div>
+      <div class="activate-plan" data-plan="premium" role="button" tabindex="0">
+        <h3>Premium</h3>
+        <p class="price">£299 <span style="font-size: 0.85rem; font-weight: 400; color: var(--lum-text-muted);">/month</span></p>
+        <p class="desc">For busy clinics and multi-staff teams. Unlimited enquiries, multi-channel (email + SMS), custom setup, dedicated support.</p>
+      </div>
+    </div>
+
+    <div class="activate-tcs">
+      <label for="agree-tcs">
+        <input type="checkbox" id="agree-tcs" name="agree_tcs">
+        <span>I have read and agree to the <a href="/terms" target="_blank" rel="noopener">Terms &amp; Conditions</a>.</span>
+      </label>
+    </div>
+
+    <div class="activate-cta-wrap">
+      <a href="#" id="btn-activate" class="lumo-btn-primary btn-disabled">Continue to payment</a>
+      <p class="no-link-msg" id="no-link-msg" style="display: none;">Payment for this plan isn’t available yet. Try another plan or check back soon.</p>
+    </div>
+    <p class="activate-back"><a href="/digital-front-desk">← Back to Digital Front Desk</a> · <a href="/">Lumo 22 home</a></p>
+  </section>
+
+  <footer class="lumo-footer">
+    <div class="lumo-footer-inner">
+      <div>
+        <a href="/" class="lumo-footer-brand">Lumo 22</a>
+        <p class="lumo-footer-tagline">Lighting the way to better business</p>
+      </div>
+      <div class="lumo-footer-links">
+        <a href="/captions">Captions</a>
+        <a href="/#front-desk">Front Desk</a>
+        <a href="/plans">Pricing</a>
+        <a href="/terms">Terms</a>
+        <a href="mailto:hello@lumo22.com">Contact</a>
+      </div>
+    </div>
+    <div class="lumo-footer-bottom">© Lumo 22. All rights reserved.</div>
+  </footer>
+
+  <script>
+    (function() {
+      var planLinks = {
+        starter: {{ (activation_link_starter or activation_link) | tojson | safe }},
+        standard: {{ (activation_link_standard or activation_link) | tojson | safe }},
+        premium: {{ (activation_link_premium or activation_link) | tojson | safe }}
+      };
+      var cards = document.querySelectorAll('.activate-plan');
+      var btn = document.getElementById('btn-activate');
+      var noLinkMsg = document.getElementById('no-link-msg');
+      var checkbox = document.getElementById('agree-tcs');
+      var selectedPlan = null;
+
+      function getPaymentUrl() {
+        if (!selectedPlan) return null;
+        return planLinks[selectedPlan] || null;
+      }
+
+      function updateBtn() {
+        var url = getPaymentUrl();
+        var agreed = checkbox.checked;
+        if (!agreed || !selectedPlan) {
+          btn.classList.add('btn-disabled');
+          btn.href = '#';
+          btn.textContent = 'Continue to payment';
+          noLinkMsg.style.display = 'none';
+          return;
+        }
+        if (url) {
+          btn.classList.remove('btn-disabled');
+          btn.href = url;
+          btn.textContent = 'Continue to payment';
+          noLinkMsg.style.display = 'none';
+        } else {
+          btn.classList.add('btn-disabled');
+          btn.href = '#';
+          btn.textContent = 'Continue to payment';
+          noLinkMsg.style.display = 'block';
+        }
+      }
+
+      cards.forEach(function(card) {
+        card.addEventListener('click', function() {
+          selectedPlan = card.dataset.plan;
+          cards.forEach(function(c) { c.classList.remove('selected'); });
+          card.classList.add('selected');
+          updateBtn();
+        });
+        card.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            card.click();
+          }
+        });
+      });
+      checkbox.addEventListener('change', updateBtn);
+      updateBtn();
+    })();
+  </script>
 </body>
 </html>
