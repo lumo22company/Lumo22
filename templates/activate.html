@@ -49,31 +49,32 @@
   <section class="lumo-section activate-section">
     <div class="activate-intro">
       <h1>Activate your Digital Front Desk</h1>
-      <p>Choose your plan and go live — no setup calls required. All plans are email-only. <a href="/website-chat" style="color: var(--lum-gold);">Add Website Chat</a> (£49/month) or see bundles for email + website.</p>
+      <p>Choose your plan and go live — no setup calls required. Email only, or add the Chat Assistant. Prefer <a href="/website-chat" style="color: var(--lum-gold);">chat only</a>? See <a href="/plans" style="color: var(--lum-gold);">plans</a>.</p>
     </div>
 
     <div class="activate-plans" id="plan-cards">
-      <div class="activate-plan" data-plan="starter" role="button" tabindex="0">
+      <div class="activate-plan" data-plan="starter" data-addon-price="25" role="button" tabindex="0">
         <h3>Starter</h3>
         <p class="price">£79 <span style="font-size: 0.85rem; font-weight: 400; color: var(--lum-text-muted);">/month</span></p>
-        <p class="desc">Email receptionist only. Up to 100 enquiries/month, instant replies, 24/7. Add Website Chat available.</p>
+        <p class="desc">Email receptionist only. Up to 100 enquiries/month, instant replies, 24/7. Add Chat Assistant available.</p>
       </div>
-      <div class="activate-plan" data-plan="standard" role="button" tabindex="0">
+      <div class="activate-plan" data-plan="standard" data-addon-price="35" role="button" tabindex="0">
         <h3>Standard</h3>
         <p class="price">£149 <span style="font-size: 0.85rem; font-weight: 400; color: var(--lum-text-muted);">/month</span></p>
-        <p class="desc">Email receptionist — more capacity. Up to 300 enquiries/month, lead tracking, booking config, priority support. Add Website Chat available.</p>
+        <p class="desc">Email receptionist — more capacity. Up to 300 enquiries/month, lead tracking, booking config, priority support. Add Chat Assistant available.</p>
       </div>
-      <div class="activate-plan" data-plan="premium" role="button" tabindex="0">
+      <div class="activate-plan" data-plan="premium" data-addon-price="45" role="button" tabindex="0">
         <h3>Premium</h3>
         <p class="price">£299 <span style="font-size: 0.85rem; font-weight: 400; color: var(--lum-text-muted);">/month</span></p>
-        <p class="desc">Email receptionist — unlimited. Multi-channel (email + SMS), custom setup, dedicated support. Add Website Chat available.</p>
+        <p class="desc">Email receptionist — unlimited. Multi-channel (email + SMS), custom setup, dedicated support. Add Chat Assistant available.</p>
       </div>
     </div>
 
-    <div class="activate-tcs">
-      <label for="agree-tcs">
-        <input type="checkbox" id="agree-tcs" name="agree_tcs">
-        <span>I have read and agree to the <a href="/terms" target="_blank" rel="noopener">Terms &amp; Conditions</a>.</span>
+    <div class="activate-addon-wrap" id="activate-addon-wrap" style="display: none; max-width: 520px; margin: 0 auto 1.5rem; padding: 1rem; background: var(--lum-surface-elevated); border-radius: 8px; border: 1px solid var(--lum-border);">
+      <p style="font-size: 0.9rem; color: var(--lum-text-muted); margin-bottom: 0.75rem;">Chat works alongside email — one receptionist across your inbox and website. Instant, intelligent replies using your business details. Chat features scale with your selected email plan.</p>
+      <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; color: var(--lum-text); font-size: 0.95rem;">
+        <input type="checkbox" id="add-chat-toggle" style="width: 1.1rem; height: 1.1rem; accent-color: var(--lum-gold);">
+        <span id="add-chat-label">Add Chat Assistant (+£59) — 5% off bundle total</span>
       </label>
     </div>
 
@@ -81,7 +82,7 @@
       <a href="#" id="btn-activate" class="lumo-btn-primary btn-disabled">Continue to payment</a>
       <p class="no-link-msg" id="no-link-msg" style="display: none;">Payment for this plan isn’t available yet. Try another plan or check back soon.</p>
     </div>
-    <p class="activate-back"><a href="/digital-front-desk">← Back to Digital Front Desk</a> · <a href="/website-chat">Add Website Chat</a> · <a href="/">Lumo 22 home</a></p>
+    <p class="activate-back"><a href="/digital-front-desk">← Back to Digital Front Desk</a> · <a href="/website-chat">Chat Assistant</a> · <a href="/plans">Plans</a> · <a href="/">Lumo 22 home</a></p>
   </section>
 
   <footer class="lumo-footer">
@@ -101,6 +102,7 @@
     <div class="lumo-footer-bottom">© Lumo 22. All rights reserved.</div>
   </footer>
 
+  {% include '_terms_modal.html' %}
   <script>
     (function() {
       var planLinks = {
@@ -108,39 +110,67 @@
         standard: {{ (activation_link_standard or activation_link) | tojson | safe }},
         premium: {{ (activation_link_premium or activation_link) | tojson | safe }}
       };
+      var bundleLinks = {
+        starter: {{ (activation_link_starter_bundle or activation_link_starter or activation_link) | tojson | safe }},
+        standard: {{ (activation_link_standard_bundle or activation_link_standard or activation_link) | tojson | safe }},
+        premium: {{ (activation_link_premium_bundle or activation_link_premium or activation_link) | tojson | safe }}
+      };
+      var basePrices = { starter: 79, standard: 149, premium: 299 };
+      var chatPrice = 59;
+      var bundleDiscountPercent = 5;
+      function getBundleTotal(plan) { return Math.round((basePrices[plan] + chatPrice) * (1 - bundleDiscountPercent / 100)); }
       var cards = document.querySelectorAll('.activate-plan');
       var btn = document.getElementById('btn-activate');
       var noLinkMsg = document.getElementById('no-link-msg');
-      var checkbox = document.getElementById('agree-tcs');
+      var addonWrap = document.getElementById('activate-addon-wrap');
+      var addonToggle = document.getElementById('add-chat-toggle');
+      var addonLabel = document.getElementById('add-chat-label');
       var selectedPlan = null;
 
       function getPaymentUrl() {
         if (!selectedPlan) return null;
-        return planLinks[selectedPlan] || null;
+        var addon = addonToggle && addonToggle.checked;
+        return addon ? (bundleLinks[selectedPlan] || planLinks[selectedPlan]) : (planLinks[selectedPlan] || null);
+      }
+
+      function updateAddonLabel() {
+        if (!selectedPlan || !addonLabel) return;
+        addonLabel.textContent = 'Add Chat Assistant (+£' + chatPrice + ') — ' + bundleDiscountPercent + '% off';
       }
 
       function updateBtn() {
         var url = getPaymentUrl();
-        var agreed = checkbox.checked;
-        if (!agreed || !selectedPlan) {
+        if (!selectedPlan) {
           btn.classList.add('btn-disabled');
           btn.href = '#';
           btn.textContent = 'Continue to payment';
           noLinkMsg.style.display = 'none';
+          if (addonWrap) addonWrap.style.display = 'none';
           return;
         }
+        if (addonWrap) addonWrap.style.display = 'block';
+        updateAddonLabel();
         if (url) {
           btn.classList.remove('btn-disabled');
-          btn.href = url;
-          btn.textContent = 'Continue to payment';
+          btn.href = '#';
+          var addon = addonToggle && addonToggle.checked;
+          var total = addon ? getBundleTotal(selectedPlan) : basePrices[selectedPlan];
+          btn.textContent = addon ? 'Continue to payment — £' + total + '/month' : 'Continue to payment';
           noLinkMsg.style.display = 'none';
         } else {
           btn.classList.add('btn-disabled');
           btn.href = '#';
-          btn.textContent = 'Continue to payment';
           noLinkMsg.style.display = 'block';
         }
       }
+
+      btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        var url = getPaymentUrl();
+        if (url && window.openTermsModal) window.openTermsModal(url);
+      });
+
+      if (addonToggle) addonToggle.addEventListener('change', updateBtn);
 
       cards.forEach(function(card) {
         card.addEventListener('click', function() {
@@ -156,7 +186,15 @@
           }
         });
       });
-      checkbox.addEventListener('change', updateBtn);
+
+      var params = new URLSearchParams(window.location.search);
+      var planParam = params.get('plan');
+      var addChatParam = params.get('add_chat');
+      if (planParam && ['starter', 'standard', 'premium'].indexOf(planParam) !== -1) {
+        var card = document.querySelector('.activate-plan[data-plan="' + planParam + '"]');
+        if (card) { card.click(); }
+        if (addChatParam === '1' && addonToggle) { addonToggle.checked = true; updateBtn(); }
+      }
       updateBtn();
     })();
   </script>
