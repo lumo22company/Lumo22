@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Complete your setup | Lumo 22 Digital Front Desk</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
+  <style>
+    .setup-page { padding: 6rem 1.5rem 4rem; max-width: 520px; margin: 0 auto; }
+    .setup-page h1 { font-family: var(--font-display); font-size: 1.75rem; margin-bottom: 0.5rem; }
+    .setup-page .sub { color: var(--lum-text-muted); margin-bottom: 2rem; line-height: 1.6; }
+    .setup-page label { display: block; font-size: 0.9rem; font-weight: 500; margin-bottom: 0.5rem; color: var(--lum-text); }
+    .setup-page input { width: 100%; padding: 0.75rem 1rem; background: var(--lum-surface-elevated); border: 1px solid var(--lum-border); border-radius: 8px; color: var(--lum-text); font-size: 1rem; margin-bottom: 1.25rem; }
+    .setup-page input::placeholder { color: var(--lum-text-subtle); }
+    .setup-page .hint { font-size: 0.85rem; color: var(--lum-text-muted); margin-top: -0.75rem; margin-bottom: 1.25rem; }
+    .setup-page .btn-submit { display: inline-block; padding: 1rem 2rem; background: var(--lum-gold); color: var(--lum-black); text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1rem; border: none; cursor: pointer; font-family: var(--font-display); }
+    .setup-page .btn-submit:hover { opacity: 0.95; }
+    .setup-page .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+    .setup-page #success-msg { display: none; margin-top: 2rem; padding: 1.5rem; background: var(--lum-surface-elevated); border-radius: 8px; border: 1px solid var(--lum-border); }
+    .setup-page #success-msg.show { display: block; }
+    .setup-page #form-wrap.hide { display: none; }
+    .setup-page .back { margin-top: 2rem; }
+    .setup-page .back a { color: var(--lum-text-muted); text-decoration: none; font-size: 0.95rem; }
+    .setup-page .back a:hover { color: var(--lum-text); }
+  </style>
+</head>
+<body class="lumo-landing">
+  <nav class="lumo-nav lumo-nav-scrolled">
+    <a href="/" class="lumo-nav-logo">Lumo 22</a>
+    <div class="lumo-nav-links">
+      <a href="/captions">Captions</a>
+      <a href="/digital-front-desk">Front Desk</a>
+      <a href="/plans">Pricing</a>
+    </div>
+    <a href="/digital-front-desk" class="lumo-nav-cta">Front Desk</a>
+  </nav>
+
+  <main class="setup-page">
+    {% if product == 'chat' and setup_token %}
+    <h1>Complete your Website Chat setup</h1>
+    <p class="sub">Enter your details below. We'll give you an embed code to add to your website so the chat goes live.</p>
+
+    <div id="form-wrap">
+      <form id="front-desk-setup-form" action="#" method="post">
+        <input type="hidden" name="product" value="chat">
+        <input type="hidden" name="setup_token" value="{{ setup_token }}">
+
+        <label for="business_name">Business name</label>
+        <input type="text" id="business_name" name="business_name" placeholder="Your business or practice name" required>
+
+        <label for="enquiry_email">Where to send leads</label>
+        <input type="email" id="enquiry_email" name="enquiry_email" placeholder="enquiries@yourbusiness.com" required>
+        <p class="hint">We'll send you chat enquiries at this address.</p>
+
+        <label for="booking_link">Booking link <span style="font-weight:400;color:var(--lum-text-muted);">(optional)</span></label>
+        <input type="url" id="booking_link" name="booking_link" placeholder="https://calendly.com/you or leave blank">
+
+        <label for="business_description">About your business <span style="font-weight:400;color:var(--lum-text-muted);">(optional)</span></label>
+        <textarea id="business_description" name="business_description" rows="3" placeholder="e.g. We're a beauty salon in London. We offer facials, lashes, and brows. Open Tue–Sat." style="width:100%; padding:0.75rem 1rem; background:var(--lum-surface-elevated); border:1px solid var(--lum-border); border-radius:8px; color:var(--lum-text); font-size:1rem; margin-bottom:1.25rem; resize:vertical;"></textarea>
+        <p class="hint">This helps the chat answer visitors in your tone and with your services.</p>
+
+        <button type="submit" class="btn-submit" id="submit-btn">Get my embed code</button>
+      </form>
+      <p class="back"><a href="/website-chat">← Back to Website Chat</a></p>
+    </div>
+
+    <div id="success-msg">
+      <p style="margin:0 0 0.5rem; font-weight: 600;">You're all set.</p>
+      <p style="margin:0 0 1rem; color: var(--lum-text-muted); line-height: 1.6;">Add this code to your website (before the closing &lt;/body&gt; tag) to show the chat widget:</p>
+      <pre id="embed-code" style="background:var(--lum-surface-elevated); border:1px solid var(--lum-border); border-radius:8px; padding:1rem; overflow-x:auto; font-size:0.85rem; margin:0 0 1rem;"></pre>
+      <p style="margin:0; color: var(--lum-text-muted); font-size:0.9rem;">The chat widget will appear on your site. If you need help, reply to your setup email or contact hello@lumo22.com.</p>
+      <p class="back" style="margin-top: 1rem;"><a href="/website-chat">← Website Chat</a> · <a href="/">Home</a></p>
+    </div>
+    {% else %}
+    <h1>Complete your setup</h1>
+    <p class="sub">Tell us where to connect your Digital Front Desk. We'll use this to monitor enquiries and send booking links.</p>
+
+    <div id="form-wrap">
+      <form id="front-desk-setup-form" action="#" method="post">
+        <label for="customer_email">Your email</label>
+        <input type="email" id="customer_email" name="customer_email" placeholder="you@yourbusiness.com" required>
+        <p class="hint">The email we'll use to contact you about your account.</p>
+
+        <label for="business_name">Business name</label>
+        <input type="text" id="business_name" name="business_name" placeholder="Your business or practice name" required>
+
+        <label for="enquiry_email">Enquiry email to monitor</label>
+        <input type="email" id="enquiry_email" name="enquiry_email" placeholder="enquiries@yourbusiness.com" required>
+        <p class="hint">The inbox we'll watch for new enquiries and reply from (e.g. hello@, enquiries@, or your main contact email).</p>
+
+        <label for="booking_link">Booking link <span style="font-weight:400;color:var(--lum-text-muted);">(Standard & Premium)</span></label>
+        <input type="url" id="booking_link" name="booking_link" placeholder="https://calendly.com/you or https://fresha.com/...">
+        <p class="hint">Your Calendly, Fresha, or other booking page. Leave blank if you're on Starter or don't use one yet.</p>
+
+        <button type="submit" class="btn-submit" id="submit-btn">Submit setup</button>
+      </form>
+      <p class="back"><a href="/digital-front-desk">← Back to Digital Front Desk</a></p>
+    </div>
+
+    <div id="success-msg">
+      <p style="margin:0 0 0.5rem; font-weight: 600;">We've received your setup.</p>
+      <p style="margin:0; color: var(--lum-text-muted); line-height: 1.6;">We'll connect your enquiry email and booking link and have you live within 24 hours. If we need anything else we'll email you.</p>
+      <p class="back" style="margin-top: 1rem;"><a href="/digital-front-desk">← Back to Digital Front Desk</a> · <a href="/">Home</a></p>
+    </div>
+    {% endif %}
+  </main>
+
+  <script>
+    (function() {
+      var form = document.getElementById('front-desk-setup-form');
+      if (!form) return;
+      var isChat = !!form.querySelector('input[name="product"][value="chat"]');
+      var setupToken = form.querySelector('input[name="setup_token"]');
+      form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        var btn = document.getElementById('submit-btn');
+        btn.disabled = true;
+        btn.textContent = isChat ? 'Getting your code…' : 'Submitting…';
+        var payload = {};
+        if (isChat && setupToken) {
+          payload.product = 'chat';
+          payload.setup_token = setupToken.value.trim();
+          payload.business_name = (form.business_name && form.business_name.value || '').trim();
+          payload.enquiry_email = (form.enquiry_email && form.enquiry_email.value || '').trim();
+          payload.booking_link = (form.booking_link && form.booking_link.value || '').trim() || null;
+          payload.business_description = (form.business_description && form.business_description.value || '').trim() || null;
+        } else {
+          payload.customer_email = (form.customer_email && form.customer_email.value || '').trim();
+          payload.business_name = (form.business_name && form.business_name.value || '').trim();
+          payload.enquiry_email = (form.enquiry_email && form.enquiry_email.value || '').trim();
+          payload.booking_link = (form.booking_link && form.booking_link.value || '').trim() || null;
+        }
+        fetch('/api/front-desk-setup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (data.ok) {
+              document.getElementById('form-wrap').classList.add('hide');
+              var successEl = document.getElementById('success-msg');
+              successEl.classList.add('show');
+              if (isChat && data.embed_snippet) {
+                var pre = document.getElementById('embed-code');
+                if (pre) pre.textContent = data.embed_snippet;
+              }
+            } else {
+              btn.disabled = false;
+              btn.textContent = isChat ? 'Get my embed code' : 'Submit setup';
+              alert(data.error || 'Something went wrong. Please try again or email hello@lumo22.com.');
+            }
+          })
+          .catch(function() {
+            btn.disabled = false;
+            btn.textContent = isChat ? 'Get my embed code' : 'Submit setup';
+            alert('Network error. Please try again or email hello@lumo22.com.');
+          });
+      });
+    })();
+  </script>
+</body>
+</html>

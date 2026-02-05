@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thanks for your order | Website Chat Widget | Lumo 22</title>
+  <meta name="description" content="Thanks for signing up for the Website Chat Widget. Check your email for next steps.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
+  <style>
+    .success-section { padding-top: 8rem; padding-bottom: 4rem; min-height: 60vh; display: flex; align-items: center; justify-content: center; }
+    .success-card { max-width: 480px; margin: 0 auto; padding: 2.5rem; background: var(--lum-card-bg, rgba(255,255,255,0.03)); border-radius: 16px; border: 1px solid var(--lum-border); text-align: center; }
+    .success-card h1 { font-family: var(--font-display); font-size: 1.75rem; margin-bottom: 1rem; }
+    .success-card p { color: var(--lum-text-muted); line-height: 1.6; margin-bottom: 1.5rem; }
+    .success-card .back-links { margin-top: 1.5rem; }
+    .success-card .back-links a { color: var(--lum-gold); text-decoration: none; font-size: 0.95rem; }
+    .success-card .back-links a:hover { text-decoration: underline; }
+    .success-card .back-links span { color: var(--lum-text-subtle); margin: 0 0.5rem; }
+  </style>
+</head>
+<body class="lumo-landing">
+  <nav class="lumo-nav lumo-nav-scrolled">
+    <a href="/" class="lumo-nav-logo">Lumo 22</a>
+    <div class="lumo-nav-links">
+      <a href="/captions">Captions</a>
+      <a href="/digital-front-desk">Front Desk</a>
+      <a href="/plans">Pricing</a>
+    </div>
+    <a href="/website-chat" class="lumo-nav-cta">Website Chat</a>
+  </nav>
+
+  <section class="lumo-section success-section">
+    <div class="success-card">
+      <h1>Thanks for your order</h1>
+      <p>You're signed up for the Website Chat Widget. We've sent you an email with a link to complete your setup — it takes about 2 minutes.</p>
+      <p style="font-size: 0.95rem;">Check your inbox (and spam folder) for a message from us. Click the link to enter your business details and get your embed code. Once you add it to your site, your chat will go live.</p>
+      <div class="back-links">
+        <a href="/website-chat">Website Chat</a>
+        <span>·</span>
+        <a href="/">Home</a>
+      </div>
+    </div>
+  </section>
+
+  <footer class="lumo-footer">
+    <div class="lumo-footer-inner">
+      <div>
+        <a href="/" class="lumo-footer-brand">Lumo 22</a>
+        <p class="lumo-footer-tagline">Lighting the way to better business</p>
+      </div>
+      <div class="lumo-footer-links">
+        <a href="/captions">Captions</a>
+        <a href="/digital-front-desk">Front Desk</a>
+        <a href="/plans">Pricing</a>
+        <a href="/terms">Terms</a>
+        <a href="mailto:hello@lumo22.com">Contact</a>
+      </div>
+    </div>
+    <div class="lumo-footer-bottom">© Lumo 22. All rights reserved.</div>
+  </footer>
+</body>
+</html>

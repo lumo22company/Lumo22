@@ -49,6 +49,140 @@ def init_services():
     except Exception as e:
         print(f"Warning: CRM service not available: {e}")
 
+def _front_desk_base_url():
+    """Base URL for links in emails (sanitized)."""
+    import re
+    base = (Config.BASE_URL or "").strip().rstrip("/")
+    base = re.sub(r"[\x00-\x1f\x7f]", "", base) if base else "https://lumo-22-production.up.railway.app"
+    if base and not base.startswith("http"):
+        base = "https://" + base
+    return base
+
+
+@api_bp.route('/front-desk-setup', methods=['POST'])
+def front_desk_setup():
+    """
+    Receive Digital Front Desk setup form, or chat-only setup completion.
+    - Full Front Desk: creates new setup, emails you + customer.
+    - Chat-only (product=chat, setup_token=t): updates pending row, returns embed code.
+    """
+    try:
+        data = request.get_json() or {}
+        product = (data.get('product') or '').strip().lower()
+        setup_token = (data.get('setup_token') or '').strip()
+
+        # Chat-only: complete pending setup and return embed code
+        if product == 'chat' and setup_token:
+            business_name = (data.get('business_name') or '').strip()
+            enquiry_email = (data.get('enquiry_email') or '').strip()
+            booking_link = (data.get('booking_link') or '').strip() or None
+            business_description = (data.get('business_description') or '').strip() or None
+            if not business_name or not enquiry_email:
+                return jsonify({'ok': False, 'error': 'Please fill in business name and enquiry email.'}), 400
+            if '@' not in enquiry_email:
+                return jsonify({'ok': False, 'error': 'Please enter a valid enquiry email.'}), 400
+            try:
+                from services.front_desk_setup_service import FrontDeskSetupService
+                svc = FrontDeskSetupService()
+                setup = svc.complete_chat_only_setup(
+                    done_token=setup_token,
+                    business_name=business_name,
+                    enquiry_email=enquiry_email,
+                    booking_link=booking_link,
+                    business_description=business_description,
+                )
+            except Exception as db_err:
+                print(f"[front-desk-setup] Chat complete failed: {db_err}")
+                return jsonify({'ok': False, 'error': 'Invalid or expired setup link. Please use the link from your email.'}), 400
+            if not setup:
+                return jsonify({'ok': False, 'error': 'Invalid or expired setup link. Please use the link from your email.'}), 400
+            base = _front_desk_base_url()
+            widget_key = setup.get('chat_widget_key') or ''
+            # Embed snippet: script loads widget; key identifies the setup. TODO: actual embed.js URL when widget exists.
+            embed_snippet = f'<script src="{base}/static/js/chat-widget.js" data-key="{widget_key}" async></script>'
+            return jsonify({
+                'ok': True,
+                'product': 'chat',
+                'chat_widget_key': widget_key,
+                'embed_snippet': embed_snippet,
+            }), 200
+
+        # Full Front Desk: create new setup
+        customer_email = (data.get('customer_email') or '').strip()
+        business_name = (data.get('business_name') or '').strip()
+        enquiry_email = (data.get('enquiry_email') or '').strip()
+        booking_link = (data.get('booking_link') or '').strip() or None
+        if not customer_email or not business_name or not enquiry_email:
+            return jsonify({'ok': False, 'error': 'Please fill in your email, business name, and enquiry email.'}), 400
+        if '@' not in customer_email or '@' not in enquiry_email:
+            return jsonify({'ok': False, 'error': 'Please enter valid email addresses.'}), 400
+
+        try:
+            from services.front_desk_setup_service import FrontDeskSetupService
+            svc = FrontDeskSetupService()
+            setup = svc.create(
+                customer_email=customer_email,
+                business_name=business_name,
+                enquiry_email=enquiry_email,
+                booking_link=booking_link,
+            )
+            done_token = setup.get("done_token")
+            forwarding_email = setup.get("forwarding_email") or ""
+            base = _front_desk_base_url()
+            mark_connected_url = f"{base}/front-desk-setup-done?t={done_token}" if done_token else None
+        except Exception as db_err:
+            print(f"[front-desk-setup] DB save failed: {db_err}")
+            mark_connected_url = None
+            forwarding_email = ""
+
+        to_business = Config.FROM_EMAIL or 'hello@lumo22.com'
+        subject_business = f"Digital Front Desk setup: {business_name}"
+        body_business = f"""New Digital Front Desk setup submitted:
+
+Customer email: {customer_email}
+Business name: {business_name}
+Enquiry email to monitor: {enquiry_email}
+Booking link: {booking_link or '(none)'}
+Forwarding address (for auto-reply): {forwarding_email or '(not set)'}
+
+Forward enquiries to the forwarding address above and we'll auto-reply. When done, click below to mark as connected.
+"""
+        if mark_connected_url:
+            body_business += f"""
+
+Mark as connected (one click):
+{mark_connected_url}
+"""
+
+        notif = NotificationService()
+        ok1 = notif.send_email(to_business, subject_business, body_business)
+        if not ok1:
+            return jsonify({'ok': False, 'error': 'Could not send setup. Please try again or email hello@lumo22.com.'}), 500
+
+        # Confirmation to customer: include their unique forwarding address so they can forward enquiries for auto-reply
+        subject_customer = "Your Digital Front Desk setup — next step"
+        body_customer = f"""Hi,
+
+Thanks for submitting your setup for {business_name}.
+
+Your unique forwarding address for auto-replies is:
+
+  {forwarding_email or "(we'll email it to you separately)"}
+
+Forward any enquiry emails to this address and we'll send a professional reply on your behalf (you can set up a rule in your email client to forward from {enquiry_email} to the address above). We'll be in touch if we need anything else.
+
+Lumo 22
+"""
+        notif.send_email(customer_email, subject_customer, body_customer)
+
+        return jsonify({'ok': True}), 200
+    except Exception as e:
+        print(f"[front-desk-setup] Error: {e}")
+        return jsonify({'ok': False, 'error': 'Something went wrong. Please try again.'}), 500
+
+
+
+
 @api_bp.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""

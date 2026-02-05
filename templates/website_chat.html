@@ -1,0 +1,85 @@
+{# Standalone product: Website Chat Widget. For businesses that want chat only, no full inbox automation. #}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Website Chat Widget | Lumo 22</title>
+  <meta name="description" content="Add a chat widget to your website. Visitors get instant answers, and you capture enquiries — same receptionist intelligence, no full inbox setup.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
+  <style>
+    .lumo-chat-single-card { max-width: 480px; margin: 2rem auto; padding: 2rem; background: var(--lum-surface-elevated); border: 1px solid var(--lum-border); border-radius: 16px; }
+    .lumo-chat-cta-wrap { text-align: center; margin-top: 2rem; }
+    .lumo-chat-note { max-width: 560px; margin: 2rem auto 0; padding: 1rem 1.25rem; background: var(--lum-surface-elevated); border-radius: 8px; border: 1px solid var(--lum-border); font-size: 0.9rem; color: var(--lum-text-muted); line-height: 1.5; }
+  </style>
+</head>
+<body class="lumo-landing">
+  <nav class="lumo-nav lumo-nav-scrolled">
+    <a href="/" class="lumo-nav-logo">Lumo 22</a>
+    <div class="lumo-nav-links">
+      <a href="/captions">Captions</a>
+      <a href="/digital-front-desk">Front Desk</a>
+      <a href="/plans">Pricing</a>
+    </div>
+    <a href="/plans" class="lumo-nav-cta">View plans</a>
+  </nav>
+
+  <section class="lumo-section" style="padding-top: 8rem;">
+    <div class="lumo-section-header">
+      <p class="lumo-section-label">Website Chat Widget</p>
+      <h1 class="lumo-section-title">Chat on your site. Same receptionist, different entry point.</h1>
+      <p class="lumo-section-desc">For businesses that want instant website chat only — no full inbox setup. Visitors get replies straight away; you capture enquiries and send them to book or get in touch.</p>
+    </div>
+
+    <ul class="lumo-offer-includes" style="max-width: 560px; margin: 2rem auto;">
+      <li>Replies instantly to visitors on your website</li>
+      <li>Captures enquiries and qualifies leads</li>
+      <li>Shares your booking link or contact details when it makes sense</li>
+      <li>Same tone and intelligence as the full Digital Front Desk — website or inbox, they talk to the same system</li>
+    </ul>
+
+    <div class="lumo-chat-single-card">
+      <h3 style="margin-bottom: 0.5rem;">Website Chat</h3>
+      <p style="color: var(--lum-text-muted); font-size: 0.95rem; margin-bottom: 1rem;">Chat widget only. No onboarding fee.</p>
+      <div class="lumo-offer-price" style="margin: 1rem 0;">£49 <span>/month</span></div>
+      <p style="color: var(--lum-text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">Need inbox handling too? <a href="/digital-front-desk" style="color: var(--lum-gold);">See the full Digital Front Desk</a> — website and email in one.</p>
+      {% if chat_payment_link %}
+      <a href="{{ chat_payment_link }}" class="lumo-btn-primary" style="display: block; text-align: center;">Add chat to your site</a>
+      {% else %}
+      <a href="/plans" class="lumo-btn-primary" style="display: block; text-align: center;">Add chat to your site</a>
+      {% endif %}
+    </div>
+
+    <p class="lumo-chat-note">Designed to support teams, not replace people. Your receptionist or you stay in control; the widget handles the first response so you never miss an enquiry.</p>
+  </section>
+
+  <section class="lumo-section" style="text-align: center; padding: 3rem 2rem;">
+    <p style="color: var(--lum-text-muted); margin-bottom: 1rem;">Want website and inbox together?</p>
+    <a href="/digital-front-desk" class="lumo-btn-secondary">Complete Digital Front Desk — website + inbox + bookings</a>
+  </section>
+
+  <footer class="lumo-footer">
+    <div class="lumo-footer-inner">
+      <div>
+        <a href="/" class="lumo-footer-brand">Lumo 22</a>
+        <p class="lumo-footer-tagline">Lighting the way to better business</p>
+      </div>
+      <div class="lumo-footer-links">
+        <a href="/captions">Captions</a>
+        <a href="/digital-front-desk">Front Desk</a>
+        <a href="/plans">Pricing</a>
+        <a href="/terms">Terms</a>
+        <a href="mailto:hello@lumo22.com">Contact</a>
+      </div>
+    </div>
+    <div class="lumo-footer-bottom">© Lumo 22. All rights reserved.</div>
+  </footer>
+</body>
+</html>
+<!-- TODO: Chat widget embed instructions (copy-paste snippet, data-key). -->
+<!-- TODO: API key / widget key management for standalone chat customers. -->
+<!-- TODO: Per-conversation or per-seat limits for £49 tier. -->
+<!-- TODO: Annual billing toggle (e.g. pay yearly, save X%). -->

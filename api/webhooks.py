@@ -16,6 +16,9 @@ CAPTIONS_AMOUNT_PENCE = 9700  # £97
 FRONT_DESK_AMOUNTS_PENCE = (7900, 14900, 29900)  # Starter, Standard, Premium
 FRONT_DESK_PLAN_NAMES = {7900: "Starter", 14900: "Standard", 29900: "Premium"}
 
+# --- Stripe (Website Chat Widget standalone) £49/month ---
+CHAT_AMOUNT_PENCE = 4900
+
 
 def _sanitize_base_url(raw: str) -> str:
     """Remove non-printable ASCII (e.g. newline from env) so URLs are valid."""
@@ -180,52 +183,185 @@ Lumo 22
         print(f"[Stripe webhook] intake-link email sent to {customer_email}")
 
 
+def _get_session_amount_total(session):
+    """Get amount_total from session; for subscriptions it may be in line_items or require a fetch."""
+    amount_raw = session.get("amount_total")
+    if amount_raw is not None:
+        try:
+            return int(amount_raw)
+        except (TypeError, ValueError):
+            pass
+    # Subscription checkout sometimes has amount in line_items (may not be in default webhook payload)
+    items = (session.get("line_items") or {}).get("data") if isinstance(session.get("line_items"), dict) else None
+    if items and len(items) > 0:
+        first = items[0]
+        amt = first.get("amount_total") if isinstance(first, dict) else getattr(first, "amount_total", None)
+        if amt is not None:
+            try:
+                return int(amt)
+            except (TypeError, ValueError):
+                pass
+    # Fetch session with line_items if amount still missing (e.g. subscription, Stripe didn't expand)
+    try:
+        import stripe
+        sid = session.get("id") if hasattr(session, "get") else getattr(session, "id", None)
+        if Config.STRIPE_SECRET_KEY and sid:
+            stripe.api_key = Config.STRIPE_SECRET_KEY
+            full = stripe.checkout.Session.retrieve(sid, expand=["line_items"])
+            amount_raw = full.get("amount_total")
+            if amount_raw is not None:
+                return int(amount_raw)
+            items = (full.get("line_items") or {}).get("data") if isinstance(full.get("line_items"), dict) else None
+            if items and len(items) > 0:
+                amt = items[0].get("amount_total") if isinstance(items[0], dict) else getattr(items[0], "amount_total", None)
+                if amt is not None:
+                    return int(amt)
+    except Exception as e:
+        print(f"[Stripe webhook] Could not retrieve session for amount_total: {e}")
+    return None
+
+
 def _is_front_desk_payment(session):
     """True if this checkout is for Digital Front Desk (Starter £79, Standard £149, Premium £299 monthly)."""
     if _is_captions_payment(session):
         return False
-    amount_raw = session.get("amount_total")
-    try:
-        amount = int(amount_raw) if amount_raw is not None else 0
-    except (TypeError, ValueError):
+    if _is_chat_payment(session):
+        return False
+    amount = _get_session_amount_total(session)
+    if amount is None:
+        print("[Stripe webhook] Front Desk: amount_total missing in session; not matching.")
         return False
     currency = (session.get("currency") or "gbp").lower()
     if currency != "gbp":
+        print(f"[Stripe webhook] Front Desk: currency={currency} not GBP; not matching.")
         return False
-    return amount in FRONT_DESK_AMOUNTS_PENCE
+    if amount not in FRONT_DESK_AMOUNTS_PENCE:
+        print(f"[Stripe webhook] Front Desk: amount={amount} not in {FRONT_DESK_AMOUNTS_PENCE}; not matching.")
+        return False
+    return True
+
+
+def _is_chat_payment(session):
+    """True if this checkout is for Website Chat Widget standalone (£49/month)."""
+    meta = (session.get("metadata") or {}) if isinstance(session, dict) else {}
+    if meta.get("product") == "chat":
+        print(f"[Stripe webhook] Chat: matched by metadata product=chat")
+        return True
+    amount = _get_session_amount_total(session)
+    if amount is None:
+        return False
+    currency = (session.get("currency") or "gbp").lower()
+    if currency != "gbp":
+        if amount == CHAT_AMOUNT_PENCE:
+            print(f"[Stripe webhook] Chat: amount=4900 but currency={currency!r} not GBP; not matching.")
+        return False
+    if amount == CHAT_AMOUNT_PENCE:
+        print(f"[Stripe webhook] Chat: matched by amount=4900 GBP")
+        return True
+    return False
 
 
 def _handle_front_desk_payment(session):
-    """Send welcome email for Digital Front Desk activation."""
+    """Send setup email for Digital Front Desk — takes customer through setup straight away."""
     from services.notifications import NotificationService
 
     customer_email = _get_customer_email_from_session(session)
     if not customer_email:
-        print("[Stripe webhook] Front Desk: no customer email; welcome email not sent.")
+        print("[Stripe webhook] Front Desk: no customer email in session; setup email not sent. Check Stripe webhook payload or expand customer_details.")
         return
-    amount_raw = session.get("amount_total")
-    amount = int(amount_raw) if amount_raw is not None else 0
+    amount = _get_session_amount_total(session) or 0
     plan_name = FRONT_DESK_PLAN_NAMES.get(amount, "Digital Front Desk")
 
-    subject = "Welcome to Lumo 22 Digital Front Desk"
+    base = (Config.BASE_URL or "").strip().rstrip("/")
+    base = re.sub(r"[\x00-\x1f\x7f]", "", base) if base else "https://lumo-22-production.up.railway.app"
+    if base and not base.startswith("http"):
+        base = "https://" + base
+    setup_url = f"{base}/front-desk-setup"
+
+    subject = "Your Digital Front Desk — complete your setup"
     body = f"""Hi,
 
-Thanks for activating your Digital Front Desk — you're on the {plan_name} plan.
+You're on the {plan_name} plan. Complete your setup in 3 steps so we can get you live:
 
-We've received your payment and will be in touch within 24 hours with your setup details. We'll connect your enquiry channel and get you live.
+Step 1 — Open your setup form
+Click the link below (takes about 2 minutes):
 
-If you have any questions in the meantime, just reply to this email.
+{setup_url}
+
+Step 2 — Enter your details
+• Your email (so we can contact you)
+• Business name
+• The email address you want us to monitor for enquiries (e.g. hello@ or enquiries@)
+• Your booking link (Calendly, Fresha, etc.) — if you're on Standard or Premium, or leave blank for now
+
+Step 3 — Submit
+We'll receive your details and connect everything. You'll be live within 24 hours.
+
+If anything's unclear, just reply to this email.
 
 Lumo 22
 """
 
-    print(f"[Stripe webhook] Sending Front Desk welcome email to {customer_email}")
+    print(f"[Stripe webhook] Sending Front Desk setup email to {customer_email}")
     notif = NotificationService()
     ok = notif.send_email(customer_email, subject, body)
     if ok:
-        print(f"[Stripe webhook] Front Desk welcome email sent to {customer_email}")
+        print(f"[Stripe webhook] Front Desk setup email sent to {customer_email}")
     else:
-        print(f"[Stripe webhook] Front Desk welcome email FAILED to send to {customer_email}")
+        print(f"[Stripe webhook] Front Desk setup email FAILED to send to {customer_email}")
+
+
+def _handle_chat_payment(session):
+    """Create pending chat-only setup and send email with link to complete setup (get embed code)."""
+    from services.notifications import NotificationService
+    from services.front_desk_setup_service import FrontDeskSetupService
+
+    customer_email = _get_customer_email_from_session(session)
+    if not customer_email:
+        print("[Stripe webhook] Chat: no customer email in session; setup email not sent.")
+        return
+    print(f"[Stripe webhook] Chat: handling payment for {customer_email}")
+    svc = FrontDeskSetupService()
+    try:
+        setup = svc.create_chat_only_pending(customer_email)
+    except Exception as e:
+        print(f"[Stripe webhook] Chat: create_chat_only_pending failed: {e}")
+        raise
+    done_token = setup.get("done_token")
+    if not done_token:
+        print("[Stripe webhook] Chat: no done_token after create.")
+        return
+    base = (Config.BASE_URL or "").strip().rstrip("/")
+    base = re.sub(r"[\x00-\x1f\x7f]", "", base) if base else "https://lumo-22-production.up.railway.app"
+    if base and not base.startswith("http"):
+        base = "https://" + base
+    setup_url = f"{base}/front-desk-setup?product=chat&t={done_token}"
+
+    subject = "Your Website Chat Widget — complete your setup"
+    body = f"""Hi,
+
+Thanks for signing up for the Website Chat Widget. Complete your setup in 2 minutes to get your embed code:
+
+{setup_url}
+
+You'll enter:
+• Your business name
+• Where to send leads (email address)
+• Optional: booking link, short description of your business
+
+Once you submit, we'll show your embed code — add it to your website and your chat will go live.
+
+If anything's unclear, just reply to this email.
+
+Lumo 22
+"""
+    print(f"[Stripe webhook] Sending Chat setup email to {customer_email}")
+    notif = NotificationService()
+    ok = notif.send_email(customer_email, subject, body)
+    if ok:
+        print(f"[Stripe webhook] Chat setup email sent to {customer_email}")
+    else:
+        print(f"[Stripe webhook] Chat setup email FAILED to send to {customer_email}")
 
 
 @webhook_bp.route('/stripe', methods=['GET', 'POST'])
@@ -265,7 +401,9 @@ def stripe_webhook():
             amount = session.get("amount_total")
             meta = session.get("metadata") or {}
             is_captions = _is_captions_payment(session)
-            print(f"[Stripe webhook] checkout.session.completed amount_total={amount} metadata={meta} _is_captions_payment={is_captions}")
+            is_chat = _is_chat_payment(session)
+            is_front_desk = _is_front_desk_payment(session)
+            print(f"[Stripe webhook] checkout.session.completed amount_total={amount} metadata={meta} is_captions={is_captions} is_chat={is_chat} is_front_desk={is_front_desk}")
             if is_captions:
                 try:
                     _handle_captions_payment(session)
@@ -277,19 +415,28 @@ def stripe_webhook():
                     detail = (str(e) or repr(e))[:400]
                     detail = "".join(c for c in detail if ord(c) < 128)
                     return jsonify({"error": "Handler failed", "detail": detail or "Unknown error"}), 500
+            elif is_chat:
+                try:
+                    _handle_chat_payment(session)
+                except Exception as e:
+                    import traceback
+                    print(f"[Stripe webhook] Chat handler error: {e}")
+                    traceback.print_exc()
+                    detail = (str(e) or repr(e))[:400]
+                    detail = "".join(c for c in detail if ord(c) < 128)
+                    return jsonify({"error": "Handler failed", "detail": detail or "Unknown error"}), 500
+            elif is_front_desk:
+                try:
+                    _handle_front_desk_payment(session)
+                except Exception as e:
+                    import traceback
+                    print(f"[Stripe webhook] Front Desk welcome email error: {e}")
+                    traceback.print_exc()
+                    detail = (str(e) or repr(e))[:400]
+                    detail = "".join(c for c in detail if ord(c) < 128)
+                    return jsonify({"error": "Handler failed", "detail": detail or "Unknown error"}), 500
             else:
-                if _is_front_desk_payment(session):
-                    try:
-                        _handle_front_desk_payment(session)
-                    except Exception as e:
-                        import traceback
-                        print(f"[Stripe webhook] Front Desk welcome email error: {e}")
-                        traceback.print_exc()
-                        detail = (str(e) or repr(e))[:400]
-                        detail = "".join(c for c in detail if ord(c) < 128)
-                        return jsonify({"error": "Handler failed", "detail": detail or "Unknown error"}), 500
-                else:
-                    print("[Stripe webhook] Not a captions or Front Desk payment; no action.")
+                print("[Stripe webhook] Not captions, chat, or Front Desk payment; no action.")
 
         return jsonify({"received": True}), 200
     except Exception as e:
@@ -395,6 +542,33 @@ def zapier_webhook():
     except Exception as e:
         print(f"Error processing Zapier webhook: {e}")
         return jsonify({'error': str(e)}), 500
+
+@webhook_bp.route('/sendgrid-inbound', methods=['POST'])
+def sendgrid_inbound():
+    """
+    SendGrid Inbound Parse: receives parsed inbound email as multipart/form-data.
+    Look up front_desk_setups by recipient (forwarding_email), generate reply with OpenAI, send via SendGrid.
+    """
+    try:
+        # SendGrid sends: to, from, subject, text, html, envelope, etc.
+        to_addr = request.form.get("to", "").strip()
+        from_addr = request.form.get("from", "").strip()
+        subject = request.form.get("subject", "").strip()
+        text = request.form.get("text", "").strip()
+        html = request.form.get("html", "").strip()
+        if not to_addr:
+            print("[SendGrid inbound] Missing 'to'")
+            return "", 400
+        from services.inbound_reply_service import process_inbound
+        ok = process_inbound(to_addr=to_addr, from_addr=from_addr, subject=subject, text=text, html=html)
+        # Inbound Parse expects 200 to stop retries
+        return "", 200
+    except Exception as e:
+        print(f"[SendGrid inbound] Error: {e}")
+        import traceback
+        traceback.print_exc()
+        return "", 500
+
 
 @webhook_bp.route('/generic', methods=['POST'])
 def generic_webhook():

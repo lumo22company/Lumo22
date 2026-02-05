@@ -64,6 +64,8 @@ class Config:
     ACTIVATION_LINK_STARTER = os.getenv('ACTIVATION_LINK_STARTER', '').strip() or None
     ACTIVATION_LINK_STANDARD = os.getenv('ACTIVATION_LINK_STANDARD', '').strip() or None
     ACTIVATION_LINK_PREMIUM = os.getenv('ACTIVATION_LINK_PREMIUM', '').strip() or None
+    # Website Chat Widget standalone product (£49/month). Stripe Payment Link.
+    CHAT_PAYMENT_LINK = os.getenv('CHAT_PAYMENT_LINK', '').strip() or None
 
     # 30 Days Captions product (Stripe payment link for one-time purchase)
     CAPTIONS_PAYMENT_LINK = os.getenv('CAPTIONS_PAYMENT_LINK', '').strip() or None
@@ -77,6 +79,9 @@ class Config:
     BASE_URL = re.sub(r'[\x00-\x1f\x7f]', '', _base) if _base else ''
     # Stripe Price ID for 30 Days Captions (price_xxx) — required for Checkout Session; get from Stripe → Products → your product
     STRIPE_CAPTIONS_PRICE_ID = os.getenv('STRIPE_CAPTIONS_PRICE_ID', '').strip() or None
+
+    # Digital Front Desk inbound (auto-reply). Domain for unique addresses, e.g. inbound.lumo22.com. MX must point to SendGrid.
+    INBOUND_EMAIL_DOMAIN = (os.getenv('INBOUND_EMAIL_DOMAIN', '').strip() or 'inbound.lumo22.com').lower()
 
     # Qualification Settings
     MIN_QUALIFICATION_SCORE = int(os.getenv('MIN_QUALIFICATION_SCORE', '60'))

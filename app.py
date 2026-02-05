@@ -60,12 +60,20 @@ def terms_page():
 @app.route('/plans')
 def plans_page():
     """Plans / pricing page"""
-    return render_template('plans.html')
+    chat_payment_link = getattr(Config, 'CHAT_PAYMENT_LINK', None)
+    return render_template('plans.html', chat_payment_link=chat_payment_link)
 
 @app.route('/digital-front-desk')
 def digital_front_desk_page():
     """Digital Front Desk product page: what it is + pricing, Activate now CTAs"""
     return render_template('digital_front_desk.html')
+
+
+@app.route('/website-chat')
+def website_chat_page():
+    """Standalone Website Chat Widget product page — chat only, no full inbox. £49/month."""
+    chat_payment_link = getattr(Config, 'CHAT_PAYMENT_LINK', None)
+    return render_template('website_chat.html', chat_payment_link=chat_payment_link)
 
 @app.route('/signup')
 def signup_page():
@@ -111,8 +119,41 @@ def activate_page():
 
 @app.route('/activate-success')
 def activate_success_page():
-    """Thank-you page after Digital Front Desk payment. Set this URL as the success URL in each Stripe Payment Link."""
+    """Thank-you page after Digital Front Desk payment. Set this URL as the success URL for Front Desk Stripe Payment Links only."""
     return render_template('activate_success.html')
+
+
+@app.route('/website-chat-success')
+def website_chat_success_page():
+    """Thank-you page after Website Chat Widget payment. Set this URL as the success URL for the chat product Payment Link only."""
+    return render_template('website_chat_success.html')
+
+
+@app.route('/front-desk-setup')
+def front_desk_setup_page():
+    """Setup form for Digital Front Desk or chat-only (product=chat&t=TOKEN from email)."""
+    product = request.args.get('product', '').strip().lower()
+    setup_token = request.args.get('t', '').strip()
+    return render_template('front_desk_setup.html', product=product, setup_token=setup_token)
+
+
+@app.route('/front-desk-setup-done')
+def front_desk_setup_done_page():
+    """One-click 'Mark as connected' — link from the setup email to you. Marks the customer's setup connected and shows confirmation."""
+    from services.front_desk_setup_service import FrontDeskSetupService
+    done_token = request.args.get("t", "").strip()
+    if not done_token:
+        return render_template('front_desk_setup_done.html', error='Missing link'), 400
+    try:
+        svc = FrontDeskSetupService()
+        setup = svc.get_by_done_token(done_token)
+        if not setup:
+            return render_template('front_desk_setup_done.html', error='Invalid or expired link'), 404
+        if setup.get("status") != "connected":
+            svc.mark_connected(setup["id"])
+        return render_template('front_desk_setup_done.html')
+    except Exception as e:
+        return render_template('front_desk_setup_done.html', error=str(e)), 500
 
 
 @app.errorhandler(404)
