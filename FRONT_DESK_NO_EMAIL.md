@@ -36,7 +36,7 @@ Keep the **success URL** for your **Digital Front Desk** Payment Links (Starter,
 
 - `https://your-domain.com/activate-success`
 
-Do **not** use `/website-chat-success` for Front Desk — that’s only for the **Website Chat Widget** (£49) product.
+Do **not** use `/website-chat-success` for Front Desk — that’s only for the **Website Chat Widget** (£59) product.
 
 ---
 

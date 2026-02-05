@@ -1,7 +1,7 @@
 """
 Digital Front Desk setup: store form submissions and support one-click 'Mark as connected'.
 Used by /api/front-desk-setup and /api/front-desk-setup-done.
-Supports product_type: 'front_desk' (full) or 'chat_only' (Website Chat Widget £49).
+Supports product_type: 'front_desk' (full) or 'chat_only' (Website Chat Widget £59).
 """
 import re
 import secrets
@@ -58,7 +58,7 @@ class FrontDeskSetupService:
         return result.data[0]
 
     def create_chat_only_pending(self, customer_email: str) -> Dict[str, Any]:
-        """Create a pending chat-only setup (after £49 payment). Customer completes form to get embed code."""
+        """Create a pending chat-only setup (after £59 payment). Customer completes form to get embed code."""
         done_token = secrets.token_urlsafe(24)
         row = {
             "done_token": done_token,

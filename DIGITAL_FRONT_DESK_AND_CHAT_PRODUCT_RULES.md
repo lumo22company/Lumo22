@@ -2,9 +2,15 @@
 
 ## Product structure (enforced in copy and UX)
 
+Users can choose one of three options:
+
+1. **Chat only** — Standalone Website Chat Widget (£59/month). Chat on your site only; no email inbox. Can add email receptionist later or move to a bundle.
+2. **Email only** — Digital Front Desk (Starter £79, Standard £149, Premium £299). Email receptionist only; no chat included in the plan. Can add chat as add-on or get a bundle.
+3. **Bundle** — Digital Front Desk + Website Chat. One receptionist across email and your website. Add chat to any email plan, or purchase as a bundle.
+
 - **Digital Front Desk (core)** = email receptionist only. No website chat included in any plan.
-- **Website Chat Widget** = separate add-on or included in bundles. Same receptionist (tone, context). Requires its own setup (embed code, domain, behaviour). **Requires Digital Front Desk to be active** (dependency).
-- **Bundles** = Digital Front Desk + Website Chat. Positioned as: *"One receptionist across email and your website."* Primary way to get chat without buying add-on separately.
+- **Website Chat Widget** = standalone product (chat only) OR add-on to an email plan OR included in bundles. Same receptionist (tone, context). Own setup (embed code, domain, behaviour).
+- **Bundles** = Digital Front Desk + Website Chat. Positioned as: *"One receptionist across email and your website."*
 
 ## Marketing and copy (implemented)
 
