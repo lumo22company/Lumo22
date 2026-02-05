@@ -1,6 +1,6 @@
 # Website Chat Product — Setup Checklist
 
-The chat product is wired in code. Complete these steps to start selling.
+The chat product is wired in code as a **separate add-on** (or bundle feature). Digital Front Desk plans are email-only; chat is not included in any plan. See **DIGITAL_FRONT_DESK_AND_CHAT_PRODUCT_RULES.md** for product rules and future technical enforcement (e.g. chat requires active Front Desk or bundle).
 
 ---
 

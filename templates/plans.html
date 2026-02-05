@@ -22,46 +22,47 @@
         <a href="/signup" class="landing-nav-cta">Get started</a>
     </nav>
 
-    <!-- Strategic: Digital Front Desk tiers. Starter = email only (no website chat). Standard/Premium = bundle (website + inbox + bookings). Standalone chat option for those not ready for full front desk. -->
+    <!-- Digital Front Desk plans = email only. Website Chat = add-on or included in bundles. -->
     <section class="reveal-on-scroll pricing-preview pricing-page" data-anim="fade">
         <div class="content">
             <h2>Plans</h2>
-            <p class="pricing-sub">Digital Front Desk — email-first receptionist. No setup fees. Cancel anytime.</p>
-            <p class="pricing-sub" style="margin-top: 0.5rem;">Just want chat on your site? <a href="{% if chat_payment_link %}{{ chat_payment_link }}{% else %}/website-chat{% endif %}" class="chat-activate-link">Activate chat widget</a> — £49/month (no full inbox).</p>
+            <p class="pricing-sub">Digital Front Desk — email receptionist only. No setup fees. Cancel anytime.</p>
+            <p class="pricing-sub" style="margin-top: 0.5rem;">All plans are email-only. Add Website Chat as an add-on or choose a bundle for one receptionist across email and your website. <a href="{% if chat_payment_link %}{{ chat_payment_link }}{% else %}/website-chat{% endif %}" class="chat-activate-link">Add Website Chat</a> (£49/month).</p>
             <div class="pricing-grid">
                 <div class="pricing-card">
                     <h3>Starter</h3>
-                    <p class="pricing-desc">For solo businesses. Email only — no website chat.</p>
+                    <p class="pricing-desc">For solo businesses. Email receptionist only.</p>
                     <div class="pricing-price">£79<span>/month</span></div>
                     <ul>
                         <li>Up to 100 enquiries/month</li>
                         <li>Replies instantly to every email</li>
                         <li>Booking link · Basic tracking · 24/7</li>
+                        <li>Add Website Chat available</li>
                     </ul>
                     <a href="/activate" class="btn-secondary">Activate</a>
                 </div>
                 <div class="pricing-card featured">
                     <span class="badge">Most popular</span>
                     <h3>Standard</h3>
-                    <p class="pricing-desc">Website + inbox + bookings — fully automated.</p>
+                    <p class="pricing-desc">Email receptionist — more capacity and features.</p>
                     <div class="pricing-price">£149<span>/month</span></div>
                     <ul>
                         <li>Up to 300 enquiries/month</li>
-                        <li>Website chat widget included</li>
-                        <li>Ongoing conversation handling · Lead tracking</li>
+                        <li>Replies instantly · Conversation handling · Lead tracking</li>
                         <li>Booking configuration · Priority support · 24/7</li>
+                        <li>Add Website Chat available · Available in bundles</li>
                     </ul>
                     <a href="/activate" class="btn-primary">Activate</a>
                 </div>
                 <div class="pricing-card">
                     <h3>Premium</h3>
-                    <p class="pricing-desc">Complete front desk — unlimited, multi-channel.</p>
+                    <p class="pricing-desc">Email receptionist — unlimited, multi-channel.</p>
                     <div class="pricing-price">£299<span>/month</span></div>
                     <ul>
                         <li>Unlimited enquiries</li>
-                        <li>Website chat widget included</li>
                         <li>Multi-channel (email + SMS) · Custom setup</li>
                         <li>Dedicated support · 24/7</li>
+                        <li>Add Website Chat available · Available in bundles</li>
                     </ul>
                     <a href="/activate" class="btn-secondary">Activate</a>
                 </div>
@@ -72,7 +73,7 @@
     <section class="reveal-on-scroll cta-band" data-anim="left">
         <div class="content">
             <h2>Ready for a calmer front desk?</h2>
-            <p>Website and inbox handled in one place — a fraction of the cost of a receptionist. Join businesses that reply faster, book more, and spend less time on admin.</p>
+            <p>Your inbox handled — a fraction of the cost of a receptionist. Add Website Chat when you want one receptionist across email and your website. Join businesses that reply faster, book more, and spend less time on admin.</p>
             <a href="/activate" class="btn-primary btn-light">Activate now</a>
         </div>
     </section>
@@ -85,7 +86,7 @@
                     <p class="footer-tagline">Lighting the way to better business</p>
                 </div>
                 <div>
-                    <a href="/activate">Front Desk plans</a> · <a href="{% if chat_payment_link %}{{ chat_payment_link }}{% else %}/website-chat{% endif %}">Activate chat widget</a> · <a href="mailto:hello@lumo22.com">Contact</a>
+                    <a href="/activate">Front Desk plans</a> · <a href="{% if chat_payment_link %}{{ chat_payment_link }}{% else %}/website-chat{% endif %}">Add Website Chat</a> · <a href="mailto:hello@lumo22.com">Contact</a>
                 </div>
             </div>
             <div class="footer-bottom">© Lumo 22. All rights reserved.</div>
