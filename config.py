@@ -64,8 +64,15 @@ class Config:
     ACTIVATION_LINK_STARTER = os.getenv('ACTIVATION_LINK_STARTER', '').strip() or None
     ACTIVATION_LINK_STANDARD = os.getenv('ACTIVATION_LINK_STANDARD', '').strip() or None
     ACTIVATION_LINK_PREMIUM = os.getenv('ACTIVATION_LINK_PREMIUM', '').strip() or None
-    # Website Chat Widget standalone product (£49/month). Stripe Payment Link.
+    # Chat Assistant: standalone product. Per-tier Stripe Payment Links.
     CHAT_PAYMENT_LINK = os.getenv('CHAT_PAYMENT_LINK', '').strip() or None
+    CHAT_PAYMENT_LINK_STARTER = os.getenv('CHAT_PAYMENT_LINK_STARTER', '').strip() or None
+    CHAT_PAYMENT_LINK_GROWTH = os.getenv('CHAT_PAYMENT_LINK_GROWTH', '').strip() or None
+    CHAT_PAYMENT_LINK_PRO = os.getenv('CHAT_PAYMENT_LINK_PRO', '').strip() or None
+    # Email + Chat bundle: per-email-tier Stripe Payment Links (Starter+chat, Standard+chat, Premium+chat).
+    ACTIVATION_LINK_STARTER_BUNDLE = os.getenv('ACTIVATION_LINK_STARTER_BUNDLE', '').strip() or None
+    ACTIVATION_LINK_STANDARD_BUNDLE = os.getenv('ACTIVATION_LINK_STANDARD_BUNDLE', '').strip() or None
+    ACTIVATION_LINK_PREMIUM_BUNDLE = os.getenv('ACTIVATION_LINK_PREMIUM_BUNDLE', '').strip() or None
 
     # 30 Days Captions product (Stripe payment link for one-time purchase)
     CAPTIONS_PAYMENT_LINK = os.getenv('CAPTIONS_PAYMENT_LINK', '').strip() or None
@@ -77,8 +84,10 @@ class Config:
     # Remove any non-printable chars (e.g. newline from env) so URLs are valid
     _base = os.getenv('BASE_URL', 'http://localhost:5001').strip().rstrip('/')
     BASE_URL = re.sub(r'[\x00-\x1f\x7f]', '', _base) if _base else ''
-    # Stripe Price ID for 30 Days Captions (price_xxx) — required for Checkout Session; get from Stripe → Products → your product
+    # Stripe Price ID for 30 Days Captions one-off (price_xxx); required for Checkout Session
     STRIPE_CAPTIONS_PRICE_ID = os.getenv('STRIPE_CAPTIONS_PRICE_ID', '').strip() or None
+    # Stripe Price ID for 30 Days Captions subscription £79/month (price_xxx); optional, for subscription option on /captions
+    STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID = os.getenv('STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID', '').strip() or None
 
     # Digital Front Desk inbound (auto-reply). Domain for unique addresses, e.g. inbound.lumo22.com. MX must point to SendGrid.
     INBOUND_EMAIL_DOMAIN = (os.getenv('INBOUND_EMAIL_DOMAIN', '').strip() or 'inbound.lumo22.com').lower()

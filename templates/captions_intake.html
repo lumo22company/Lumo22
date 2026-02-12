@@ -7,7 +7,7 @@
   <meta name="description" content="Complete your intake so we can tailor your 30 days of social media captions.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Encode+Sans+Condensed:wght@400;500;600;700&family=Inter+Tight:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
   <style>
     .intake-page { padding: 6rem 1.5rem 4rem; max-width: 560px; margin: 0 auto; }
@@ -18,12 +18,22 @@
     .intake-page textarea { min-height: 100px; resize: vertical; }
     .intake-page input::placeholder, .intake-page textarea::placeholder { color: var(--lum-text-subtle); }
     .intake-page .form-section { margin-bottom: 2rem; }
-    .intake-page .form-section h2 { font-family: var(--font-display); font-size: 1.1rem; color: var(--lum-text-muted); margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .intake-page .form-section h2 { font-family: 'Encode Sans Condensed', sans-serif; font-size: 1.1rem; color: var(--lum-text-muted); margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 0.05em; }
     .intake-page .btn-submit { display: inline-block; padding: 1rem 2rem; background: var(--lum-gold); color: var(--lum-black); text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1rem; border: none; cursor: pointer; font-family: var(--font-display); }
     .intake-page .btn-submit:hover { opacity: 0.95; }
     .intake-page .back { margin-top: 2rem; }
     .intake-page .back a { color: var(--lum-text-muted); text-decoration: none; font-size: 0.95rem; }
     .intake-page .back a:hover { color: var(--lum-text); }
+    .intake-page .review-step { display: none; margin-bottom: 2rem; }
+    .intake-page .review-step.show { display: block; }
+    .intake-page .review-section { margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--lum-border); }
+    .intake-page .review-section:last-of-type { border-bottom: none; }
+    .intake-page .review-section h3 { font-size: 0.85rem; color: var(--lum-text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
+    .intake-page .review-section p { margin: 0; font-size: 0.95rem; line-height: 1.5; color: var(--lum-text); white-space: pre-wrap; }
+    .intake-page .review-section .empty { color: var(--lum-text-subtle); font-style: italic; }
+    .intake-page .review-actions { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1.5rem; }
+    .intake-page .btn-secondary { background: transparent; color: var(--lum-text-muted); border: 1px solid var(--lum-border); }
+    .intake-page .btn-secondary:hover { border-color: var(--lum-text-subtle); color: var(--lum-text); }
   </style>
 </head>
 <body class="lumo-landing">
@@ -31,8 +41,8 @@
     <a href="/" class="lumo-nav-logo">Lumo 22</a>
     <div class="lumo-nav-links">
       <a href="/captions">Captions</a>
-      <a href="/#front-desk">Front Desk</a>
-      <a href="/plans">Pricing</a>
+      <a href="/digital-front-desk">Front Desk</a>
+      <a href="/digital-front-desk#pricing">Pricing</a>
     </div>
     <a href="/captions" class="lumo-nav-cta">Get my 30 days</a>
   </nav>
@@ -45,8 +55,20 @@
     <p class="sub" style="margin-top: 1rem;">Use the link from your order email to complete your intake. If you just purchased, check your inbox for a message from us with a personalised link.</p>
     <p class="back"><a href="/captions">← Back to 30 Days Captions</a></p>
     {% else %}
-    <div id="intake-success" style="display: none; margin: 2rem 0; padding: 1.5rem; background: var(--lum-surface-elevated); border-radius: 8px;">
-      <p style="margin: 0;">Thanks. We're generating your 30 captions now. You'll receive them by email within a few minutes.</p>
+    <div id="intake-success" style="display: none; margin: 2rem 0;">
+      <div style="padding: 1.5rem; background: var(--lum-surface-elevated); border-radius: 8px; margin-bottom: 1rem;">
+        <p id="intake-success-msg" style="margin: 0;">Thanks. We're generating your 30 captions now. You'll receive them by email within a few minutes.</p>
+      </div>
+      <div id="create-account-box" style="padding: 1.25rem; background: var(--lum-surface-elevated); border-radius: 8px; border: 1px solid var(--lum-border);">
+        <p style="margin: 0 0 1rem; font-weight: 500;">Create an account to access your captions and more in one place.</p>
+        <form id="create-account-form" style="max-width: 320px;">
+          <input type="hidden" id="ca-email" value="">
+          <label for="ca-password" style="display:block; font-size:0.9rem; margin-bottom:0.25rem;">Password (min 6 characters)</label>
+          <input type="password" id="ca-password" required minlength="6" style="width:100%; padding:0.5rem 0.75rem; margin-bottom:0.75rem; border-radius:6px; border:1px solid var(--lum-border);">
+          <button type="submit" class="btn-submit" id="ca-btn">Create account</button>
+        </form>
+        <p id="ca-done" style="display:none; margin:0; color: var(--lum-gold);">Account created! <a href="/account" style="color:inherit;">Go to your account</a></p>
+      </div>
     </div>
     <div id="intake-error" style="display: none; margin: 2rem 0; padding: 1.5rem; background: rgba(200,80,80,0.15); border-radius: 8px; color: var(--lum-text);"></div>
 
@@ -55,43 +77,53 @@
       <div class="form-section">
         <h2>Business</h2>
         <label for="business_type">What type of business do you run?</label>
-        <input type="text" id="business_type" name="business_type" placeholder="e.g. consultancy, agency, product brand">
+        <input type="text" id="business_type" name="business_type" placeholder="e.g. consultancy, agency, product brand" value="{{ existing_intake.get('business_type', '') }}">
         <label for="offer_one_line">In one sentence, what do you offer and to whom?</label>
-        <textarea id="offer_one_line" name="offer_one_line" placeholder="Your answer"></textarea>
+        <textarea id="offer_one_line" name="offer_one_line" placeholder="Your answer">{{ existing_intake.get('offer_one_line', '') }}</textarea>
       </div>
       <div class="form-section">
         <h2>Audience</h2>
         <label for="audience">Who is your primary audience?</label>
-        <input type="text" id="audience" name="audience" placeholder="role, industry, or life stage">
+        <input type="text" id="audience" name="audience" placeholder="role, industry, or life stage" value="{{ existing_intake.get('audience', '') }}">
         <label for="audience_cares">What do they care about most when they land on your content?</label>
-        <textarea id="audience_cares" name="audience_cares" placeholder="Your answer"></textarea>
+        <textarea id="audience_cares" name="audience_cares" placeholder="Your answer">{{ existing_intake.get('audience_cares', '') }}</textarea>
       </div>
       <div class="form-section">
         <h2>Voice</h2>
         <label for="voice_words">Choose 3–5 words that describe how you want to sound.</label>
-        <input type="text" id="voice_words" name="voice_words" placeholder="e.g. direct, thoughtful, understated, precise, warm">
+        <input type="text" id="voice_words" name="voice_words" placeholder="e.g. direct, thoughtful, understated, precise, warm" value="{{ existing_intake.get('voice_words', '') }}">
         <label for="voice_avoid">Is there any language or phrasing you want to avoid?</label>
-        <textarea id="voice_avoid" name="voice_avoid" placeholder="Your answer (optional)"></textarea>
+        <textarea id="voice_avoid" name="voice_avoid" placeholder="Your answer (optional)">{{ existing_intake.get('voice_avoid', '') }}</textarea>
       </div>
       <div class="form-section">
         <h2>Platform</h2>
         <label for="platform">Primary platform for these captions?</label>
-        <input type="text" id="platform" name="platform" placeholder="Instagram / LinkedIn / both / other">
+        <input type="text" id="platform" name="platform" placeholder="Instagram / LinkedIn / both / other" value="{{ existing_intake.get('platform', '') }}">
         <label for="platform_habits">Any platform-specific habits?</label>
-        <input type="text" id="platform_habits" name="platform_habits" placeholder="e.g. shorter on Instagram, longer on LinkedIn (optional)">
+        <input type="text" id="platform_habits" name="platform_habits" placeholder="e.g. shorter on Instagram, longer on LinkedIn (optional)" value="{{ existing_intake.get('platform_habits', '') }}">
       </div>
       <div class="form-section">
         <h2>Goal for this month</h2>
         <label for="goal">What's the main outcome you want from this 30 days?</label>
-        <textarea id="goal" name="goal" placeholder="e.g. more inquiries, stronger authority, launch visibility"></textarea>
+        <textarea id="goal" name="goal" placeholder="e.g. more inquiries, stronger authority, launch visibility">{{ existing_intake.get('goal', '') }}</textarea>
       </div>
       <div class="form-section">
         <h2>Example captions (optional)</h2>
         <label for="caption_examples">Paste 1–3 example captions you like — from your own posts, competitors, or inspiration. We'll match this style, tone, and structure where relevant.</label>
-        <textarea id="caption_examples" name="caption_examples" placeholder="Paste example captions here (optional)" style="min-height: 140px;"></textarea>
+        <textarea id="caption_examples" name="caption_examples" placeholder="Paste example captions here (optional)" style="min-height: 140px;">{{ existing_intake.get('caption_examples', '') }}</textarea>
       </div>
-      <button type="submit" class="btn-submit" id="submit-btn">Send my answers</button>
+      <button type="button" class="btn-submit" id="btn-review">{% if existing_intake %}Review changes{% else %}Review my answers{% endif %}</button>
     </form>
+
+    <div id="review-step" class="review-step">
+      <h2 class="form-section" style="margin-bottom: 1rem;">Double-check your answers</h2>
+      <p class="sub" style="margin-bottom: 1.5rem;">Review before sending. Click Edit to change anything.</p>
+      <div id="review-content"></div>
+      <div class="review-actions">
+        <button type="button" class="btn-submit btn-secondary" id="btn-edit">Edit</button>
+        <button type="button" class="btn-submit" id="btn-confirm">Confirm &amp; send</button>
+      </div>
+    </div>
 
     <p class="back"><a href="/captions">← Back to 30 Days Captions</a></p>
     {% endif %}
@@ -99,49 +131,135 @@
 
   {% if intake_token %}
   <script>
-    document.getElementById('captions-intake-form').addEventListener('submit', function(e) {
-      e.preventDefault();
-      var token = document.getElementById('intake_token').value;
-      var payload = {
-        token: token,
-        business_type: document.getElementById('business_type').value.trim(),
-        offer_one_line: document.getElementById('offer_one_line').value.trim(),
-        audience: document.getElementById('audience').value.trim(),
-        audience_cares: document.getElementById('audience_cares').value.trim(),
-        voice_words: document.getElementById('voice_words').value.trim(),
-        voice_avoid: document.getElementById('voice_avoid').value.trim(),
-        platform: document.getElementById('platform').value.trim(),
-        platform_habits: document.getElementById('platform_habits').value.trim(),
-        goal: document.getElementById('goal').value.trim(),
-        caption_examples: document.getElementById('caption_examples').value.trim()
-      };
-      var btn = document.getElementById('submit-btn');
-      btn.disabled = true;
-      btn.textContent = 'Sending…';
-      fetch('/api/captions-intake', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
-      .then(function(r) { return r.json().then(function(j) { return { status: r.status, json: j }; }); })
-      .then(function(result) {
-        if (result.status === 200 && result.json.success) {
-          document.getElementById('captions-intake-form').style.display = 'none';
-          document.getElementById('intake-success').style.display = 'block';
-        } else {
-          document.getElementById('intake-error').textContent = result.json.error || 'Something went wrong. Please try again or email us.';
+    (function() {
+      var form = document.getElementById('captions-intake-form');
+      var reviewStep = document.getElementById('review-step');
+      var reviewContent = document.getElementById('review-content');
+      var btnReview = document.getElementById('btn-review');
+      var btnEdit = document.getElementById('btn-edit');
+      var btnConfirm = document.getElementById('btn-confirm');
+
+      function getVal(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; }
+      function sect(t, v) {
+        var p = document.createElement('p');
+        p.textContent = v || '(not provided)';
+        if (!v) p.className = 'empty';
+        var h = document.createElement('h3');
+        h.textContent = t;
+        var div = document.createElement('div');
+        div.className = 'review-section';
+        div.appendChild(h);
+        div.appendChild(p);
+        return div;
+      }
+
+      function showReview() {
+        if (!form.checkValidity()) { form.reportValidity(); return; }
+        reviewContent.innerHTML = '';
+        reviewContent.appendChild(sect('Business type', getVal('business_type')));
+        reviewContent.appendChild(sect('What you offer', getVal('offer_one_line')));
+        reviewContent.appendChild(sect('Primary audience', getVal('audience')));
+        reviewContent.appendChild(sect('What they care about', getVal('audience_cares')));
+        reviewContent.appendChild(sect('Voice (3–5 words)', getVal('voice_words')));
+        reviewContent.appendChild(sect('Language to avoid', getVal('voice_avoid')));
+        reviewContent.appendChild(sect('Primary platform', getVal('platform')));
+        reviewContent.appendChild(sect('Platform habits', getVal('platform_habits')));
+        reviewContent.appendChild(sect('Goal for this month', getVal('goal')));
+        reviewContent.appendChild(sect('Example captions', getVal('caption_examples')));
+        form.style.display = 'none';
+        reviewStep.classList.add('show');
+      }
+
+      function showForm() {
+        reviewStep.classList.remove('show');
+        form.style.display = 'block';
+      }
+
+      function submitForm() {
+        var payload = {
+          token: getVal('intake_token'),
+          business_type: getVal('business_type'),
+          offer_one_line: getVal('offer_one_line'),
+          audience: getVal('audience'),
+          audience_cares: getVal('audience_cares'),
+          voice_words: getVal('voice_words'),
+          voice_avoid: getVal('voice_avoid'),
+          platform: getVal('platform'),
+          platform_habits: getVal('platform_habits'),
+          goal: getVal('goal'),
+          caption_examples: getVal('caption_examples')
+        };
+        btnConfirm.disabled = true;
+        btnConfirm.textContent = 'Sending…';
+        fetch('/api/captions-intake', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
+        .then(function(r) { return r.json().then(function(j) { return { status: r.status, json: j }; }); })
+        .then(function(result) {
+          if (result.status === 200 && result.json.success) {
+            reviewStep.classList.remove('show');
+            var successEl = document.getElementById('intake-success');
+            successEl.style.display = 'block';
+            var msgEl = document.getElementById('intake-success-msg');
+            if (msgEl && result.json.message) msgEl.textContent = result.json.message;
+            var custEmail = (result.json.customer_email || '').trim();
+            document.getElementById('ca-email').value = custEmail;
+          } else {
+            document.getElementById('intake-error').textContent = result.json.error || 'Something went wrong. Please try again or email us.';
+            document.getElementById('intake-error').style.display = 'block';
+            btnConfirm.disabled = false;
+            btnConfirm.textContent = 'Confirm & send';
+          }
+        })
+        .catch(function() {
+          document.getElementById('intake-error').textContent = 'Network error. Please try again or email hello@lumo22.com.';
           document.getElementById('intake-error').style.display = 'block';
-          btn.disabled = false;
-          btn.textContent = 'Send my answers';
-        }
-      })
-      .catch(function() {
-        document.getElementById('intake-error').textContent = 'Network error. Please try again or email hello@lumo22.com.';
-        document.getElementById('intake-error').style.display = 'block';
-        btn.disabled = false;
-        btn.textContent = 'Send my answers';
-      });
-    });
+          btnConfirm.disabled = false;
+          btnConfirm.textContent = 'Confirm & send';
+        });
+      }
+
+      if (btnReview) btnReview.addEventListener('click', showReview);
+      if (btnEdit) btnEdit.addEventListener('click', showForm);
+      if (btnConfirm) btnConfirm.addEventListener('click', submitForm);
+
+      var caForm = document.getElementById('create-account-form');
+      if (caForm) {
+        caForm.addEventListener('submit', function(e) {
+          e.preventDefault();
+          var email = document.getElementById('ca-email').value.trim();
+          var pw = document.getElementById('ca-password').value;
+          if (!email) { alert('Email is required.'); return; }
+          if (pw.length < 6) { alert('Password must be at least 6 characters.'); return; }
+          var btn = document.getElementById('ca-btn');
+          btn.disabled = true;
+          btn.textContent = 'Creating…';
+          fetch('/api/auth/create-account', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email.toLowerCase(), password: pw })
+          })
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (data.ok) {
+              document.getElementById('create-account-form').style.display = 'none';
+              document.getElementById('ca-done').style.display = 'block';
+            } else {
+              alert(data.error || 'Something went wrong.');
+              btn.disabled = false;
+              btn.textContent = 'Create account';
+            }
+          })
+          .catch(function() {
+            alert('Network error. Please try again.');
+            btn.disabled = false;
+            btn.textContent = 'Create account';
+          });
+        });
+      }
+    })();
   </script>
   {% endif %}
 </body>

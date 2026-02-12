@@ -105,6 +105,7 @@ def front_desk_setup():
                 'product': 'chat',
                 'chat_widget_key': widget_key,
                 'embed_snippet': embed_snippet,
+                'customer_email': (setup.get('customer_email') or enquiry_email or '').strip(),
             }), 200
 
         # Full Front Desk: create new setup
@@ -117,6 +118,20 @@ def front_desk_setup():
         if '@' not in customer_email or '@' not in enquiry_email:
             return jsonify({'ok': False, 'error': 'Please enter valid email addresses.'}), 400
 
+        tight_scheduling_enabled = bool(data.get('tight_scheduling_enabled'))
+        raw_gap = data.get('minimum_gap_between_appointments')
+        minimum_gap_between_appointments = 60
+        if raw_gap is not None:
+            try:
+                minimum_gap_between_appointments = max(15, min(480, int(raw_gap)))
+            except (TypeError, ValueError):
+                pass
+        auto_reply_enabled = data.get('auto_reply_enabled', True)
+        if isinstance(auto_reply_enabled, str):
+            auto_reply_enabled = auto_reply_enabled.strip().lower() in ('1', 'true', 'yes', 'on')
+        else:
+            auto_reply_enabled = bool(auto_reply_enabled)
+        skip_reply_domains = (data.get('skip_reply_domains') or '').strip() or None
         try:
             from services.front_desk_setup_service import FrontDeskSetupService
             svc = FrontDeskSetupService()
@@ -125,14 +140,14 @@ def front_desk_setup():
                 business_name=business_name,
                 enquiry_email=enquiry_email,
                 booking_link=booking_link,
+                tight_scheduling_enabled=tight_scheduling_enabled,
+                minimum_gap_between_appointments=minimum_gap_between_appointments,
+                auto_reply_enabled=auto_reply_enabled,
+                skip_reply_domains=skip_reply_domains,
             )
-            done_token = setup.get("done_token")
             forwarding_email = setup.get("forwarding_email") or ""
-            base = _front_desk_base_url()
-            mark_connected_url = f"{base}/front-desk-setup-done?t={done_token}" if done_token else None
         except Exception as db_err:
             print(f"[front-desk-setup] DB save failed: {db_err}")
-            mark_connected_url = None
             forwarding_email = ""
 
         to_business = Config.FROM_EMAIL or 'hello@lumo22.com'
@@ -144,14 +159,10 @@ Business name: {business_name}
 Enquiry email to monitor: {enquiry_email}
 Booking link: {booking_link or '(none)'}
 Forwarding address (for auto-reply): {forwarding_email or '(not set)'}
+Auto-reply: {'on' if auto_reply_enabled else 'off (customer will use pause link to turn on)'}
+Skip reply domains (only reply to external): {skip_reply_domains or '(none)'}
 
-Forward enquiries to the forwarding address above and we'll auto-reply. When done, click below to mark as connected.
-"""
-        if mark_connected_url:
-            body_business += f"""
-
-Mark as connected (one click):
-{mark_connected_url}
+Forward enquiries to the forwarding address above and we'll auto-reply. No action needed from you — the setup is already active.
 """
 
         notif = NotificationService()
@@ -159,8 +170,11 @@ Mark as connected (one click):
         if not ok1:
             return jsonify({'ok': False, 'error': 'Could not send setup. Please try again or email hello@lumo22.com.'}), 500
 
-        # Confirmation to customer: include their unique forwarding address so they can forward enquiries for auto-reply
+        # Confirmation to customer: forwarding address + pause/resume links so they can handle emails manually when they want
         subject_customer = "Your Digital Front Desk setup — next step"
+        base = _front_desk_base_url()
+        pause_url = f"{base}/api/front-desk-setup/pause-auto-reply?token={setup.get('done_token', '')}"
+        resume_url = f"{base}/api/front-desk-setup/resume-auto-reply?token={setup.get('done_token', '')}"
         body_customer = f"""Hi,
 
 Thanks for submitting your setup for {business_name}.
@@ -169,18 +183,65 @@ Your unique forwarding address for auto-replies is:
 
   {forwarding_email or "(we'll email it to you separately)"}
 
-Forward any enquiry emails to this address and we'll send a professional reply on your behalf (you can set up a rule in your email client to forward from {enquiry_email} to the address above). We'll be in touch if we need anything else.
+Forward any enquiry emails to this address and we'll send a professional reply on your behalf (you can set up a rule in your email client to forward from {enquiry_email} to the address above).
+
+When you want to handle emails yourself, turn auto-reply off (no new auto-replies will be sent until you turn it back on):
+  {pause_url}
+
+To turn auto-reply back on:
+  {resume_url}
+
+We'll be in touch if we need anything else.
 
 Lumo 22
 """
         notif.send_email(customer_email, subject_customer, body_customer)
 
-        return jsonify({'ok': True}), 200
+        return jsonify({'ok': True, 'customer_email': customer_email}), 200
     except Exception as e:
         print(f"[front-desk-setup] Error: {e}")
         return jsonify({'ok': False, 'error': 'Something went wrong. Please try again.'}), 500
 
 
+@api_bp.route('/front-desk-setup/pause-auto-reply', methods=['GET'])
+def front_desk_pause_auto_reply():
+    """Turn off auto-reply for this setup (customer handles emails manually). Token in query: token=."""
+    token = (request.args.get('token') or '').strip()
+    if not token:
+        return _auto_reply_toggle_response(False, "Missing token.")
+    try:
+        from services.front_desk_setup_service import FrontDeskSetupService
+        svc = FrontDeskSetupService()
+        ok = svc.set_auto_reply_by_done_token(token, False)
+        return _auto_reply_toggle_response(ok, "Auto-reply is now paused." if ok else "Invalid or expired link.")
+    except Exception as e:
+        print(f"[pause-auto-reply] Error: {e}")
+        return _auto_reply_toggle_response(False, "Something went wrong.")
+
+
+@api_bp.route('/front-desk-setup/resume-auto-reply', methods=['GET'])
+def front_desk_resume_auto_reply():
+    """Turn auto-reply back on for this setup. Token in query: token=."""
+    token = (request.args.get('token') or '').strip()
+    if not token:
+        return _auto_reply_toggle_response(False, "Missing token.")
+    try:
+        from services.front_desk_setup_service import FrontDeskSetupService
+        svc = FrontDeskSetupService()
+        ok = svc.set_auto_reply_by_done_token(token, True)
+        return _auto_reply_toggle_response(ok, "Auto-reply is back on." if ok else "Invalid or expired link.")
+    except Exception as e:
+        print(f"[resume-auto-reply] Error: {e}")
+        return _auto_reply_toggle_response(False, "Something went wrong.")
+
+
+def _auto_reply_toggle_response(success: bool, message: str):
+    """Return a simple HTML page for click-from-email links."""
+    html = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Digital Front Desk</title></head><body style="font-family: system-ui, sans-serif; max-width: 480px; margin: 3rem auto; padding: 1rem; color: #333;"><p>{message}</p><p><a href="/digital-front-desk">Back to Digital Front Desk</a></p></body></html>"""
+    from flask import make_response
+    r = make_response(html)
+    r.headers["Content-Type"] = "text/html; charset=utf-8"
+    return r
 
 
 @api_bp.route('/health', methods=['GET'])
@@ -195,6 +256,70 @@ def health_check():
             'crm': crm_service is not None
         }
     })
+
+
+@api_bp.route('/available-slots', methods=['GET'])
+def available_slots():
+    """
+    Return available appointment slot start times for a given day.
+    Query params: date (YYYY-MM-DD), tight_schedule (true|false), gap_minutes (int),
+    optional slot_minutes, work_start (HH:MM), work_end (HH:MM).
+    When tight_schedule is true and there are existing bookings that day, only slots
+    within gap_minutes of a booking are returned; if no bookings, all slots are returned.
+    """
+    try:
+        date_str = (request.args.get("date") or "").strip()
+        if not date_str:
+            return jsonify({"error": "Missing date (use ?date=YYYY-MM-DD)"}), 400
+        try:
+            datetime.strptime(date_str[:10], "%Y-%m-%d")
+        except ValueError:
+            return jsonify({"error": "Invalid date; use YYYY-MM-DD"}), 400
+
+        tight_schedule = (request.args.get("tight_schedule") or "").strip().lower() in ("1", "true", "yes")
+        raw_gap = request.args.get("gap_minutes")
+        gap_minutes = 60
+        if raw_gap is not None:
+            try:
+                gap_minutes = max(5, min(480, int(raw_gap)))
+            except (TypeError, ValueError):
+                pass
+
+        slot_minutes = 30
+        raw_slot = request.args.get("slot_minutes")
+        if raw_slot is not None:
+            try:
+                slot_minutes = max(5, min(120, int(raw_slot)))
+            except (TypeError, ValueError):
+                pass
+
+        work_start = request.args.get("work_start") or None
+        work_end = request.args.get("work_end") or None
+
+        from services.availability import get_available_slots
+        from services.appointments_service import get_appointment_starts_for_date
+        from datetime import date as date_type
+
+        day = datetime.strptime(date_str[:10], "%Y-%m-%d").date()
+        existing = get_appointment_starts_for_date(day)
+        slots = get_available_slots(
+            date_str,
+            existing,
+            slot_minutes=slot_minutes,
+            work_start=work_start,
+            work_end=work_end,
+            tight_schedule=tight_schedule,
+            gap_minutes=gap_minutes,
+        )
+        return jsonify({
+            "date": date_str[:10],
+            "slots": [s.strftime("%H:%M") for s in slots],
+            "count": len(slots),
+        }), 200
+    except Exception as e:
+        print(f"[available-slots] Error: {e}")
+        return jsonify({"error": "Could not compute slots"}), 500
+
 
 @api_bp.route('/capture', methods=['POST'])
 def capture_lead():

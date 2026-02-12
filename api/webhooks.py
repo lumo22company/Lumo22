@@ -13,11 +13,15 @@ webhook_bp = Blueprint('webhooks', __name__, url_prefix='/webhooks')
 CAPTIONS_AMOUNT_PENCE = 9700  # £97
 
 # --- Stripe (Digital Front Desk) — monthly amounts in pence ---
-FRONT_DESK_AMOUNTS_PENCE = (7900, 14900, 29900)  # Starter, Standard, Premium
-FRONT_DESK_PLAN_NAMES = {7900: "Starter", 14900: "Standard", 29900: "Premium"}
+# Email only: £79, £149, £299. Bundle (tier + £59, 5% off): £131, £198, £340.
+FRONT_DESK_AMOUNTS_PENCE = (7900, 14900, 29900, 13100, 19800, 34000)
+FRONT_DESK_PLAN_NAMES = {
+    7900: "Starter", 14900: "Growth", 29900: "Pro",
+    13100: "Starter + Chat", 19800: "Growth + Chat", 34000: "Pro + Chat",
+}
 
-# --- Stripe (Website Chat Widget standalone) £49/month ---
-CHAT_AMOUNT_PENCE = 4900
+# --- Stripe (Chat Assistant) — single fixed price £59/month ---
+CHAT_AMOUNTS_PENCE = (5900,)
 
 
 def _sanitize_base_url(raw: str) -> str:
@@ -37,8 +41,26 @@ def _sanitize_for_email(text: str) -> str:
     return re.sub(r"[\x00-\x09\x0b-\x1f\x7f]", "", text)
 
 
+def _is_captions_subscription_payment(session) -> bool:
+    """True if this checkout is for 30 Days Captions subscription (£79/month). Reuses same intake/delivery as one-off."""
+    mode = (session.get("mode") or "") if isinstance(session, dict) else ""
+    if mode != "subscription":
+        return False
+    meta = (session.get("metadata") or {}) if isinstance(session, dict) else {}
+    if meta.get("product") == "captions_subscription":
+        return True
+    sub_price_id = getattr(Config, "STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID", None) or ""
+    if not sub_price_id:
+        return False
+    for item in (session.get("line_items") or {}).get("data") or []:
+        pid = (item.get("price") or {}).get("id") if isinstance(item.get("price"), dict) else getattr(item.get("price"), "id", None)
+        if pid == sub_price_id:
+            return True
+    return False
+
+
 def _is_captions_payment(session) -> bool:
-    """True if this checkout is for 30 Days Captions."""
+    """True if this checkout is for 30 Days Captions (one-off £97)."""
     meta = (session.get("metadata") or {}) if isinstance(session, dict) else {}
     if meta.get("product") == "captions":
         return True
@@ -99,17 +121,24 @@ def _get_customer_email_from_session(session):
 
 
 def _handle_captions_payment(session):
-    """Create caption order and send intake-link email. Idempotent: if we already have an order for this session, resend email and return.
-    Note: We never use session.customer (null for Checkout) or session.subscription (one-time payment only)."""
+    """Create caption order and send intake-link email. Used for both one-off (£97) and subscription (£79/mo) captions.
+    Idempotent: if we already have an order for this session, resend email and return."""
     from services.caption_order_service import CaptionOrderService
     from services.notifications import NotificationService
 
-    session_id = session.get("id") if hasattr(session, "get") else getattr(session, "id", None)
+    session_id = session.get("id") if isinstance(session, dict) else getattr(session, "id", None)
     customer_email = _get_customer_email_from_session(session)
     if not customer_email:
         print("[Stripe webhook] No customer email in session; intake email not sent.")
         return
     print(f"[Stripe webhook] Customer email from session: {customer_email}")
+
+    stripe_customer_id = (session.get("customer") or "").strip() or None
+    stripe_subscription_id = (session.get("subscription") or "").strip() or None
+    if stripe_customer_id:
+        print(f"[Stripe webhook] Stripe customer: {stripe_customer_id[:20]}...")
+    if stripe_subscription_id:
+        print(f"[Stripe webhook] Stripe subscription: {stripe_subscription_id[:20]}...")
 
     order_service = CaptionOrderService()
     # Idempotent: if Stripe retries, we may already have an order for this session
@@ -117,11 +146,22 @@ def _handle_captions_payment(session):
     if existing:
         print(f"[Stripe webhook] Order already exists for session {session_id[:20]}..., resending intake email")
         order = existing
+        if stripe_customer_id or stripe_subscription_id:
+            updates = {}
+            if stripe_customer_id and not existing.get("stripe_customer_id"):
+                updates["stripe_customer_id"] = stripe_customer_id
+            if stripe_subscription_id and not existing.get("stripe_subscription_id"):
+                updates["stripe_subscription_id"] = stripe_subscription_id
+            if updates:
+                order_service.update(existing["id"], updates)
+                order = {**existing, **updates}
     else:
         try:
             order = order_service.create_order(
                 customer_email=customer_email,
                 stripe_session_id=session_id,
+                stripe_customer_id=stripe_customer_id,
+                stripe_subscription_id=stripe_subscription_id,
             )
         except Exception as e:
             print(f"[Stripe webhook] Failed to create order in Supabase: {e}")
@@ -222,7 +262,7 @@ def _get_session_amount_total(session):
 
 
 def _is_front_desk_payment(session):
-    """True if this checkout is for Digital Front Desk (Starter £79, Standard £149, Premium £299 monthly)."""
+    """True if this checkout is for Digital Front Desk (Starter £79, Growth £149, Pro £299 monthly)."""
     if _is_captions_payment(session):
         return False
     if _is_chat_payment(session):
@@ -242,21 +282,19 @@ def _is_front_desk_payment(session):
 
 
 def _is_chat_payment(session):
-    """True if this checkout is for Website Chat Widget standalone (£49/month)."""
+    """True if this checkout is for Chat Assistant (£59/month)."""
     meta = (session.get("metadata") or {}) if isinstance(session, dict) else {}
     if meta.get("product") == "chat":
-        print(f"[Stripe webhook] Chat: matched by metadata product=chat")
+        print("[Stripe webhook] Chat: matched by metadata product=chat")
         return True
     amount = _get_session_amount_total(session)
     if amount is None:
         return False
     currency = (session.get("currency") or "gbp").lower()
     if currency != "gbp":
-        if amount == CHAT_AMOUNT_PENCE:
-            print(f"[Stripe webhook] Chat: amount=4900 but currency={currency!r} not GBP; not matching.")
         return False
-    if amount == CHAT_AMOUNT_PENCE:
-        print(f"[Stripe webhook] Chat: matched by amount=4900 GBP")
+    if amount in CHAT_AMOUNTS_PENCE:
+        print(f"[Stripe webhook] Chat: matched by amount={amount} GBP")
         return True
     return False
 
@@ -292,7 +330,7 @@ Step 2 — Enter your details
 • Your email (so we can contact you)
 • Business name
 • The email address you want us to monitor for enquiries (e.g. hello@ or enquiries@)
-• Your booking link (Calendly, Fresha, etc.) — if you're on Standard or Premium, or leave blank for now
+• Your booking link (Calendly, Fresha, etc.) — if you're on Growth or Pro, or leave blank for now
 
 Step 3 — Submit
 We'll receive your details and connect everything. You'll be live within 24 hours.
@@ -397,21 +435,24 @@ def stripe_webhook():
 
     try:
         if event_type == "checkout.session.completed":
-            session = event["data"]["object"]
+            session = event.get("data", {}).get("object") if isinstance(event, dict) else None
+            if not session or not isinstance(session, dict):
+                print("[Stripe webhook] checkout.session.completed: missing or invalid session object; skipping.")
+                return jsonify({"received": True}), 200
             amount = session.get("amount_total")
-            meta = session.get("metadata") or {}
+            meta = (session.get("metadata") or {}) if isinstance(session.get("metadata"), dict) else {}
             is_captions = _is_captions_payment(session)
+            is_captions_sub = _is_captions_subscription_payment(session)
             is_chat = _is_chat_payment(session)
             is_front_desk = _is_front_desk_payment(session)
-            print(f"[Stripe webhook] checkout.session.completed amount_total={amount} metadata={meta} is_captions={is_captions} is_chat={is_chat} is_front_desk={is_front_desk}")
-            if is_captions:
+            print(f"[Stripe webhook] checkout.session.completed amount_total={amount} metadata={meta} is_captions={is_captions} is_captions_sub={is_captions_sub} is_chat={is_chat} is_front_desk={is_front_desk}")
+            if is_captions or is_captions_sub:
                 try:
                     _handle_captions_payment(session)
                 except Exception as e:
                     import traceback
-                    print(f"[Stripe webhook] captions handler error: {e}")
+                    print(f"[Stripe webhook] CAPTIONS HANDLER FAILED: {e}")
                     traceback.print_exc()
-                    # Safe detail for Stripe response (ASCII, truncated) so you see the real error
                     detail = (str(e) or repr(e))[:400]
                     detail = "".join(c for c in detail if ord(c) < 128)
                     return jsonify({"error": "Handler failed", "detail": detail or "Unknown error"}), 500
@@ -420,7 +461,7 @@ def stripe_webhook():
                     _handle_chat_payment(session)
                 except Exception as e:
                     import traceback
-                    print(f"[Stripe webhook] Chat handler error: {e}")
+                    print(f"[Stripe webhook] CHAT HANDLER FAILED: {e}")
                     traceback.print_exc()
                     detail = (str(e) or repr(e))[:400]
                     detail = "".join(c for c in detail if ord(c) < 128)
@@ -430,7 +471,7 @@ def stripe_webhook():
                     _handle_front_desk_payment(session)
                 except Exception as e:
                     import traceback
-                    print(f"[Stripe webhook] Front Desk welcome email error: {e}")
+                    print(f"[Stripe webhook] FRONT DESK HANDLER FAILED: {e}")
                     traceback.print_exc()
                     detail = (str(e) or repr(e))[:400]
                     detail = "".join(c for c in detail if ord(c) < 128)
@@ -441,7 +482,7 @@ def stripe_webhook():
         return jsonify({"received": True}), 200
     except Exception as e:
         import traceback
-        print(f"[Stripe webhook] unexpected error: {e}")
+        print(f"[Stripe webhook] UNEXPECTED ERROR: {e}")
         traceback.print_exc()
         detail = (str(e) or repr(e))[:400]
         detail = "".join(c for c in detail if ord(c) < 128)

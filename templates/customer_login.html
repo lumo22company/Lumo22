@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Log in | Lumo 22</title>
+  <meta name="description" content="Log in to your Lumo 22 account. Access your Digital Front Desk, Chat, and Captions in one place.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Encode+Sans+Condensed:wght@400;500;600;700;800;900&family=PT+Sans+Narrow:wght@400;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v={{ asset_version }}">
+  <style>
+    .auth-section { min-height: 70vh; display: flex; align-items: center; padding-top: 5rem; }
+    .auth-form-wrap { max-width: 420px; }
+    .auth-form-wrap label { display: block; font-family: var(--font-body); font-size: 0.7rem; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: var(--lum-text-muted); margin-bottom: 0.5rem; }
+    .auth-form-wrap input { width: 100%; padding: 14px 18px; background: var(--lum-surface-elevated); border: 1px solid var(--lum-border); border-radius: var(--radius-btn); color: var(--lum-text); font-family: var(--font-body); font-size: 0.95rem; margin-bottom: 1.25rem; transition: border-color var(--duration-fast); }
+    .auth-form-wrap input:focus { outline: none; border-color: var(--lum-gold); }
+    .auth-form-wrap input::placeholder { color: var(--lum-text-subtle); }
+    .auth-form-wrap .auth-btn { display: inline-flex; align-items: center; justify-content: center; width: 100%; min-height: 48px; padding: 14px 24px; background: #ffffff; color: #000000; font-family: var(--font-body); font-weight: 500; font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; border: none; border-radius: var(--radius-btn); cursor: pointer; transition: transform 0.3s ease-in-out, background-color 0.3s ease-in-out; }
+    .auth-form-wrap .auth-btn:hover:not(:disabled) { transform: translateY(-3px); background-color: var(--lum-gold); }
+    .auth-form-wrap .auth-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .auth-form-wrap .auth-msg { margin-top: 1rem; padding: 0.75rem 1rem; border-radius: var(--radius-btn); font-size: 0.9rem; font-family: var(--font-body); }
+    .auth-form-wrap .auth-msg.error { background: rgba(200,80,80,0.15); color: var(--lum-text); }
+    .auth-form-wrap .auth-msg.success { background: rgba(76,175,80,0.15); color: var(--lum-text); }
+    .auth-links { margin-top: 1.5rem; font-size: 0.9rem; }
+    .auth-links p { margin-bottom: 0.75rem; }
+    .auth-links a { color: var(--lum-gold); text-decoration: none; transition: color var(--duration-fast); }
+    .auth-links a:hover { color: var(--lum-ivory); }
+    .auth-links .auth-muted { color: var(--lum-text-muted); }
+    .auth-links .auth-muted a { color: var(--lum-text-muted); }
+    .auth-links .auth-muted a:hover { color: var(--lum-text); }
+  </style>
+</head>
+<body class="lumo-landing">
+  <nav class="lumo-nav lumo-nav-scrolled" id="lumo-nav">
+    <a href="/" class="lumo-nav-logo">Lumo 22</a>
+    <div class="lumo-nav-links">
+      <a href="/captions">Captions</a>
+      <a href="/digital-front-desk">Front Desk</a>
+      <a href="/digital-front-desk#pricing">Pricing</a>
+    </div>
+    <a href="/signup" class="lumo-nav-cta">Sign up</a>
+  </nav>
+
+  <section class="block block-trust section-dark auth-section">
+    <div class="section-inner">
+      <div class="block-inner auth-form-wrap">
+        <p class="block-label">Your account</p>
+        <h1 class="block-title">Log in</h1>
+        <p class="block-desc">Access your Digital Front Desk, Chat, and Captions in one place.</p>
+
+        <form id="login-form">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" required autocomplete="email" placeholder="you@example.com">
+
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="••••••••">
+
+          <button type="submit" class="auth-btn" id="btn">Log in</button>
+          <div id="msg" class="auth-msg" style="display: none;"></div>
+        </form>
+
+        <div class="auth-links">
+          <p><a href="/forgot-password">Forgot password?</a></p>
+          <p class="auth-muted">Don't have an account? <a href="/signup">Sign up</a></p>
+          <p class="auth-muted"><a href="/">← Back to Lumo 22</a></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="footer-inner">
+      <div>
+        <a href="/" class="footer-brand">Lumo 22</a>
+        <p class="footer-tagline">Lighting the way to better business</p>
+        <p class="footer-questions">Questions? <a href="mailto:hello@lumo22.com">hello@lumo22.com</a></p>
+      </div>
+      <div class="footer-links">
+        <a href="/captions">Captions</a>
+        <a href="/digital-front-desk">Front Desk</a>
+        <a href="/digital-front-desk#pricing">Pricing</a>
+        <a href="/terms">Terms</a>
+        <a href="mailto:hello@lumo22.com">Contact</a>
+      </div>
+    </div>
+    <div class="footer-bottom">© Lumo 22. All rights reserved.</div>
+  </footer>
+
+  <script>
+    (function() {
+      var form = document.getElementById('login-form');
+      var btn = document.getElementById('btn');
+      var msg = document.getElementById('msg');
+      var next = new URLSearchParams(window.location.search).get('next') || '/account';
+
+      form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        msg.style.display = 'none';
+        btn.disabled = true;
+        btn.textContent = 'Logging in…';
+
+        fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: document.getElementById('email').value.trim().toLowerCase(),
+            password: document.getElementById('password').value
+          })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.ok) {
+            msg.className = 'auth-msg success';
+            msg.textContent = 'Logged in. Redirecting…';
+            msg.style.display = 'block';
+            window.location.href = next;
+          } else {
+            msg.className = 'auth-msg error';
+            msg.textContent = data.error || 'Invalid email or password';
+            msg.style.display = 'block';
+            btn.disabled = false;
+            btn.textContent = 'Log in';
+          }
+        })
+        .catch(function() {
+          msg.className = 'auth-msg error';
+          msg.textContent = 'Network error. Please try again.';
+          msg.style.display = 'block';
+          btn.disabled = false;
+          btn.textContent = 'Log in';
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

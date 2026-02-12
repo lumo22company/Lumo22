@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Account | Lumo 22</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
+  <style>
+    .account-page { padding: 6rem 1.5rem 4rem; max-width: 720px; margin: 0 auto; }
+    .account-page h1 { font-family: var(--font-display); font-size: 1.75rem; margin-bottom: 0.25rem; }
+    .account-page .sub { color: var(--lum-text-muted); margin-bottom: 1.5rem; }
+    .account-header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; margin-bottom: 2.5rem; }
+    .account-header .logout { padding: 0.5rem 1rem; background: transparent; border: 1px solid var(--lum-border); border-radius: 6px; color: var(--lum-text-muted); text-decoration: none; font-size: 0.9rem; cursor: pointer; font-family: inherit; }
+    .account-header .logout:hover { border-color: var(--lum-text-subtle); color: var(--lum-text); }
+    .section { margin-bottom: 2rem; padding: 1.5rem; background: var(--lum-surface-elevated); border: 1px solid var(--lum-border); border-radius: 12px; }
+    .section h2 { font-family: 'Encode Sans Condensed', sans-serif; font-size: 1rem; color: var(--lum-gold); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+    .section .empty { color: var(--lum-text-muted); font-size: 0.95rem; }
+    .card-grid { display: flex; flex-direction: column; gap: 1rem; }
+    .setup-card { padding: 1.25rem; background: rgba(0,0,0,0.2); border-radius: 10px; border: 1px solid rgba(255,255,255,0.06); }
+    .setup-card h3 { font-size: 1rem; margin: 0 0 0.5rem; font-weight: 600; }
+    .setup-card p { margin: 0.25rem 0; font-size: 0.9rem; color: var(--lum-text-muted); }
+    .setup-card a { color: var(--lum-gold); text-decoration: none; font-size: 0.9rem; }
+    .setup-card a:hover { text-decoration: underline; }
+    .setup-card .card-actions { margin-top: 0.75rem; display: flex; flex-wrap: wrap; gap: 0.75rem; }
+    .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; }
+    .badge-dfd { background: rgba(184,134,11,0.2); color: var(--lum-gold); }
+    .badge-chat { background: rgba(100,150,255,0.2); color: #6495ed; }
+    .badge-captions { background: rgba(76,175,80,0.2); color: #4caf50; }
+    .settings-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding: 0.75rem 0; border-bottom: 1px solid var(--lum-border); }
+    .settings-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .settings-row:first-child { padding-top: 0; }
+    .settings-label { font-size: 0.95rem; }
+    .settings-desc { font-size: 0.85rem; color: var(--lum-text-muted); margin-top: 0.25rem; }
+    .toggle-switch { position: relative; width: 44px; height: 24px; background: var(--lum-border); border-radius: 12px; cursor: pointer; transition: background 0.2s; }
+    .toggle-switch.on { background: var(--lum-gold); }
+    .toggle-switch::after { content: ''; position: absolute; width: 20px; height: 20px; background: #fff; border-radius: 50%; top: 2px; left: 2px; transition: transform 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+    .toggle-switch.on::after { transform: translateX(20px); }
+    .embed-pre { background: rgba(0,0,0,0.3); padding: 0.75rem; font-size: 0.8rem; overflow-x: auto; margin: 0.5rem 0; border-radius: 6px; font-family: monospace; }
+    .back-link { margin-top: 2rem; }
+    .back-link a { color: var(--lum-text-muted); text-decoration: none; font-size: 0.95rem; }
+    .back-link a:hover { color: var(--lum-text); }
+  </style>
+</head>
+<body class="lumo-landing">
+  <nav class="lumo-nav lumo-nav-scrolled">
+    <a href="/" class="lumo-nav-logo">Lumo 22</a>
+    <div class="lumo-nav-links">
+      <a href="/captions">Captions</a>
+      <a href="/digital-front-desk">Front Desk</a>
+      <a href="/digital-front-desk#pricing">Pricing</a>
+    </div>
+    <a href="/account" class="lumo-nav-cta">Account</a>
+  </nav>
+
+  <main class="account-page">
+    {% if request.args.get('billing') == 'no_sub' %}
+    <p style="padding: 0.75rem 1rem; background: rgba(255,200,0,0.1); border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.9rem;">No subscription found. If you're on the monthly plan, use the link in your order emails to manage billing.</p>
+    {% elif request.args.get('billing') == 'error' %}
+    <p style="padding: 0.75rem 1rem; background: rgba(200,80,80,0.1); border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.9rem;">Could not open billing portal. Please try again or email hello@lumo22.com.</p>
+    {% endif %}
+    <div class="account-header">
+      <div>
+        <h1>Your Account</h1>
+        <p class="sub">{{ customer.email }}</p>
+      </div>
+      <form action="/api/auth/logout" method="POST" style="margin: 0;">
+        <button type="submit" class="logout">Log out</button>
+      </form>
+    </div>
+
+    <section class="section">
+      <h2>Digital Front Desk & Chat</h2>
+      {% if setups %}
+        <div class="card-grid">
+          {% for s in setups %}
+          <div class="setup-card">
+            {% if (s.product_type or 'front_desk') == 'chat_only' %}
+            <span class="badge badge-chat">Chat Assistant</span>
+            {% else %}
+            <span class="badge badge-dfd">Digital Front Desk</span>
+            {% endif %}
+            <h3>{{ s.business_name or 'Setup' }}</h3>
+            <p>Enquiry email: {{ s.enquiry_email }}</p>
+            {% if (s.product_type or 'front_desk') == 'front_desk' %}
+            {% if s.forwarding_email %}
+            <p>Forwarding address: {{ s.forwarding_email }}</p>
+            {% endif %}
+            <div class="card-actions">
+              <a href="/api/front-desk-setup/pause-auto-reply?token={{ s.done_token }}">Pause auto-reply</a>
+              <a href="/api/front-desk-setup/resume-auto-reply?token={{ s.done_token }}">Resume auto-reply</a>
+            </div>
+            {% elif (s.product_type or '') == 'chat_only' and s.chat_widget_key %}
+            <p>Your embed code:</p>
+            <pre class="embed-pre">&lt;script src="{{ base_url or '' }}/static/js/chat-widget.js" data-key="{{ s.chat_widget_key }}" async&gt;&lt;/script&gt;</pre>
+            <p style="font-size:0.85rem; color:var(--lum-text-muted);">Add this before the closing &lt;/body&gt; tag on your website.</p>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="empty">No Digital Front Desk or Chat setups yet.</p>
+        <p class="empty" style="margin-top:0.5rem;"><a href="/digital-front-desk#pricing" style="color:var(--lum-gold);">Get started</a></p>
+      {% endif %}
+    </section>
+
+    <section class="section">
+      <h2>30 Days Captions</h2>
+      {% set has_subscription = caption_orders and caption_orders|selectattr('stripe_customer_id')|list|length > 0 %}
+      {% if has_subscription %}
+      <p style="margin: 0 0 1rem; font-size: 0.9rem;">
+        <a href="/api/billing/portal" style="color: var(--lum-gold);">Manage subscription</a> — update payment, view invoices, or cancel
+      </p>
+      {% endif %}
+      {% if caption_orders %}
+        <div class="card-grid">
+          {% for o in caption_orders %}
+          <div class="setup-card">
+            <span class="badge badge-captions">Order</span>
+            <h3>Order {{ o.created_at[:10] if o.created_at else '' }}</h3>
+            <p>Status: {{ o.status or '—' }}</p>
+            <div class="card-actions">
+              {% if o.status == 'awaiting_intake' %}
+              <a href="/captions-intake?t={{ o.token }}">Complete your intake</a>
+              {% else %}
+              <a href="/captions-intake?t={{ o.token }}">Edit intake</a>
+              {% if o.status == 'delivered' %}
+              <a href="mailto:hello@lumo22.com">Captions delivered by email</a>
+              {% else %}
+              <a href="mailto:hello@lumo22.com">Contact us</a>
+              {% endif %}
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="empty">No caption orders yet.</p>
+        <p class="empty" style="margin-top:0.5rem;"><a href="/captions" style="color:var(--lum-gold);">Get 30 Days Captions</a></p>
+      {% endif %}
+    </section>
+
+    <section class="section">
+      <h2>Settings</h2>
+      <div class="settings-row">
+        <div>
+          <div class="settings-label">Marketing emails</div>
+          <div class="settings-desc">Receive tips, updates, and offers from Lumo 22</div>
+        </div>
+        <div id="marketing-toggle-wrap" role="button" tabindex="0" class="toggle-switch {% if customer.get('marketing_opt_in', True) %}on{% endif %}" aria-label="Toggle marketing emails" onclick="toggleMarketing()" onkeydown="if(event.key==='Enter'||event.key===' ') { event.preventDefault(); toggleMarketing(); }"></div>
+      </div>
+    </section>
+
+    <p class="back-link"><a href="/">← Back to Lumo 22</a></p>
+  </main>
+
+  <script>
+    (function() {
+      document.querySelector('form[action="/api/auth/logout"]').addEventListener('submit', function(e) {
+        e.preventDefault();
+        fetch('/api/auth/logout', { method: 'POST' })
+          .then(function() { window.location.href = '/'; });
+      });
+
+      function toggleMarketing() {
+        var wrap = document.getElementById('marketing-toggle-wrap');
+        var optIn = wrap.classList.contains('on');
+        var nextOptIn = !optIn;
+        wrap.classList.toggle('on', nextOptIn);
+        fetch('/api/auth/preferences', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ marketing_opt_in: nextOptIn })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (!data.ok) { wrap.classList.toggle('on', optIn); }
+        })
+        .catch(function() { wrap.classList.toggle('on', optIn); });
+      }
+    })();
+  </script>
+</body>
+</html>

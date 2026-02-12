@@ -6,7 +6,7 @@
   <title>Complete your setup | Lumo 22 Digital Front Desk</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Encode+Sans+Condensed:wght@400;500;600;700&family=PT+Sans+Narrow:wght@400;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
   <style>
     .setup-page { padding: 6rem 1.5rem 4rem; max-width: 520px; margin: 0 auto; }
@@ -25,6 +25,27 @@
     .setup-page .back { margin-top: 2rem; }
     .setup-page .back a { color: var(--lum-text-muted); text-decoration: none; font-size: 0.95rem; }
     .setup-page .back a:hover { color: var(--lum-text); }
+    .setup-page .step-badge { font-size: 0.8rem; font-weight: 600; color: var(--lum-gold); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
+    .setup-page .step-actions { margin-top: 1.5rem; display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; }
+    .setup-page .step-skip { color: var(--lum-text-muted); text-decoration: none; font-size: 0.9rem; }
+    .setup-page .step-skip:hover { color: var(--lum-text); }
+    .setup-page .form-step { display: none; }
+    .setup-page .form-step.active { display: block; }
+    .setup-page .checkbox-group, .setup-page .radio-group { margin-bottom: 1.25rem; }
+    .setup-page .checkbox-item, .setup-page .radio-item { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.5rem; cursor: pointer; }
+    .setup-page .checkbox-item input, .setup-page .radio-item input { width: auto; margin: 0; }
+    .setup-page .checkbox-item span, .setup-page .radio-item span { font-weight: 400; color: var(--lum-text); }
+    .setup-page textarea { width: 100%; padding: 0.75rem 1rem; background: var(--lum-surface-elevated); border: 1px solid var(--lum-border); border-radius: 8px; color: var(--lum-text); font-size: 1rem; margin-bottom: 1.25rem; resize: vertical; font-family: inherit; }
+    .setup-page .review-step { display: none; margin-bottom: 2rem; }
+    .setup-page .review-step.show { display: block; }
+    .setup-page .review-section { margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--lum-border); }
+    .setup-page .review-section:last-of-type { border-bottom: none; }
+    .setup-page .review-section h3 { font-size: 0.85rem; color: var(--lum-text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem; }
+    .setup-page .review-section p { margin: 0; font-size: 0.95rem; line-height: 1.5; }
+    .setup-page .review-section .empty { color: var(--lum-text-subtle); font-style: italic; }
+    .setup-page .review-actions { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1.5rem; }
+    .setup-page .btn-secondary { background: transparent; color: var(--lum-text-muted); border: 1px solid var(--lum-border); }
+    .setup-page .btn-secondary:hover { border-color: var(--lum-text-subtle); color: var(--lum-text); }
   </style>
 </head>
 <body class="lumo-landing">
@@ -33,46 +54,123 @@
     <div class="lumo-nav-links">
       <a href="/captions">Captions</a>
       <a href="/digital-front-desk">Front Desk</a>
-      <a href="/plans">Pricing</a>
+      <a href="/digital-front-desk#pricing">Pricing</a>
     </div>
-    <a href="/digital-front-desk" class="lumo-nav-cta">Front Desk</a>
+    {% if current_customer %}<a href="/account" class="lumo-nav-cta">Account</a>{% else %}<a href="/login" class="lumo-nav-cta">Log in</a>{% endif %}
   </nav>
 
   <main class="setup-page">
     {% if product == 'chat' and setup_token %}
     <h1>Complete your Website Chat setup</h1>
-    <p class="sub">Enter your details below. We'll give you an embed code to add to your website so the chat goes live.</p>
+    <p class="sub">Two short steps — we'll give you an embed code so your chat goes live on your site.</p>
 
     <div id="form-wrap">
       <form id="front-desk-setup-form" action="#" method="post">
         <input type="hidden" name="product" value="chat">
         <input type="hidden" name="setup_token" value="{{ setup_token }}">
 
-        <label for="business_name">Business name</label>
-        <input type="text" id="business_name" name="business_name" placeholder="Your business or practice name" required>
+        <!-- Step 1: Essentials -->
+        <div id="chat-step-1" class="form-step active">
+          <p class="step-badge">Step 1 of 2</p>
+          <h2 style="font-family: 'Encode Sans Condensed', sans-serif; font-size: 1.25rem; margin-bottom: 0.5rem;">The essentials</h2>
+          <p class="sub" style="margin-bottom: 1.5rem;">Quick details so we can get you set up. Takes under a minute.</p>
 
-        <label for="enquiry_email">Where to send leads</label>
-        <input type="email" id="enquiry_email" name="enquiry_email" placeholder="enquiries@yourbusiness.com" required>
-        <p class="hint">We'll send you chat enquiries at this address.</p>
+          <label for="business_name">Business name</label>
+          <input type="text" id="business_name" name="business_name" placeholder="Your business or practice name" required>
 
-        <label for="booking_link">Booking link <span style="font-weight:400;color:var(--lum-text-muted);">(optional)</span></label>
-        <input type="url" id="booking_link" name="booking_link" placeholder="https://calendly.com/you or leave blank">
+          <label for="enquiry_email">Where to send leads</label>
+          <input type="email" id="enquiry_email" name="enquiry_email" placeholder="enquiries@yourbusiness.com" required>
+          <p class="hint">We'll send chat enquiries to this address.</p>
 
-        <label for="business_description">About your business <span style="font-weight:400;color:var(--lum-text-muted);">(optional)</span></label>
-        <textarea id="business_description" name="business_description" rows="3" placeholder="e.g. We're a beauty salon in London. We offer facials, lashes, and brows. Open Tue–Sat." style="width:100%; padding:0.75rem 1rem; background:var(--lum-surface-elevated); border:1px solid var(--lum-border); border-radius:8px; color:var(--lum-text); font-size:1rem; margin-bottom:1.25rem; resize:vertical;"></textarea>
-        <p class="hint">This helps the chat answer visitors in your tone and with your services.</p>
+          <label for="booking_link">Booking link <span style="font-weight:400;color:var(--lum-text-muted);">(optional)</span></label>
+          <input type="url" id="booking_link" name="booking_link" placeholder="https://calendly.com/you or leave blank">
+          <p class="hint">Your Calendly, Fresha, or other booking page — we'll share it when it helps.</p>
 
-        <button type="submit" class="btn-submit" id="submit-btn">Get my embed code</button>
+          <label for="business_description">About your business <span style="font-weight:400;color:var(--lum-text-muted);">(optional)</span></label>
+          <textarea id="business_description" name="business_description" rows="3" placeholder="e.g. We're a beauty salon in London. We offer facials, lashes, and brows. Open Tue–Sat."></textarea>
+          <p class="hint">A short description helps the chat answer visitors in your voice.</p>
+
+          <div class="step-actions">
+            <button type="button" class="btn-submit" id="btn-continue">Continue</button>
+            <a href="#" class="step-skip" id="link-skip-step">Skip this step — get my embed code</a>
+          </div>
+        </div>
+
+        <!-- Step 2: Make your chat smarter (optional but encouraged) -->
+        <div id="chat-step-2" class="form-step">
+          <p class="step-badge">Step 2 of 2</p>
+          <h2 style="font-family: 'Encode Sans Condensed', sans-serif; font-size: 1.25rem; margin-bottom: 0.5rem;">Make your chat smarter</h2>
+          <p class="sub" style="margin-bottom: 1.5rem;">Answer a few quick questions to help your chat give better answers and higher-quality enquiries. Optional — you can skip if you prefer.</p>
+
+          <label>What do people usually contact you about?</label>
+          <p class="hint" style="margin-bottom: 0.5rem;">Select all that apply. This helps the chat guide conversations.</p>
+          <div class="checkbox-group">
+            <label class="checkbox-item"><input type="checkbox" name="enquiry_types" value="pricing"> <span>Pricing</span></label>
+            <label class="checkbox-item"><input type="checkbox" name="enquiry_types" value="booking_appointments"> <span>Booking appointments</span></label>
+            <label class="checkbox-item"><input type="checkbox" name="enquiry_types" value="availability"> <span>Availability</span></label>
+            <label class="checkbox-item"><input type="checkbox" name="enquiry_types" value="services_offered"> <span>Services offered</span></label>
+            <label class="checkbox-item"><input type="checkbox" name="enquiry_types" value="general_questions"> <span>General questions</span></label>
+            <label class="checkbox-item"><input type="checkbox" name="enquiry_types" value="something_else"> <span>Something else</span></label>
+          </div>
+
+          <label for="opening_hours">When should visitors expect a response?</label>
+          <input type="text" id="opening_hours" name="opening_hours" placeholder="e.g. Mon–Fri 9am–6pm" style="margin-bottom: 0.75rem;">
+          <p class="hint" style="margin-bottom: 0.75rem;">Your opening hours (optional).</p>
+          <div class="checkbox-group">
+            <label class="checkbox-item"><input type="checkbox" name="reply_same_day" value="1"> <span>We usually reply same day</span></label>
+            <label class="checkbox-item"><input type="checkbox" name="reply_24h" value="1"> <span>We usually reply within 24 hours</span></label>
+          </div>
+          <p class="hint">This sets clear expectations and builds trust with visitors.</p>
+
+          <label>How should your chat sound?</label>
+          <p class="hint" style="margin-bottom: 0.5rem;">Choose the tone that fits your brand.</p>
+          <div class="radio-group">
+            <label class="radio-item"><input type="radio" name="tone" value="friendly_relaxed"> <span>Friendly & relaxed</span></label>
+            <label class="radio-item"><input type="radio" name="tone" value="professional_smart"> <span>Professional & smart</span></label>
+            <label class="radio-item"><input type="radio" name="tone" value="warm_reassuring"> <span>Warm & reassuring</span></label>
+            <label class="radio-item"><input type="radio" name="tone" value="short_direct"> <span>Short & direct</span></label>
+          </div>
+
+          <label for="good_lead_rules">When should the chat encourage someone to book? <span style="font-weight:400;color:var(--lum-text-muted);">(optional)</span></label>
+          <textarea id="good_lead_rules" name="good_lead_rules" rows="2" placeholder="e.g. when they mention a specific service, timeframe, or budget"></textarea>
+          <p class="hint">Helps us prioritise the kinds of enquiries you care about most.</p>
+
+          <div class="step-actions" style="margin-top: 1.5rem;">
+            <button type="button" class="btn-submit" id="btn-back-step">← Back</button>
+            <button type="button" class="btn-submit" id="chat-btn-review">Review my answers</button>
+          </div>
+        </div>
+        <div id="chat-review-step" class="form-step">
+          <p class="step-badge">Review</p>
+          <h2 style="font-family: 'Encode Sans Condensed', sans-serif; font-size: 1.25rem; margin-bottom: 0.5rem;">Double-check your answers</h2>
+          <p class="sub" style="margin-bottom: 1rem;">Review before submitting. Click Edit to change anything.</p>
+          <div id="chat-review-content"></div>
+          <div class="step-actions" style="margin-top: 1.5rem;">
+            <button type="button" class="btn-submit btn-secondary" id="chat-btn-edit">← Edit</button>
+            <button type="button" class="btn-submit" id="submit-btn">Finish setup &amp; get embed code</button>
+          </div>
+        </div>
       </form>
       <p class="back"><a href="/website-chat">← Back to Website Chat</a></p>
     </div>
 
     <div id="success-msg">
-      <p style="margin:0 0 0.5rem; font-weight: 600;">You're all set.</p>
-      <p style="margin:0 0 1rem; color: var(--lum-text-muted); line-height: 1.6;">Add this code to your website (before the closing &lt;/body&gt; tag) to show the chat widget:</p>
+      <p style="margin:0 0 0.5rem; font-weight: 600;">Your chat is ready.</p>
+      <p style="margin:0 0 1rem; color: var(--lum-text-muted); line-height: 1.6;">Add the code below to your website (before the closing &lt;/body&gt; tag). Your embed code is also in the confirmation email we've sent you.</p>
       <pre id="embed-code" style="background:var(--lum-surface-elevated); border:1px solid var(--lum-border); border-radius:8px; padding:1rem; overflow-x:auto; font-size:0.85rem; margin:0 0 1rem;"></pre>
-      <p style="margin:0; color: var(--lum-text-muted); font-size:0.9rem;">The chat widget will appear on your site. If you need help, reply to your setup email or contact hello@lumo22.com.</p>
-      <p class="back" style="margin-top: 1rem;"><a href="/website-chat">← Website Chat</a> · <a href="/">Home</a></p>
+      <p style="margin:0; color: var(--lum-text-muted); font-size: 0.9rem;">The chat will appear on your site right away. If you need help, reply to your setup email or contact hello@lumo22.com.</p>
+      <div id="create-account-box" style="margin-top: 1.5rem; padding: 1.25rem; background: var(--lum-surface-elevated); border: 1px solid var(--lum-border); border-radius: 8px;">
+        <p style="margin:0 0 0.75rem; font-weight: 600; font-size: 0.95rem;">Create an account</p>
+        <p style="margin:0 0 1rem; color: var(--lum-text-muted); font-size: 0.9rem;">Access your chat setup and embed code anytime from your account.</p>
+        <form id="create-account-form">
+          <input type="hidden" id="ca-email">
+          <label for="ca-password">Password</label>
+          <input type="password" id="ca-password" minlength="6" required style="width:100%;padding:0.5rem;margin-bottom:0.75rem;">
+          <button type="submit" class="btn-submit" id="ca-btn">Create account</button>
+        </form>
+        <p id="ca-done" style="display:none; margin:0; color: var(--lum-gold);">Account created! <a href="/account" style="color:inherit;">Go to your account</a></p>
+      </div>
+      <p class="back" style="margin-top: 1rem;"><a href="/website-chat">← Website Chat</a> · <a href="/account">Account</a> · <a href="/">Home</a></p>
     </div>
     {% else %}
     <h1>Complete your setup</h1>
@@ -91,19 +189,65 @@
         <input type="email" id="enquiry_email" name="enquiry_email" placeholder="enquiries@yourbusiness.com" required>
         <p class="hint">The inbox we'll watch for new enquiries and reply from (e.g. hello@, enquiries@, or your main contact email).</p>
 
-        <label for="booking_link">Booking link <span style="font-weight:400;color:var(--lum-text-muted);">(Standard & Premium)</span></label>
+        <label for="booking_link">Booking link <span style="font-weight:400;color:var(--lum-text-muted);">(Growth & Pro)</span></label>
         <input type="url" id="booking_link" name="booking_link" placeholder="https://calendly.com/you or https://fresha.com/...">
         <p class="hint">Your Calendly, Fresha, or other booking page. Leave blank if you're on Starter or don't use one yet.</p>
 
-        <button type="submit" class="btn-submit" id="submit-btn">Submit setup</button>
+        <fieldset style="border:0; padding:0; margin:0 0 1.25rem;">
+          <legend style="font-size:0.9rem; font-weight:500; margin-bottom:0.5rem; color:var(--lum-text);">Who gets auto-replies</legend>
+          <label for="skip_reply_domains">Domains to never auto-reply to <span style="font-weight:400;color:var(--lum-text-muted);">(optional)</span></label>
+          <input type="text" id="skip_reply_domains" name="skip_reply_domains" placeholder="e.g. mybusiness.com, mycompany.co.uk">
+          <p class="hint">Add your own company domain(s) here so we only auto-reply to real clients and enquiries — not internal emails or forwards from your team.</p>
+          <div class="checkbox-group" style="margin-top:1rem;">
+            <label class="checkbox-item">
+              <input type="checkbox" id="auto_reply_enabled" name="auto_reply_enabled" value="1" checked>
+              <span>Auto-reply to new enquiries (you can turn this off later via the link we send you)</span>
+            </label>
+          </div>
+        </fieldset>
+
+        <fieldset style="border:0; padding:0; margin:0 0 1.25rem;">
+          <legend style="font-size:0.9rem; font-weight:500; margin-bottom:0.5rem; color:var(--lum-text);">Scheduling (optional)</legend>
+          <div class="checkbox-group" style="margin-bottom:0.75rem;">
+            <label class="checkbox-item">
+              <input type="checkbox" id="tight_scheduling_enabled" name="tight_scheduling_enabled" value="1">
+              <span>Enable tight scheduling</span>
+            </label>
+          </div>
+          <label for="minimum_gap_between_appointments">Minimum gap between appointments (minutes)</label>
+          <input type="number" id="minimum_gap_between_appointments" name="minimum_gap_between_appointments" value="60" min="15" max="480" step="15" style="width:6rem; margin-bottom:0.25rem;">
+          <p class="hint" title="If enabled, new appointments will only be scheduled within this time of existing bookings. If no bookings exist, all times are available.">If enabled, new appointments will only be scheduled within this time of existing bookings. If no bookings exist, all times are available.</p>
+        </fieldset>
+
+        <button type="button" class="btn-submit" id="dfd-btn-review">Review my setup</button>
       </form>
+      <div id="dfd-review-step" class="review-step">
+        <h2 style="font-family: 'Encode Sans Condensed', sans-serif; font-size: 1.25rem; margin-bottom: 0.5rem;">Double-check your setup</h2>
+        <p class="sub" style="margin-bottom: 1rem;">Review before submitting. Click Edit to change anything.</p>
+        <div id="dfd-review-content"></div>
+        <div class="review-actions">
+          <button type="button" class="btn-submit btn-secondary" id="dfd-btn-edit">Edit</button>
+          <button type="button" class="btn-submit" id="dfd-btn-confirm">Confirm &amp; submit</button>
+        </div>
+      </div>
       <p class="back"><a href="/digital-front-desk">← Back to Digital Front Desk</a></p>
     </div>
 
     <div id="success-msg">
       <p style="margin:0 0 0.5rem; font-weight: 600;">We've received your setup.</p>
       <p style="margin:0; color: var(--lum-text-muted); line-height: 1.6;">We'll connect your enquiry email and booking link and have you live within 24 hours. If we need anything else we'll email you.</p>
-      <p class="back" style="margin-top: 1rem;"><a href="/digital-front-desk">← Back to Digital Front Desk</a> · <a href="/">Home</a></p>
+      <div id="create-account-box" style="margin-top: 1.5rem; padding: 1.25rem; background: var(--lum-surface-elevated); border: 1px solid var(--lum-border); border-radius: 8px;">
+        <p style="margin:0 0 0.75rem; font-weight: 600; font-size: 0.95rem;">Create an account</p>
+        <p style="margin:0 0 1rem; color: var(--lum-text-muted); font-size: 0.9rem;">Access your Digital Front Desk, pause links, and settings anytime from your account.</p>
+        <form id="create-account-form">
+          <input type="hidden" id="ca-email">
+          <label for="ca-password">Password</label>
+          <input type="password" id="ca-password" minlength="6" required style="width:100%;padding:0.5rem;margin-bottom:0.75rem;">
+          <button type="submit" class="btn-submit" id="ca-btn">Create account</button>
+        </form>
+        <p id="ca-done" style="display:none; margin:0; color: var(--lum-gold);">Account created! <a href="/account" style="color:inherit;">Go to your account</a></p>
+      </div>
+      <p class="back" style="margin-top: 1rem;"><a href="/digital-front-desk">← Back to Digital Front Desk</a> · <a href="/account">Account</a> · <a href="/">Home</a></p>
     </div>
     {% endif %}
   </main>
@@ -114,25 +258,118 @@
       if (!form) return;
       var isChat = !!form.querySelector('input[name="product"][value="chat"]');
       var setupToken = form.querySelector('input[name="setup_token"]');
-      form.addEventListener('submit', function(e) {
-        e.preventDefault();
-        var btn = document.getElementById('submit-btn');
-        btn.disabled = true;
-        btn.textContent = isChat ? 'Getting your code…' : 'Submitting…';
-        var payload = {};
-        if (isChat && setupToken) {
-          payload.product = 'chat';
-          payload.setup_token = setupToken.value.trim();
-          payload.business_name = (form.business_name && form.business_name.value || '').trim();
-          payload.enquiry_email = (form.enquiry_email && form.enquiry_email.value || '').trim();
-          payload.booking_link = (form.booking_link && form.booking_link.value || '').trim() || null;
-          payload.business_description = (form.business_description && form.business_description.value || '').trim() || null;
-        } else {
-          payload.customer_email = (form.customer_email && form.customer_email.value || '').trim();
-          payload.business_name = (form.business_name && form.business_name.value || '').trim();
-          payload.enquiry_email = (form.enquiry_email && form.enquiry_email.value || '').trim();
-          payload.booking_link = (form.booking_link && form.booking_link.value || '').trim() || null;
+      var step1 = document.getElementById('chat-step-1');
+      var step2 = document.getElementById('chat-step-2');
+      var btnContinue = document.getElementById('btn-continue');
+      var linkSkip = document.getElementById('link-skip-step');
+      var btnBack = document.getElementById('btn-back-step');
+      var submitBtn = document.getElementById('submit-btn');
+
+      var chatReviewStep = document.getElementById('chat-review-step');
+      var chatReviewContent = document.getElementById('chat-review-content');
+      var chatBtnReview = document.getElementById('chat-btn-review');
+      var chatBtnEdit = document.getElementById('chat-btn-edit');
+
+      function chatSect(title, val) {
+        var p = document.createElement('p');
+        p.textContent = val || '(not provided)';
+        if (!val) p.className = 'empty';
+        var h = document.createElement('h3');
+        h.textContent = title;
+        var div = document.createElement('div');
+        div.className = 'review-section';
+        div.appendChild(h);
+        div.appendChild(p);
+        return div;
+      }
+
+      // 2-step chat flow: Continue → step 2, Skip → submit with step 1 only, Review → review step
+      if (isChat && step1 && step2) {
+        if (btnContinue) {
+          btnContinue.addEventListener('click', function() {
+            if (!form.checkValidity()) { form.reportValidity(); return; }
+            step1.classList.remove('active');
+            step2.classList.add('active');
+          });
         }
+        if (linkSkip) {
+          linkSkip.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (!form.checkValidity()) { form.reportValidity(); return; }
+            submitChatForm(true);
+          });
+        }
+        if (btnBack) {
+          btnBack.addEventListener('click', function() {
+            step2.classList.remove('active');
+            step1.classList.add('active');
+          });
+        }
+        if (chatBtnReview && chatReviewStep && chatReviewContent) {
+          chatBtnReview.addEventListener('click', function() {
+            if (!form.checkValidity()) { form.reportValidity(); return; }
+            var p = buildChatPayload(false);
+            chatReviewContent.innerHTML = '';
+            chatReviewContent.appendChild(chatSect('Business name', p.business_name));
+            chatReviewContent.appendChild(chatSect('Where to send leads', p.enquiry_email));
+            chatReviewContent.appendChild(chatSect('Booking link', p.booking_link));
+            chatReviewContent.appendChild(chatSect('About your business', p.business_description));
+            if (p.enquiry_types && p.enquiry_types.length) {
+              chatReviewContent.appendChild(chatSect('Contact topics', p.enquiry_types.join(', ')));
+            }
+            chatReviewContent.appendChild(chatSect('Opening hours', p.opening_hours));
+            chatReviewContent.appendChild(chatSect('Reply same day', p.reply_same_day ? 'Yes' : 'No'));
+            chatReviewContent.appendChild(chatSect('Reply within 24h', p.reply_24h ? 'Yes' : 'No'));
+            chatReviewContent.appendChild(chatSect('Tone', p.tone));
+            chatReviewContent.appendChild(chatSect('When to encourage booking', p.good_lead_rules));
+            step2.classList.remove('active');
+            chatReviewStep.classList.add('active');
+          });
+        }
+        if (chatBtnEdit) {
+          chatBtnEdit.addEventListener('click', function() {
+            chatReviewStep.classList.remove('active');
+            step2.classList.add('active');
+          });
+        }
+        if (submitBtn) {
+          submitBtn.addEventListener('click', function() {
+            submitChatForm(false);
+          });
+        }
+      }
+
+      function buildChatPayload(skipStep2) {
+        var payload = {
+          product: 'chat',
+          setup_token: setupToken ? setupToken.value.trim() : '',
+          business_name: (form.business_name && form.business_name.value || '').trim(),
+          enquiry_email: (form.enquiry_email && form.enquiry_email.value || '').trim(),
+          booking_link: (form.booking_link && form.booking_link.value || '').trim() || null,
+          business_description: (form.business_description && form.business_description.value || '').trim() || null
+        };
+        if (!skipStep2 && step2) {
+          var enquiryTypes = form.querySelectorAll('input[name="enquiry_types"]:checked');
+          payload.enquiry_types = [].map.call(enquiryTypes, function(cb) { return cb.value; });
+          payload.opening_hours = (form.opening_hours && form.opening_hours.value || '').trim() || null;
+          payload.reply_same_day = !!(form.reply_same_day && form.reply_same_day.checked);
+          payload.reply_24h = !!(form.reply_24h && form.reply_24h.checked);
+          var toneEl = form.querySelector('input[name="tone"]:checked');
+          payload.tone = toneEl ? toneEl.value : null;
+          payload.good_lead_rules = (form.good_lead_rules && form.good_lead_rules.value || '').trim() || null;
+          // TODO: Backend — persist enquiry_types, opening_hours, reply_same_day, reply_24h, tone, good_lead_rules to database (e.g. front_desk_setups or chat_config table).
+          // TODO: Chat logic — pass tone + good_lead_rules (and availability) into reply generation for tailored, on-brand conversations.
+          // TODO: Per-plan feature gating — optional step 2 or richer fields could be gated by plan later.
+        }
+        return payload;
+      }
+
+      function submitChatForm(skipStep2) {
+        var payload = isChat && setupToken ? buildChatPayload(skipStep2) : null;
+        if (!payload) return;
+        var btn = skipStep2 ? (btnContinue || submitBtn) : (submitBtn || btnContinue);
+        var origText = btn ? btn.textContent : 'Submit';
+        if (btn) { btn.disabled = true; btn.textContent = 'Getting your code…'; }
         fetch('/api/front-desk-setup', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -144,22 +381,171 @@
               document.getElementById('form-wrap').classList.add('hide');
               var successEl = document.getElementById('success-msg');
               successEl.classList.add('show');
-              if (isChat && data.embed_snippet) {
+              if (data.embed_snippet) {
                 var pre = document.getElementById('embed-code');
                 if (pre) pre.textContent = data.embed_snippet;
               }
+              var caEmail = document.getElementById('ca-email');
+              if (caEmail && data.customer_email) caEmail.value = (data.customer_email || '').trim();
             } else {
-              btn.disabled = false;
-              btn.textContent = isChat ? 'Get my embed code' : 'Submit setup';
+              if (btn) { btn.disabled = false; btn.textContent = origText; }
               alert(data.error || 'Something went wrong. Please try again or email hello@lumo22.com.');
             }
           })
           .catch(function() {
-            btn.disabled = false;
-            btn.textContent = isChat ? 'Get my embed code' : 'Submit setup';
+            if (btn) { btn.disabled = false; btn.textContent = origText; }
             alert('Network error. Please try again or email hello@lumo22.com.');
           });
+      }
+
+      (function() {
+        var tightCheck = document.getElementById('tight_scheduling_enabled');
+        var gapInput = document.getElementById('minimum_gap_between_appointments');
+        if (tightCheck && gapInput) {
+          function updateGapDisabled() { gapInput.disabled = !tightCheck.checked; }
+          tightCheck.addEventListener('change', updateGapDisabled);
+          updateGapDisabled();
+        }
+      })();
+
+      function buildDfdPayload() {
+        var tightCheck = form.querySelector('#tight_scheduling_enabled');
+        var gapInput = form.querySelector('#minimum_gap_between_appointments');
+        var autoReplyCheck = form.querySelector('#auto_reply_enabled');
+        var skipDomainsInput = form.querySelector('#skip_reply_domains');
+        return {
+          customer_email: (form.customer_email && form.customer_email.value || '').trim(),
+          business_name: (form.business_name && form.business_name.value || '').trim(),
+          enquiry_email: (form.enquiry_email && form.enquiry_email.value || '').trim(),
+          booking_link: (form.booking_link && form.booking_link.value || '').trim() || null,
+          tight_scheduling_enabled: !!(tightCheck && tightCheck.checked),
+          minimum_gap_between_appointments: (gapInput && gapInput.value) ? parseInt(gapInput.value, 10) : 60,
+          auto_reply_enabled: !!(autoReplyCheck && autoReplyCheck.checked),
+          skip_reply_domains: (skipDomainsInput && skipDomainsInput.value || '').trim() || null
+        };
+      }
+
+      function submitDfdForm() {
+        var btn = document.getElementById('dfd-btn-confirm');
+        if (!btn) btn = document.getElementById('submit-btn');
+        var origText = btn ? btn.textContent : 'Submit setup';
+        if (btn) { btn.disabled = true; btn.textContent = 'Submitting…'; }
+        var payload = buildDfdPayload();
+        fetch('/api/front-desk-setup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (data.ok) {
+              document.getElementById('form-wrap').classList.add('hide');
+              document.getElementById('success-msg').classList.add('show');
+              var caEmail = document.getElementById('ca-email');
+              if (caEmail && data.customer_email) caEmail.value = (data.customer_email || '').trim();
+            } else {
+              if (btn) { btn.disabled = false; btn.textContent = origText; }
+              alert(data.error || 'Something went wrong. Please try again or email hello@lumo22.com.');
+            }
+          })
+          .catch(function() {
+            if (btn) { btn.disabled = false; btn.textContent = origText; }
+            alert('Network error. Please try again or email hello@lumo22.com.');
+          });
+      }
+
+      var dfdBtnReview = document.getElementById('dfd-btn-review');
+      var dfdReviewStep = document.getElementById('dfd-review-step');
+      var dfdReviewContent = document.getElementById('dfd-review-content');
+      var dfdBtnEdit = document.getElementById('dfd-btn-edit');
+      var dfdBtnConfirm = document.getElementById('dfd-btn-confirm');
+      if (dfdBtnReview && dfdReviewStep && dfdReviewContent) {
+        function dfdSect(title, val) {
+          var p = document.createElement('p');
+          p.textContent = val || '(not provided)';
+          if (!val) p.className = 'empty';
+          var h = document.createElement('h3');
+          h.textContent = title;
+          var div = document.createElement('div');
+          div.className = 'review-section';
+          div.appendChild(h);
+          div.appendChild(p);
+          return div;
+        }
+        dfdBtnReview.addEventListener('click', function() {
+          if (!form.checkValidity()) { form.reportValidity(); return; }
+          var p = buildDfdPayload();
+          dfdReviewContent.innerHTML = '';
+          dfdReviewContent.appendChild(dfdSect('Your email', p.customer_email));
+          dfdReviewContent.appendChild(dfdSect('Business name', p.business_name));
+          dfdReviewContent.appendChild(dfdSect('Enquiry email to monitor', p.enquiry_email));
+          dfdReviewContent.appendChild(dfdSect('Booking link', p.booking_link));
+          dfdReviewContent.appendChild(dfdSect('Domains to never auto-reply', p.skip_reply_domains));
+          dfdReviewContent.appendChild(dfdSect('Auto-reply', p.auto_reply_enabled ? 'Yes' : 'No'));
+          dfdReviewContent.appendChild(dfdSect('Tight scheduling', p.tight_scheduling_enabled ? 'Yes (gap: ' + p.minimum_gap_between_appointments + ' min)' : 'No'));
+          form.style.display = 'none';
+          dfdReviewStep.classList.add('show');
+        });
+        dfdBtnEdit.addEventListener('click', function() {
+          dfdReviewStep.classList.remove('show');
+          form.style.display = 'block';
+        });
+        dfdBtnConfirm.addEventListener('click', submitDfdForm);
+      }
+
+      form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        if (isChat && setupToken) {
+          if (chatReviewStep && chatReviewStep.classList.contains('active')) {
+            submitChatForm(false);
+          } else if (step2 && step2.classList.contains('active')) {
+            submitChatForm(false);
+          } else {
+            submitChatForm(true);
+          }
+          return;
+        }
+        if (dfdBtnReview) {
+          dfdBtnReview.click();
+        } else {
+          submitDfdForm();
+        }
       });
+
+      var caForm = document.getElementById('create-account-form');
+      if (caForm) {
+        caForm.addEventListener('submit', function(e) {
+          e.preventDefault();
+          var email = document.getElementById('ca-email').value.trim();
+          var pw = document.getElementById('ca-password').value;
+          if (!email) { alert('Email is required.'); return; }
+          if (pw.length < 6) { alert('Password must be at least 6 characters.'); return; }
+          var btn = document.getElementById('ca-btn');
+          btn.disabled = true;
+          btn.textContent = 'Creating…';
+          fetch('/api/auth/create-account', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email.toLowerCase(), password: pw })
+          })
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (data.ok) {
+              document.getElementById('create-account-form').style.display = 'none';
+              document.getElementById('ca-done').style.display = 'block';
+            } else {
+              alert(data.error || 'Something went wrong.');
+              btn.disabled = false;
+              btn.textContent = 'Create account';
+            }
+          })
+          .catch(function() {
+            alert('Network error. Please try again.');
+            btn.disabled = false;
+            btn.textContent = 'Create account';
+          });
+        });
+      }
     })();
   </script>
 </body>
