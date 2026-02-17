@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>30 Days Captions — Your details | Lumo 22</title>
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
   <meta name="description" content="Complete the form so we can tailor your 30 days of social media captions.">
@@ -63,6 +66,11 @@
     .intake-page #intake-success .btn-submit { background: var(--lum-gold); color: #000; }
     .intake-page #intake-success div[style*="background"] { background: #f0f0ee !important; border: 1px solid #ddd; }
     .intake-page #intake-error { background: rgba(200,80,80,0.12); color: #1a1a1a; border: 1px solid rgba(200,80,80,0.3); }
+    .intake-page select { width: 100%; padding: 0.75rem 1rem; background: #fff; border: 1px solid #ccc; border-radius: 8px; color: #111; font-family: var(--font-body); font-size: 1rem; margin-bottom: 1.25rem; }
+    .intake-page select:focus { outline: none; border-color: #666; }
+    .intake-checkbox-group { display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem; margin-bottom: 0.25rem; }
+    .intake-checkbox-label { display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 400; font-size: 0.95rem; }
+    .intake-checkbox-label input { width: auto; margin: 0; }
   </style>
 </head>
 <body class="lumo-landing">
@@ -102,42 +110,93 @@
     </div>
     <div id="intake-error" style="display: none; margin: 2rem 0; padding: 1.5rem; background: rgba(200,80,80,0.15); border-radius: 8px; color: var(--lum-text);"></div>
 
-    <form id="captions-intake-form" action="#" method="post">
+    <form id="captions-intake-form" action="#" method="post" data-platforms-count="{{ platforms_count }}">
       <input type="hidden" name="token" id="intake_token" value="{{ intake_token }}">
       <div class="form-section">
         <h2>Business</h2>
-        <label for="business_name">What is your business name? <span style="font-weight: 400; color: var(--lum-text-muted);">(optional)</span></label>
-        <input type="text" id="business_name" name="business_name" placeholder="e.g. Lumo 22, Acme Coaching" value="{{ existing_intake.get('business_name', '') }}">
+        <label for="business_name">What is your business name?</label>
+        <input type="text" id="business_name" name="business_name" required placeholder="e.g. Lumo 22, Acme Coaching" value="{{ existing_intake.get('business_name', '') }}">
         <label for="business_type">What type of business do you run?</label>
-        <input type="text" id="business_type" name="business_type" placeholder="e.g. consultancy, agency, product brand" value="{{ existing_intake.get('business_type', '') }}">
+        <select id="business_type" name="business_type">
+          <option value="">— Select one —</option>
+          <option value="Consultancy" {% if existing_intake.get('business_type') == 'Consultancy' %}selected{% endif %}>Consultancy</option>
+          <option value="Agency" {% if existing_intake.get('business_type') == 'Agency' %}selected{% endif %}>Agency</option>
+          <option value="Coach / Mentor" {% if existing_intake.get('business_type') == 'Coach / Mentor' %}selected{% endif %}>Coach / Mentor</option>
+          <option value="Product brand" {% if existing_intake.get('business_type') == 'Product brand' %}selected{% endif %}>Product brand</option>
+          <option value="Creative / Freelancer" {% if existing_intake.get('business_type') == 'Creative / Freelancer' %}selected{% endif %}>Creative / Freelancer</option>
+          <option value="E-commerce" {% if existing_intake.get('business_type') == 'E-commerce' %}selected{% endif %}>E-commerce</option>
+          <option value="Other" {% if existing_intake.get('business_type') and existing_intake.get('business_type') not in ['Consultancy', 'Agency', 'Coach / Mentor', 'Product brand', 'Creative / Freelancer', 'E-commerce'] %}selected{% endif %}>Other</option>
+        </select>
+        <input type="text" id="business_type_other" name="business_type_other" placeholder="Specify your business type" class="intake-other-field" style="display: none; margin-top: 0.5rem;" value="{{ existing_intake.get('business_type', '') if existing_intake.get('business_type') and existing_intake.get('business_type') not in ['Consultancy', 'Agency', 'Coach / Mentor', 'Product brand', 'Creative / Freelancer', 'E-commerce'] else '' }}">
         <label for="offer_one_line">In one sentence, what do you offer and to whom?</label>
-        <textarea id="offer_one_line" name="offer_one_line" placeholder="e.g. We help busy founders build a content habit without the daily grind" value="{{ existing_intake.get('offer_one_line', '') }}"></textarea>
+        <textarea id="offer_one_line" name="offer_one_line" placeholder="e.g. We help busy founders build a content habit without the daily grind">{{ existing_intake.get('offer_one_line', '') }}</textarea>
         <p class="field-helper">A couple of sentences is enough.</p>
       </div>
       <div class="form-section">
         <h2>Audience</h2>
-        <label for="audience">Who is your primary audience?</label>
-        <input type="text" id="audience" name="audience" placeholder="e.g. founders, marketing leads, small business owners" value="{{ existing_intake.get('audience', '') }}">
+        <p class="field-helper" style="margin-bottom: 0.5rem;">Who is your primary audience? (pick any that apply)</p>
+        <div class="intake-checkbox-group" role="group" aria-label="Primary audience">
+          <label class="intake-checkbox-label"><input type="checkbox" name="audience_cb" value="Founders"> Founders</label>
+          <label class="intake-checkbox-label"><input type="checkbox" name="audience_cb" value="Small business owners"> Small business owners</label>
+          <label class="intake-checkbox-label"><input type="checkbox" name="audience_cb" value="Marketing leads"> Marketing leads</label>
+          <label class="intake-checkbox-label"><input type="checkbox" name="audience_cb" value="Creatives"> Creatives</label>
+          <label class="intake-checkbox-label"><input type="checkbox" name="audience_cb" value="Consumers" id="audience_cb_consumers"> Consumers</label>
+        </div>
+        <div id="consumer_age_wrap" class="intake-other-wrap" style="display: none; margin-top: 0.75rem;" data-consumer-age-field="true">
+          <label for="consumer_age_range">What age range is your consumer audience?</label>
+          <input type="text" id="consumer_age_range" name="consumer_age_range" placeholder="e.g. 18-24 or 30+" value="{{ existing_intake.get('consumer_age_range', '') }}" autocomplete="off">
+        </div>
+        <input type="text" id="audience_other" name="audience_other" placeholder="Other (e.g. coaches, agencies)" style="margin-top: 0.75rem;" value="">
+        <input type="hidden" id="audience" name="audience" value="{{ existing_intake.get('audience', '') }}">
         <label for="audience_cares">What do they care about most when they land on your content?</label>
-        <textarea id="audience_cares" name="audience_cares" placeholder="e.g. quick wins, feeling less overwhelmed, practical tips" value="{{ existing_intake.get('audience_cares', '') }}"></textarea>
+        <textarea id="audience_cares" name="audience_cares" placeholder="e.g. quick wins, feeling less overwhelmed, practical tips">{{ existing_intake.get('audience_cares', '') }}</textarea>
       </div>
       <div class="form-section">
         <h2>Voice</h2>
-        <label for="voice_words">Choose 3–5 words that describe how you want to sound.</label>
-        <input type="text" id="voice_words" name="voice_words" placeholder="e.g. direct, thoughtful, understated, precise, warm" value="{{ existing_intake.get('voice_words', '') }}">
-        <p class="field-helper">Write this like you speak to your customers.</p>
+        <p class="field-helper" style="margin-bottom: 0.5rem;">Choose 3–5 words that describe how you want to sound (pick any that apply):</p>
+        <div class="intake-checkbox-group" role="group" aria-label="Voice tone">
+          <label class="intake-checkbox-label"><input type="checkbox" name="voice_words_cb" value="direct"> Direct</label>
+          <label class="intake-checkbox-label"><input type="checkbox" name="voice_words_cb" value="thoughtful"> Thoughtful</label>
+          <label class="intake-checkbox-label"><input type="checkbox" name="voice_words_cb" value="warm"> Warm</label>
+          <label class="intake-checkbox-label"><input type="checkbox" name="voice_words_cb" value="professional"> Professional</label>
+          <label class="intake-checkbox-label"><input type="checkbox" name="voice_words_cb" value="playful"> Playful</label>
+          <label class="intake-checkbox-label"><input type="checkbox" name="voice_words_cb" value="understated"> Understated</label>
+          <label class="intake-checkbox-label"><input type="checkbox" name="voice_words_cb" value="bold"> Bold</label>
+          <label class="intake-checkbox-label"><input type="checkbox" name="voice_words_cb" value="friendly"> Friendly</label>
+          <label class="intake-checkbox-label"><input type="checkbox" name="voice_words_cb" value="concise"> Concise</label>
+          <label class="intake-checkbox-label"><input type="checkbox" name="voice_words_cb" value="inspiring"> Inspiring</label>
+        </div>
+        <input type="text" id="voice_words_other" name="voice_words_other" placeholder="Other words (optional)" style="margin-top: 0.75rem;" value="">
+        <input type="hidden" id="voice_words" name="voice_words" value="{{ existing_intake.get('voice_words', '') }}">
         <label for="voice_avoid">Is there any language or phrasing you want to avoid?</label>
-        <textarea id="voice_avoid" name="voice_avoid" placeholder="e.g. jargon, hype, overly formal (optional)" value="{{ existing_intake.get('voice_avoid', '') }}"></textarea>
+        <textarea id="voice_avoid" name="voice_avoid" placeholder="e.g. jargon, hype, overly formal (optional)">{{ existing_intake.get('voice_avoid', '') }}</textarea>
       </div>
       <div class="form-section">
         <h2>Platform</h2>
+        {% if platforms_count > 1 %}
+        <p class="field-helper" style="margin-bottom: 0.5rem;">Select up to {{ platforms_count }} platforms (included in your order):</p>
+        <div class="intake-checkbox-group" role="group" aria-label="Platforms">
+          <label class="intake-checkbox-label"><input type="checkbox" name="platform_cb" value="Instagram & Facebook"> Instagram &amp; Facebook</label>
+          <label class="intake-checkbox-label"><input type="checkbox" name="platform_cb" value="LinkedIn"> LinkedIn</label>
+          <label class="intake-checkbox-label"><input type="checkbox" name="platform_cb" value="TikTok"> TikTok</label>
+          <label class="intake-checkbox-label"><input type="checkbox" name="platform_cb" value="Pinterest"> Pinterest</label>
+        </div>
+        <input type="hidden" id="platform" name="platform" value="{{ prefilled_platform }}">
+        {% else %}
         <label for="platform">Primary platform for these captions?</label>
-        <input type="text" id="platform" name="platform" placeholder="Instagram / LinkedIn / both / other" value="{{ existing_intake.get('platform', '') }}">
+        <select id="platform" name="platform">
+          <option value="">— Select one —</option>
+          <option value="Instagram & Facebook" {% if prefilled_platform == 'Instagram & Facebook' %}selected{% endif %}>Instagram &amp; Facebook</option>
+          <option value="LinkedIn" {% if prefilled_platform == 'LinkedIn' %}selected{% endif %}>LinkedIn</option>
+          <option value="TikTok" {% if prefilled_platform == 'TikTok' %}selected{% endif %}>TikTok</option>
+          <option value="Pinterest" {% if prefilled_platform == 'Pinterest' %}selected{% endif %}>Pinterest</option>
+        </select>
+        {% endif %}
         <label for="platform_habits">Any platform-specific habits?</label>
         <input type="text" id="platform_habits" name="platform_habits" placeholder="e.g. shorter on Instagram, longer on LinkedIn (optional)" value="{{ existing_intake.get('platform_habits', '') }}">
       </div>
       <div class="form-section">
-        <h2 style="display: flex; align-items: center;">Hashtags<span class="help-trigger" tabindex="0" role="button" aria-label="Hashtag guidelines"><span aria-hidden="true">?</span><span class="help-tooltip"><strong>Recommended by platform:</strong><br>Instagram 3–5 (or up to 30)<br>LinkedIn 2–5<br>TikTok 2–5<br><br>Quality over quantity. 3–10 is a safe range for most posts.</span></span></h2>
+        <h2 style="display: flex; align-items: center;">Hashtags<span class="help-trigger" tabindex="0" role="button" aria-label="Hashtag guidelines"><span aria-hidden="true">?</span><span class="help-tooltip"><strong>Recommended by platform:</strong><br>Instagram &amp; Facebook 2–5 (or up to 30 on Instagram)<br>LinkedIn 2–5<br>TikTok 2–5<br>Pinterest 2–5<br><br>Quality over quantity. 3–10 is a safe range for most posts.</span></span></h2>
         <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; margin-bottom: 0.5rem;">
           <input type="checkbox" id="include_hashtags" name="include_hashtags" {% if existing_intake.get('include_hashtags', True) %}checked{% endif %} style="width: auto;">
           <span>Include suggested hashtags with each caption</span>
@@ -153,13 +212,26 @@
       <div class="form-section">
         <h2>Goal for this month</h2>
         <label for="goal">What's the main outcome you want from this 30 days?</label>
-        <textarea id="goal" name="goal" placeholder="e.g. more inquiries, stronger authority, launch visibility">{{ existing_intake.get('goal', '') }}</textarea>
+        <select id="goal" name="goal">
+          <option value="">— Select one —</option>
+          <option value="More inquiries / leads" {% if existing_intake.get('goal') == 'More inquiries / leads' %}selected{% endif %}>More inquiries / leads</option>
+          <option value="Build authority" {% if existing_intake.get('goal') == 'Build authority' %}selected{% endif %}>Build authority</option>
+          <option value="Launch visibility" {% if existing_intake.get('goal') == 'Launch visibility' %}selected{% endif %}>Launch visibility</option>
+          <option value="Grow following" {% if existing_intake.get('goal') == 'Grow following' %}selected{% endif %}>Grow following</option>
+          <option value="Consistent presence" {% if existing_intake.get('goal') == 'Consistent presence' %}selected{% endif %}>Consistent presence</option>
+          <option value="Other" {% if existing_intake.get('goal') and existing_intake.get('goal') not in ['More inquiries / leads', 'Build authority', 'Launch visibility', 'Grow following', 'Consistent presence'] %}selected{% endif %}>Other</option>
+        </select>
+        <div id="goal_other_wrap" class="intake-other-wrap" style="display: none; margin-top: 0.5rem;">
+          <label for="goal_other">Describe your goal</label>
+          <input type="text" id="goal_other" name="goal_other" placeholder="e.g. build my email list, promote a new offer" value="{{ existing_intake.get('goal', '') if existing_intake.get('goal') and existing_intake.get('goal') not in ['More inquiries / leads', 'Build authority', 'Launch visibility', 'Grow following', 'Consistent presence'] else '' }}">
+        </div>
       </div>
       <div class="form-section">
         <h2>Example captions (optional)</h2>
         <label for="caption_examples">Paste 1–3 example captions you like — from your own posts, competitors, or inspiration. We'll match this style, tone, and structure where relevant.</label>
         <textarea id="caption_examples" name="caption_examples" placeholder="Paste example captions here (optional)" style="min-height: 140px;">{{ existing_intake.get('caption_examples', '') }}</textarea>
       </div>
+      <p id="intake-validation-hint" style="display: none; margin-bottom: 1rem; font-size: 0.9rem; color: #c00;"></p>
       <button type="button" class="btn-submit" id="btn-review">{% if existing_intake %}Review changes{% else %}Next step{% endif %}</button>
     </form>
 
@@ -180,22 +252,55 @@
   {% if intake_token %}
   <script>
     (function() {
+      function runWhenReady(fn) {
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', fn);
+        } else {
+          fn();
+        }
+      }
+      runWhenReady(function() {
       var form = document.getElementById('captions-intake-form');
       var reviewStep = document.getElementById('review-step');
       var reviewContent = document.getElementById('review-content');
       var btnReview = document.getElementById('btn-review');
       var btnEdit = document.getElementById('btn-edit');
       var btnConfirm = document.getElementById('btn-confirm');
+      if (!form || !reviewStep || !reviewContent || !btnReview) return;
 
-      function toggleHashtagRange() {
-        var wrap = document.getElementById('hashtag-range-wrap');
-        var cb = document.getElementById('include_hashtags');
-        if (wrap && cb) wrap.style.display = cb.checked ? '' : 'none';
-      }
-      document.getElementById('include_hashtags').addEventListener('change', toggleHashtagRange);
-      toggleHashtagRange();
-
+      var platformsCount = parseInt(form.getAttribute('data-platforms-count') || '1', 10) || 1;
       function getVal(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; }
+      function getSelectOrOther(selectId, otherId) {
+        var sel = document.getElementById(selectId);
+        if (!sel) return '';
+        var other = otherId ? document.getElementById(otherId) : null;
+        if (sel.value === 'Other' && other) return other.value.trim();
+        return sel.value.trim();
+      }
+      function syncAudience() {
+        var checked = Array.prototype.slice.call(document.querySelectorAll('input[name="audience_cb"]:checked')).map(function(c) { return c.value; });
+        var other = getVal('audience_other');
+        var combined = checked.length ? checked.join(', ') : '';
+        if (other) combined = combined ? combined + ', ' + other : other;
+        var el = document.getElementById('audience');
+        if (el) el.value = combined;
+      }
+      function syncVoiceWords() {
+        var checked = Array.prototype.slice.call(document.querySelectorAll('input[name="voice_words_cb"]:checked')).map(function(c) { return c.value; });
+        var other = getVal('voice_words_other');
+        var combined = checked.length ? checked.join(', ') : '';
+        if (other) combined = combined ? combined + ', ' + other : other;
+        var el = document.getElementById('voice_words');
+        if (el) el.value = combined;
+      }
+      function syncPlatforms() {
+        var cbs = document.querySelectorAll('input[name="platform_cb"]');
+        if (!cbs.length) return;
+        var checked = Array.prototype.slice.call(cbs).filter(function(c) { return c.checked; });
+        var parts = checked.map(function(c) { return c.value; }).filter(Boolean);
+        var el = document.getElementById('platform');
+        if (el) el.value = parts.join(', ');
+      }
       function sect(t, v) {
         var p = document.createElement('p');
         p.textContent = v || '(not provided)';
@@ -208,33 +313,47 @@
         div.appendChild(p);
         return div;
       }
-
       function showReview() {
-        if (!form.checkValidity()) { form.reportValidity(); return; }
+        var hintEl = document.getElementById('intake-validation-hint');
+        if (hintEl) { hintEl.style.display = 'none'; hintEl.textContent = ''; }
+        syncAudience();
+        syncVoiceWords();
+        if (document.querySelectorAll('input[name="platform_cb"]').length) syncPlatforms();
+        if (!form.checkValidity()) {
+          form.reportValidity();
+          var firstInvalid = form.querySelector(':invalid');
+          if (firstInvalid && firstInvalid.scrollIntoView) firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          if (hintEl) { hintEl.textContent = 'Please complete the required fields above (e.g. business name).'; hintEl.style.display = 'block'; }
+          return;
+        }
         reviewContent.innerHTML = '';
-        reviewContent.appendChild(sect('Business name', getVal('business_name') || '(not provided)'));
-        reviewContent.appendChild(sect('Business type', getVal('business_type')));
+        reviewContent.appendChild(sect('Business name', getVal('business_name')));
+        reviewContent.appendChild(sect('Business type', getSelectOrOther('business_type', 'business_type_other') || '(not provided)'));
         reviewContent.appendChild(sect('What you offer', getVal('offer_one_line')));
-        reviewContent.appendChild(sect('Primary audience', getVal('audience')));
+        reviewContent.appendChild(sect('Primary audience', getVal('audience') || '(not provided)'));
+        var ageRange = getVal('consumer_age_range');
+        if (ageRange) reviewContent.appendChild(sect('Consumer age range', ageRange));
         reviewContent.appendChild(sect('What they care about', getVal('audience_cares')));
-        reviewContent.appendChild(sect('Voice (3–5 words)', getVal('voice_words')));
+        reviewContent.appendChild(sect('Voice (3–5 words)', getVal('voice_words') || '(not provided)'));
         reviewContent.appendChild(sect('Language to avoid', getVal('voice_avoid')));
-        reviewContent.appendChild(sect('Primary platform', getVal('platform')));
+        reviewContent.appendChild(sect('Primary platform', getVal('platform') || '(not provided)'));
         reviewContent.appendChild(sect('Platform habits', getVal('platform_habits')));
-        var hashtags = document.getElementById('include_hashtags').checked ? 'Yes, ' + (getVal('hashtag_min') || '3') + '–' + (getVal('hashtag_max') || '10') + ' per caption' : 'No';
+        var incCb = document.getElementById('include_hashtags');
+        var hashtags = incCb && incCb.checked ? 'Yes, ' + (getVal('hashtag_min') || '3') + '–' + (getVal('hashtag_max') || '10') + ' per caption' : 'No';
         reviewContent.appendChild(sect('Hashtags', hashtags));
-        reviewContent.appendChild(sect('Goal for this month', getVal('goal')));
+        reviewContent.appendChild(sect('Goal for this month', getSelectOrOther('goal', 'goal_other') || '(not provided)'));
         reviewContent.appendChild(sect('Example captions', getVal('caption_examples')));
         form.style.display = 'none';
         reviewStep.classList.add('show');
       }
-
       function showForm() {
         reviewStep.classList.remove('show');
         form.style.display = 'block';
       }
-
       function submitForm() {
+        syncAudience();
+        syncVoiceWords();
+        if (document.querySelectorAll('input[name="platform_cb"]').length) syncPlatforms();
         var incHashtags = document.getElementById('include_hashtags').checked;
         var minH = parseInt(document.getElementById('hashtag_min').value, 10) || 3;
         var maxH = parseInt(document.getElementById('hashtag_max').value, 10) || 10;
@@ -242,9 +361,10 @@
         var payload = {
           token: getVal('intake_token'),
           business_name: getVal('business_name'),
-          business_type: getVal('business_type'),
+          business_type: getSelectOrOther('business_type', 'business_type_other'),
           offer_one_line: getVal('offer_one_line'),
           audience: getVal('audience'),
+          consumer_age_range: getVal('consumer_age_range'),
           audience_cares: getVal('audience_cares'),
           voice_words: getVal('voice_words'),
           voice_avoid: getVal('voice_avoid'),
@@ -253,7 +373,7 @@
           include_hashtags: incHashtags,
           hashtag_min: minH,
           hashtag_max: maxH,
-          goal: getVal('goal'),
+          goal: getSelectOrOther('goal', 'goal_other'),
           caption_examples: getVal('caption_examples')
         };
         btnConfirm.disabled = true;
@@ -288,9 +408,143 @@
         });
       }
 
-      if (btnReview) btnReview.addEventListener('click', showReview);
+      btnReview.addEventListener('click', function() { try { showReview(); } catch (e) { if (typeof console !== 'undefined' && console.error) console.error('Next step:', e); } });
       if (btnEdit) btnEdit.addEventListener('click', showForm);
       if (btnConfirm) btnConfirm.addEventListener('click', submitForm);
+
+      (function goalOtherToggle() {
+        var goalSelect = document.getElementById('goal');
+        var goalWrap = document.getElementById('goal_other_wrap');
+        if (!goalSelect || !goalWrap) return;
+        function showHide() {
+          goalWrap.style.display = goalSelect.value === 'Other' ? 'block' : 'none';
+        }
+        goalSelect.addEventListener('change', showHide);
+        showHide();
+      })();
+
+      (function consumerAgeToggle() {
+        var consumersCb = document.getElementById('audience_cb_consumers');
+        var wrap = document.getElementById('consumer_age_wrap');
+        if (!consumersCb || !wrap) return;
+        function showHide() {
+          var show = consumersCb.checked;
+          wrap.style.display = show ? 'block' : 'none';
+          wrap.setAttribute('aria-hidden', show ? 'false' : 'true');
+        }
+        consumersCb.addEventListener('change', showHide);
+        consumersCb.addEventListener('click', function() { setTimeout(showHide, 0); });
+        var ageInput = document.getElementById('consumer_age_range');
+        if (ageInput && ageInput.value.trim()) {
+          consumersCb.checked = true;
+          showHide();
+        } else {
+          showHide();
+        }
+      })();
+
+      try {
+
+      function toggleHashtagRange() {
+        var wrap = document.getElementById('hashtag-range-wrap');
+        var cb = document.getElementById('include_hashtags');
+        if (wrap && cb) wrap.style.display = cb.checked ? '' : 'none';
+      }
+      var includeHashtags = document.getElementById('include_hashtags');
+      if (includeHashtags) { includeHashtags.addEventListener('change', toggleHashtagRange); toggleHashtagRange(); }
+
+      function toggleOtherFields() {
+        var bt = document.getElementById('business_type');
+        var bto = document.getElementById('business_type_other');
+        if (bt && bto) bto.style.display = bt.value === 'Other' ? 'block' : 'none';
+        var goalSelect = document.getElementById('goal');
+        var goalOtherWrap = document.getElementById('goal_other_wrap');
+        if (goalSelect && goalOtherWrap) {
+          goalOtherWrap.style.display = goalSelect.value === 'Other' ? 'block' : 'none';
+          goalOtherWrap.setAttribute('aria-hidden', goalSelect.value === 'Other' ? 'false' : 'true');
+        }
+      }
+      ['business_type', 'goal'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.addEventListener('change', toggleOtherFields);
+      });
+      toggleOtherFields();
+      (function setupMultiPlatform() {
+        var cbs = document.querySelectorAll('input[name="platform_cb"]');
+        if (!cbs.length) return;
+        cbs.forEach(function(cb) {
+          cb.addEventListener('change', function() {
+            var checked = document.querySelectorAll('input[name="platform_cb"]:checked');
+            if (checked.length > platformsCount && this.checked) this.checked = false;
+            syncPlatforms();
+          });
+        });
+        var platformVal = getVal('platform');
+        if (platformVal) {
+          var parts = platformVal.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+          var known = ['Instagram & Facebook', 'LinkedIn', 'TikTok', 'Pinterest'];
+          parts.forEach(function(p) {
+            cbs.forEach(function(cb) {
+              if (cb.value === p) cb.checked = true;
+            });
+          });
+        }
+        syncPlatforms();
+      })();
+      function toggleConsumerAge() {
+        var consumersCb = document.getElementById('audience_cb_consumers');
+        var wrap = document.getElementById('consumer_age_wrap');
+        if (wrap && consumersCb) {
+          wrap.style.display = consumersCb.checked ? 'block' : 'none';
+          wrap.setAttribute('aria-hidden', consumersCb.checked ? 'false' : 'true');
+        }
+      }
+      var consumersCb = document.getElementById('audience_cb_consumers');
+      if (consumersCb) {
+        consumersCb.addEventListener('change', toggleConsumerAge);
+        consumersCb.addEventListener('click', function() { setTimeout(toggleConsumerAge, 0); });
+      }
+      if (getVal('consumer_age_range') && consumersCb) {
+        consumersCb.checked = true;
+        toggleConsumerAge();
+      } else {
+        toggleConsumerAge();
+      }
+      document.querySelectorAll('input[name="audience_cb"], #audience_other').forEach(function(el) { el.addEventListener('change', syncAudience); el.addEventListener('input', syncAudience); });
+      document.querySelectorAll('input[name="voice_words_cb"], #voice_words_other').forEach(function(el) { el.addEventListener('change', syncVoiceWords); el.addEventListener('input', syncVoiceWords); });
+      (function prefillCheckboxes() {
+        var aud = getVal('audience');
+        if (aud) {
+          var parts = aud.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+          var otherParts = [];
+          parts.forEach(function(p) {
+            var cbs = document.querySelectorAll('input[name="audience_cb"]');
+            var found = false;
+            for (var i = 0; i < cbs.length; i++) { if (cbs[i].value === p) { cbs[i].checked = true; found = true; break; } }
+            if (!found) otherParts.push(p);
+          });
+          var otherEl = document.getElementById('audience_other');
+          if (otherEl && otherParts.length) otherEl.value = otherParts.join(', ');
+        }
+        var vw = getVal('voice_words');
+        if (vw) {
+          var parts = vw.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+          var otherParts = [];
+          parts.forEach(function(p) {
+            var cbs = document.querySelectorAll('input[name="voice_words_cb"]');
+            var found = false;
+            for (var i = 0; i < cbs.length; i++) { if (cbs[i].value.toLowerCase() === p.toLowerCase()) { cbs[i].checked = true; found = true; break; } }
+            if (!found) otherParts.push(p);
+          });
+          var otherEl = document.getElementById('voice_words_other');
+          if (otherEl && otherParts.length) otherEl.value = otherParts.join(', ');
+        }
+        syncAudience();
+        syncVoiceWords();
+        toggleConsumerAge();
+      })();
+
+      } catch (e) { if (typeof console !== 'undefined' && console.error) console.error('Intake setup:', e); }
 
       var caForm = document.getElementById('create-account-form');
       if (caForm) {
@@ -326,6 +580,7 @@
           });
         });
       }
+      }); // end runWhenReady
     })();
   </script>
   {% endif %}

@@ -4,108 +4,288 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>30 Days of Social Media Captions | Lumo 22</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
   <meta name="description" content="30 days of captions, written for your brand. No daily grind, no generic copy. Done-for-you social content for founders and professionals.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Encode+Sans+Condensed:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v={{ asset_version }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/product.css') }}?v={{ asset_version }}">
 </head>
-<body class="lumo-landing">
-  <nav class="lumo-nav lumo-nav-scrolled">
+<body class="lumo-landing product-page-captions">
+  <nav class="lumo-nav" id="lumo-nav">
     <a href="/" class="lumo-nav-logo">Lumo 22</a>
     <div class="lumo-nav-links">
       <a href="/captions">Captions</a>
       <a href="/digital-front-desk">Front Desk</a>
       <a href="/digital-front-desk#pricing">Pricing</a>
     </div>
-    {% if current_customer %}<a href="/account" class="lumo-nav-cta">Account</a>{% else %}<a href="/login" class="lumo-nav-cta">Log in</a>{% endif %}
+    {% if current_customer %}<a href="/account" class="lumo-nav-cta">Account</a>{% else %}<span style="display: inline-flex; align-items: center; gap: 0.75rem;"><a href="/login" style="color: var(--lum-text-muted); text-decoration: none; font-size: 0.9rem;">Log in</a><a href="/signup" class="lumo-nav-cta">Sign up</a></span>{% endif %}
   </nav>
 
-  <section class="lumo-section" style="padding-top: 8rem;">
-    <div class="lumo-section-header">
-      <p class="lumo-section-label">Paid offer</p>
-      <h1 class="lumo-section-title">30 Days of Social Media Captions</h1>
-      <p class="lumo-section-desc">30 days of captions, written for your brand. No daily grind, no generic copy.</p>
+  <!-- 1. HERO — full-width black, left-aligned -->
+  <section class="dfd-hero" id="captions-hero">
+    <div class="dfd-hero-inner">
+      <h1 class="dfd-hero-title">30 Days of Social Media Captions</h1>
+      <p class="dfd-hero-hook">Show up consistently without the daily grind.</p>
+      <p class="dfd-hero-outcome">A month of structure so your marketing actually happens.</p>
+      <p class="dfd-hero-subtitle">Done for you, in your voice. One short form, 30 posts—ready in 15 minutes. Cancel anytime.</p>
+      <p class="dfd-hero-cta"><a href="#pricing" class="dfd-btn dfd-btn-hero-cta">View options</a></p>
     </div>
+  </section>
 
-    <div class="lumo-offer-card" style="max-width: 640px; margin: 0 auto;">
-      <p class="lumo-offer-who">30 Days of Social Media Captions is a done-for-you caption system. You answer a short intake form; we write a full month of on-brand captions across five categories—authority, education, personality, soft promotion, and engagement. No daily scramble, no generic filler. Clear, consistent, copy-paste ready.</p>
-
-      <h3>What’s included</h3>
-      <ul class="lumo-offer-includes">
-        <li>Intake form — We capture your business, audience, voice, and goal for the month.</li>
-        <li>30 captions — One per day, structured across Authority, Educational, Brand Personality, Soft Promotion, and Engagement.</li>
-        <li>Single document — Clean, copy-paste friendly. Delivered as Markdown or PDF.</li>
-        <li>Optional: Suggested first-line hooks or visual directions for each caption.</li>
-      </ul>
-
-      <h3>Who it’s for</h3>
-      <p class="lumo-offer-who" style="margin-bottom: 1.5rem;">Founders and solo professionals who post themselves but don’t want to write from scratch every day. Small teams that need consistent social content without hiring a full-time copywriter. Anyone who wants a smart, professional feed—no hype, no emoji overload, no generic or robotic tone.</p>
-
-      <h3>What problem it solves</h3>
-      <ul class="lumo-offer-includes">
-        <li><strong>Daily content stress</strong> — You stop staring at a blank box. Each day has a caption ready to use or tweak.</li>
-        <li><strong>Inconsistent voice</strong> — One framework and one writer keep your feed sounding like you.</li>
-        <li><strong>Generic or sales-heavy feeds</strong> — The mix of authority, value, personality, and soft promotion keeps the feed useful and credible, not just promotional.</li>
-      </ul>
-
-      <h3>How it works</h3>
-      <div class="lumo-offer-steps">
-        <div class="lumo-offer-step">
-          <div class="lumo-offer-step-num">01</div>
-          <p>Share your business, audience, and tone.</p>
+  <!-- 2. HOW IT WORKS — light section (alternate with hero dark) -->
+  <section class="dfd-section dfd-section--light dfd-how-section" id="how-it-works">
+    <div class="dfd-section-inner">
+      <h2 class="dfd-heading">How it works</h2>
+      <p class="dfd-lead">Three steps to a month of content.</p>
+      <div class="dfd-steps">
+        <div class="dfd-step">
+          <span class="dfd-step-icon" aria-hidden="true">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>
+          </span>
+          <span class="dfd-step-num" aria-hidden="true">1</span>
+          <h3 class="dfd-step-title">Share your business and tone</h3>
+          <p class="dfd-step-desc">Answer a short form so we capture your voice, audience, and goal for the month.</p>
         </div>
-        <div class="lumo-offer-step">
-          <div class="lumo-offer-step-num">02</div>
-          <p>We create 30 captions tailored to you.</p>
+        <div class="dfd-step">
+          <span class="dfd-step-icon" aria-hidden="true">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </span>
+          <span class="dfd-step-num" aria-hidden="true">2</span>
+          <h3 class="dfd-step-title">We create 30 captions for you</h3>
+          <p class="dfd-step-desc">One caption per day, tailored to your brand, with algorithm-optimised hashtags for reach and discovery. Clear, consistent, ready to use or tweak.</p>
         </div>
-        <div class="lumo-offer-step">
-          <div class="lumo-offer-step-num">03</div>
-          <p>Receive your document — copy, edit, post.</p>
+        <div class="dfd-step">
+          <span class="dfd-step-icon" aria-hidden="true">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          </span>
+          <span class="dfd-step-num" aria-hidden="true">3</span>
+          <h3 class="dfd-step-title">Receive your document</h3>
+          <p class="dfd-step-desc">Get your PDF. Copy, edit, post — your feed stays consistent without the daily scramble.</p>
         </div>
       </div>
+      <p class="dfd-how-cta"><a href="#pricing" class="dfd-btn dfd-btn-accent">Get my 30 days</a></p>
+    </div>
+  </section>
 
-      <p class="lumo-offer-turnaround">Turnaround: 3–5 business days.</p>
+  <!-- 3. TESTIMONIALS — social proof -->
+  <section class="dfd-section dfd-section--dark dfd-testimonials-section" id="testimonials">
+    <div class="dfd-section-inner">
+      <h2 class="dfd-heading">What people say</h2>
+      <div class="dfd-testimonials dfd-testimonials--two">
+        <blockquote class="dfd-testimonial">
+          <p class="dfd-testimonial-text">"I stopped stressing about what to post. One form and I had a month of captions that actually sound like me."</p>
+          <cite class="dfd-testimonial-cite">– Founder, coaching business</cite>
+        </blockquote>
+        <blockquote class="dfd-testimonial">
+          <p class="dfd-testimonial-text">"Had my pack in minutes. Copy, tweak, post—my feed’s been consistent for the first time in ages."</p>
+          <cite class="dfd-testimonial-cite">– Freelance consultant</cite>
+        </blockquote>
+      </div>
+    </div>
+  </section>
 
-      <div class="lumo-captions-options" style="display: grid; gap: 1.25rem; margin: 1.5rem 0;">
+  <!-- 4. PRICING -->
+  <section class="product-section product-section--dark" id="pricing">
+    <div class="product-section-inner">
+      <p class="product-section-label">Pricing</p>
+      <h2 class="product-section-title">Choose your option</h2>
+      <p class="product-section-desc">One-off pack or monthly subscription. Same form and delivery. Cancel anytime on subscription.</p>
+      <div class="captions-platform-selector" style="max-width: 420px; margin: 0 auto 1.5rem; padding: 1rem 1.25rem; background: rgba(255,255,255,0.06); border-radius: 10px; border: 1px solid rgba(255,255,255,0.12);">
+        <label for="captions-platforms" style="display: block; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem;">How many platforms?</label>
+        <select id="captions-platforms" name="platforms" style="width: 100%; padding: 0.6rem 0.75rem; border-radius: 6px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: inherit; font-size: 1rem;">
+          <option value="1">1 platform</option>
+          <option value="2">2 platforms — add £29 one-off / £19/mo</option>
+          <option value="3">3 platforms — add £58 one-off / £38/mo</option>
+          <option value="4">4 platforms — add £87 one-off / £57/mo</option>
+          <option value="5">5 platforms — add £116 one-off / £76/mo</option>
+        </select>
+        <div id="captions-which-wrap" style="margin-top: 1rem;">
+          <p id="captions-which-label" style="font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem;">Which platform?</p>
+          <div style="display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; margin-bottom: 0.25rem;">
+            <label style="display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer; font-size: 0.9rem;"><input type="checkbox" name="which_platform" value="Instagram & Facebook" class="captions-which-cb"> Instagram &amp; Facebook</label>
+            <label style="display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer; font-size: 0.9rem;"><input type="checkbox" name="which_platform" value="LinkedIn" class="captions-which-cb"> LinkedIn</label>
+            <label style="display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer; font-size: 0.9rem;"><input type="checkbox" name="which_platform" value="TikTok" class="captions-which-cb"> TikTok</label>
+            <label style="display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer; font-size: 0.9rem;"><input type="checkbox" name="which_platform" value="Pinterest" class="captions-which-cb"> Pinterest</label>
+          </div>
+          <p id="captions-which-hint" style="font-size: 0.8rem; color: var(--lum-text-muted); margin: 0.5rem 0 0;"></p>
+        </div>
+        <p style="font-size: 0.8rem; color: var(--lum-text-muted); margin: 0.5rem 0 0;">Your choice will be prefilled on the form after payment.</p>
+      </div>
+      <p class="product-section-guarantee">Not happy with your pack? We’ll make it right.</p>
+      <div class="lumo-pricing-grid">
         {% if captions_subscription_available %}
-        <div class="lumo-offer-option" style="padding: 1.25rem; background: var(--lum-surface-elevated, rgba(255,255,255,0.05)); border: 1px solid var(--lum-border); border-radius: 12px; border-color: var(--lum-gold, #c9a227);">
-          <span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--lum-gold); font-weight: 600;">Best value</span>
-          <div style="font-size: 1.5rem; font-weight: 600; color: var(--lum-text); margin: 0.25rem 0;">£79 <span style="font-size: 0.95rem; font-weight: 400; color: var(--lum-text-muted);">/month</span></div>
-          <p style="font-size: 0.9rem; color: var(--lum-text-muted); margin: 0.5rem 0 1rem;">New 30-day pack each month. Cancel anytime from your Stripe customer portal or by emailing us.</p>
-          <a href="/captions-checkout-subscription" class="lumo-btn-primary">Subscribe — £79/month</a>
+        <div class="lumo-pricing-card glass-card">
+          <span class="product-badge-captions">Best value</span>
+          <h3>Subscription</h3>
+          <p class="lumo-pricing-subtitle">New 30-day pack each month</p>
+          <div class="lumo-offer-price" id="captions-sub-price">£79 <span>/month</span></div>
+          <p class="lumo-pricing-save" id="captions-sub-save">Save £18 vs one-off</p>
+          <ul class="lumo-offer-includes">
+            <li>30 captions every month</li>
+            <li>Algorithm-optimised hashtags for each post</li>
+            <li>Same form, same categories</li>
+            <li>Cancel anytime</li>
+          </ul>
+          <div class="dfd-pricing-footer">
+            <a href="/captions-checkout-subscription?platforms=1" id="captions-sub-cta" class="dfd-btn dfd-btn-accent">Subscribe — £79/month</a>
+          </div>
         </div>
         {% endif %}
-        <div class="lumo-offer-option" style="padding: 1.25rem; background: var(--lum-surface-elevated, rgba(255,255,255,0.03)); border: 1px solid var(--lum-border); border-radius: 12px;">
-          <div style="font-size: 1.5rem; font-weight: 600; color: var(--lum-text); margin: 0.25rem 0;">£97 <span style="font-size: 0.95rem; font-weight: 400; color: var(--lum-text-muted);">one-time</span></div>
-          <p style="font-size: 0.9rem; color: var(--lum-text-muted); margin: 0.5rem 0 1rem;">Single 30-day pack. No renewal. Same intake and delivery.</p>
-          {% if use_checkout_redirect %}
-          <a href="/captions-checkout" class="lumo-btn-secondary">Get my 30 days (one-off)</a>
-          {% elif captions_payment_link %}
-          <a href="{{ captions_payment_link }}" class="lumo-btn-secondary">Get my 30 days (one-off)</a>
-          {% else %}
-          <a href="mailto:hello@lumo22.com?subject=30%20Days%20Captions%20Order" class="lumo-btn-secondary">Get my 30 days (one-off)</a>
-          {% endif %}
+        <div class="lumo-pricing-card glass-card">
+          <h3>One-off</h3>
+          <p class="lumo-pricing-subtitle">Single 30-day pack</p>
+          <div class="lumo-offer-price" id="captions-oneoff-price">£97 <span>one-time</span></div>
+          <ul class="lumo-offer-includes">
+            <li>30 captions, one delivery</li>
+            <li>Algorithm-optimised hashtags for each post</li>
+            <li>Same form and format</li>
+            <li>No renewal</li>
+            <li>No commitment—one pack, one payment</li>
+          </ul>
+          <div class="dfd-pricing-footer">
+            {% if use_checkout_redirect %}
+            <a href="/captions-checkout?platforms=1" id="captions-oneoff-cta" class="dfd-btn dfd-btn-secondary">Get my 30 days</a>
+            {% elif captions_payment_link %}
+            <a href="{{ captions_payment_link }}" class="dfd-btn dfd-btn-secondary">Get my 30 days</a>
+            {% else %}
+            <a href="mailto:hello@lumo22.com?subject=30%20Days%20Captions%20Order" class="dfd-btn dfd-btn-secondary">Get my 30 days</a>
+            {% endif %}
+          </div>
         </div>
       </div>
     </div>
   </section>
 
-  <footer class="lumo-footer">
-    <div class="lumo-footer-inner">
-      <div>
-        <a href="/" class="lumo-footer-brand">Lumo 22</a>
-        <p class="lumo-footer-tagline">Lighting the way to better business</p>
-      </div>
-      <div class="lumo-footer-links">
-        <a href="/captions">Captions</a>
-        <a href="/digital-front-desk">Front Desk</a>
-        <a href="/digital-front-desk#pricing">Pricing</a>
-        <a href="/terms">Terms</a>
-        <a href="mailto:hello@lumo22.com">Contact</a>
+  <!-- FAQ — same format as DFD -->
+  <section class="dfd-section dfd-section--light dfd-faq-section" id="faq">
+    <div class="dfd-section-inner">
+      <h2 class="dfd-heading">Frequently asked questions</h2>
+      <div class="dfd-faq-list">
+        <details class="dfd-faq-item">
+          <summary class="dfd-faq-question">How quickly do I get my captions?</summary>
+          <p class="dfd-faq-answer">Your 30-day pack is ready within 15 minutes of submitting the form. We’ll email your document as soon as it’s done.</p>
+        </details>
+        <details class="dfd-faq-item">
+          <summary class="dfd-faq-question">Can I cancel the subscription anytime?</summary>
+          <p class="dfd-faq-answer">Yes. Cancel anytime and you’ll keep access until the end of your current billing period. No lock-in.</p>
+        </details>
+        <details class="dfd-faq-item">
+          <summary class="dfd-faq-question">What format do I receive?</summary>
+          <p class="dfd-faq-answer">You get your captions as a PDF. Copy, edit, and post straight to your channels.</p>
+        </details>
+        <details class="dfd-faq-item">
+          <summary class="dfd-faq-question">Are hashtags included?</summary>
+          <p class="dfd-faq-answer">Yes. Each caption comes with suggested hashtags chosen for your niche and platform—optimised for algorithm reach and discovery. You can set how many you want in the form, or turn them off if you prefer.</p>
+        </details>
+        <details class="dfd-faq-item">
+          <summary class="dfd-faq-question">What’s the difference between one-off and subscription?</summary>
+          <p class="dfd-faq-answer">One-off is a single 30-day pack, delivered once. Subscription gives you a new 30-day pack every month for as long as you’re subscribed. Same form and delivery process for both.</p>
+        </details>
+        <details class="dfd-faq-item">
+          <summary class="dfd-faq-question">Are the captions written in my voice?</summary>
+          <p class="dfd-faq-answer">Yes. The form captures your business, audience, and tone. Your captions are written to match so they sound like you.</p>
+        </details>
+        <details class="dfd-faq-item">
+          <summary class="dfd-faq-question">What if I’m not happy with my pack?</summary>
+          <p class="dfd-faq-answer">We’ll make it right — just get in touch and we’ll sort it.</p>
+        </details>
       </div>
     </div>
-    <div class="lumo-footer-bottom">© Lumo 22. All rights reserved.</div>
-  </footer>
+  </section>
+
+  <!-- Final CTA — same container style as DFD -->
+  <section class="dfd-cta-section" aria-label="Get started">
+    <div class="dfd-cta-inner">
+      <h2 class="dfd-cta-heading">Ready for 30 days of content?</h2>
+      <p class="dfd-cta-lead">One short form, 30 captions. Copy, edit, post.</p>
+      <div class="dfd-cta-btn-wrap">
+        <a href="#pricing" class="dfd-btn dfd-btn-accent">Get my 30 days</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Sticky CTA — appears on scroll past hero -->
+  <div class="sticky-cta" id="sticky-cta-captions" aria-label="Quick action">
+    <a href="#pricing" class="sticky-cta-btn">View options</a>
+    <a href="#pricing" class="sticky-cta-btn sticky-cta-btn-accent">Get my 30 days</a>
+  </div>
+
+  {% include '_footer.html' %}
+
+  <script src="{{ url_for('static', filename='js/landing.js') }}?v={{ asset_version }}"></script>
+  <script>
+  (function() {
+    var sticky = document.getElementById('sticky-cta-captions');
+    var hero = document.getElementById('captions-hero');
+    if (sticky && hero) {
+      function check() {
+        var y = window.scrollY || window.pageYOffset;
+        var heroBottom = hero.offsetTop + hero.offsetHeight;
+        sticky.classList.toggle('visible', y > heroBottom - 60);
+      }
+      window.addEventListener('scroll', check, { passive: true });
+      window.addEventListener('load', check);
+    }
+  })();
+  (function() {
+    var sel = document.getElementById('captions-platforms');
+    var oneoffPrice = document.getElementById('captions-oneoff-price');
+    var oneoffCta = document.getElementById('captions-oneoff-cta');
+    var subPrice = document.getElementById('captions-sub-price');
+    var subSave = document.getElementById('captions-sub-save');
+    var subCta = document.getElementById('captions-sub-cta');
+    var whichLabel = document.getElementById('captions-which-label');
+    var whichHint = document.getElementById('captions-which-hint');
+    if (!sel) return;
+    function oneoffTotal(n) { return 97 + (n - 1) * 29; }
+    function subTotal(n) { return 79 + (n - 1) * 19; }
+    function getN() { return Math.max(1, Math.min(5, parseInt(sel.value, 10) || 1)); }
+    function getSelectedPlatforms() {
+      var n = getN();
+      var cbs = document.querySelectorAll('.captions-which-cb:checked');
+      var vals = [];
+      for (var i = 0; i < cbs.length; i++) vals.push(cbs[i].value);
+      if (vals.length !== n) return null;
+      return vals.join(', ');
+    }
+    function updateWhichUI() {
+      var n = getN();
+      if (whichLabel) whichLabel.textContent = n === 1 ? 'Which platform?' : 'Which ' + n + ' platforms?';
+      if (whichHint) whichHint.textContent = n === 1 ? 'Pick one.' : 'Pick exactly ' + n + '.';
+    }
+    function updateLinks() {
+      var n = getN();
+      var selected = getSelectedPlatforms();
+      var q = 'platforms=' + n;
+      if (selected) q += '&selected=' + encodeURIComponent(selected);
+      if (oneoffPrice) oneoffPrice.innerHTML = '£' + oneoffTotal(n) + ' <span>one-time</span>';
+      if (oneoffCta && oneoffCta.getAttribute('href') && oneoffCta.getAttribute('href').indexOf('captions-checkout') !== -1) oneoffCta.href = '/captions-checkout?' + q;
+      if (subPrice) subPrice.innerHTML = '£' + subTotal(n) + ' <span>/month</span>';
+      if (subSave) subSave.textContent = 'Save £' + (oneoffTotal(n) - subTotal(n)) + ' vs one-off';
+      if (subCta) subCta.href = '/captions-checkout-subscription?' + q;
+    }
+    function onPlatformChange() {
+      var cbs = document.querySelectorAll('.captions-which-cb');
+      cbs.forEach(function(cb) { cb.checked = false; });
+      updateWhichUI();
+      updateLinks();
+    }
+    function onCheckboxChange() {
+      var n = getN();
+      var checked = document.querySelectorAll('.captions-which-cb:checked');
+      if (checked.length > n && this.checked) this.checked = false;
+      updateWhichUI();
+      updateLinks();
+    }
+    document.querySelectorAll('.captions-which-cb').forEach(function(cb) {
+      cb.addEventListener('change', onCheckboxChange);
+    });
+    sel.addEventListener('change', onPlatformChange);
+    updateWhichUI();
+    updateLinks();
+  })();
+  </script>
 </body>
 </html>
