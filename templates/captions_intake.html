@@ -4,36 +4,65 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>30 Days Captions — Intake | Lumo 22</title>
-  <meta name="description" content="Complete your intake so we can tailor your 30 days of social media captions.">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
+  <meta name="description" content="Complete the form so we can tailor your 30 days of social media captions.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Encode+Sans+Condensed:wght@400;500;600;700&family=Inter+Tight:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v={{ asset_version }}">
   <style>
-    .intake-page { padding: 6rem 1.5rem 4rem; max-width: 560px; margin: 0 auto; }
-    .intake-page h1 { font-family: var(--font-display); font-size: 1.75rem; margin-bottom: 0.5rem; }
-    .intake-page .sub { color: var(--lum-text-muted); margin-bottom: 2.5rem; }
-    .intake-page label { display: block; font-size: 0.9rem; font-weight: 500; margin-bottom: 0.5rem; color: var(--lum-text); }
-    .intake-page input, .intake-page textarea { width: 100%; padding: 0.75rem 1rem; background: var(--lum-surface-elevated); border: 1px solid var(--lum-border); border-radius: 8px; color: var(--lum-text); font-family: var(--font-body); font-size: 1rem; margin-bottom: 1.25rem; }
+    .intake-page {
+      padding: 2rem 1.5rem 4rem;
+      max-width: 560px;
+      margin: 6rem auto 4rem;
+      background: var(--bg-light);
+      color: #1a1a1a;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+    }
+    .intake-page h1 { font-family: var(--font-display); font-size: 1.75rem; margin-bottom: 0.5rem; color: #000; }
+    .intake-page .sub { color: #555; margin-bottom: 2.5rem; }
+    .intake-page label { display: block; font-size: 0.9rem; font-weight: 500; margin-bottom: 0.5rem; color: #1a1a1a; }
+    .intake-page input, .intake-page textarea {
+      width: 100%; padding: 0.75rem 1rem;
+      background: #fff; border: 1px solid #ccc; border-radius: 8px;
+      color: #111; font-family: var(--font-body); font-size: 1rem; margin-bottom: 1.25rem;
+    }
+    .intake-page input:focus, .intake-page textarea:focus { outline: none; border-color: #666; }
     .intake-page textarea { min-height: 100px; resize: vertical; }
-    .intake-page input::placeholder, .intake-page textarea::placeholder { color: var(--lum-text-subtle); }
+    .intake-page input::placeholder, .intake-page textarea::placeholder { color: #666; }
     .intake-page .form-section { margin-bottom: 2rem; }
-    .intake-page .form-section h2 { font-family: 'Encode Sans Condensed', sans-serif; font-size: 1.1rem; color: var(--lum-text-muted); margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 0.05em; }
-    .intake-page .btn-submit { display: inline-block; padding: 1rem 2rem; background: var(--lum-gold); color: var(--lum-black); text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1rem; border: none; cursor: pointer; font-family: var(--font-display); }
+    .intake-page .form-section h2 { font-family: 'Encode Sans Condensed', sans-serif; font-size: 1.1rem; color: #555; margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .intake-page .btn-submit {
+      display: inline-block; padding: 1rem 2rem;
+      background: var(--lum-gold); color: #000;
+      text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1rem; border: none; cursor: pointer; font-family: var(--font-display);
+    }
     .intake-page .btn-submit:hover { opacity: 0.95; }
     .intake-page .back { margin-top: 2rem; }
-    .intake-page .back a { color: var(--lum-text-muted); text-decoration: none; font-size: 0.95rem; }
-    .intake-page .back a:hover { color: var(--lum-text); }
+    .intake-page .back a { color: #555; text-decoration: none; font-size: 0.95rem; }
+    .intake-page .back a:hover { color: #000; }
+    .intake-page a[href] { color: #1a1a1a; }
+    .intake-page a[href]:hover { color: #000; text-decoration: underline; }
     .intake-page .review-step { display: none; margin-bottom: 2rem; }
     .intake-page .review-step.show { display: block; }
-    .intake-page .review-section { margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--lum-border); }
+    .intake-page .review-section { margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid #ddd; }
     .intake-page .review-section:last-of-type { border-bottom: none; }
-    .intake-page .review-section h3 { font-size: 0.85rem; color: var(--lum-text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
-    .intake-page .review-section p { margin: 0; font-size: 0.95rem; line-height: 1.5; color: var(--lum-text); white-space: pre-wrap; }
-    .intake-page .review-section .empty { color: var(--lum-text-subtle); font-style: italic; }
+    .intake-page .review-section h3 { font-size: 0.85rem; color: #555; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
+    .intake-page .review-section p { margin: 0; font-size: 0.95rem; line-height: 1.5; color: #1a1a1a; white-space: pre-wrap; }
+    .intake-page .review-section .empty { color: #666; font-style: italic; }
     .intake-page .review-actions { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1.5rem; }
-    .intake-page .btn-secondary { background: transparent; color: var(--lum-text-muted); border: 1px solid var(--lum-border); }
-    .intake-page .btn-secondary:hover { border-color: var(--lum-text-subtle); color: var(--lum-text); }
+    .intake-page .btn-secondary { background: transparent; color: #333; border: 1px solid #999; }
+    .intake-page .btn-secondary:hover { border-color: #666; color: #000; }
+    .intake-page .help-trigger { display: inline-flex; align-items: center; justify-content: center; width: 1.1rem; height: 1.1rem; border-radius: 50%; background: #999; color: #fff; font-size: 0.7rem; font-weight: 600; cursor: help; margin-left: 0.4rem; vertical-align: middle; position: relative; }
+    .intake-page .help-trigger:hover, .intake-page .help-trigger:focus { background: var(--lum-gold); color: #000; outline: none; }
+    .intake-page .help-tooltip { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(100% + 0.5rem); width: min(280px, 90vw); padding: 1rem; background: #1a1a1a; color: #f5f5f2; font-size: 0.8rem; line-height: 1.5; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); border: 1px solid #333; opacity: 0; visibility: hidden; transition: opacity 0.2s, visibility 0.2s; z-index: 100; pointer-events: none; text-align: left; font-weight: 400; }
+    .intake-page .help-trigger:hover .help-tooltip, .intake-page .help-trigger:focus .help-tooltip { opacity: 1; visibility: visible; }
+    .intake-page .help-tooltip::after { content: ''; position: absolute; top: 100%; left: 50%; margin-left: -6px; border: 6px solid transparent; border-top-color: #1a1a1a; }
+    .intake-page .field-helper { font-size: 0.85rem; color: #555; margin: -0.75rem 0 1rem; line-height: 1.4; }
+    .intake-page #intake-success .btn-submit { background: var(--lum-gold); color: #000; }
+    .intake-page #intake-success div[style*="background"] { background: #f0f0ee !important; border: 1px solid #ddd; }
+    .intake-page #intake-error { background: rgba(200,80,80,0.12); color: #1a1a1a; border: 1px solid rgba(200,80,80,0.3); }
   </style>
 </head>
 <body class="lumo-landing">
@@ -52,12 +81,13 @@
     <p class="sub">Complete this form so we can tailor your caption set. Your answers shape your voice and structure for the month.</p>
 
     {% if not intake_token %}
-    <p class="sub" style="margin-top: 1rem;">Use the link from your order email to complete your intake. If you just purchased, check your inbox for a message from us with a personalised link.</p>
+    <p class="sub" style="margin-top: 1rem;">Use the link from your order email to complete the form. If you just purchased, check your inbox for a message from us with a personalised link.</p>
+    <p class="sub" style="margin-top: 0.5rem;">Haven't bought yet? <a href="/captions" style="color: var(--lum-gold);">Get 30 Days Captions</a></p>
     <p class="back"><a href="/captions">← Back to 30 Days Captions</a></p>
     {% else %}
     <div id="intake-success" style="display: none; margin: 2rem 0;">
       <div style="padding: 1.5rem; background: var(--lum-surface-elevated); border-radius: 8px; margin-bottom: 1rem;">
-        <p id="intake-success-msg" style="margin: 0;">Thanks. We're generating your 30 captions now. You'll receive them by email within a few minutes.</p>
+        <p id="intake-success-msg" style="margin: 0;">Request received. We'll take it from here — your captions will arrive by email within a few minutes.</p>
       </div>
       <div id="create-account-box" style="padding: 1.25rem; background: var(--lum-surface-elevated); border-radius: 8px; border: 1px solid var(--lum-border);">
         <p style="margin: 0 0 1rem; font-weight: 500;">Create an account to access your captions and more in one place.</p>
@@ -76,24 +106,28 @@
       <input type="hidden" name="token" id="intake_token" value="{{ intake_token }}">
       <div class="form-section">
         <h2>Business</h2>
+        <label for="business_name">What is your business name? <span style="font-weight: 400; color: var(--lum-text-muted);">(optional)</span></label>
+        <input type="text" id="business_name" name="business_name" placeholder="e.g. Lumo 22, Acme Coaching" value="{{ existing_intake.get('business_name', '') }}">
         <label for="business_type">What type of business do you run?</label>
         <input type="text" id="business_type" name="business_type" placeholder="e.g. consultancy, agency, product brand" value="{{ existing_intake.get('business_type', '') }}">
         <label for="offer_one_line">In one sentence, what do you offer and to whom?</label>
-        <textarea id="offer_one_line" name="offer_one_line" placeholder="Your answer">{{ existing_intake.get('offer_one_line', '') }}</textarea>
+        <textarea id="offer_one_line" name="offer_one_line" placeholder="e.g. We help busy founders build a content habit without the daily grind" value="{{ existing_intake.get('offer_one_line', '') }}"></textarea>
+        <p class="field-helper">A couple of sentences is enough.</p>
       </div>
       <div class="form-section">
         <h2>Audience</h2>
         <label for="audience">Who is your primary audience?</label>
-        <input type="text" id="audience" name="audience" placeholder="role, industry, or life stage" value="{{ existing_intake.get('audience', '') }}">
+        <input type="text" id="audience" name="audience" placeholder="e.g. founders, marketing leads, small business owners" value="{{ existing_intake.get('audience', '') }}">
         <label for="audience_cares">What do they care about most when they land on your content?</label>
-        <textarea id="audience_cares" name="audience_cares" placeholder="Your answer">{{ existing_intake.get('audience_cares', '') }}</textarea>
+        <textarea id="audience_cares" name="audience_cares" placeholder="e.g. quick wins, feeling less overwhelmed, practical tips" value="{{ existing_intake.get('audience_cares', '') }}"></textarea>
       </div>
       <div class="form-section">
         <h2>Voice</h2>
         <label for="voice_words">Choose 3–5 words that describe how you want to sound.</label>
         <input type="text" id="voice_words" name="voice_words" placeholder="e.g. direct, thoughtful, understated, precise, warm" value="{{ existing_intake.get('voice_words', '') }}">
+        <p class="field-helper">Write this like you speak to your customers.</p>
         <label for="voice_avoid">Is there any language or phrasing you want to avoid?</label>
-        <textarea id="voice_avoid" name="voice_avoid" placeholder="Your answer (optional)">{{ existing_intake.get('voice_avoid', '') }}</textarea>
+        <textarea id="voice_avoid" name="voice_avoid" placeholder="e.g. jargon, hype, overly formal (optional)" value="{{ existing_intake.get('voice_avoid', '') }}"></textarea>
       </div>
       <div class="form-section">
         <h2>Platform</h2>
@@ -101,6 +135,20 @@
         <input type="text" id="platform" name="platform" placeholder="Instagram / LinkedIn / both / other" value="{{ existing_intake.get('platform', '') }}">
         <label for="platform_habits">Any platform-specific habits?</label>
         <input type="text" id="platform_habits" name="platform_habits" placeholder="e.g. shorter on Instagram, longer on LinkedIn (optional)" value="{{ existing_intake.get('platform_habits', '') }}">
+      </div>
+      <div class="form-section">
+        <h2 style="display: flex; align-items: center;">Hashtags<span class="help-trigger" tabindex="0" role="button" aria-label="Hashtag guidelines"><span aria-hidden="true">?</span><span class="help-tooltip"><strong>Recommended by platform:</strong><br>Instagram 3–5 (or up to 30)<br>LinkedIn 2–5<br>TikTok 2–5<br><br>Quality over quantity. 3–10 is a safe range for most posts.</span></span></h2>
+        <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; margin-bottom: 0.5rem;">
+          <input type="checkbox" id="include_hashtags" name="include_hashtags" {% if existing_intake.get('include_hashtags', True) %}checked{% endif %} style="width: auto;">
+          <span>Include suggested hashtags with each caption</span>
+        </label>
+        <p style="font-size: 0.9rem; color: var(--lum-text-muted); margin-bottom: 1rem;">Uncheck if you prefer no hashtags (e.g. for a clean LinkedIn look).</p>
+        <div id="hashtag-range-wrap" style="margin-top: 0.5rem;">
+          <label for="hashtag_min">Minimum hashtags per caption</label>
+          <input type="number" id="hashtag_min" name="hashtag_min" min="1" max="30" value="{{ existing_intake.get('hashtag_min', 3) }}" placeholder="3">
+          <label for="hashtag_max">Maximum hashtags per caption</label>
+          <input type="number" id="hashtag_max" name="hashtag_max" min="0" max="30" value="{{ existing_intake.get('hashtag_max', 10) }}" placeholder="10">
+        </div>
       </div>
       <div class="form-section">
         <h2>Goal for this month</h2>
@@ -112,7 +160,7 @@
         <label for="caption_examples">Paste 1–3 example captions you like — from your own posts, competitors, or inspiration. We'll match this style, tone, and structure where relevant.</label>
         <textarea id="caption_examples" name="caption_examples" placeholder="Paste example captions here (optional)" style="min-height: 140px;">{{ existing_intake.get('caption_examples', '') }}</textarea>
       </div>
-      <button type="button" class="btn-submit" id="btn-review">{% if existing_intake %}Review changes{% else %}Review my answers{% endif %}</button>
+      <button type="button" class="btn-submit" id="btn-review">{% if existing_intake %}Review changes{% else %}Next step{% endif %}</button>
     </form>
 
     <div id="review-step" class="review-step">
@@ -121,7 +169,7 @@
       <div id="review-content"></div>
       <div class="review-actions">
         <button type="button" class="btn-submit btn-secondary" id="btn-edit">Edit</button>
-        <button type="button" class="btn-submit" id="btn-confirm">Confirm &amp; send</button>
+        <button type="button" class="btn-submit" id="btn-confirm">Send details</button>
       </div>
     </div>
 
@@ -138,6 +186,14 @@
       var btnReview = document.getElementById('btn-review');
       var btnEdit = document.getElementById('btn-edit');
       var btnConfirm = document.getElementById('btn-confirm');
+
+      function toggleHashtagRange() {
+        var wrap = document.getElementById('hashtag-range-wrap');
+        var cb = document.getElementById('include_hashtags');
+        if (wrap && cb) wrap.style.display = cb.checked ? '' : 'none';
+      }
+      document.getElementById('include_hashtags').addEventListener('change', toggleHashtagRange);
+      toggleHashtagRange();
 
       function getVal(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; }
       function sect(t, v) {
@@ -156,6 +212,7 @@
       function showReview() {
         if (!form.checkValidity()) { form.reportValidity(); return; }
         reviewContent.innerHTML = '';
+        reviewContent.appendChild(sect('Business name', getVal('business_name') || '(not provided)'));
         reviewContent.appendChild(sect('Business type', getVal('business_type')));
         reviewContent.appendChild(sect('What you offer', getVal('offer_one_line')));
         reviewContent.appendChild(sect('Primary audience', getVal('audience')));
@@ -164,6 +221,8 @@
         reviewContent.appendChild(sect('Language to avoid', getVal('voice_avoid')));
         reviewContent.appendChild(sect('Primary platform', getVal('platform')));
         reviewContent.appendChild(sect('Platform habits', getVal('platform_habits')));
+        var hashtags = document.getElementById('include_hashtags').checked ? 'Yes, ' + (getVal('hashtag_min') || '3') + '–' + (getVal('hashtag_max') || '10') + ' per caption' : 'No';
+        reviewContent.appendChild(sect('Hashtags', hashtags));
         reviewContent.appendChild(sect('Goal for this month', getVal('goal')));
         reviewContent.appendChild(sect('Example captions', getVal('caption_examples')));
         form.style.display = 'none';
@@ -176,8 +235,13 @@
       }
 
       function submitForm() {
+        var incHashtags = document.getElementById('include_hashtags').checked;
+        var minH = parseInt(document.getElementById('hashtag_min').value, 10) || 3;
+        var maxH = parseInt(document.getElementById('hashtag_max').value, 10) || 10;
+        if (minH > maxH) maxH = minH;
         var payload = {
           token: getVal('intake_token'),
+          business_name: getVal('business_name'),
           business_type: getVal('business_type'),
           offer_one_line: getVal('offer_one_line'),
           audience: getVal('audience'),
@@ -186,6 +250,9 @@
           voice_avoid: getVal('voice_avoid'),
           platform: getVal('platform'),
           platform_habits: getVal('platform_habits'),
+          include_hashtags: incHashtags,
+          hashtag_min: minH,
+          hashtag_max: maxH,
           goal: getVal('goal'),
           caption_examples: getVal('caption_examples')
         };
@@ -207,17 +274,17 @@
             var custEmail = (result.json.customer_email || '').trim();
             document.getElementById('ca-email').value = custEmail;
           } else {
-            document.getElementById('intake-error').textContent = result.json.error || 'Something went wrong. Please try again or email us.';
+            document.getElementById('intake-error').textContent = result.json.error || 'Something didn't send — try again or email us at hello@lumo22.com.';
             document.getElementById('intake-error').style.display = 'block';
             btnConfirm.disabled = false;
-            btnConfirm.textContent = 'Confirm & send';
+            btnConfirm.textContent = 'Send details';
           }
         })
         .catch(function() {
-          document.getElementById('intake-error').textContent = 'Network error. Please try again or email hello@lumo22.com.';
+          document.getElementById('intake-error').textContent = 'Something didn't send — try again or email hello@lumo22.com.';
           document.getElementById('intake-error').style.display = 'block';
           btnConfirm.disabled = false;
-          btnConfirm.textContent = 'Confirm & send';
+          btnConfirm.textContent = 'Send details';
         });
       }
 
@@ -231,7 +298,7 @@
           e.preventDefault();
           var email = document.getElementById('ca-email').value.trim();
           var pw = document.getElementById('ca-password').value;
-          if (!email) { alert('Email is required.'); return; }
+          if (!email) { alert('Just need your email to continue.'); return; }
           if (pw.length < 6) { alert('Password must be at least 6 characters.'); return; }
           var btn = document.getElementById('ca-btn');
           btn.disabled = true;
@@ -247,13 +314,13 @@
               document.getElementById('create-account-form').style.display = 'none';
               document.getElementById('ca-done').style.display = 'block';
             } else {
-              alert(data.error || 'Something went wrong.');
+              alert(data.error || 'Something didn\'t go through — try again.');
               btn.disabled = false;
               btn.textContent = 'Create account';
             }
           })
           .catch(function() {
-            alert('Network error. Please try again.');
+            alert('Something didn\'t send — try again.');
             btn.disabled = false;
             btn.textContent = 'Create account';
           });
@@ -262,5 +329,6 @@
     })();
   </script>
   {% endif %}
+  {% include '_footer.html' %}
 </body>
 </html>

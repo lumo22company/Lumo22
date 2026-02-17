@@ -37,6 +37,7 @@ html.lenis body {
   --lum-text-muted: #9a9a96;
   --lum-text-subtle: #6b6b68;
   --lum-gold: #fff200;      /* Accent yellow site-wide */
+  --lum-black: #000000;    /* Text on gold / light accents */
   --lum-border: rgba(255, 255, 255, 0.06);
   --lum-ivory: #e8e6e2;
   --font-display: 'Bebas Neue', sans-serif;
@@ -123,7 +124,8 @@ body.lumo-landing {
   transition: background 0.3s ease, border-color 0.3s ease;
 }
 
-.lumo-nav.scrolled {
+.lumo-nav.scrolled,
+.lumo-nav.lumo-nav-scrolled {
   background: #000000;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
