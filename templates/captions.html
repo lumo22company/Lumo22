@@ -11,6 +11,11 @@
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Encode+Sans+Condensed:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v={{ asset_version }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/product.css') }}?v={{ asset_version }}">
+  <style>
+    .captions-platform-checkboxes { display: flex; flex-wrap: nowrap; gap: 0.5rem 1.25rem; margin-bottom: 0.25rem; }
+    @media (max-width: 640px) { .captions-platform-checkboxes { flex-wrap: wrap; } }
+    .dfd-btn.btn-disabled { opacity: 0.5; pointer-events: none; cursor: not-allowed; }
+  </style>
 </head>
 <body class="lumo-landing product-page-captions">
   <nav class="lumo-nav" id="lumo-nav">
@@ -89,21 +94,24 @@
   <!-- 4. PRICING -->
   <section class="product-section product-section--dark" id="pricing">
     <div class="product-section-inner">
-      <p class="product-section-label">Pricing</p>
-      <h2 class="product-section-title">Choose your option</h2>
+      <h2 class="product-section-title">Choose your plan</h2>
       <p class="product-section-desc">One-off pack or monthly subscription. Same form and delivery. Cancel anytime on subscription.</p>
-      <div class="captions-platform-selector" style="max-width: 420px; margin: 0 auto 1.5rem; padding: 1rem 1.25rem; background: rgba(255,255,255,0.06); border-radius: 10px; border: 1px solid rgba(255,255,255,0.12);">
+      {% if checkout_error == 'extra_platform_not_configured' %}
+      <p class="product-section-error" style="max-width: 420px; margin: 0 auto 1rem; padding: 0.75rem 1rem; background: rgba(220,50,50,0.15); border: 1px solid rgba(220,50,50,0.4); border-radius: 8px; color: #ff9999; font-size: 0.9rem;">Multi-platform checkout is not fully configured. Please select 1 platform for now, or contact us.</p>
+      {% endif %}
+      <div class="captions-platform-selector" style="max-width: 600px; margin: 0 auto 1.5rem; padding: 1rem 1.25rem; background: rgba(255,255,255,0.06); border-radius: 10px; border: 1px solid rgba(255,255,255,0.12);">
         <label for="captions-platforms" style="display: block; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem;">How many platforms?</label>
         <select id="captions-platforms" name="platforms" style="width: 100%; padding: 0.6rem 0.75rem; border-radius: 6px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: inherit; font-size: 1rem;">
           <option value="1">1 platform</option>
+          {% if supports_multi_platform|default(false) %}
           <option value="2">2 platforms — add £29 one-off / £19/mo</option>
           <option value="3">3 platforms — add £58 one-off / £38/mo</option>
           <option value="4">4 platforms — add £87 one-off / £57/mo</option>
-          <option value="5">5 platforms — add £116 one-off / £76/mo</option>
+          {% endif %}
         </select>
         <div id="captions-which-wrap" style="margin-top: 1rem;">
           <p id="captions-which-label" style="font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem;">Which platform?</p>
-          <div style="display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; margin-bottom: 0.25rem;">
+          <div class="captions-platform-checkboxes">
             <label style="display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer; font-size: 0.9rem;"><input type="checkbox" name="which_platform" value="Instagram & Facebook" class="captions-which-cb"> Instagram &amp; Facebook</label>
             <label style="display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer; font-size: 0.9rem;"><input type="checkbox" name="which_platform" value="LinkedIn" class="captions-which-cb"> LinkedIn</label>
             <label style="display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer; font-size: 0.9rem;"><input type="checkbox" name="which_platform" value="TikTok" class="captions-which-cb"> TikTok</label>
@@ -111,9 +119,9 @@
           </div>
           <p id="captions-which-hint" style="font-size: 0.8rem; color: var(--lum-text-muted); margin: 0.5rem 0 0;"></p>
         </div>
+        <p id="captions-platform-error" role="alert" style="display: none; margin-top: 0.75rem; padding: 0.75rem 1rem; background: rgba(220,50,50,0.15); border: 1px solid rgba(220,50,50,0.4); border-radius: 8px; color: #ff9999; font-size: 0.9rem;">Please select which platform(s) you want above. You cannot proceed to checkout until this is complete.</p>
         <p style="font-size: 0.8rem; color: var(--lum-text-muted); margin: 0.5rem 0 0;">Your choice will be prefilled on the form after payment.</p>
       </div>
-      <p class="product-section-guarantee">Not happy with your pack? We’ll make it right.</p>
       <div class="lumo-pricing-grid">
         {% if captions_subscription_available %}
         <div class="lumo-pricing-card glass-card">
@@ -188,6 +196,10 @@
           <p class="dfd-faq-answer">Yes. The form captures your business, audience, and tone. Your captions are written to match so they sound like you.</p>
         </details>
         <details class="dfd-faq-item">
+          <summary class="dfd-faq-question">I have a product launch, sale, or event. Can you tailor the captions?</summary>
+          <p class="dfd-faq-answer">Yes. In the form, fill in the Key date section and tell us what’s happening and when (must be within the next 30 days of your caption set). We’ll tailor your captions: pre-date builds anticipation, on the day we announce, after we shift to thank-you and feedback. Include dates in your description for accuracy (e.g. Valentine’s sale Feb 10–14, 20% off ends 28 Feb, Black Friday weekend).</p>
+        </details>
+        <details class="dfd-faq-item">
           <summary class="dfd-faq-question">What if I’m not happy with my pack?</summary>
           <p class="dfd-faq-answer">We’ll make it right — just get in touch and we’ll sort it.</p>
         </details>
@@ -238,10 +250,11 @@
     var subCta = document.getElementById('captions-sub-cta');
     var whichLabel = document.getElementById('captions-which-label');
     var whichHint = document.getElementById('captions-which-hint');
+    var errEl = document.getElementById('captions-platform-error');
     if (!sel) return;
     function oneoffTotal(n) { return 97 + (n - 1) * 29; }
     function subTotal(n) { return 79 + (n - 1) * 19; }
-    function getN() { return Math.max(1, Math.min(5, parseInt(sel.value, 10) || 1)); }
+    function getN() { return Math.max(1, Math.min(4, parseInt(sel.value, 10) || 1)); }
     function getSelectedPlatforms() {
       var n = getN();
       var cbs = document.querySelectorAll('.captions-which-cb:checked');
@@ -261,10 +274,23 @@
       var q = 'platforms=' + n;
       if (selected) q += '&selected=' + encodeURIComponent(selected);
       if (oneoffPrice) oneoffPrice.innerHTML = '£' + oneoffTotal(n) + ' <span>one-time</span>';
-      if (oneoffCta && oneoffCta.getAttribute('href') && oneoffCta.getAttribute('href').indexOf('captions-checkout') !== -1) oneoffCta.href = '/captions-checkout?' + q;
+      var isValid = selected !== null;
+      var targetHref = '/captions-checkout?' + q;
+      var subHref = '/captions-checkout-subscription?' + q;
+      if (oneoffCta && oneoffCta.getAttribute('href') && oneoffCta.getAttribute('href').indexOf('captions-checkout') !== -1) {
+        oneoffCta.href = isValid ? targetHref : '#pricing';
+        oneoffCta.classList.toggle('btn-disabled', !isValid);
+        oneoffCta.setAttribute('aria-disabled', !isValid);
+      }
       if (subPrice) subPrice.innerHTML = '£' + subTotal(n) + ' <span>/month</span>';
       if (subSave) subSave.textContent = 'Save £' + (oneoffTotal(n) - subTotal(n)) + ' vs one-off';
-      if (subCta) subCta.href = '/captions-checkout-subscription?' + q;
+      if (subCta) {
+        subCta.href = isValid ? subHref : '#pricing';
+        subCta.textContent = 'Subscribe — £' + subTotal(n) + '/month';
+        subCta.classList.toggle('btn-disabled', !isValid);
+        subCta.setAttribute('aria-disabled', !isValid);
+      }
+      if (errEl) errEl.style.display = isValid ? 'none' : 'block';
     }
     function onPlatformChange() {
       var cbs = document.querySelectorAll('.captions-which-cb');
@@ -285,6 +311,31 @@
     sel.addEventListener('change', onPlatformChange);
     updateWhichUI();
     updateLinks();
+
+    function validateAndGo(cta) {
+      if (!cta || !cta.href || cta.href.indexOf('captions-checkout') === -1) return true;
+      var selected = getSelectedPlatforms();
+      if (selected === null) {
+        if (errEl) { errEl.style.display = 'block'; errEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+        document.getElementById('pricing').scrollIntoView({ behavior: 'smooth' });
+        return false;
+      }
+      if (errEl) errEl.style.display = 'none';
+      return true;
+    }
+    function handleCtaClick(e) {
+      if (!validateAndGo(this)) e.preventDefault();
+    }
+    if (oneoffCta && oneoffCta.href && oneoffCta.href.indexOf('captions-checkout') !== -1) {
+      oneoffCta.addEventListener('click', handleCtaClick);
+    }
+    if (subCta && subCta.href && subCta.href.indexOf('captions-checkout') !== -1) {
+      subCta.addEventListener('click', handleCtaClick);
+    }
+    document.querySelectorAll('.captions-which-cb').forEach(function(cb) {
+      cb.addEventListener('change', function() { if (errEl) errEl.style.display = 'none'; });
+    });
+    sel.addEventListener('change', function() { if (errEl) errEl.style.display = 'none'; });
   })();
   </script>
 </body>

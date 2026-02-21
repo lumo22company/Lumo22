@@ -51,6 +51,7 @@
     .intake-page .review-step.show { display: block; }
     .intake-page .review-section { margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid #ddd; }
     .intake-page .review-section:last-of-type { border-bottom: none; }
+    .intake-page #review-content { min-height: 70vh; }
     .intake-page .review-section h3 { font-size: 0.85rem; color: #555; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
     .intake-page .review-section p { margin: 0; font-size: 0.95rem; line-height: 1.5; color: #1a1a1a; white-space: pre-wrap; }
     .intake-page .review-section .empty { color: #666; font-style: italic; }
@@ -69,8 +70,16 @@
     .intake-page select { width: 100%; padding: 0.75rem 1rem; background: #fff; border: 1px solid #ccc; border-radius: 8px; color: #111; font-family: var(--font-body); font-size: 1rem; margin-bottom: 1.25rem; }
     .intake-page select:focus { outline: none; border-color: #666; }
     .intake-checkbox-group { display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem; margin-bottom: 0.25rem; }
+    .platform-chip-label { display: inline-flex; align-items: center; padding: 0.5rem 1rem; border: 1px solid #ccc; border-radius: 8px; background: #fff; font-size: 0.95rem; cursor: pointer; font-family: inherit; color: #1a1a1a; user-select: none; }
+    .platform-chip-label:hover { border-color: #888; }
+    .platform-chip-label:has(.platform-chip-cb:checked) { background: var(--lum-gold, #c9a227); border-color: var(--lum-gold, #c9a227); color: #000; }
+    .platform-chip-label:focus-within { outline: 2px solid rgba(0,0,0,0.3); outline-offset: 2px; }
+    .platform-chip-label:has(.platform-chip-cb:disabled) { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
+    .platform-chip-label .platform-chip-cb { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
     .intake-checkbox-label { display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 400; font-size: 0.95rem; }
     .intake-checkbox-label input { width: auto; margin: 0; }
+    .intake-checkbox-label input:disabled { cursor: not-allowed; opacity: 0.5; }
+    .intake-checkbox-label:has(input:disabled) { cursor: not-allowed; color: #888; pointer-events: none; }
   </style>
 </head>
 <body class="lumo-landing">
@@ -85,6 +94,7 @@
   </nav>
 
   <main class="intake-page">
+    <!-- intake-form-version: 2025-02-v3 -->
     <h1>30 Days Captions — Your details</h1>
     <p class="sub">Complete this form so we can tailor your caption set. Your answers shape your voice and structure for the month.</p>
 
@@ -99,6 +109,8 @@
       </div>
       <div id="create-account-box" style="padding: 1.25rem; background: var(--lum-surface-elevated); border-radius: 8px; border: 1px solid var(--lum-border);">
         <p style="margin: 0 0 1rem; font-weight: 500;">Create an account to access your captions and more in one place.</p>
+        <p id="ca-required-note" style="margin: 0 0 1rem; font-size: 0.85rem; color: var(--lum-text-muted); display: none;">Required for subscription customers — you'll use this to manage billing and re-download captions.</p>
+        <p id="ca-email-display" style="margin: 0 0 0.75rem; font-size: 0.9rem; color: var(--lum-text-muted); display: none;">Account for: <strong id="ca-email-text"></strong></p>
         <form id="create-account-form" style="max-width: 320px;">
           <input type="hidden" id="ca-email" value="">
           <label for="ca-password" style="display:block; font-size:0.9rem; margin-bottom:0.25rem;">Password (min 6 characters)</label>
@@ -122,12 +134,12 @@
           <option value="Consultancy" {% if existing_intake.get('business_type') == 'Consultancy' %}selected{% endif %}>Consultancy</option>
           <option value="Agency" {% if existing_intake.get('business_type') == 'Agency' %}selected{% endif %}>Agency</option>
           <option value="Coach / Mentor" {% if existing_intake.get('business_type') == 'Coach / Mentor' %}selected{% endif %}>Coach / Mentor</option>
-          <option value="Product brand" {% if existing_intake.get('business_type') == 'Product brand' %}selected{% endif %}>Product brand</option>
+          <option value="Product brand / E-commerce" {% if existing_intake.get('business_type') in ['Product brand / E-commerce', 'Product brand', 'E-commerce'] %}selected{% endif %}>Product brand / E-commerce</option>
+          <option value="Service business" {% if existing_intake.get('business_type') == 'Service business' %}selected{% endif %}>Service business</option>
           <option value="Creative / Freelancer" {% if existing_intake.get('business_type') == 'Creative / Freelancer' %}selected{% endif %}>Creative / Freelancer</option>
-          <option value="E-commerce" {% if existing_intake.get('business_type') == 'E-commerce' %}selected{% endif %}>E-commerce</option>
-          <option value="Other" {% if existing_intake.get('business_type') and existing_intake.get('business_type') not in ['Consultancy', 'Agency', 'Coach / Mentor', 'Product brand', 'Creative / Freelancer', 'E-commerce'] %}selected{% endif %}>Other</option>
+          <option value="Other" {% if existing_intake.get('business_type') and existing_intake.get('business_type') not in ['Consultancy', 'Agency', 'Coach / Mentor', 'Product brand / E-commerce', 'Product brand', 'E-commerce', 'Service business', 'Creative / Freelancer'] %}selected{% endif %}>Other</option>
         </select>
-        <input type="text" id="business_type_other" name="business_type_other" placeholder="Specify your business type" class="intake-other-field" style="display: none; margin-top: 0.5rem;" value="{{ existing_intake.get('business_type', '') if existing_intake.get('business_type') and existing_intake.get('business_type') not in ['Consultancy', 'Agency', 'Coach / Mentor', 'Product brand', 'Creative / Freelancer', 'E-commerce'] else '' }}">
+        <input type="text" id="business_type_other" name="business_type_other" placeholder="Specify your business type" class="intake-other-field" style="display: none; margin-top: 0.5rem;" value="{{ existing_intake.get('business_type', '') if existing_intake.get('business_type') and existing_intake.get('business_type') not in ['Consultancy', 'Agency', 'Coach / Mentor', 'Product brand / E-commerce', 'Product brand', 'E-commerce', 'Service business', 'Creative / Freelancer'] else '' }}">
         <label for="offer_one_line">In one sentence, what do you offer and to whom?</label>
         <textarea id="offer_one_line" name="offer_one_line" placeholder="e.g. We help busy founders build a content habit without the daily grind">{{ existing_intake.get('offer_one_line', '') }}</textarea>
         <p class="field-helper">A couple of sentences is enough.</p>
@@ -174,14 +186,14 @@
       <div class="form-section">
         <h2>Platform</h2>
         {% if platforms_count > 1 %}
-        <p class="field-helper" style="margin-bottom: 0.5rem;">Select up to {{ platforms_count }} platforms (included in your order):</p>
-        <div class="intake-checkbox-group" role="group" aria-label="Platforms">
-          <label class="intake-checkbox-label"><input type="checkbox" name="platform_cb" value="Instagram & Facebook"> Instagram &amp; Facebook</label>
-          <label class="intake-checkbox-label"><input type="checkbox" name="platform_cb" value="LinkedIn"> LinkedIn</label>
-          <label class="intake-checkbox-label"><input type="checkbox" name="platform_cb" value="TikTok"> TikTok</label>
-          <label class="intake-checkbox-label"><input type="checkbox" name="platform_cb" value="Pinterest"> Pinterest</label>
+        <p class="field-helper" style="margin-bottom: 0.5rem;">Select up to {{ platforms_count }} platforms (included in your order). You cannot exceed the number you paid for.</p>
+        <div class="intake-checkbox-group" role="group" aria-label="Platforms" id="platform-checkbox-group" data-max-platforms="{{ platforms_count }}">
+          <label class="platform-chip-label"><input type="checkbox" name="platform_cb" value="Instagram & Facebook" class="platform-chip-cb"> Instagram &amp; Facebook</label>
+          <label class="platform-chip-label"><input type="checkbox" name="platform_cb" value="LinkedIn" class="platform-chip-cb"> LinkedIn</label>
+          <label class="platform-chip-label"><input type="checkbox" name="platform_cb" value="TikTok" class="platform-chip-cb"> TikTok</label>
+          <label class="platform-chip-label"><input type="checkbox" name="platform_cb" value="Pinterest" class="platform-chip-cb"> Pinterest</label>
         </div>
-        <input type="hidden" id="platform" name="platform" value="{{ prefilled_platform }}">
+        <input type="hidden" id="platform" name="platform" value="{{ existing_intake.get('platform', '') or prefilled_platform }}">
         {% else %}
         <label for="platform">Primary platform for these captions?</label>
         <select id="platform" name="platform">
@@ -227,6 +239,13 @@
         </div>
       </div>
       <div class="form-section">
+        <h2>Key date (optional)</h2>
+        <p class="field-helper" style="margin-bottom: 0.75rem;">If you have a product launch, event, sale, or similar within the next 30 days of your caption set, we'll tailor captions: before the date we build anticipation; on the day we announce; during we promote and drive action; after we shift to thank-you and feedback.</p>
+        <label for="launch_event_description">What's happening? Include dates.</label>
+        <input type="text" id="launch_event_description" name="launch_event_description" placeholder="e.g. Valentine's sale 10–14 Feb, product launch 20 March, Black Friday weekend 28–30 Nov" value="{{ existing_intake.get('launch_event_description', '') }}">
+        <p class="field-helper">Include dates for each event (e.g. sale runs 10–14 Feb, launch on 15 March). Multiple events? List them all with their dates.</p>
+      </div>
+      <div class="form-section">
         <h2>Example captions (optional)</h2>
         <label for="caption_examples">Paste 1–3 example captions you like — from your own posts, competitors, or inspiration. We'll match this style, tone, and structure where relevant.</label>
         <textarea id="caption_examples" name="caption_examples" placeholder="Paste example captions here (optional)" style="min-height: 140px;">{{ existing_intake.get('caption_examples', '') }}</textarea>
@@ -251,6 +270,240 @@
 
   {% if intake_token %}
   <script>
+  (function(){
+    var c = document.getElementById('audience_cb_consumers');
+    var w = document.getElementById('consumer_age_wrap');
+    if (c && w) {
+      function ca() { w.style.display = c.checked ? 'block' : 'none'; }
+      c.addEventListener('change', ca);
+      c.addEventListener('click', function(){ setTimeout(ca,0); });
+      ca();
+    }
+    var g = document.getElementById('goal');
+    var gw = document.getElementById('goal_other_wrap');
+    if (g && gw) {
+      function go() { gw.style.display = g.value === 'Other' ? 'block' : 'none'; }
+      g.addEventListener('change', go);
+      go();
+    }
+    (function prefillCheckboxesOnLoad() {
+      function gv(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; }
+      var aud = gv('audience');
+      if (aud) {
+        var parts = aud.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+        var otherParts = [];
+        parts.forEach(function(p) {
+          var cbs = document.querySelectorAll('input[name="audience_cb"]');
+          var found = false;
+          for (var i = 0; i < cbs.length; i++) { if (cbs[i].value === p) { cbs[i].checked = true; found = true; break; } }
+          if (!found) otherParts.push(p);
+        });
+        var otherEl = document.getElementById('audience_other');
+        if (otherEl && otherParts.length) otherEl.value = otherParts.join(', ');
+      }
+      var vw = gv('voice_words');
+      if (vw) {
+        var parts = vw.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+        var otherParts = [];
+        parts.forEach(function(p) {
+          var cbs = document.querySelectorAll('input[name="voice_words_cb"]');
+          var found = false;
+          for (var i = 0; i < cbs.length; i++) { if (cbs[i].value.toLowerCase() === p.toLowerCase()) { cbs[i].checked = true; found = true; break; } }
+          if (!found) otherParts.push(p);
+        });
+        var otherEl = document.getElementById('voice_words_other');
+        if (otherEl && otherParts.length) otherEl.value = otherParts.join(', ');
+      }
+      var platformVal = gv('platform');
+      if (platformVal) {
+        var form = document.getElementById('captions-intake-form');
+        var platformsCount = parseInt((form && form.getAttribute('data-platforms-count')) || '1', 10) || 1;
+        var parts = platformVal.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+        var capped = parts.slice(0, platformsCount);
+        var pCbs = document.querySelectorAll('input[name="platform_cb"]');
+        if (pCbs.length) {
+          capped.forEach(function(p) {
+            pCbs.forEach(function(cb) { if (cb.value === p) cb.checked = true; });
+          });
+        }
+      }
+      var ageVal = gv('consumer_age_range');
+      var consumersCb = document.getElementById('audience_cb_consumers');
+      var ageWrap = document.getElementById('consumer_age_wrap');
+      if (ageVal && consumersCb) { consumersCb.checked = true; if (ageWrap) ageWrap.style.display = 'block'; }
+    })();
+
+    var nextBtn = document.getElementById('btn-review');
+    if (nextBtn) nextBtn.addEventListener('click', function doNextStep() {
+      var form = document.getElementById('captions-intake-form');
+      var reviewStep = document.getElementById('review-step');
+      var reviewContent = document.getElementById('review-content');
+      if (!form || !reviewStep || !reviewContent) return;
+      function gv(id){ var el = document.getElementById(id); return el ? el.value.trim() : ''; }
+      function gso(sid, oid){ var sel = document.getElementById(sid); if(!sel) return ''; var o = oid ? document.getElementById(oid) : null; return (sel.value === 'Other' && o) ? o.value.trim() : sel.value.trim(); }
+      var audCk = document.querySelectorAll('input[name="audience_cb"]:checked');
+      var aud = [].map.call(audCk, function(x){ return x.value; }).join(', ');
+      if (gv('audience_other')) aud = aud ? aud + ', ' + gv('audience_other') : gv('audience_other');
+      var audEl = document.getElementById('audience'); if(audEl) audEl.value = aud;
+      var vwCk = document.querySelectorAll('input[name="voice_words_cb"]:checked');
+      var vw = [].map.call(vwCk, function(x){ return x.value; }).join(', ');
+      if (gv('voice_words_other')) vw = vw ? vw + ', ' + gv('voice_words_other') : gv('voice_words_other');
+      var vwEl = document.getElementById('voice_words'); if(vwEl) vwEl.value = vw;
+      var pCbs = document.querySelectorAll('input[name="platform_cb"], .platform-chip-cb');
+      if (pCbs.length) { var pv = [].filter.call(pCbs, function(x){ return x.checked; }).map(function(x){ return x.value; }); var pEl = document.getElementById('platform'); if(pEl) pEl.value = pv.join(', '); }
+      var hint = document.getElementById('intake-validation-hint');
+      if (hint) { hint.style.display = 'none'; hint.textContent = ''; }
+      if (!form.checkValidity()) {
+        form.reportValidity();
+        var inv = form.querySelector(':invalid'); if (inv && inv.scrollIntoView) inv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        if (hint) { hint.textContent = 'Please complete the required fields above (e.g. business name).'; hint.style.display = 'block'; }
+        return;
+      }
+      function sect(t,v){ var p = document.createElement('p'); p.textContent = v || '(not provided)'; if(!v) p.className = 'empty'; var h = document.createElement('h3'); h.textContent = t; var d = document.createElement('div'); d.className = 'review-section'; d.appendChild(h); d.appendChild(p); return d; }
+      reviewContent.innerHTML = '';
+      reviewContent.appendChild(sect('Business name', gv('business_name')));
+      reviewContent.appendChild(sect('Business type', gso('business_type', 'business_type_other') || '(not provided)'));
+      reviewContent.appendChild(sect('What you offer', gv('offer_one_line')));
+      reviewContent.appendChild(sect('Primary audience', gv('audience') || '(not provided)'));
+      if (gv('consumer_age_range')) reviewContent.appendChild(sect('Consumer age range', gv('consumer_age_range')));
+      reviewContent.appendChild(sect('What they care about', gv('audience_cares')));
+      reviewContent.appendChild(sect('Voice (3–5 words)', gv('voice_words') || '(not provided)'));
+      reviewContent.appendChild(sect('Language to avoid', gv('voice_avoid')));
+      reviewContent.appendChild(sect('Primary platform', gv('platform') || '(not provided)'));
+      reviewContent.appendChild(sect('Platform habits', gv('platform_habits')));
+      var inc = document.getElementById('include_hashtags');
+      reviewContent.appendChild(sect('Hashtags', inc && inc.checked ? 'Yes, ' + (gv('hashtag_min')||'3') + '–' + (gv('hashtag_max')||'10') + ' per caption' : 'No'));
+      reviewContent.appendChild(sect('Goal for this month', gso('goal', 'goal_other') || '(not provided)'));
+      var launchDesc = gv('launch_event_description');
+      if (launchDesc) reviewContent.appendChild(sect('Key date', launchDesc));
+      reviewContent.appendChild(sect('Example captions', gv('caption_examples')));
+      form.style.display = 'none';
+      reviewStep.classList.add('show');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+    var btnEdit = document.getElementById('btn-edit');
+    if (btnEdit) btnEdit.addEventListener('click', function() {
+      var rs = document.getElementById('review-step');
+      var f = document.getElementById('captions-intake-form');
+      if (rs) rs.classList.remove('show');
+      if (f) f.style.display = 'block';
+    });
+    var btnConfirm = document.getElementById('btn-confirm');
+    if (btnConfirm) btnConfirm.addEventListener('click', function sendDetails() {
+      function gv(id){ var el = document.getElementById(id); return el ? el.value.trim() : ''; }
+      function gso(sid, oid){ var sel = document.getElementById(sid); if(!sel) return ''; var o = oid ? document.getElementById(oid) : null; return (sel.value === 'Other' && o) ? o.value.trim() : sel.value.trim(); }
+      var audCk = document.querySelectorAll('input[name="audience_cb"]:checked');
+      var aud = [].map.call(audCk, function(x){ return x.value; }).join(', ');
+      if (gv('audience_other')) aud = aud ? aud + ', ' + gv('audience_other') : gv('audience_other');
+      var audEl = document.getElementById('audience'); if(audEl) audEl.value = aud;
+      var vwCk = document.querySelectorAll('input[name="voice_words_cb"]:checked');
+      var vw = [].map.call(vwCk, function(x){ return x.value; }).join(', ');
+      if (gv('voice_words_other')) vw = vw ? vw + ', ' + gv('voice_words_other') : gv('voice_words_other');
+      var vwEl = document.getElementById('voice_words'); if(vwEl) vwEl.value = vw;
+      var pCbs = document.querySelectorAll('input[name="platform_cb"], .platform-chip-cb');
+      if (pCbs.length) { var pv = [].filter.call(pCbs, function(x){ return x.checked; }).map(function(x){ return x.value; }); var pEl = document.getElementById('platform'); if(pEl) pEl.value = pv.join(', '); }
+      var inc = document.getElementById('include_hashtags');
+      var minH = parseInt(document.getElementById('hashtag_min') ? document.getElementById('hashtag_min').value : 3, 10) || 3;
+      var maxH = parseInt(document.getElementById('hashtag_max') ? document.getElementById('hashtag_max').value : 10, 10) || 10;
+      if (minH > maxH) maxH = minH;
+      var payload = {
+        token: gv('intake_token'),
+        business_name: gv('business_name'),
+        business_type: gso('business_type', 'business_type_other'),
+        offer_one_line: gv('offer_one_line'),
+        audience: gv('audience'),
+        consumer_age_range: gv('consumer_age_range'),
+        audience_cares: gv('audience_cares'),
+        voice_words: gv('voice_words'),
+        voice_avoid: gv('voice_avoid'),
+        platform: gv('platform'),
+        platform_habits: gv('platform_habits'),
+        include_hashtags: inc ? inc.checked : true,
+        hashtag_min: minH,
+        hashtag_max: maxH,
+        goal: gso('goal', 'goal_other'),
+        launch_event_description: gv('launch_event_description'),
+        caption_examples: gv('caption_examples')
+      };
+      var btn = document.getElementById('btn-confirm');
+      if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+      fetch('/api/captions-intake', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+        .then(function(r){ return r.json().then(function(j){ return { status: r.status, json: j }; }); })
+        .then(function(result) {
+          if (result.status === 200 && result.json.success) {
+            var rs = document.getElementById('review-step');
+            if (rs) rs.classList.remove('show');
+            var successEl = document.getElementById('intake-success');
+            if (successEl) successEl.style.display = 'block';
+            var msgEl = document.getElementById('intake-success-msg');
+            if (msgEl) {
+              if (result.json.is_subscription) {
+                msgEl.textContent = "Your captions are on the way. Create an account to manage your subscription, re-download captions, and cancel anytime.";
+              } else if (result.json.message) {
+                msgEl.textContent = result.json.message;
+              }
+            }
+            var createAccountBox = document.getElementById('create-account-box');
+            var caRequiredNote = document.getElementById('ca-required-note');
+            if (result.json.is_subscription) {
+              if (createAccountBox) createAccountBox.setAttribute('data-required', 'true');
+              if (caRequiredNote) caRequiredNote.style.display = 'block';
+            } else {
+              if (createAccountBox) createAccountBox.removeAttribute('data-required');
+              if (caRequiredNote) caRequiredNote.style.display = 'none';
+            }
+            var caEmail = document.getElementById('ca-email');
+            var custEmail = (result.json.customer_email || '').trim();
+            if (caEmail && custEmail) { caEmail.value = custEmail; }
+            var caEmailText = document.getElementById('ca-email-text');
+            var caEmailDisplay = document.getElementById('ca-email-display');
+            if (caEmailText && caEmailDisplay && custEmail) { caEmailText.textContent = custEmail; caEmailDisplay.style.display = 'block'; }
+          } else {
+            var errEl = document.getElementById('intake-error');
+            if (errEl) { errEl.textContent = result.json.error || 'Something didn\'t send — try again or email us at hello@lumo22.com.'; errEl.style.display = 'block'; }
+            if (btn) { btn.disabled = false; btn.textContent = 'Send details'; }
+          }
+        })
+        .catch(function() {
+          var errEl = document.getElementById('intake-error');
+          if (errEl) { errEl.textContent = 'Something didn\'t send — try again or email hello@lumo22.com.'; errEl.style.display = 'block'; }
+          if (btn) { btn.disabled = false; btn.textContent = 'Send details'; }
+        });
+    });
+    var caForm = document.getElementById('create-account-form');
+    if (caForm) {
+      caForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        var emailEl = document.getElementById('ca-email');
+        var email = (emailEl ? emailEl.value : '').trim();
+        var pwEl = document.getElementById('ca-password');
+        var pw = pwEl ? pwEl.value : '';
+        if (!email) { alert('Just need your email to continue.'); return; }
+        if (pw.length < 6) { alert('Password must be at least 6 characters.'); return; }
+        var caBtn = document.getElementById('ca-btn');
+        if (caBtn) { caBtn.disabled = true; caBtn.textContent = 'Creating…'; }
+        fetch('/api/auth/create-account', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email.toLowerCase(), password: pw }) })
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (data.ok) {
+              var formEl = document.getElementById('create-account-form');
+              if (formEl) formEl.style.display = 'none';
+              var doneEl = document.getElementById('ca-done');
+              if (doneEl) doneEl.style.display = 'block';
+            } else {
+              alert(data.error || 'Something didn\'t go through — try again.');
+              if (caBtn) { caBtn.disabled = false; caBtn.textContent = 'Create account'; }
+            }
+          })
+          .catch(function() {
+            alert('Something didn\'t send — try again.');
+            if (caBtn) { caBtn.disabled = false; caBtn.textContent = 'Create account'; }
+          });
+      });
+    }
+  })();
+  </script>
+  <script>
     (function() {
       function runWhenReady(fn) {
         if (document.readyState === 'loading') {
@@ -266,9 +519,8 @@
       var btnReview = document.getElementById('btn-review');
       var btnEdit = document.getElementById('btn-edit');
       var btnConfirm = document.getElementById('btn-confirm');
-      if (!form || !reviewStep || !reviewContent || !btnReview) return;
 
-      var platformsCount = parseInt(form.getAttribute('data-platforms-count') || '1', 10) || 1;
+      var platformsCount = parseInt((form && form.getAttribute('data-platforms-count')) || '1', 10) || 1;
       function getVal(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; }
       function getSelectOrOther(selectId, otherId) {
         var sel = document.getElementById(selectId);
@@ -294,7 +546,7 @@
         if (el) el.value = combined;
       }
       function syncPlatforms() {
-        var cbs = document.querySelectorAll('input[name="platform_cb"]');
+        var cbs = document.querySelectorAll('input[name="platform_cb"], .platform-chip-cb');
         if (!cbs.length) return;
         var checked = Array.prototype.slice.call(cbs).filter(function(c) { return c.checked; });
         var parts = checked.map(function(c) { return c.value; }).filter(Boolean);
@@ -314,11 +566,15 @@
         return div;
       }
       function showReview() {
+        var form = document.getElementById('captions-intake-form');
+        var reviewStep = document.getElementById('review-step');
+        var reviewContent = document.getElementById('review-content');
+        if (!form || !reviewStep || !reviewContent) return;
         var hintEl = document.getElementById('intake-validation-hint');
         if (hintEl) { hintEl.style.display = 'none'; hintEl.textContent = ''; }
         syncAudience();
         syncVoiceWords();
-        if (document.querySelectorAll('input[name="platform_cb"]').length) syncPlatforms();
+        if (document.querySelectorAll('input[name="platform_cb"], .platform-chip-cb').length) syncPlatforms();
         if (!form.checkValidity()) {
           form.reportValidity();
           var firstInvalid = form.querySelector(':invalid');
@@ -342,18 +598,26 @@
         var hashtags = incCb && incCb.checked ? 'Yes, ' + (getVal('hashtag_min') || '3') + '–' + (getVal('hashtag_max') || '10') + ' per caption' : 'No';
         reviewContent.appendChild(sect('Hashtags', hashtags));
         reviewContent.appendChild(sect('Goal for this month', getSelectOrOther('goal', 'goal_other') || '(not provided)'));
+        var launchDesc = getVal('launch_event_description');
+        if (launchDesc) reviewContent.appendChild(sect('Key date', launchDesc));
         reviewContent.appendChild(sect('Example captions', getVal('caption_examples')));
         form.style.display = 'none';
         reviewStep.classList.add('show');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }
+      window.doShowReview = showReview;
+      if (!form || !reviewStep || !reviewContent || !btnReview) return;
+
       function showForm() {
-        reviewStep.classList.remove('show');
-        form.style.display = 'block';
+        var reviewStep = document.getElementById('review-step');
+        var form = document.getElementById('captions-intake-form');
+        if (reviewStep) reviewStep.classList.remove('show');
+        if (form) form.style.display = 'block';
       }
       function submitForm() {
         syncAudience();
         syncVoiceWords();
-        if (document.querySelectorAll('input[name="platform_cb"]').length) syncPlatforms();
+        if (document.querySelectorAll('input[name="platform_cb"], .platform-chip-cb').length) syncPlatforms();
         var incHashtags = document.getElementById('include_hashtags').checked;
         var minH = parseInt(document.getElementById('hashtag_min').value, 10) || 3;
         var maxH = parseInt(document.getElementById('hashtag_max').value, 10) || 10;
@@ -374,6 +638,7 @@
           hashtag_min: minH,
           hashtag_max: maxH,
           goal: getSelectOrOther('goal', 'goal_other'),
+          launch_event_description: getVal('launch_event_description'),
           caption_examples: getVal('caption_examples')
         };
         btnConfirm.disabled = true;
@@ -408,9 +673,7 @@
         });
       }
 
-      btnReview.addEventListener('click', function() { try { showReview(); } catch (e) { if (typeof console !== 'undefined' && console.error) console.error('Next step:', e); } });
       if (btnEdit) btnEdit.addEventListener('click', showForm);
-      if (btnConfirm) btnConfirm.addEventListener('click', submitForm);
 
       (function goalOtherToggle() {
         var goalSelect = document.getElementById('goal');
@@ -470,26 +733,41 @@
       });
       toggleOtherFields();
       (function setupMultiPlatform() {
-        var cbs = document.querySelectorAll('input[name="platform_cb"]');
+        var cbs = document.querySelectorAll('.platform-chip-cb');
         if (!cbs.length) return;
+        var platformEl = document.getElementById('platform');
+        var group = document.getElementById('platform-checkbox-group');
+        var maxPlatforms = parseInt((group && group.getAttribute('data-max-platforms')) || '1', 10) || 1;
+        function syncToHidden() {
+          var checked = document.querySelectorAll('.platform-chip-cb:checked');
+          var vals = [].map.call(checked, function(c) { return c.value; }).filter(Boolean);
+          if (platformEl) platformEl.value = vals.slice(0, maxPlatforms).join(', ');
+        }
+        function enforceLimit() {
+          var checked = document.querySelectorAll('.platform-chip-cb:checked');
+          cbs.forEach(function(cb) {
+            cb.disabled = !cb.checked && checked.length >= maxPlatforms;
+          });
+          syncToHidden();
+        }
         cbs.forEach(function(cb) {
           cb.addEventListener('change', function() {
-            var checked = document.querySelectorAll('input[name="platform_cb"]:checked');
-            if (checked.length > platformsCount && this.checked) this.checked = false;
-            syncPlatforms();
+            var checked = document.querySelectorAll('.platform-chip-cb:checked');
+            if (checked.length > maxPlatforms && this.checked) {
+              this.checked = false;
+            }
+            enforceLimit();
           });
         });
-        var platformVal = getVal('platform');
-        if (platformVal) {
-          var parts = platformVal.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
-          var known = ['Instagram & Facebook', 'LinkedIn', 'TikTok', 'Pinterest'];
-          parts.forEach(function(p) {
-            cbs.forEach(function(cb) {
-              if (cb.value === p) cb.checked = true;
-            });
+        enforceLimit();
+        var initialVal = (platformEl && platformEl.value || '').trim();
+        if (initialVal) {
+          var parts = initialVal.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+          parts.slice(0, maxPlatforms).forEach(function(p) {
+            cbs.forEach(function(cb) { if (cb.value === p) cb.checked = true; });
           });
+          enforceLimit();
         }
-        syncPlatforms();
       })();
       function toggleConsumerAge() {
         var consumersCb = document.getElementById('audience_cb_consumers');
@@ -546,40 +824,6 @@
 
       } catch (e) { if (typeof console !== 'undefined' && console.error) console.error('Intake setup:', e); }
 
-      var caForm = document.getElementById('create-account-form');
-      if (caForm) {
-        caForm.addEventListener('submit', function(e) {
-          e.preventDefault();
-          var email = document.getElementById('ca-email').value.trim();
-          var pw = document.getElementById('ca-password').value;
-          if (!email) { alert('Just need your email to continue.'); return; }
-          if (pw.length < 6) { alert('Password must be at least 6 characters.'); return; }
-          var btn = document.getElementById('ca-btn');
-          btn.disabled = true;
-          btn.textContent = 'Creating…';
-          fetch('/api/auth/create-account', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: email.toLowerCase(), password: pw })
-          })
-          .then(function(r) { return r.json(); })
-          .then(function(data) {
-            if (data.ok) {
-              document.getElementById('create-account-form').style.display = 'none';
-              document.getElementById('ca-done').style.display = 'block';
-            } else {
-              alert(data.error || 'Something didn\'t go through — try again.');
-              btn.disabled = false;
-              btn.textContent = 'Create account';
-            }
-          })
-          .catch(function() {
-            alert('Something didn\'t send — try again.');
-            btn.disabled = false;
-            btn.textContent = 'Create account';
-          });
-        });
-      }
       }); // end runWhenReady
     })();
   </script>
