@@ -1,23 +1,23 @@
 /**
- * Split section parallax — section-scoped, dayos.com style.
- * Panels move at different speeds (data-speed). Content: headings slide opposite directions, text fades.
- * Uses transform: translate3d only; no layout shift, no page container movement.
- *
- * TWEAK: data-speed on .lumo-split-panel — e.g. 0.08 and -0.06. Higher absolute = more movement.
- * TWEAK: Content slide distance — CONTENT_OFFSET_LEFT / CONTENT_OFFSET_RIGHT (px). Animation timing in CSS.
+ * Split section — dayos-style subtle parallax.
+ * Apply translateY ONLY to .split-content. Do NOT move the section.
+ * Scroll progress 0 → 1; max movement 40px; opposite directions for left/right panels.
  */
+
 (function () {
   'use strict';
+
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
   var section = document.getElementById('lumo-split');
   if (!section) return;
 
-  var panels = section.querySelectorAll('.lumo-split-panel[data-speed]');
-  var inner = section.querySelector('.lumo-split-inner');
+  var leftContent = section.querySelector('.split-left .split-content');
+  var rightContent = section.querySelector('.split-right .split-content');
 
-  /* Distance (px) content moves on scroll. Increase for stronger slide-in. */
-  var CONTENT_OFFSET_LEFT = 48;
-  var CONTENT_OFFSET_RIGHT = 48;
+  if (!leftContent || !rightContent) return;
+
+  var MAX_MOVE = 40;
 
   function easeOutCubic(t) {
     return 1 - Math.pow(1 - t, 3);
@@ -26,33 +26,21 @@
   function update() {
     var rect = section.getBoundingClientRect();
     var winH = window.innerHeight;
-    var sectionTop = rect.top;
-    var sectionHeight = rect.height;
+    var sectionH = rect.height;
 
-    /* Progress: 0 = section just entering viewport bottom, 1 = section fully scrolled past. */
     var progress = 0;
-    if (sectionTop < winH && sectionTop + sectionHeight > 0) {
-      var visibleStart = Math.max(0, winH - sectionTop - sectionHeight);
-      progress = Math.min(1, Math.max(0, visibleStart / (winH + sectionHeight * 0.5)));
+    if (rect.top < winH && rect.bottom > 0) {
+      var visibleStart = winH - rect.top;
+      progress = visibleStart / (winH + sectionH);
+      progress = Math.max(0, Math.min(1, progress));
       progress = easeOutCubic(progress);
     }
 
-    /* Panel parallax: translateY by data-speed * scroll progress. */
-    panels.forEach(function (panel) {
-      var speed = parseFloat(panel.getAttribute('data-speed')) || 0;
-      var move = (winH * 0.15) * speed * progress;
-      panel.style.transform = 'translate3d(0, ' + move + 'px, 0)';
+    var leftY = (1 - progress) * MAX_MOVE;
+    var rightY = (1 - progress) * -MAX_MOVE;
 
-      var content = panel.querySelector('.lumo-split-content');
-      if (!content) return;
-
-      var isLeft = panel.classList.contains('lumo-split-left');
-      var offset = isLeft ? CONTENT_OFFSET_LEFT : -CONTENT_OFFSET_RIGHT;
-      var contentX = offset * (1 - progress);
-      var opacity = 0.4 + 0.6 * progress;
-      content.style.transform = 'translate3d(' + contentX + 'px, 0, 0)';
-      content.style.opacity = opacity;
-    });
+    leftContent.style.transform = 'translateY(' + leftY + 'px)';
+    rightContent.style.transform = 'translateY(' + rightY + 'px)';
   }
 
   function onScroll() {
@@ -60,7 +48,8 @@
   }
 
   window.addEventListener('scroll', onScroll, { passive: true });
-  window.addEventListener('resize', update);
+  window.addEventListener('lumoscroll', onScroll);
+  window.addEventListener('resize', onScroll);
   window.addEventListener('load', update);
   update();
 })();

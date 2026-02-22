@@ -1,6 +1,8 @@
 # Deploy LUMO22 so lumo22.com (or your live URL) works
 
-Your app runs on **port 5001** locally. To have it live at **lumo22.com** (or a host URL), deploy this repo to a host and set your env vars there. Below: **Railway** (simplest) and **Render**.
+Your app runs on **port 5001** locally. To have it live at **lumo22.com** (or a host URL), deploy this repo to a host and set your env vars there.
+
+**No GitHub?** Use **Option C** below — deploy from your Mac with the Railway CLI (no GitHub needed).
 
 ---
 
@@ -54,6 +56,45 @@ Your app runs on **port 5001** locally. To have it live at **lumo22.com** (or a 
 5. **Custom domain:** Render → your service → **Settings** → **Custom Domains** → add `lumo22.com`, then set `BASE_URL=https://lumo22.com` and the Stripe webhook URL to `https://lumo22.com/webhooks/stripe`.
 
 6. Deploy and test as in Step 7.
+
+---
+
+## Option C: Deploy without GitHub (Railway CLI)
+
+Use this if you can’t use GitHub right now. You deploy from your Mac; Railway hosts the app.
+
+1. **Sign up at Railway:** Go to [railway.app](https://railway.app). Sign up with **email** (or Google) — you don’t need GitHub.
+
+2. **Install the Railway CLI** (on your Mac, in Terminal):
+   ```bash
+   brew install railway
+   ```
+   If you don’t have Homebrew: [brew.sh](https://brew.sh) or download the CLI from [railway.app](https://railway.app).
+
+3. **Log in and deploy from your project folder:**
+   ```bash
+   cd /Users/sophieoverment/LUMO22
+   railway login
+   ```
+   A browser window opens; log in to Railway. Then:
+   ```bash
+   railway init
+   ```
+   Choose **Create new project** and a new **empty** service. Then:
+   ```bash
+   railway up
+   ```
+   Railway uploads your folder and builds the app. Wait until it finishes.
+
+4. **Add env vars:** In the [Railway dashboard](https://railway.app/dashboard), open your project → your service → **Variables**. Add every variable from your `.env` (copy from your machine). Include at least: `FLASK_ENV=production`, `SECRET_KEY`, `OPENAI_API_KEY`, `SUPABASE_URL`, `SUPABASE_KEY`, `SENDGRID_API_KEY`, `FROM_EMAIL`, `CAPTIONS_PAYMENT_LINK`, `STRIPE_WEBHOOK_SECRET`, and `BASE_URL` (see step 5).
+
+5. **Get your live URL:** In Railway → your service → **Settings** → **Networking** → **Generate domain**. You’ll get a URL like `https://lumo22-production.up.railway.app`. Add it as a variable: `BASE_URL=https://that-full-url` (no trailing slash). Redeploy if needed (e.g. **Deploy** → **Redeploy**).
+
+6. **Stripe webhook:** In Stripe → your webhook destination → edit the endpoint URL to your Railway URL + `/webhooks/stripe`, e.g. `https://lumo22-production.up.railway.app/webhooks/stripe`.
+
+7. Test: open `BASE_URL/captions`, do a test payment, check the intake email and delivery email.
+
+When you have GitHub later, you can connect the same Railway project to a repo and deploy from there instead.
 
 ---
 

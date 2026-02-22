@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Subscribe — 30 Days Captions | Lumo 22</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
+  <meta name="description" content="Subscribe to 30 Days of Social Media Captions. New pack each month. Cancel anytime.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v={{ asset_version }}">
+  <style>
+    .checkout-section { padding-top: 8rem; padding-bottom: 4rem; }
+    .checkout-card { max-width: 520px; margin: 0 auto; padding: 2.5rem; background: var(--lum-card-bg, rgba(255,255,255,0.03)); border-radius: 12px; border: 1px solid var(--lum-border, rgba(255,255,255,0.08)); }
+    .checkout-card h1 { font-family: var(--font-display); font-size: 1.5rem; margin-bottom: 0.5rem; }
+    .checkout-card .price { color: var(--lum-gold); font-size: 1.25rem; margin-bottom: 1rem; }
+    .checkout-card .price-note { font-size: 0.9rem; color: var(--lum-text-muted); margin-bottom: 1.5rem; }
+    .checkout-card .btn-wrap { margin-top: 1.5rem; }
+    .checkout-card .btn-disabled { opacity: 0.5; pointer-events: none; cursor: not-allowed; }
+    .checkout-card .back { margin-top: 1.5rem; }
+    .checkout-card .back a { color: var(--lum-text-muted); text-decoration: none; font-size: 0.95rem; }
+    .checkout-card .back a:hover { color: var(--lum-text); }
+  </style>
+</head>
+<body class="lumo-landing">
+  <nav class="lumo-nav lumo-nav-scrolled">
+    <a href="/" class="lumo-nav-logo">Lumo 22</a>
+    <div class="lumo-nav-links">
+      <a href="/captions">Captions</a>
+      <a href="/digital-front-desk">Front Desk</a>
+    </div>
+    {% if current_customer %}<a href="/account" class="lumo-nav-cta">Account</a>{% else %}<a href="/login" class="lumo-nav-cta">Log in</a>{% endif %}
+  </nav>
+
+  <section class="lumo-section checkout-section">
+    <div class="checkout-card">
+      <h1>30 Days Captions — Subscription</h1>
+      <p class="price" id="checkout-price">£{{ total_sub|default(79) }} <span>/month</span></p>
+      {% if platforms_invalid|default(false) %}
+      <p class="checkout-platform-error" style="margin-bottom: 1rem; padding: 0.75rem 1rem; background: rgba(220,50,50,0.15); border: 1px solid rgba(220,50,50,0.4); border-radius: 8px; color: #ff9999; font-size: 0.9rem;">Please go back and select which {{ platforms }} platform(s) you want on the captions page.</p>
+      {% else %}
+      <p id="checkout-platform-note" style="font-size: 0.9rem; color: var(--lum-text-muted); margin-bottom: 0;">{% if selected %}Platforms: {{ selected }}{% elif platforms|default(1) > 1 %}{{ platforms }} platforms included.{% endif %}</p>
+      {% endif %}
+      <p class="price-note">New 30-day caption pack each month. Renews monthly until you cancel. Cancel anytime from your Stripe customer portal. You’ll complete a short form after payment; your captions are ready within 15 minutes.</p>
+
+      {% if not platforms_invalid|default(false) %}
+      <p style="font-size: 0.9rem; color: var(--lum-text-muted); margin: 1rem 0 0;">You must read and accept the Terms &amp; Conditions to proceed.</p>
+      {% endif %}
+
+      <div class="btn-wrap">
+        {% if platforms_invalid|default(false) %}
+        <a href="/captions#pricing" class="lumo-btn-primary">Back to select platforms</a>
+        {% else %}
+        <a href="{{ api_url|default('/api/captions-checkout-subscription?platforms=1') }}" id="btn-continue" class="lumo-btn-primary js-terms-checkout">Next step — read &amp; accept terms</a>
+        {% endif %}
+      </div>
+      <p class="back"><a href="/captions">← Back to Captions</a></p>
+    </div>
+  </section>
+
+  {% include '_footer.html' %}
+  {% if not platforms_invalid|default(false) %}
+  {% include '_terms_modal.html' %}
+  {% endif %}
+</body>
+</html>

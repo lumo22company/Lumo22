@@ -32,6 +32,7 @@ def signup():
         data = request.get_json() or {}
         email = (data.get("email") or "").strip().lower()
         password = (data.get("password") or "").strip()
+        referral_code = (data.get("referral_code") or data.get("ref") or "").strip() or None
 
         if not email or "@" not in email:
             return jsonify({"ok": False, "error": "Valid email required"}), 400
@@ -39,7 +40,7 @@ def signup():
             return jsonify({"ok": False, "error": "Password must be at least 6 characters"}), 400
 
         svc = CustomerAuthService()
-        customer = svc.create(email=email, password=password)
+        customer = svc.create(email=email, password=password, referral_code=referral_code)
 
         session["customer_id"] = str(customer["id"])
         session["customer_email"] = customer["email"]

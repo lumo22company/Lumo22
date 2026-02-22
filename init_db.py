@@ -2,9 +2,17 @@
 Initialize Supabase database tables.
 Creates the leads table if it doesn't exist.
 """
+import re
 from supabase import create_client
 from config import Config
 import json
+
+
+def _sanitize_url(u: str) -> str:
+    if not u or not isinstance(u, str):
+        return (u or "").strip() or ""
+    return re.sub(r"[\x00-\x1f\x7f]", "", (u or "").strip()).rstrip("/").strip()
+
 
 def init_database():
     """Initialize database schema"""
@@ -15,7 +23,11 @@ def init_database():
         return
     
     try:
-        client = create_client(Config.SUPABASE_URL, Config.SUPABASE_KEY)
+        url = _sanitize_url(Config.SUPABASE_URL)
+        if not url:
+            print("Supabase URL invalid after sanitization. Skipping.")
+            return
+        client = create_client(url, (Config.SUPABASE_KEY or "").strip())
         
         # SQL to create leads table
         # Note: Supabase uses PostgreSQL, so we'll use SQL

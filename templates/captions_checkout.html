@@ -4,21 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Checkout — 30 Days Captions | Lumo 22</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
   <meta name="description" content="Complete your purchase of 30 Days of Social Media Captions.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v={{ asset_version }}">
   <style>
     .checkout-section { padding-top: 8rem; padding-bottom: 4rem; }
     .checkout-card { max-width: 520px; margin: 0 auto; padding: 2.5rem; background: var(--lum-card-bg, rgba(255,255,255,0.03)); border-radius: 12px; border: 1px solid var(--lum-border, rgba(255,255,255,0.08)); }
     .checkout-card h1 { font-family: var(--font-display); font-size: 1.5rem; margin-bottom: 0.5rem; }
     .checkout-card .price { color: var(--lum-gold); font-size: 1.25rem; margin-bottom: 1.5rem; }
-    .checkout-tcs { margin: 1.5rem 0; padding: 1rem; background: var(--lum-surface-elevated); border-radius: 8px; border: 1px solid var(--lum-border); }
-    .checkout-tcs label { display: flex; align-items: flex-start; gap: 0.75rem; cursor: pointer; color: var(--lum-text-muted); font-size: 0.95rem; line-height: 1.5; }
-    .checkout-tcs input[type="checkbox"] { margin-top: 0.2rem; flex-shrink: 0; width: 1.1rem; height: 1.1rem; accent-color: var(--lum-gold); }
-    .checkout-tcs a { color: var(--lum-gold); text-decoration: none; }
-    .checkout-tcs a:hover { text-decoration: underline; }
     .checkout-card .btn-wrap { margin-top: 1.5rem; }
     .checkout-card .btn-disabled { opacity: 0.5; pointer-events: none; cursor: not-allowed; }
     .checkout-card .back { margin-top: 1.5rem; }
@@ -31,63 +27,40 @@
     <a href="/" class="lumo-nav-logo">Lumo 22</a>
     <div class="lumo-nav-links">
       <a href="/captions">Captions</a>
-      <a href="/#front-desk">Front Desk</a>
-      <a href="/plans">Pricing</a>
+      <a href="/digital-front-desk">Front Desk</a>
     </div>
-    <a href="/#front-desk" class="lumo-nav-cta">Try the concierge</a>
+    {% if current_customer %}<a href="/account" class="lumo-nav-cta">Account</a>{% else %}<a href="/login" class="lumo-nav-cta">Log in</a>{% endif %}
   </nav>
 
   <section class="lumo-section checkout-section">
     <div class="checkout-card">
       <h1>30 Days of Social Media Captions</h1>
-      <p class="price">£97 one-time</p>
-      <p style="color: var(--lum-text-muted); margin-bottom: 0;">You’ll complete a short intake form after payment so we can tailor your captions. Delivery within 3–5 business days.</p>
+      <p class="price" id="checkout-price">£{{ total_oneoff|default(97) }} one-time</p>
+      {% if platforms_invalid %}
+      <p class="checkout-platform-error" style="margin-bottom: 1rem; padding: 0.75rem 1rem; background: rgba(220,50,50,0.15); border: 1px solid rgba(220,50,50,0.4); border-radius: 8px; color: #ff9999; font-size: 0.9rem;">Please go back and select which {{ platforms }} platform(s) you want on the captions page.</p>
+      {% else %}
+      <p id="checkout-platform-note" style="color: var(--lum-text-muted); margin-bottom: 0; font-size: 0.9rem;">{% if selected %}Platforms: {{ selected }}{% elif platforms|default(1) > 1 %}{{ platforms }} platforms included.{% endif %}</p>
+      {% endif %}
+      <p style="color: var(--lum-text-muted); margin-bottom: 0;">You’ll complete a short form after payment so we can tailor your captions. Ready within 15 minutes of submitting the form.</p>
 
-      <div class="checkout-tcs">
-        <label for="agree-tcs">
-          <input type="checkbox" id="agree-tcs" name="agree_tcs" required>
-          <span>I have read and agree to the <a href="/terms" target="_blank" rel="noopener">Terms &amp; Conditions</a>.</span>
-        </label>
-      </div>
+      {% if not platforms_invalid|default(false) %}
+      <p style="font-size: 0.9rem; color: var(--lum-text-muted); margin: 1rem 0 0;">You must read and accept the Terms &amp; Conditions to proceed.</p>
+      {% endif %}
 
       <div class="btn-wrap">
-        <a href="/api/captions-checkout" id="btn-continue" class="lumo-btn-primary btn-disabled">Continue to payment</a>
+        {% if platforms_invalid %}
+        <a href="/captions#pricing" class="lumo-btn-primary">Back to select platforms</a>
+        {% else %}
+        <a href="{{ api_url|default('/api/captions-checkout?platforms=1') }}" id="btn-continue" class="lumo-btn-primary js-terms-checkout">Next step — read &amp; accept terms</a>
+        {% endif %}
       </div>
       <p class="back"><a href="/captions">← Back to Captions</a></p>
     </div>
   </section>
 
-  <footer class="lumo-footer">
-    <div class="lumo-footer-inner">
-      <div>
-        <a href="/" class="lumo-footer-brand">Lumo 22</a>
-        <p class="lumo-footer-tagline">Lighting the way to better business</p>
-      </div>
-      <div class="lumo-footer-links">
-        <a href="/captions">Captions</a>
-        <a href="/#front-desk">Front Desk</a>
-        <a href="/plans">Pricing</a>
-        <a href="/terms">Terms</a>
-        <a href="mailto:hello@lumo22.com">Contact</a>
-      </div>
-    </div>
-    <div class="lumo-footer-bottom">© Lumo 22. All rights reserved.</div>
-  </footer>
-
-  <script>
-    (function() {
-      var checkbox = document.getElementById('agree-tcs');
-      var btn = document.getElementById('btn-continue');
-      function updateBtn() {
-        if (checkbox.checked) {
-          btn.classList.remove('btn-disabled');
-        } else {
-          btn.classList.add('btn-disabled');
-        }
-      }
-      checkbox.addEventListener('change', updateBtn);
-      updateBtn();
-    })();
-  </script>
+  {% include '_footer.html' %}
+  {% if not platforms_invalid|default(false) %}
+  {% include '_terms_modal.html' %}
+  {% endif %}
 </body>
 </html>

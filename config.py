@@ -48,6 +48,7 @@ class Config:
     # SendGrid (sanitize key so Authorization header doesn't get Invalid header value from env newline)
     SENDGRID_API_KEY = _sanitize_header_value(os.getenv('SENDGRID_API_KEY', '') or '')
     FROM_EMAIL = _sanitize_header_value(os.getenv('FROM_EMAIL', '') or '') or 'noreply@example.com'
+    FROM_NAME = _sanitize_header_value(os.getenv('FROM_NAME', '') or '') or 'Lumo 22'
     
     # Twilio
     TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID')
@@ -88,9 +89,18 @@ class Config:
     STRIPE_CAPTIONS_PRICE_ID = os.getenv('STRIPE_CAPTIONS_PRICE_ID', '').strip() or None
     # Stripe Price ID for 30 Days Captions subscription £79/month (price_xxx); optional, for subscription option on /captions
     STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID = os.getenv('STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID', '').strip() or None
+    # Extra platform add-on: one-off £29, subscription £19/mo (price_xxx each). Optional; if set, checkout accepts ?platforms=N.
+    STRIPE_CAPTIONS_EXTRA_PLATFORM_PRICE_ID = os.getenv('STRIPE_CAPTIONS_EXTRA_PLATFORM_PRICE_ID', '').strip() or None
+    STRIPE_CAPTIONS_EXTRA_PLATFORM_SUBSCRIPTION_PRICE_ID = os.getenv('STRIPE_CAPTIONS_EXTRA_PLATFORM_SUBSCRIPTION_PRICE_ID', '').strip() or None
 
     # Digital Front Desk inbound (auto-reply). Domain for unique addresses, e.g. inbound.lumo22.com. MX must point to SendGrid.
     INBOUND_EMAIL_DOMAIN = (os.getenv('INBOUND_EMAIL_DOMAIN', '').strip() or 'inbound.lumo22.com').lower()
+
+    # Cron job auth: shared secret for /api/captions-send-reminders (Railway cron). Generate with: openssl rand -hex 32
+    CRON_SECRET = _sanitize_header_value(os.getenv('CRON_SECRET', '').strip() or '')
+
+    # Site chat widget: key for the Lumo 22 marketing site's own chat bubble (demo + help). When set, widget appears and status endpoint returns valid.
+    SITE_CHAT_WIDGET_KEY = (os.getenv('SITE_CHAT_WIDGET_KEY', '').strip() or None)
 
     # Qualification Settings
     MIN_QUALIFICATION_SCORE = int(os.getenv('MIN_QUALIFICATION_SCORE', '60'))

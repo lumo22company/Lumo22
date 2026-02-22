@@ -4,12 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Digital Front Desk | Lumo 22 — Your Smart Front Desk, 24/7</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
   <meta name="description" content="Instantly respond to customer enquiries and manage your bookings on your terms. Flexible booking blocks, automated email responses, one dashboard.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Encode+Sans+Condensed:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/product.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v={{ asset_version }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/product.css') }}?v={{ asset_version }}">
 </head>
 <body class="lumo-landing product-page-dfd">
   <nav class="lumo-nav" id="lumo-nav">
@@ -17,9 +18,8 @@
     <div class="lumo-nav-links">
       <a href="/captions">Captions</a>
       <a href="/digital-front-desk">Front Desk</a>
-      <a href="/digital-front-desk#pricing">Pricing</a>
     </div>
-    {% if current_customer %}<a href="/account" class="lumo-nav-cta">Account</a>{% else %}<a href="/login" class="lumo-nav-cta">Log in</a>{% endif %}
+    {% if current_customer %}<a href="/account" class="lumo-nav-cta">Account</a>{% else %}<span style="display: inline-flex; align-items: center; gap: 0.75rem;"><a href="/login" style="color: var(--lum-text-muted); text-decoration: none; font-size: 0.9rem;">Log in</a><a href="/signup" class="lumo-nav-cta">Sign up</a></span>{% endif %}
   </nav>
 
   <!-- 1. HERO — full-width black, left-aligned -->
@@ -58,7 +58,7 @@
         </article>
         <article class="dfd-feature-card">
           <h3 class="dfd-feature-title">Smart Scheduling</h3>
-          <p class="dfd-feature-desc">Set the duration between appointments or allow back-to-back. Smart Booking only offers slots next to existing ones—avoiding gaps. Toggle on or off; empty days show the full timetable. Your schedule, your rules.</p>
+          <p class="dfd-feature-desc">No new system—integrates with Calendly, Fresha, or whatever you already use. Set the duration between appointments or allow back-to-back. Smart Booking only offers slots next to existing ones—avoiding gaps. Toggle on or off; empty days show the full timetable. Your schedule, your rules.</p>
         </article>
         <article class="dfd-feature-card">
           <h3 class="dfd-feature-title">Serious Enquiries Only</h3>
@@ -68,6 +68,22 @@
           <h3 class="dfd-feature-title">Your Voice in Every Reply</h3>
           <p class="dfd-feature-desc">Every reply is written in your tone, so customers feel like they're talking to you—not a bot. Personal, professional, consistent.</p>
         </article>
+      </div>
+
+      <!-- Smart Scheduling — screenshots demo -->
+      <div class="dfd-smart-booking-demo" id="smart-booking" style="margin-top: 3rem; padding-top: 2rem; border-top: 1px solid rgba(0,0,0,0.08);">
+        <h3 class="dfd-heading" style="font-size: 1.25rem; margin-bottom: 0.75rem;">Smart Scheduling in action</h3>
+        <p class="dfd-lead" style="color: #444; font-size: 0.95rem; margin-bottom: 1.5rem;">Toggle it on during setup. When enabled, we only show slots near your existing bookings—no more gaps in your day.</p>
+        <div class="dfd-smart-booking-images" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; max-width: 900px;">
+          <figure style="margin: 0;">
+            <img src="{{ url_for('static', filename='images/smart-booking-setup.png') }}" alt="Setup form showing Enable tight scheduling option" style="width: 100%; border-radius: 12px; border: 1px solid rgba(0,0,0,0.1); box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
+            <figcaption style="margin-top: 0.5rem; font-size: 0.85rem; color: #666;">1. Enable in setup — choose your gap (e.g. 60 min)</figcaption>
+          </figure>
+          <figure style="margin: 0;">
+            <img src="{{ url_for('static', filename='images/smart-booking-concept.png') }}" alt="Before and after: scattered slots vs slots grouped near existing bookings" style="width: 100%; border-radius: 12px; border: 1px solid rgba(0,0,0,0.1); box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
+            <figcaption style="margin-top: 0.5rem; font-size: 0.85rem; color: #666;">2. Slots cluster near existing bookings — empty days show full availability</figcaption>
+          </figure>
+        </div>
       </div>
     </div>
   </section>
@@ -107,22 +123,18 @@
     </div>
   </section>
 
-  <!-- 3b. CHAT ASSISTANT — off-white, add-on section -->
-  <section class="dfd-section dfd-section--light dfd-chat-section" id="chat-assistant">
+  <!-- 3b. TRY THE DEMO — dark section, email CTA -->
+  <section class="dfd-section dfd-section--dark" id="try-demo">
     <div class="dfd-section-inner">
-      <h2 class="dfd-heading">Chat Assistant</h2>
-      <p class="dfd-chat-headline">One receptionist across email and website</p>
-      <ul class="dfd-chat-bullets">
-        <li>Website chat widget</li>
-        <li>Answers FAQs using your business info</li>
-        <li>Lead capture to email</li>
-        <li>Booking prompts when relevant</li>
-      </ul>
-      <p class="dfd-chat-price">£59<span>/mo</span> — add-on or standalone</p>
-      <div class="dfd-chat-ctas">
-        <a href="/activate" class="dfd-btn dfd-btn-accent">Add Chat to my plan</a>
-        <a href="/website-chat" class="dfd-btn dfd-btn-secondary-outline">Get Chat only</a>
+      <h2 class="dfd-heading">See it in action</h2>
+      <p class="dfd-lead">Send an email to the address below with any enquiry—e.g. "Hi, I'd like to book a facial next week"—and we'll reply in seconds. Same experience your clients get.</p>
+      <div style="max-width: 480px; margin: 1.5rem 0; padding: 1.25rem 1.5rem; background: rgba(255,255,255,0.06); border-radius: 12px; border: 1px solid rgba(255,255,255,0.12);">
+        <p style="margin: 0 0 0.5rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--lum-text-muted);">Demo address</p>
+        <p style="margin: 0; font-family: var(--font-body); font-size: 1.1rem; font-weight: 500; color: var(--lum-text);">
+          <a href="mailto:reply-demo@inbound.lumo22.com" style="color: var(--lum-gold); text-decoration: none;">reply-demo@inbound.lumo22.com</a>
+        </p>
       </div>
+      <p class="dfd-lead" style="font-size: 0.9rem; color: var(--lum-text-muted);">Use your own email—you'll get the reply in your inbox.</p>
     </div>
   </section>
 
@@ -152,13 +164,12 @@
     <div class="product-section-inner">
       <p class="product-section-label">Pricing</p>
       <h2 class="product-section-title">Choose your plan</h2>
-      <p class="product-section-desc">No setup fees. Cancel anytime. Add Chat Assistant as an add-on or choose a bundle.</p>
+      <p class="product-section-desc">No setup fees. Cancel anytime.</p>
       <div class="lumo-pricing-grid">
-        <div class="lumo-pricing-card glass-card" data-email-plan="starter" data-email-price="79" data-chat-price="59" data-bundle-discount-percent="5">
+        <div class="lumo-pricing-card glass-card" data-email-plan="starter">
           <h3 style="margin-bottom: 0.5rem;">Starter</h3>
           <p style="color: var(--lum-text-muted); font-size: 0.95rem; margin-bottom: 1rem;">Replies + qualification</p>
-          <div class="lumo-offer-price js-dfd-price" style="margin: 1rem 0;">£79 <span>/mo</span></div>
-          <p class="dfd-price-note" data-note="">Email only</p>
+          <div class="lumo-offer-price" style="margin: 1rem 0;">£79 <span>/mo</span></div>
           <ul class="lumo-offer-includes" style="margin: 1rem 0;">
             <li>Up to 100 enquiries/month</li>
             <li>Instant replies to email</li>
@@ -166,19 +177,14 @@
             <li>Lead capture · Basic tracking</li>
           </ul>
           <div class="dfd-pricing-footer">
-            <div class="dfd-addon-toggle">
-              <label class="dfd-addon-label"><input type="checkbox" id="addon-starter" class="js-addon-toggle" aria-label="Add Chat Assistant"> Add Chat Assistant (+£59) — 5% off bundle</label>
-            </div>
-            <a href="/activate?plan=starter" class="lumo-nav-cta dfd-pricing-cta js-activate-email" data-plan="starter">Get Started</a>
-            <a href="/activate?plan=starter&amp;add_chat=1" class="lumo-nav-cta dfd-pricing-cta js-activate-bundle" data-plan="starter" style="display: none;">Get Started with chat</a>
+            <a href="/activate?plan=starter" class="lumo-nav-cta dfd-pricing-cta" data-plan="starter">Get Started</a>
           </div>
         </div>
-        <div class="lumo-pricing-card glass-card featured" style="position: relative;" data-email-plan="standard" data-email-price="149" data-chat-price="59" data-bundle-discount-percent="5">
+        <div class="lumo-pricing-card glass-card featured" style="position: relative;" data-email-plan="standard">
           <span class="product-badge-recommended">Recommended</span>
           <h3 style="margin-bottom: 0.5rem;">Growth</h3>
           <p style="color: var(--lum-text-muted); font-size: 0.95rem; margin-bottom: 1rem;">Smart booking + lead routing</p>
-          <div class="lumo-offer-price js-dfd-price" style="margin: 1rem 0;">£149 <span>/mo</span></div>
-          <p class="dfd-price-note" data-note="">Email only</p>
+          <div class="lumo-offer-price" style="margin: 1rem 0;">£149 <span>/mo</span></div>
           <ul class="lumo-offer-includes" style="margin: 1rem 0;">
             <li>Up to 300 enquiries/month</li>
             <li>Instant replies · Ongoing conversation handling</li>
@@ -186,18 +192,13 @@
             <li>Block scheduling · Buffers</li>
           </ul>
           <div class="dfd-pricing-footer">
-            <div class="dfd-addon-toggle">
-              <label class="dfd-addon-label"><input type="checkbox" id="addon-standard" class="js-addon-toggle" aria-label="Add Chat Assistant"> Add Chat Assistant (+£59) — 5% off bundle</label>
-            </div>
-            <a href="/activate?plan=standard" class="lumo-nav-cta dfd-pricing-cta js-activate-email" data-plan="standard">Get Started</a>
-            <a href="/activate?plan=standard&amp;add_chat=1" class="lumo-nav-cta dfd-pricing-cta js-activate-bundle" data-plan="standard" style="display: none;">Get Started with chat</a>
+            <a href="/activate?plan=standard" class="lumo-nav-cta dfd-pricing-cta" data-plan="standard">Get Started</a>
           </div>
         </div>
-        <div class="lumo-pricing-card glass-card" data-email-plan="premium" data-email-price="299" data-chat-price="59" data-bundle-discount-percent="5">
+        <div class="lumo-pricing-card glass-card" data-email-plan="premium">
           <h3 style="margin-bottom: 0.5rem;">Pro</h3>
           <p style="color: var(--lum-text-muted); font-size: 0.95rem; margin-bottom: 1rem;">Full calendar sync + custom rules</p>
-          <div class="lumo-offer-price js-dfd-price" style="margin: 1rem 0;">£299 <span>/mo</span></div>
-          <p class="dfd-price-note" data-note="">Email only</p>
+          <div class="lumo-offer-price" style="margin: 1rem 0;">£299 <span>/mo</span></div>
           <ul class="lumo-offer-includes" style="margin: 1rem 0;">
             <li>Unlimited enquiries</li>
             <li>Multi-channel (email + SMS)</li>
@@ -205,11 +206,7 @@
             <li>Dedicated support · 24/7</li>
           </ul>
           <div class="dfd-pricing-footer">
-            <div class="dfd-addon-toggle">
-              <label class="dfd-addon-label"><input type="checkbox" id="addon-premium" class="js-addon-toggle" aria-label="Add Chat Assistant"> Add Chat Assistant (+£59) — 5% off bundle</label>
-            </div>
-            <a href="/activate?plan=premium" class="lumo-nav-cta dfd-pricing-cta js-activate-email" data-plan="premium">Get Started</a>
-            <a href="/activate?plan=premium&amp;add_chat=1" class="lumo-nav-cta dfd-pricing-cta js-activate-bundle" data-plan="premium" style="display: none;">Get Started with chat</a>
+            <a href="/activate?plan=premium" class="lumo-nav-cta dfd-pricing-cta" data-plan="premium">Get Started</a>
           </div>
         </div>
       </div>
@@ -258,12 +255,6 @@
               <td class="tick">✓</td>
             </tr>
             <tr>
-              <td>Chat Assistant</td>
-              <td class="add-on">Add-on</td>
-              <td class="add-on">Add-on / bundles</td>
-              <td class="add-on">Add-on / bundles</td>
-            </tr>
-            <tr>
               <td>Channels</td>
               <td>Email</td>
               <td>Email</td>
@@ -278,7 +269,7 @@
           </tbody>
         </table>
       </div>
-      <p class="product-addon-note"><strong>Booking configuration:</strong> We connect your calendar (Calendly, Fresha, or similar) so the receptionist can send booking links and confirm appointments. Included from Growth upwards.<br><strong>Chat Assistant:</strong> Add as an add-on or choose a bundle. <a href="/website-chat">Chat Assistant</a> · <a href="#pricing">See plans &amp; bundles</a></p>
+      <p class="product-addon-note"><strong>Booking configuration:</strong> We connect your calendar (Calendly, Fresha, or similar) so the receptionist can send booking links and confirm appointments. Included from Growth upwards.</p>
       <p class="product-secondary-path">Questions or want to chat? <a href="mailto:hello@lumo22.com">Drop us a line →</a></p>
     </div>
   </section>
@@ -308,6 +299,10 @@
           <summary class="dfd-faq-question">How do I manage my bookings in blocks?</summary>
           <p class="dfd-faq-answer">Simply set the duration for each appointment block in the dashboard. The system handles the rest.</p>
         </details>
+        <details class="dfd-faq-item">
+          <summary class="dfd-faq-question">How does booking work? Do I need a new system?</summary>
+          <p class="dfd-faq-answer">No new system. You keep using Calendly, Fresha, or whatever you already use. During setup you add your booking link. When someone enquires, our receptionist includes that link in the reply when it makes sense—the customer clicks through and books directly on your existing page. All your availability, durations, and rules stay in your system; we just make sure the right people get the link at the right time.</p>
+        </details>
       </div>
     </div>
   </section>
@@ -319,23 +314,7 @@
     <a href="/activate" class="sticky-cta-btn sticky-cta-btn-accent">Get Started</a>
   </div>
 
-  <footer class="footer">
-    <div class="footer-inner">
-      <div>
-        <a href="/" class="footer-brand">Lumo 22</a>
-        <p class="footer-tagline">Lighting the way to better business</p>
-        <p class="footer-questions">Questions or want to chat? Drop us a line → <a href="mailto:hello@lumo22.com">hello@lumo22.com</a></p>
-      </div>
-      <div class="footer-links">
-        <a href="/captions">Captions</a>
-        <a href="/digital-front-desk">Front Desk</a>
-        <a href="/digital-front-desk#pricing">Pricing</a>
-        <a href="/terms">Terms</a>
-        <a href="mailto:hello@lumo22.com">Contact</a>
-      </div>
-    </div>
-    <div class="footer-bottom">© Lumo 22. All rights reserved.</div>
-  </footer>
+  {% include '_footer.html' %}
 
   <script src="{{ url_for('static', filename='js/landing.js') }}"></script>
   <script>
@@ -350,43 +329,6 @@
       }
       window.addEventListener('scroll', check, { passive: true });
       window.addEventListener('load', check);
-    }
-    var cards = document.querySelectorAll('.lumo-pricing-card[data-email-plan]');
-    cards.forEach(function(card) {
-      var basePrice = parseInt(card.dataset.emailPrice, 10);
-      var chatPrice = parseInt(card.dataset.chatPrice, 10) || 59;
-      var discountPercent = parseInt(card.dataset.bundleDiscountPercent, 10) || 5;
-      var priceEl = card.querySelector('.js-dfd-price');
-      var noteEl = card.querySelector('.dfd-price-note[data-note]');
-      var btnEmail = card.querySelector('.js-activate-email');
-      var btnBundle = card.querySelector('.js-activate-bundle');
-      var checkbox = card.querySelector('.js-addon-toggle');
-      if (!checkbox || !priceEl) return;
-      function update() {
-        var addon = checkbox.checked;
-        if (addon) {
-          var totalBeforeDiscount = basePrice + chatPrice;
-          var total = Math.round(totalBeforeDiscount * (1 - discountPercent / 100));
-          priceEl.innerHTML = '£' + total + ' <span>/mo</span>';
-          if (noteEl) noteEl.textContent = 'Email + Chat (' + discountPercent + '% off)';
-          if (btnEmail) btnEmail.style.display = 'none';
-          if (btnBundle) btnBundle.style.display = 'flex';
-        } else {
-          priceEl.innerHTML = '£' + basePrice + ' <span>/mo</span>';
-          if (noteEl) noteEl.textContent = 'Email only';
-          if (btnEmail) btnEmail.style.display = 'flex';
-          if (btnBundle) btnBundle.style.display = 'none';
-        }
-      }
-      checkbox.addEventListener('change', update);
-      update();
-    });
-    var params = new URLSearchParams(window.location.search);
-    var addChat = params.get('add_chat');
-    var plan = params.get('plan');
-    if (addChat === '1' && plan) {
-      var ck = document.getElementById('addon-' + plan);
-      if (ck) { ck.checked = true; document.querySelectorAll('.js-addon-toggle').forEach(function(c) { c.dispatchEvent(new Event('change')); }); }
     }
   })();
   </script>

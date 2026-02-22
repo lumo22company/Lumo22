@@ -23,6 +23,9 @@ FRONT_DESK_PLAN_NAMES = {
 # --- Stripe (Chat Assistant) — single fixed price £59/month ---
 CHAT_AMOUNTS_PENCE = (5900,)
 
+# Subscription amounts that include chat — when cancelled, disable widget
+DFD_CHAT_SUBSCRIPTION_AMOUNTS_PENCE = (5900, 13100, 19800, 34000)  # Chat-only £59, bundles
+
 
 def _sanitize_base_url(raw: str) -> str:
     """Remove non-printable ASCII (e.g. newline from env) so URLs are valid."""
@@ -140,6 +143,19 @@ def _handle_captions_payment(session):
     if stripe_subscription_id:
         print(f"[Stripe webhook] Stripe subscription: {stripe_subscription_id[:20]}...")
 
+    meta = (session.get("metadata") or {}) if isinstance(session, dict) else getattr(session, "metadata", None) or {}
+    if hasattr(meta, "get"):
+        platforms_count = meta.get("platforms")
+        selected_platforms = meta.get("selected_platforms")
+    else:
+        platforms_count = getattr(meta, "platforms", None)
+        selected_platforms = getattr(meta, "selected_platforms", None)
+    try:
+        platforms_count = max(1, int(platforms_count)) if platforms_count is not None else 1
+    except (TypeError, ValueError):
+        platforms_count = 1
+    selected_platforms = (selected_platforms or "").strip() or None
+
     order_service = CaptionOrderService()
     # Idempotent: if Stripe retries, we may already have an order for this session
     existing = order_service.get_by_stripe_session_id(session_id) if session_id else None
@@ -162,6 +178,8 @@ def _handle_captions_payment(session):
                 stripe_session_id=session_id,
                 stripe_customer_id=stripe_customer_id,
                 stripe_subscription_id=stripe_subscription_id,
+                platforms_count=platforms_count,
+                selected_platforms=selected_platforms,
             )
         except Exception as e:
             print(f"[Stripe webhook] Failed to create order in Supabase: {e}")
@@ -402,6 +420,65 @@ Lumo 22
         print(f"[Stripe webhook] Chat setup email FAILED to send to {customer_email}")
 
 
+def _handle_subscription_deleted(subscription):
+    """
+    When a DFD/chat subscription is cancelled, disable chat for that customer
+    so their embedded widget no longer works (get_by_chat_widget_key requires chat_enabled=True).
+    Only acts on subscriptions that include chat: £59 chat-only, or bundles (£131/£198/£340).
+    """
+    import stripe
+    from services.front_desk_setup_service import FrontDeskSetupService
+
+    sub_id = (subscription.get("id") or "").strip()
+    if not sub_id:
+        print("[Stripe webhook] subscription.deleted: no subscription id; skipping.")
+        return
+    # Fetch with expand to get price amounts and customer email
+    try:
+        sub = stripe.Subscription.retrieve(
+            sub_id, expand=["items.data.price", "customer"]
+        )
+    except Exception as e:
+        print(f"[Stripe webhook] subscription.deleted: could not retrieve subscription: {e}")
+        return
+    # Check if this subscription includes chat (by amount)
+    items = (sub.get("items") or {}).get("data") or []
+    includes_chat = False
+    for item in items:
+        price = item.get("price")
+        if isinstance(price, dict):
+            amt = price.get("unit_amount") or 0
+            if amt in DFD_CHAT_SUBSCRIPTION_AMOUNTS_PENCE:
+                includes_chat = True
+                break
+        elif price:
+            amt = getattr(price, "unit_amount", None) or 0
+            if amt in DFD_CHAT_SUBSCRIPTION_AMOUNTS_PENCE:
+                includes_chat = True
+                break
+    if not includes_chat:
+        print(f"[Stripe webhook] subscription.deleted: subscription {sub_id[:20]}... not a chat product; skipping.")
+        return
+    # Get customer email
+    customer = sub.get("customer")
+    if isinstance(customer, dict):
+        customer_email = (customer.get("email") or "").strip()
+    else:
+        customer_email = ""
+    if not customer_email and isinstance(customer, str):
+        try:
+            c = stripe.Customer.retrieve(customer)
+            customer_email = (getattr(c, "email", None) or (c.get("email") if isinstance(c, dict) else None) or "").strip()
+        except Exception:
+            customer_email = ""
+    if not customer_email or "@" not in customer_email:
+        print("[Stripe webhook] subscription.deleted: no customer email; cannot disable chat.")
+        return
+    svc = FrontDeskSetupService()
+    count = svc.disable_chat_for_customer(customer_email)
+    print(f"[Stripe webhook] subscription.deleted: disabled chat for {customer_email} ({count} setup(s))")
+
+
 @webhook_bp.route('/stripe', methods=['GET', 'POST'])
 def stripe_webhook():
     """
@@ -434,6 +511,76 @@ def stripe_webhook():
     print(f"[Stripe webhook] Webhook received: event.type={event_type}")
 
     try:
+        if event_type == "invoice.paid":
+            invoice = event.get("data", {}).get("object") if isinstance(event, dict) else None
+            if not invoice or not isinstance(invoice, dict):
+                print("[Stripe webhook] invoice.paid: missing or invalid invoice; skipping.")
+                return jsonify({"received": True}), 200
+            billing_reason = (invoice.get("billing_reason") or "").strip()
+            if billing_reason != "subscription_cycle":
+                print(f"[Stripe webhook] invoice.paid: billing_reason={billing_reason}, not subscription_cycle; skipping.")
+                return jsonify({"received": True}), 200
+            sub_id = (invoice.get("subscription") or "").strip()
+            if not sub_id:
+                print("[Stripe webhook] invoice.paid: no subscription on invoice; skipping.")
+                return jsonify({"received": True}), 200
+            sub_price_id = (getattr(Config, "STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID", None) or "").strip()
+            if not sub_price_id:
+                return jsonify({"received": True}), 200
+            is_captions = False
+            lines_data = (invoice.get("lines") or {})
+            if isinstance(lines_data, dict):
+                lines_data = lines_data.get("data") or []
+            if not isinstance(lines_data, list):
+                lines_data = []
+            for line in lines_data:
+                price = line.get("price")
+                if isinstance(price, dict):
+                    pid = price.get("id")
+                elif isinstance(price, str):
+                    pid = price
+                else:
+                    pid = getattr(price, "id", None) if price else None
+                if pid == sub_price_id:
+                    is_captions = True
+                    break
+            if not is_captions:
+                print("[Stripe webhook] invoice.paid: not captions subscription; skipping.")
+                return jsonify({"received": True}), 200
+            from services.caption_order_service import CaptionOrderService
+            from api.captions_routes import _run_generation_and_deliver
+            import threading
+            order_service = CaptionOrderService()
+            order = order_service.get_by_stripe_subscription_id(sub_id)
+            if not order:
+                print(f"[Stripe webhook] invoice.paid: no order for subscription {sub_id[:20]}...; skipping.")
+                return jsonify({"received": True}), 200
+            if not order.get("intake"):
+                print(f"[Stripe webhook] invoice.paid: order {order.get('id')} has no intake; skipping delivery.")
+                return jsonify({"received": True}), 200
+            order_id = order["id"]
+            print(f"[Stripe webhook] invoice.paid: triggering generation for order {order_id} (subscription renewal)")
+            thread = threading.Thread(target=_run_generation_and_deliver, args=(order_id,))
+            thread.daemon = True
+            thread.start()
+            return jsonify({"received": True}), 200
+
+        if event_type == "customer.subscription.deleted":
+            subscription = event.get("data", {}).get("object") if isinstance(event, dict) else None
+            if not subscription or not isinstance(subscription, dict):
+                print("[Stripe webhook] customer.subscription.deleted: missing or invalid object; skipping.")
+                return jsonify({"received": True}), 200
+            try:
+                _handle_subscription_deleted(subscription)
+            except Exception as e:
+                import traceback
+                print(f"[Stripe webhook] SUBSCRIPTION DELETED HANDLER FAILED: {e}")
+                traceback.print_exc()
+                detail = (str(e) or repr(e))[:400]
+                detail = "".join(c for c in detail if ord(c) < 128)
+                return jsonify({"error": "Handler failed", "detail": detail or "Unknown error"}), 500
+            return jsonify({"received": True}), 200
+
         if event_type == "checkout.session.completed":
             session = event.get("data", {}).get("object") if isinstance(event, dict) else None
             if not session or not isinstance(session, dict):

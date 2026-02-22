@@ -77,6 +77,16 @@ def front_desk_setup():
             enquiry_email = (data.get('enquiry_email') or '').strip()
             booking_link = (data.get('booking_link') or '').strip() or None
             business_description = (data.get('business_description') or '').strip() or None
+            enquiry_types = data.get('enquiry_types')
+            if isinstance(enquiry_types, list):
+                enquiry_types = [str(x).strip() for x in enquiry_types if x]
+            else:
+                enquiry_types = None
+            opening_hours = (data.get('opening_hours') or '').strip() or None
+            reply_same_day = bool(data.get('reply_same_day'))
+            reply_24h = bool(data.get('reply_24h'))
+            tone = (data.get('tone') or '').strip() or None
+            good_lead_rules = (data.get('good_lead_rules') or '').strip() or None
             if not business_name or not enquiry_email:
                 return jsonify({'ok': False, 'error': 'Please fill in business name and enquiry email.'}), 400
             if '@' not in enquiry_email:
@@ -90,6 +100,12 @@ def front_desk_setup():
                     enquiry_email=enquiry_email,
                     booking_link=booking_link,
                     business_description=business_description,
+                    enquiry_types=enquiry_types,
+                    opening_hours=opening_hours,
+                    reply_same_day=reply_same_day,
+                    reply_24h=reply_24h,
+                    tone=tone,
+                    good_lead_rules=good_lead_rules,
                 )
             except Exception as db_err:
                 print(f"[front-desk-setup] Chat complete failed: {db_err}")
@@ -118,6 +134,8 @@ def front_desk_setup():
         if '@' not in customer_email or '@' not in enquiry_email:
             return jsonify({'ok': False, 'error': 'Please enter valid email addresses.'}), 400
 
+        tone = (data.get('tone') or '').strip() or None
+        reply_style_examples = (data.get('reply_style_examples') or '').strip() or None
         tight_scheduling_enabled = bool(data.get('tight_scheduling_enabled'))
         raw_gap = data.get('minimum_gap_between_appointments')
         minimum_gap_between_appointments = 60
@@ -140,6 +158,8 @@ def front_desk_setup():
                 business_name=business_name,
                 enquiry_email=enquiry_email,
                 booking_link=booking_link,
+                tone=tone,
+                reply_style_examples=reply_style_examples,
                 tight_scheduling_enabled=tight_scheduling_enabled,
                 minimum_gap_between_appointments=minimum_gap_between_appointments,
                 auto_reply_enabled=auto_reply_enabled,
@@ -158,6 +178,7 @@ Customer email: {customer_email}
 Business name: {business_name}
 Enquiry email to monitor: {enquiry_email}
 Booking link: {booking_link or '(none)'}
+Reply tone: {tone or '(default)'}
 Forwarding address (for auto-reply): {forwarding_email or '(not set)'}
 Auto-reply: {'on' if auto_reply_enabled else 'off (customer will use pause link to turn on)'}
 Skip reply domains (only reply to external): {skip_reply_domains or '(none)'}
@@ -242,6 +263,29 @@ def _auto_reply_toggle_response(success: bool, message: str):
     r = make_response(html)
     r.headers["Content-Type"] = "text/html; charset=utf-8"
     return r
+
+
+@api_bp.route('/chat-widget/status', methods=['GET'])
+def chat_widget_status():
+    """
+    Validate chat widget key. Returns {valid: true/false}.
+    Used by embed script so disabled/cancelled subscriptions do not show the bubble.
+    Site key (SITE_CHAT_WIDGET_KEY) always returns valid for the Lumo 22 marketing site's demo/help widget.
+    """
+    from config import Config
+    key = (request.args.get("key") or "").strip()
+    if not key:
+        return jsonify({"valid": False}), 200
+    site_key = getattr(Config, "SITE_CHAT_WIDGET_KEY", None)
+    if site_key and key == site_key:
+        return jsonify({"valid": True}), 200
+    try:
+        from services.front_desk_setup_service import FrontDeskSetupService
+        svc = FrontDeskSetupService()
+        setup = svc.get_by_chat_widget_key(key)
+        return jsonify({"valid": bool(setup)}), 200
+    except Exception:
+        return jsonify({"valid": False}), 200
 
 
 @api_bp.route('/health', methods=['GET'])

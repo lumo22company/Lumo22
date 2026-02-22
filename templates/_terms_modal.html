@@ -1,0 +1,85 @@
+{# Reusable Terms & Conditions modal: scroll to bottom to enable "I agree", then redirect. Include on any page that has checkout. Call window.openTermsModal(redirectUrl) to open. #}
+<div id="terms-modal-overlay" class="terms-modal-overlay" aria-hidden="true">
+  <div class="terms-modal" role="dialog" aria-labelledby="terms-modal-title">
+    <div class="terms-modal-header">
+      <h2 id="terms-modal-title">Terms &amp; Conditions</h2>
+      <button type="button" class="terms-modal-close" id="terms-modal-close" aria-label="Close">&times;</button>
+    </div>
+    <div class="terms-modal-body" id="terms-modal-body">
+      <p class="terms-modal-updated" style="font-size: 0.85rem; margin-bottom: 1rem;">Please scroll to the bottom to continue.</p>
+      {% include '_terms_content.html' %}
+    </div>
+    <div class="terms-modal-footer">
+      <button type="button" class="btn-agree" id="terms-btn-agree" disabled>I have read and agree — continue to checkout</button>
+      <p class="terms-modal-scroll-hint" id="terms-scroll-hint">Scroll to the bottom of the terms to enable this button.</p>
+    </div>
+  </div>
+</div>
+<style>
+  .terms-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 10000; align-items: center; justify-content: center; padding: 1rem; }
+  .terms-modal-overlay.open { display: flex; }
+  .terms-modal { background: var(--lum-card-bg, #000000); border: 1px solid var(--lum-border); border-radius: 12px; max-width: 520px; width: 100%; max-height: 90vh; display: flex; flex-direction: column; }
+  .terms-modal-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--lum-border); display: flex; align-items: center; justify-content: space-between; }
+  .terms-modal-header h2 { font-family: 'Encode Sans Condensed', sans-serif; font-size: 1.2rem; margin: 0; }
+  .terms-modal-close { background: none; border: none; color: var(--lum-text-muted); cursor: pointer; font-size: 1.5rem; line-height: 1; padding: 0.25rem; }
+  .terms-modal-close:hover { color: var(--lum-text); }
+  .terms-modal-body { padding: 1rem 1.5rem; overflow-y: auto; flex: 1; max-height: 50vh; }
+  .terms-modal-body h2 { font-size: 1rem; margin-top: 1.25rem; margin-bottom: 0.5rem; }
+  .terms-modal-body h2:first-child { margin-top: 0; }
+  .terms-modal-body p { font-size: 0.9rem; line-height: 1.6; margin-bottom: 0.75rem; color: var(--lum-text-muted); }
+  .terms-modal-body a { color: var(--lum-gold); }
+  .terms-modal-footer { padding: 1rem 1.5rem; border-top: 1px solid var(--lum-border); }
+  .terms-modal-footer .btn-agree { width: 100%; padding: 0.75rem 1.25rem; background: var(--lum-gold); color: var(--lum-black); border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-family: inherit; font-size: 1rem; }
+  .terms-modal-footer .btn-agree:hover:not(:disabled) { opacity: 0.95; }
+  .terms-modal-footer .btn-agree:disabled { opacity: 0.5; cursor: not-allowed; }
+  .terms-modal-scroll-hint { font-size: 0.85rem; color: var(--lum-text-muted); margin-top: 0.5rem; }
+</style>
+<script>
+(function() {
+  var overlay = document.getElementById('terms-modal-overlay');
+  var modalBody = document.getElementById('terms-modal-body');
+  var btnAgree = document.getElementById('terms-btn-agree');
+  var scrollHint = document.getElementById('terms-scroll-hint');
+  var modalClose = document.getElementById('terms-modal-close');
+  if (!overlay || !modalBody || !btnAgree) return;
+  function checkScroll() {
+    var el = modalBody;
+    var atBottom = el.scrollHeight - el.scrollTop <= el.clientHeight + 20;
+    btnAgree.disabled = !atBottom;
+    if (scrollHint) scrollHint.style.display = atBottom ? 'none' : 'block';
+  }
+  window.openTermsModal = function(redirectUrl) {
+    overlay.dataset.redirect = redirectUrl || '';
+    btnAgree.disabled = true;
+    if (scrollHint) scrollHint.style.display = 'block';
+    modalBody.scrollTop = 0;
+    overlay.classList.add('open');
+    overlay.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    checkScroll();
+  };
+  window.closeTermsModal = function() {
+    overlay.classList.remove('open');
+    overlay.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+    overlay.dataset.redirect = '';
+  };
+  modalBody.addEventListener('scroll', checkScroll);
+  btnAgree.addEventListener('click', function() {
+    var url = overlay.dataset.redirect;
+    if (url) window.location.href = url;
+    window.closeTermsModal();
+  });
+  if (modalClose) modalClose.addEventListener('click', window.closeTermsModal);
+  overlay.addEventListener('click', function(e) {
+    if (e.target === overlay) window.closeTermsModal();
+  });
+  document.querySelectorAll('.js-terms-checkout').forEach(function(el) {
+    el.addEventListener('click', function(e) {
+      e.preventDefault();
+      var url = el.getAttribute('href') || el.dataset.checkoutUrl || '';
+      if (url) window.openTermsModal(url);
+    });
+  });
+})();
+</script>

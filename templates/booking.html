@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Book an appointment | Lumo 22</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Encode+Sans+Condensed:wght@400;500;600;700&family=PT+Sans+Narrow:wght@400;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v={{ asset_version }}">
+  <style>
+    .booking-page { padding: 6rem 1.5rem 4rem; max-width: 560px; margin: 0 auto; }
+    .booking-page h1 { font-family: var(--font-display); font-size: 1.75rem; margin-bottom: 0.5rem; }
+    .booking-page .sub { color: var(--lum-text-muted); margin-bottom: 1.5rem; line-height: 1.6; }
+    .booking-page label { display: block; font-size: 0.9rem; font-weight: 500; margin-bottom: 0.5rem; color: var(--lum-text); }
+    .booking-page input[type="date"],
+    .booking-page input[type="number"] { width: 100%; max-width: 12rem; padding: 0.75rem 1rem; background: var(--lum-surface-elevated); border: 1px solid var(--lum-border); border-radius: 8px; color: var(--lum-text); font-size: 1rem; margin-bottom: 1rem; }
+    .booking-page .hint { font-size: 0.85rem; color: var(--lum-text-muted); margin-top: -0.5rem; margin-bottom: 1rem; }
+    .booking-page .checkbox-group { margin-bottom: 1rem; }
+    .booking-page .checkbox-item { display: flex; align-items: flex-start; gap: 0.6rem; cursor: pointer; }
+    .booking-page .checkbox-item input { width: auto; margin: 0.35rem 0 0; }
+    .booking-page .checkbox-item span { font-weight: 400; color: var(--lum-text); }
+    .booking-page .slots-section { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--lum-border); }
+    .booking-page .slots-section h2 { font-family: 'Encode Sans Condensed', sans-serif; font-size: 1.1rem; margin-bottom: 0.75rem; }
+    .booking-page .slots-list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .booking-page .slot-btn { padding: 0.5rem 1rem; background: var(--lum-surface-elevated); border: 1px solid var(--lum-border); border-radius: 8px; color: var(--lum-text); font-size: 0.95rem; cursor: pointer; }
+    .booking-page .slot-btn:hover { border-color: var(--lum-gold); color: var(--lum-gold); }
+    .booking-page .slots-loading { color: var(--lum-text-muted); font-size: 0.9rem; }
+    .booking-page .slots-empty { color: var(--lum-text-muted); font-size: 0.9rem; }
+    .booking-page .back { margin-top: 2rem; }
+    .booking-page .back a { color: var(--lum-text-muted); text-decoration: none; font-size: 0.95rem; }
+    .booking-page .back a:hover { color: var(--lum-text); }
+  </style>
+</head>
+<body class="lumo-landing">
+  <nav class="lumo-nav lumo-nav-scrolled">
+    <a href="/" class="lumo-nav-logo">Lumo 22</a>
+    <div class="lumo-nav-links">
+      <a href="/digital-front-desk">Front Desk</a>
+    </div>
+    <a href="/digital-front-desk" class="lumo-nav-cta">Front Desk</a>
+  </nav>
+
+  <main class="booking-page">
+    <h1>Book an appointment</h1>
+    <p class="sub">Choose a date and time. Available slots update as you change the options below.</p>
+
+    <label for="booking-date">Date</label>
+    <input type="date" id="booking-date" name="date" min="">
+    <p class="hint">Pick the day you want to book.</p>
+
+    <fieldset style="border:0; padding:0; margin:0;">
+      <legend style="font-size:0.9rem; font-weight:500; margin-bottom:0.5rem; color:var(--lum-text);">Scheduling options</legend>
+      <div class="checkbox-group">
+        <label class="checkbox-item">
+          <input type="checkbox" id="group-appointments" name="group_appointments" value="1">
+          <span><strong>Group appointments together</strong></span>
+        </label>
+      </div>
+      <p class="hint">Only show times close to existing bookings to avoid gaps.</p>
+      <label for="gap-minutes">Maximum gap between appointments (minutes)</label>
+      <input type="number" id="gap-minutes" name="gap_minutes" value="60" min="5" max="480" step="5">
+      <p class="hint" title="If enabled, new bookings will be placed close to existing appointments. If your day is empty, all times will still be available.">If enabled, new bookings will be placed close to existing appointments. If your day is empty, all times will still be available.</p>
+    </fieldset>
+
+    <section class="slots-section" aria-live="polite">
+      <h2>Available times</h2>
+      <div id="slots-container">
+        <p class="slots-loading" id="slots-loading">Choose a date to see times.</p>
+        <div class="slots-list" id="slots-list" style="display:none;"></div>
+        <p class="slots-empty" id="slots-empty" style="display:none;"></p>
+      </div>
+    </section>
+
+    <p class="back"><a href="/digital-front-desk">← Back to Digital Front Desk</a></p>
+  </main>
+
+  <script>
+    (function() {
+      var dateInput = document.getElementById('booking-date');
+      var groupCheck = document.getElementById('group-appointments');
+      var gapInput = document.getElementById('gap-minutes');
+      var slotsLoading = document.getElementById('slots-loading');
+      var slotsList = document.getElementById('slots-list');
+      var slotsEmpty = document.getElementById('slots-empty');
+
+      // Set min date to today
+      var today = new Date();
+      dateInput.min = today.toISOString().slice(0, 10);
+
+      function fetchSlots() {
+        var date = (dateInput.value || '').trim();
+        if (!date) {
+          slotsLoading.textContent = 'Choose a date to see times.';
+          slotsLoading.style.display = 'block';
+          slotsList.style.display = 'none';
+          slotsEmpty.style.display = 'none';
+          return;
+        }
+        slotsLoading.textContent = 'Loading…';
+        slotsLoading.style.display = 'block';
+        slotsList.style.display = 'none';
+        slotsEmpty.style.display = 'none';
+
+        var params = new URLSearchParams({
+          date: date,
+          tight_schedule: groupCheck.checked ? 'true' : 'false',
+          gap_minutes: (gapInput.value && parseInt(gapInput.value, 10)) || 60
+        });
+        fetch('/api/available-slots?' + params.toString())
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            slotsLoading.style.display = 'none';
+            if (data.error) {
+              slotsEmpty.textContent = data.error;
+              slotsEmpty.style.display = 'block';
+              return;
+            }
+            var slots = data.slots || [];
+            if (slots.length === 0) {
+              slotsEmpty.textContent = 'No available times for this day.';
+              slotsEmpty.style.display = 'block';
+              return;
+            }
+            slotsList.innerHTML = '';
+            slots.forEach(function(time) {
+              var btn = document.createElement('button');
+              btn.type = 'button';
+              btn.className = 'slot-btn';
+              btn.textContent = time;
+              btn.setAttribute('aria-label', 'Book at ' + time);
+              slotsList.appendChild(btn);
+            });
+            slotsList.style.display = 'flex';
+          })
+          .catch(function() {
+            slotsLoading.style.display = 'none';
+            slotsEmpty.textContent = 'Could not load times. Please try again.';
+            slotsEmpty.style.display = 'block';
+          });
+      }
+
+      function updateGapDisabled() {
+        gapInput.disabled = !groupCheck.checked;
+      }
+      groupCheck.addEventListener('change', function() {
+        updateGapDisabled();
+        fetchSlots();
+      });
+      updateGapDisabled();
+
+      dateInput.addEventListener('change', fetchSlots);
+      gapInput.addEventListener('change', fetchSlots);
+      gapInput.addEventListener('input', fetchSlots);
+    })();
+  </script>
+  {% include '_footer.html' %}
+</body>
+</html>

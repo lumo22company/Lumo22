@@ -104,13 +104,14 @@ def test_lead_model():
     try:
         from models.lead import Lead
         
-        # Test valid lead
+        # Test valid lead (business_id required by model)
         lead = Lead(
             name="John Doe",
             email="john@example.com",
             phone="+1234567890",
             service_type="Consultation",
-            message="I need help with my project"
+            message="I need help with my project",
+            business_id="test-business",
         )
         
         is_valid, error = lead.validate()

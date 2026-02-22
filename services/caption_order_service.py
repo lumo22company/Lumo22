@@ -40,8 +40,12 @@ class CaptionOrderService:
         stripe_session_id: Optional[str] = None,
         stripe_customer_id: Optional[str] = None,
         stripe_subscription_id: Optional[str] = None,
+        platforms_count: int = 1,
+        selected_platforms: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Create order after payment. Returns dict with id, token, customer_email, status."""
+        """Create order after payment. Returns dict with id, token, customer_email, status.
+        platforms_count: number of platforms paid for (1 = base, 2+ = base + add-ons).
+        selected_platforms: comma-separated platforms chosen at checkout (e.g. Instagram, LinkedIn)."""
         token = _token()
         row = {
             "token": token,
@@ -50,6 +54,8 @@ class CaptionOrderService:
             "stripe_session_id": stripe_session_id,
             "stripe_customer_id": (stripe_customer_id or "").strip() or None,
             "stripe_subscription_id": (stripe_subscription_id or "").strip() or None,
+            "platforms_count": max(1, int(platforms_count)),
+            "selected_platforms": (selected_platforms or "").strip() or None,
         }
         result = self.client.table(self.table).insert(row).execute()
         if not result.data:
@@ -109,3 +115,25 @@ class CaptionOrderService:
 
     def set_failed(self, order_id: str) -> bool:
         return self.update(order_id, {"status": "failed"})
+
+    def get_active_subscription_orders(self) -> list:
+        """Get caption orders that have an active Stripe subscription (for reminder emails)."""
+        result = self.client.table(self.table).select(
+            "id, token, customer_email, stripe_subscription_id, reminder_sent_period_end, reminder_opt_out"
+        ).not_.is_("stripe_subscription_id", "null").execute()
+        return result.data or []
+
+    def get_by_stripe_subscription_id(self, stripe_subscription_id: str) -> Optional[Dict[str, Any]]:
+        """Get order by Stripe subscription id."""
+        if not stripe_subscription_id:
+            return None
+        result = self.client.table(self.table).select("*").eq(
+            "stripe_subscription_id", stripe_subscription_id.strip()
+        ).execute()
+        if result.data and len(result.data) > 0:
+            return result.data[0]
+        return None
+
+    def set_reminder_sent(self, order_id: str, period_end_ts: str) -> bool:
+        """Record that we sent a reminder for this billing period."""
+        return self.update(order_id, {"reminder_sent_period_end": period_end_ts})

@@ -4,11 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Terms &amp; Conditions | Lumo 22</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
   <meta name="description" content="Terms and conditions for Lumo 22 products and services.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Encode+Sans+Condensed:wght@400;500;600;700&family=Inter+Tight:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v={{ asset_version }}">
   <style>
     .terms-page { padding: 6rem 1.5rem 4rem; max-width: 680px; margin: 0 auto; }
     .terms-page h1 { font-family: var(--font-display); font-size: 1.75rem; margin-bottom: 0.5rem; }
@@ -26,33 +27,16 @@
     <div class="lumo-nav-links">
       <a href="/captions">Captions</a>
       <a href="/digital-front-desk">Front Desk</a>
-      <a href="/digital-front-desk#pricing">Pricing</a>
     </div>
     <a href="/digital-front-desk#pricing" class="lumo-nav-cta">View plans</a>
   </nav>
 
   <main class="terms-page">
     <h1>Terms &amp; Conditions</h1>
-    <p class="updated">Last updated: February 2025</p>
     {% include '_terms_content.html' %}
-    <p style="margin-top: 2.5rem;"><a href="/captions">← Back to Captions</a> · <a href="/">Lumo 22 home</a></p>
+    <p style="margin-top: 2.5rem;"><a href="/captions">← Back to Captions</a> · <a href="/digital-front-desk">Digital Front Desk</a> · <a href="/">Lumo 22 home</a></p>
   </main>
 
-  <footer class="lumo-footer">
-    <div class="lumo-footer-inner">
-      <div>
-        <a href="/" class="lumo-footer-brand">Lumo 22</a>
-        <p class="lumo-footer-tagline">Lighting the way to better business</p>
-      </div>
-      <div class="lumo-footer-links">
-        <a href="/captions">Captions</a>
-        <a href="/digital-front-desk">Front Desk</a>
-        <a href="/digital-front-desk#pricing">Pricing</a>
-        <a href="/terms">Terms</a>
-        <a href="mailto:hello@lumo22.com">Contact</a>
-      </div>
-    </div>
-    <div class="lumo-footer-bottom">© Lumo 22. All rights reserved.</div>
-  </footer>
+  {% include '_footer.html' %}
 </body>
 </html>

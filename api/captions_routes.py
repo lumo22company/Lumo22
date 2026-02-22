@@ -4,37 +4,93 @@ API routes for 30 Days Captions: checkout (redirect to intake after payment), in
 Subscription (£79/mo) vs one-off (£97): same intake form and delivery flow; subscription uses Stripe
 mode=subscription and is detected in webhook so we create order and send intake email on first payment.
 """
-from flask import Blueprint, request, jsonify, redirect
+from flask import Blueprint, request, jsonify, redirect, Response
 from config import Config
 
 captions_bp = Blueprint("captions", __name__, url_prefix="/api")
+
+
+def _parse_platforms(request) -> int:
+    """Parse platforms query param; clamp to 1–4. Default 1."""
+    try:
+        n = int(request.args.get("platforms", 1))
+        return max(1, min(4, n))
+    except (TypeError, ValueError):
+        return 1
+
+
+def _parse_selected_platforms(request):
+    # Returns str or None
+    """Parse selected platforms from query (e.g. selected=Instagram,LinkedIn). Max 200 chars for Stripe metadata."""
+    raw = (request.args.get("selected") or request.args.get("selected_platforms") or "").strip()
+    if not raw:
+        return None
+    return raw[:200] or None
+
+
+def _normalize_error(err) -> str:
+    """Turn any error from generation/delivery into a short ASCII string for JSON."""
+    if err is None:
+        return "Unknown error"
+    if isinstance(err, str):
+        out = err.strip() or "Unknown error"
+    elif isinstance(err, dict):
+        out = err.get("message") or (err.get("error") or {}).get("message") if isinstance(err.get("error"), dict) else err.get("error")
+        out = str(out).strip() if out else "Unknown error"
+    else:
+        out = str(err).strip() or repr(err) or "Unknown error"
+    out = (out or "Unknown error")[:500]
+    return "".join(c for c in out if ord(c) < 128)
 
 
 @captions_bp.route("/captions-checkout", methods=["GET"])
 def captions_checkout():
     """
     Create a Stripe Checkout Session and redirect to it.
-    After payment, Stripe redirects to /captions-thank-you?session_id=xxx so we can send the customer to the intake form.
+    Query: ?platforms=N (1–4). Base price covers 1; extra platforms use add-on price if configured.
+    After payment, Stripe redirects to /captions-thank-you?session_id=xxx.
     """
     import stripe
     if not Config.STRIPE_SECRET_KEY or not Config.STRIPE_CAPTIONS_PRICE_ID:
-        # Fallback: redirect to payment link if set (old flow: thank-you → email link only)
         if Config.CAPTIONS_PAYMENT_LINK:
             return redirect(Config.CAPTIONS_PAYMENT_LINK)
         return jsonify({"error": "Checkout not configured (STRIPE_SECRET_KEY, STRIPE_CAPTIONS_PRICE_ID)"}), 503
     stripe.api_key = Config.STRIPE_SECRET_KEY
+    platforms = _parse_platforms(request)
+    selected = _parse_selected_platforms(request)
+    extra_price_id = (getattr(Config, "STRIPE_CAPTIONS_EXTRA_PLATFORM_PRICE_ID", None) or "").strip()
+    if platforms > 1 and not extra_price_id:
+        return redirect(f"{request.host_url.rstrip('/')}/captions?error=extra_platform_not_configured", code=302)
     base = (Config.BASE_URL or "").strip().rstrip("/")
     if base and not base.startswith("http://") and not base.startswith("https://"):
         base = "https://" + base
     success_url = f"{base}/captions-thank-you?session_id={{CHECKOUT_SESSION_ID}}"
     cancel_url = f"{base}/captions"
+    line_items = [{"price": Config.STRIPE_CAPTIONS_PRICE_ID, "quantity": 1}]
+    if platforms > 1 and extra_price_id:
+        addon_qty = platforms - 1
+        label = f"+{addon_qty} platform" if addon_qty == 1 else f"+{addon_qty} platforms"
+        line_items.append({
+            "price_data": {
+                "currency": "gbp",
+                "unit_amount": 2900,
+                "product_data": {
+                    "name": label,
+                    "description": "Extra platform add-on for 30 Days Captions.",
+                },
+            },
+            "quantity": addon_qty,
+        })
+    metadata = {"product": "captions", "platforms": str(platforms)}
+    if selected:
+        metadata["selected_platforms"] = selected
     try:
         session = stripe.checkout.Session.create(
             mode="payment",
-            line_items=[{"price": Config.STRIPE_CAPTIONS_PRICE_ID, "quantity": 1}],
+            line_items=line_items,
             success_url=success_url,
             cancel_url=cancel_url,
-            metadata={"product": "captions"},
+            metadata=metadata,
         )
         return redirect(session.url, code=302)
     except Exception as e:
@@ -44,7 +100,8 @@ def captions_checkout():
 @captions_bp.route("/captions-checkout-subscription", methods=["GET"])
 def captions_checkout_subscription():
     """
-    Create a Stripe Checkout Session for Captions subscription (£79/month).
+    Create a Stripe Checkout Session for Captions subscription (£79/month base).
+    Query: ?platforms=N (1–4). Extra platforms use add-on subscription price if configured.
     Same success flow as one-off: redirect to thank-you then intake. Webhook handles first payment.
     """
     import stripe
@@ -53,22 +110,65 @@ def captions_checkout_subscription():
     if not Config.STRIPE_SECRET_KEY or not price_id:
         return jsonify({"error": "Subscription not configured (STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID)"}), 503
     stripe.api_key = Config.STRIPE_SECRET_KEY
+    platforms = _parse_platforms(request)
+    selected = _parse_selected_platforms(request)
+    extra_sub_id = (getattr(Config, "STRIPE_CAPTIONS_EXTRA_PLATFORM_SUBSCRIPTION_PRICE_ID", None) or "").strip()
+    if platforms > 1 and not extra_sub_id:
+        return redirect(f"{request.host_url.rstrip('/')}/captions?error=extra_platform_not_configured", code=302)
     base = (Config.BASE_URL or "").strip().rstrip("/")
     if base and not base.startswith("http://") and not base.startswith("https://"):
         base = "https://" + base
     success_url = f"{base}/captions-thank-you?session_id={{CHECKOUT_SESSION_ID}}"
     cancel_url = f"{base}/captions"
+    line_items = [{"price": price_id, "quantity": 1}]
+    if platforms > 1 and extra_sub_id:
+        addon_qty = platforms - 1
+        label = f"+{addon_qty} platform" if addon_qty == 1 else f"+{addon_qty} platforms"
+        line_items.append({
+            "price_data": {
+                "currency": "gbp",
+                "unit_amount": 1900,
+                "recurring": {"interval": "month"},
+                "product_data": {
+                    "name": label,
+                    "description": "Extra platform add-on for 30 Days Captions. Billed monthly.",
+                },
+            },
+            "quantity": addon_qty,
+        })
+    metadata = {"product": "captions_subscription", "platforms": str(platforms)}
+    if selected:
+        metadata["selected_platforms"] = selected
     try:
         session = stripe.checkout.Session.create(
             mode="subscription",
-            line_items=[{"price": price_id, "quantity": 1}],
+            line_items=line_items,
             success_url=success_url,
             cancel_url=cancel_url,
-            metadata={"product": "captions_subscription"},
+            metadata=metadata,
         )
         return redirect(session.url, code=302)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@captions_bp.route("/captions-setup-check", methods=["GET"])
+def captions_setup_check():
+    """
+    Check if captions checkout and multi-platform are correctly configured.
+    Returns JSON: checkout_configured, multi_platform_oneoff, multi_platform_sub.
+    Use to verify Railway env vars: visit /api/captions-setup-check
+    """
+    checkout_ok = bool(Config.STRIPE_SECRET_KEY and Config.STRIPE_CAPTIONS_PRICE_ID)
+    extra_oneoff = bool((getattr(Config, "STRIPE_CAPTIONS_EXTRA_PLATFORM_PRICE_ID", None) or "").strip())
+    sub_price = bool((getattr(Config, "STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID", None) or "").strip())
+    extra_sub = bool((getattr(Config, "STRIPE_CAPTIONS_EXTRA_PLATFORM_SUBSCRIPTION_PRICE_ID", None) or "").strip())
+    return jsonify({
+        "checkout_configured": checkout_ok,
+        "multi_platform_oneoff": checkout_ok and extra_oneoff,
+        "subscription_available": bool(Config.STRIPE_SECRET_KEY and sub_price),
+        "multi_platform_sub": bool(Config.STRIPE_SECRET_KEY and sub_price and extra_sub),
+    })
 
 
 @captions_bp.route("/captions-webhook-test", methods=["GET"])
@@ -165,8 +265,19 @@ def _run_generation_and_deliver(order_id: str):
         gen = CaptionGenerator()
         print(f"[Captions] Calling OpenAI for order {order_id}")
         captions_md = gen.generate(intake)
-        order_service.set_delivered(order_id, captions_md)
-        filename = "30_Days_Captions.md"
+        from services.caption_pdf import build_caption_pdf, get_logo_path
+        try:
+            pdf_bytes = build_caption_pdf(captions_md, logo_path=get_logo_path())
+            filename = "30_Days_Captions.pdf"
+            mime_type = "application/pdf"
+            file_content_bytes = pdf_bytes
+            file_content = None
+        except Exception as e:
+            print(f"[Captions] PDF build failed for order {order_id}, falling back to .md: {e}")
+            filename = "30_Days_Captions.md"
+            mime_type = "text/markdown"
+            file_content_bytes = None
+            file_content = captions_md
         subject = "Your 30 Days of Social Media Captions"
         body = """Hi,
 
@@ -178,17 +289,20 @@ Lumo 22
 """
         notif = NotificationService()
         print(f"[Captions] Sending delivery email to {customer_email} for order {order_id}")
-        ok = notif.send_email_with_attachment(
+        ok, send_error = notif.send_email_with_attachment(
             customer_email,
             subject,
             body,
             filename=filename,
-            file_content=captions_md,
-            mime_type="text/markdown",
+            file_content=file_content,
+            file_content_bytes=file_content_bytes,
+            mime_type=mime_type,
         )
         if not ok:
-            print(f"[Captions] Delivery email FAILED for order {order_id} to {customer_email}")
-            return (False, "SendGrid returned False (delivery email not sent)")
+            print(f"[Captions] Delivery email FAILED for order {order_id} to {customer_email}: {send_error}")
+            order_service.set_failed(order_id)
+            return (False, send_error or "Delivery email not sent")
+        order_service.set_delivered(order_id, captions_md)
         print(f"[Captions] Delivery email sent for order {order_id} to {customer_email}")
         return (True, None)
     except Exception as e:
@@ -201,34 +315,47 @@ Lumo 22
 @captions_bp.route("/captions-deliver-test", methods=["GET"])
 def captions_deliver_test():
     """
-    Run caption generation + delivery synchronously for an order (by token).
-    Use to see the REAL error if the background job fails.
-    Open: https://lumo-22-production.up.railway.app/api/captions-deliver-test?t=YOUR_TOKEN
-    (Copy the token from your intake link: /captions-intake?t=TOKEN)
-    Returns JSON: {"ok": true} or {"ok": false, "error": "the actual error message"}.
+    Start caption generation + delivery in the background (same as after intake).
+    Returns immediately so the request does not time out (502). Generation runs in a thread.
+    Options:
+      ?t=TOKEN   — copy the full token from your intake link (address bar: .../captions-intake?t=XXX)
+      ?session_id=cs_xxx — or use the session_id from the thank-you page URL after payment
+    Returns JSON: {"ok": true, "message": "..."} or {"ok": false, "error": "..."}.
     """
+    import threading
     token = (request.args.get("t") or request.args.get("token") or "").strip()
-    if not token:
-        return jsonify({"ok": False, "error": "Missing ?t=TOKEN (copy from your intake link)"}), 200
+    session_id = (request.args.get("session_id") or "").strip()
+    if not token and not session_id:
+        return jsonify({
+            "ok": False,
+            "error": "Missing ?t=TOKEN or ?session_id=cs_xxx. Use the token from your intake link (the part after t= in the address bar), or the session_id from the thank-you page URL.",
+        }), 200
     try:
         from services.caption_order_service import CaptionOrderService
         order_service = CaptionOrderService()
-        order = order_service.get_by_token(token)
+        order = None
+        if token:
+            order = order_service.get_by_token(token)
+        if not order and session_id:
+            order = order_service.get_by_stripe_session_id(session_id)
         if not order:
-            return jsonify({"ok": False, "error": "Order not found for this token"}), 200
+            return jsonify({
+                "ok": False,
+                "error": "Order not found. Use the full token from your intake link (address bar: .../captions-intake?t=XXX), or try ?session_id= with the session_id from the thank-you page URL.",
+            }), 200
         order_id = order["id"]
         if not order.get("intake"):
-            return jsonify({"ok": False, "error": "Order has no intake yet — submit the intake form first"}), 200
-        success, err = _run_generation_and_deliver(order_id)
-        if success:
-            return jsonify({"ok": True, "message": "Generation and delivery ran. Check your email (and spam)."}), 200
-        err = (err or "Unknown error")[:500]
-        err = "".join(c for c in err if ord(c) < 128)
-        return jsonify({"ok": False, "error": err}), 200
+            return jsonify({"ok": False, "error": "Please submit the form first."}), 200
+        thread = threading.Thread(target=_run_generation_and_deliver, args=(order_id,))
+        thread.daemon = True
+        thread.start()
+        return jsonify({
+            "ok": True,
+            "message": "Generation started. Your captions will be generated and emailed to you in a few minutes (usually 2–5). Check your spam folder if you don't see it.",
+        }), 200
     except Exception as e:
-        err = (str(e) or repr(e))[:500]
-        err = "".join(c for c in err if ord(c) < 128)
-        return jsonify({"ok": False, "error": err or "Unknown error"}), 200
+        err = _normalize_error(e)
+        return jsonify({"ok": False, "error": err}), 200
 
 
 @captions_bp.route("/captions-intake", methods=["POST"])
@@ -242,22 +369,46 @@ def captions_intake_submit():
 
     data = request.get_json() or request.form
     if not data:
-        return jsonify({"error": "Missing intake data"}), 400
+        return jsonify({"error": "Please fill in the form."}), 400
 
     token = (data.get("token") or data.get("t") or "").strip()
     if not token:
         return jsonify({"error": "Missing token. Use the link from your order email."}), 400
 
+    include_hashtags = data.get("include_hashtags")
+    if isinstance(include_hashtags, bool):
+        pass
+    elif isinstance(include_hashtags, str):
+        include_hashtags = include_hashtags.strip().lower() in ("true", "1", "yes", "on")
+    else:
+        include_hashtags = True
+    try:
+        hashtag_min = max(1, min(30, int(data.get("hashtag_min") or 3)))
+    except (TypeError, ValueError):
+        hashtag_min = 3
+    try:
+        hashtag_max = max(0, min(30, int(data.get("hashtag_max") or 10)))
+    except (TypeError, ValueError):
+        hashtag_max = 10
+    if hashtag_min > hashtag_max:
+        hashtag_max = hashtag_min
+
     intake = {
+        "business_name": (data.get("business_name") or "").strip(),
         "business_type": (data.get("business_type") or "").strip(),
         "offer_one_line": (data.get("offer_one_line") or "").strip(),
         "audience": (data.get("audience") or "").strip(),
+        "consumer_age_range": (data.get("consumer_age_range") or "").strip(),
         "audience_cares": (data.get("audience_cares") or "").strip(),
         "voice_words": (data.get("voice_words") or "").strip(),
         "voice_avoid": (data.get("voice_avoid") or "").strip(),
         "platform": (data.get("platform") or "").strip(),
         "platform_habits": (data.get("platform_habits") or "").strip(),
+        "include_hashtags": include_hashtags,
+        "hashtag_min": hashtag_min,
+        "hashtag_max": hashtag_max,
         "goal": (data.get("goal") or "").strip(),
+        "launch_event_description": (data.get("launch_event_description") or "").strip(),
         "caption_examples": (data.get("caption_examples") or "").strip(),
     }
 
@@ -272,27 +423,252 @@ def captions_intake_submit():
 
     order_id = order["id"]
     status = order.get("status") or ""
+    platforms_count = max(1, int(order.get("platforms_count", 1)))
 
     if status == "awaiting_intake":
+        platform_val = (intake.get("platform") or "").strip()
+        if platform_val and "," in platform_val:
+            platform_parts = [p.strip() for p in platform_val.split(",") if p.strip()]
+            if len(platform_parts) > platforms_count:
+                return jsonify({
+                    "error": f"You selected {len(platform_parts)} platforms but your order includes {platforms_count}. Please select no more than {platforms_count}."
+                }), 400
         if not order_service.save_intake(order_id, intake):
-            return jsonify({"error": "Failed to save intake"}), 500
+            return jsonify({"error": "Failed to save. Please try again."}), 500
         thread = threading.Thread(target=_run_generation_and_deliver, args=(order_id,))
         thread.daemon = True
         thread.start()
+        is_subscription = bool(order.get("stripe_subscription_id"))
+        customer_email = (order.get("customer_email") or "").strip().lower()
+        customer_has_account = False
+        if customer_email:
+            try:
+                from services.customer_auth_service import CustomerAuthService
+                auth_svc = CustomerAuthService()
+                customer_has_account = auth_svc.get_by_email(customer_email) is not None
+            except Exception:
+                pass
         return jsonify({
             "success": True,
             "message": "Thanks. We're generating your 30 captions now. You'll receive them by email within a few minutes.",
             "customer_email": order.get("customer_email") or "",
+            "is_subscription": is_subscription,
+            "customer_has_account": customer_has_account,
         }), 200
 
     # Edit mode: order already has intake (intake_completed, generating, delivered)
     if order.get("intake") and status in ("intake_completed", "generating", "delivered"):
+        platform_val = (intake.get("platform") or "").strip()
+        if platform_val and "," in platform_val:
+            platform_parts = [p.strip() for p in platform_val.split(",") if p.strip()]
+            if len(platform_parts) > platforms_count:
+                return jsonify({
+                    "error": f"You selected {len(platform_parts)} platforms but your order includes {platforms_count}. Please select no more than {platforms_count}."
+                }), 400
         if not order_service.update_intake_only(order_id, intake):
-            return jsonify({"error": "Failed to update intake"}), 500
+            return jsonify({"error": "Failed to update. Please try again."}), 500
+        customer_email = (order.get("customer_email") or "").strip().lower()
+        customer_has_account = False
+        if customer_email:
+            try:
+                from services.customer_auth_service import CustomerAuthService
+                auth_svc = CustomerAuthService()
+                customer_has_account = auth_svc.get_by_email(customer_email) is not None
+            except Exception:
+                pass
         return jsonify({
             "success": True,
-            "message": "Your intake has been updated. (Note: This won't change captions already delivered.)",
+            "message": "Your form has been updated. (Note: This won't change captions already delivered.)",
             "customer_email": order.get("customer_email") or "",
+            "is_subscription": bool(order.get("stripe_subscription_id")),
+            "customer_has_account": customer_has_account,
         }), 200
 
     return jsonify({"error": "This order has already been completed or is in progress."}), 400
+
+
+@captions_bp.route("/captions-download", methods=["GET"])
+def captions_download():
+    """
+    Download captions document for a delivered order. Requires logged-in customer;
+    order must belong to customer's email.
+    """
+    from api.auth_routes import get_current_customer
+    customer = get_current_customer()
+    if not customer:
+        return redirect("/login?next=/account"), 302
+    email = (customer.get("email") or "").strip().lower()
+    if not email or "@" not in email:
+        return jsonify({"error": "Invalid customer"}), 400
+    token = (request.args.get("t") or request.args.get("token") or "").strip()
+    if not token:
+        return jsonify({"error": "Missing token (use ?t=TOKEN from your order)"}), 400
+    try:
+        from services.caption_order_service import CaptionOrderService
+        order_service = CaptionOrderService()
+        order = order_service.get_by_token(token)
+    except Exception:
+        return jsonify({"error": "Could not load order"}), 500
+    if not order:
+        return jsonify({"error": "Order not found"}), 404
+    order_email = (order.get("customer_email") or "").strip().lower()
+    if order_email != email:
+        return jsonify({"error": "This order does not belong to your account"}), 403
+    if order.get("status") != "delivered":
+        return jsonify({"error": "Captions not ready yet (status: {})".format(order.get("status", "—"))}), 400
+    captions_md = order.get("captions_md")
+    if not captions_md:
+        return jsonify({"error": "Captions file not found"}), 404
+    from datetime import datetime
+    date_str = (order.get("created_at") or "")[:10] if order.get("created_at") else datetime.utcnow().strftime("%Y-%m-%d")
+    filename = f"30_Days_Captions_{date_str}.md"
+    return Response(
+        captions_md,
+        mimetype="text/markdown",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+def _get_subscription_pause_info(stripe_subscription_id: str):
+    """Fetch subscription from Stripe; return {paused: bool, resumes_at: str or None}."""
+    if not stripe_subscription_id or not Config.STRIPE_SECRET_KEY:
+        return None
+    try:
+        import stripe
+        from datetime import datetime
+        stripe.api_key = Config.STRIPE_SECRET_KEY
+        sub = stripe.Subscription.retrieve(stripe_subscription_id.strip())
+        pc = sub.get("pause_collection")
+        if not pc or not isinstance(pc, dict):
+            return {"paused": False, "resumes_at": None}
+        resumes_ts = pc.get("resumes_at")
+        if not resumes_ts:
+            return {"paused": True, "resumes_at": None}
+        try:
+            dt = datetime.utcfromtimestamp(resumes_ts)
+            return {"paused": True, "resumes_at": dt.strftime("%d %b %Y")}
+        except (TypeError, ValueError, OSError):
+            return {"paused": True, "resumes_at": None}
+    except Exception:
+        return None
+
+
+@captions_bp.route("/captions/pause-subscription", methods=["POST"])
+def captions_pause_subscription():
+    """
+    Pause caption subscription for 1 month. Requires login.
+    Body: { "order_id": "..." }
+    """
+    from api.auth_routes import get_current_customer
+    from datetime import datetime, timedelta
+    import stripe
+
+    customer = get_current_customer()
+    if not customer:
+        return jsonify({"ok": False, "error": "Not logged in"}), 401
+    email = (customer.get("email") or "").strip().lower()
+    if not email or "@" not in email:
+        return jsonify({"ok": False, "error": "Invalid customer"}), 400
+    if not Config.STRIPE_SECRET_KEY:
+        return jsonify({"ok": False, "error": "Billing not configured"}), 503
+
+    try:
+        data = request.get_json() or {}
+        order_id = (data.get("order_id") or "").strip()
+        if not order_id:
+            return jsonify({"ok": False, "error": "order_id required"}), 400
+
+        from services.caption_order_service import CaptionOrderService
+        order_service = CaptionOrderService()
+        order = order_service.get_by_id(order_id)
+        if not order:
+            return jsonify({"ok": False, "error": "Order not found"}), 404
+        order_email = (order.get("customer_email") or "").strip().lower()
+        if order_email != email:
+            return jsonify({"ok": False, "error": "This order does not belong to your account"}), 403
+
+        sub_id = (order.get("stripe_subscription_id") or "").strip()
+        if not sub_id:
+            return jsonify({"ok": False, "error": "This order is not a subscription"}), 400
+
+        stripe.api_key = Config.STRIPE_SECRET_KEY
+        sub = stripe.Subscription.retrieve(sub_id)
+        pc = sub.get("pause_collection")
+        if pc and isinstance(pc, dict) and pc.get("resumes_at"):
+            return jsonify({
+                "ok": False,
+                "error": "Subscription is already paused",
+                "resumes_at": pc.get("resumes_at"),
+            }), 400
+
+        resumes_at = int((datetime.utcnow() + timedelta(days=30)).timestamp())
+        stripe.Subscription.modify(
+            sub_id,
+            pause_collection={"behavior": "void", "resumes_at": resumes_at},
+        )
+        resumes_date = datetime.utcfromtimestamp(resumes_at).strftime("%d %b %Y")
+        return jsonify({
+            "ok": True,
+            "resumes_at": resumes_date,
+        }), 200
+    except stripe.StripeError as e:
+        return jsonify({"ok": False, "error": str(e)[:200]}), 400
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@captions_bp.route("/captions/reminder-preference", methods=["PATCH"])
+def captions_reminder_preference():
+    """
+    Update reminder opt-out for a caption subscription order.
+    Requires login. Order must belong to customer and have stripe_subscription_id.
+    Body: { "order_id": "...", "reminder_opt_out": true|false }
+    """
+    from api.auth_routes import get_current_customer
+    customer = get_current_customer()
+    if not customer:
+        return jsonify({"ok": False, "error": "Not logged in"}), 401
+    email = (customer.get("email") or "").strip().lower()
+    if not email or "@" not in email:
+        return jsonify({"ok": False, "error": "Invalid customer"}), 400
+    try:
+        data = request.get_json() or {}
+        order_id = (data.get("order_id") or "").strip()
+        opt_out = data.get("reminder_opt_out")
+        if not order_id:
+            return jsonify({"ok": False, "error": "order_id required"}), 400
+        if opt_out is None:
+            return jsonify({"ok": False, "error": "reminder_opt_out required (true or false)"}), 400
+        from services.caption_order_service import CaptionOrderService
+        order_service = CaptionOrderService()
+        order = order_service.get_by_id(order_id)
+        if not order:
+            return jsonify({"ok": False, "error": "Order not found"}), 404
+        order_email = (order.get("customer_email") or "").strip().lower()
+        if order_email != email:
+            return jsonify({"ok": False, "error": "This order does not belong to your account"}), 403
+        if not order.get("stripe_subscription_id"):
+            return jsonify({"ok": False, "error": "Reminders only apply to subscription orders"}), 400
+        if order_service.update(order_id, {"reminder_opt_out": bool(opt_out)}):
+            return jsonify({"ok": True, "reminder_opt_out": bool(opt_out)}), 200
+        return jsonify({"ok": False, "error": "Update failed"}), 500
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@captions_bp.route("/captions-send-reminders", methods=["GET"])
+def captions_send_reminders():
+    """
+    Cron endpoint: send pre-pack reminder emails to subscription customers ~5 days before each period end.
+    Protected by CRON_SECRET. Call daily from Railway cron (e.g. 0 9 * * * for 9am UTC).
+    Query: ?secret=CRON_SECRET  or  Authorization: Bearer CRON_SECRET
+    """
+    secret = request.args.get("secret", "").strip() or (request.headers.get("Authorization") or "").replace("Bearer ", "").strip()
+    if not getattr(Config, "CRON_SECRET", None) or secret != Config.CRON_SECRET:
+        return jsonify({"error": "Unauthorized"}), 401
+    try:
+        from services.caption_reminder_service import run_reminders
+        result = run_reminders()
+        return jsonify({"ok": True, **result}), 200
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500

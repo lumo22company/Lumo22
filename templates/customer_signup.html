@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sign up | Lumo 22</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v={{ asset_version }}">
   <style>
     .auth-page { padding: 6rem 1.5rem 4rem; max-width: 420px; margin: 0 auto; }
     .auth-page h1 { font-family: var(--font-display); font-size: 1.75rem; margin-bottom: 0.5rem; }
@@ -28,18 +29,18 @@
     <div class="lumo-nav-links">
       <a href="/captions">Captions</a>
       <a href="/digital-front-desk">Front Desk</a>
-      <a href="/digital-front-desk#pricing">Pricing</a>
     </div>
     <a href="/" class="lumo-nav-cta">Home</a>
   </nav>
 
   <main class="auth-page">
     <h1>Create your account</h1>
-    <p class="sub">One account for your Digital Front Desk, Chat, and Captions.</p>
+    <p class="sub">One account for your Digital Front Desk and Captions.</p>
 
     <form id="signup-form">
+      <input type="hidden" id="referral_code" name="referral_code" value="">
       <label for="email">Email</label>
-      <input type="email" id="email" name="email" required autocomplete="email">
+      <input type="email" id="email" name="email" required autocomplete="email" placeholder="you@example.com">
 
       <label for="password">Password <span style="font-weight:400;color:var(--lum-text-muted);">(min 6 characters)</span></label>
       <input type="password" id="password" name="password" required minlength="6" autocomplete="new-password">
@@ -57,6 +58,9 @@
 
   <script>
     (function() {
+      var ref = (new URLSearchParams(window.location.search).get('ref') || '').trim();
+      if (ref) document.getElementById('referral_code').value = ref;
+
       var form = document.getElementById('signup-form');
       var btn = document.getElementById('btn');
       var msg = document.getElementById('msg');
@@ -67,7 +71,7 @@
         var pw2 = document.getElementById('password_confirm').value;
         if (pw !== pw2) {
           msg.className = 'msg error';
-          msg.textContent = 'Passwords do not match.';
+          msg.textContent = 'Those passwords don\'t match.';
           msg.style.display = 'block';
           return;
         }
@@ -75,24 +79,26 @@
         btn.disabled = true;
         btn.textContent = 'Creating…';
 
+        var ref = (new URLSearchParams(window.location.search).get('ref') || document.getElementById('referral_code').value || '').trim();
         fetch('/api/auth/signup', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             email: document.getElementById('email').value.trim().toLowerCase(),
-            password: pw
+            password: pw,
+            referral_code: ref || undefined
           })
         })
         .then(function(r) { return r.json(); })
         .then(function(data) {
           if (data.ok) {
             msg.className = 'msg success';
-            msg.textContent = 'Account created. Redirecting…';
+            msg.textContent = 'You\'re in. Taking you to your account…';
             msg.style.display = 'block';
             window.location.href = '/account';
           } else {
             msg.className = 'msg error';
-            msg.textContent = data.error || 'Something went wrong.';
+            msg.textContent = data.error || 'Something didn\'t go through — try again.';
             msg.style.display = 'block';
             btn.disabled = false;
             btn.textContent = 'Create account';
@@ -100,7 +106,7 @@
         })
         .catch(function() {
           msg.className = 'msg error';
-          msg.textContent = 'Network error. Please try again.';
+          msg.textContent = 'Something didn\'t send — try again.';
           msg.style.display = 'block';
           btn.disabled = false;
           btn.textContent = 'Create account';
@@ -108,5 +114,6 @@
       });
     })();
   </script>
+  {% include '_footer.html' %}
 </body>
 </html>

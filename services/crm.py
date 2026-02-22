@@ -3,11 +3,20 @@ CRM service for managing leads in Supabase database.
 Handles lead storage, retrieval, and status updates.
 """
 from typing import Dict, Any, Optional, List
+import re
 from supabase import create_client, Client
 from datetime import datetime
 import uuid
 from config import Config
 from models.lead import Lead
+
+
+def _sanitize_supabase_url(u: str) -> str:
+    """Remove control chars so httpx doesn't raise InvalidURL."""
+    if not u or not isinstance(u, str):
+        return (u or "").strip() or ""
+    return re.sub(r"[\x00-\x1f\x7f]", "", (u or "").strip()).rstrip("/").strip()
+
 
 class CRMService:
     """Service for CRM operations using Supabase"""
@@ -15,8 +24,10 @@ class CRMService:
     def __init__(self):
         if not Config.SUPABASE_URL or not Config.SUPABASE_KEY:
             raise ValueError("Supabase configuration missing")
-        
-        self.client: Client = create_client(Config.SUPABASE_URL, Config.SUPABASE_KEY)
+        url = _sanitize_supabase_url(Config.SUPABASE_URL)
+        if not url:
+            raise ValueError("Supabase configuration missing")
+        self.client: Client = create_client(url, (Config.SUPABASE_KEY or "").strip())
         self.table_name = 'leads'
     
     def create_lead(self, lead: Lead) -> str:

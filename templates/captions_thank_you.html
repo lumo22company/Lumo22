@@ -4,11 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Thank you for your order | Lumo 22</title>
-  <meta name="description" content="Thanks for ordering 30 Days of Social Media Captions. Complete your intake form to receive your captions.">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
+  <meta name="description" content="Thanks for ordering 30 Days of Social Media Captions. Complete the short form to receive your captions.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v={{ asset_version }}">
   <style>
     .thankyou-section { padding-top: 8rem; padding-bottom: 4rem; }
     .thankyou-card { max-width: 520px; margin: 0 auto; padding: 2.5rem; background: var(--lum-card-bg, rgba(255,255,255,0.03)); border-radius: 12px; border: 1px solid var(--lum-border, rgba(255,255,255,0.08)); }
@@ -27,12 +28,12 @@
     <a href="/" class="lumo-nav-logo">Lumo 22</a>
     <div class="lumo-nav-links">
       <a href="/captions">Captions</a>
-      <a href="/#front-desk">Front Desk</a>
-      <a href="/plans">Pricing</a>
+      <a href="/digital-front-desk">Front Desk</a>
     </div>
-    <a href="/#front-desk" class="lumo-nav-cta">Try the concierge</a>
+    {% if current_customer %}<a href="/account" class="lumo-nav-cta">Account</a>{% else %}<a href="/login" class="lumo-nav-cta">Log in</a>{% endif %}
   </nav>
 
+  <!-- Same thank-you page for captions one-off and subscription; intake link is polled via session_id. No template vars required. -->
   <section class="lumo-section thankyou-section">
     <div class="lumo-section-header">
       <p class="lumo-section-label">Order confirmed</p>
@@ -42,30 +43,16 @@
       <h1>30 Days of Social Media Captions</h1>
       <p id="thankyou-message">We've received your payment. One moment — we're preparing your next step…</p>
       <p id="thankyou-form-link" style="display: none;">
-        <a href="#" id="intake-link" class="lumo-btn-primary thankyou-cta">Continue to your captions form</a>
+        <a href="#" id="intake-link" class="lumo-btn-primary thankyou-cta">Complete your details</a>
         <span id="thankyou-redirect-msg" style="display: block; margin-top: 0.75rem; font-size: 0.9rem; color: var(--lum-text-muted);"></span>
       </p>
-      <p id="thankyou-email-fallback" style="display: none;">We've also sent a link to your email. Once you submit the form, we'll generate your 30 captions and send them to you.</p>
-      <p id="thankyou-no-session" style="display: none;">Check your email for a link to complete a short form so we can tailor your captions. Once you submit, we'll generate your 30 captions and send them to you by email.</p>
+      <p id="thankyou-email-fallback" style="display: none;">We've also sent the link by email — use it anytime to open the form.</p>
+      <p id="thankyou-no-session" style="display: none;">Check your email for a link to the short form. After you submit, we'll create your 30 captions and deliver by email.</p>
       <p class="thankyou-back"><a href="/captions">← Back to Captions</a> · <a href="/">Lumo 22 home</a></p>
     </div>
   </section>
 
-  <footer class="lumo-footer">
-    <div class="lumo-footer-inner">
-      <div>
-        <a href="/" class="lumo-footer-brand">Lumo 22</a>
-        <p class="lumo-footer-tagline">Lighting the way to better business</p>
-      </div>
-      <div class="lumo-footer-links">
-        <a href="/captions">Captions</a>
-        <a href="/#front-desk">Front Desk</a>
-        <a href="/plans">Pricing</a>
-        <a href="mailto:hello@lumo22.com">Contact</a>
-      </div>
-    </div>
-    <div class="lumo-footer-bottom">© Lumo 22. All rights reserved.</div>
-  </footer>
+  {% include '_footer.html' %}
 
   <script>
     (function() {
@@ -80,7 +67,7 @@
       if (!sessionId) {
         messageEl.style.display = 'none';
         noSessionEl.style.display = 'block';
-        noSessionEl.innerHTML = 'Check your email for a link to complete a short form so we can tailor your captions. Once you submit, we\'ll generate your 30 captions and send them to you by email.<br><br>If you have any questions, contact <a href="mailto:hello@lumo22.com">hello@lumo22.com</a>.';
+        noSessionEl.innerHTML = 'Check your email for a link to the form. After you submit, we\'ll create your 30 captions and deliver by email.<br><br>Questions? <a href="mailto:hello@lumo22.com">hello@lumo22.com</a>';
         return;
       }
 
@@ -88,7 +75,7 @@
       var redirectMsgEl = document.getElementById('thankyou-redirect-msg');
 
       function showIntake(url) {
-        messageEl.textContent = "Your captions form is ready. Click below to tell us about your business and voice — then we'll generate your 30 captions.";
+        messageEl.textContent = "Your form is ready. Click below to share your business and voice — we'll then create your 30 captions.";
         messageEl.style.display = 'block';
         intakeLinkEl.href = url;
         formLinkEl.style.display = 'block';

@@ -4,7 +4,7 @@ Main Flask application for AI-powered lead capture and booking system.
 import os
 import time
 import json
-from flask import Flask, render_template, request, jsonify, redirect, url_for
+from flask import Flask, render_template, request, jsonify, redirect, url_for, send_from_directory, make_response
 from flask_cors import CORS
 from config import Config
 from functools import wraps
@@ -26,7 +26,12 @@ try:
     _css_mtime_for_version = int(os.path.getmtime(_landing_css)) if os.path.exists(_landing_css) else 0
 except Exception:
     _css_mtime_for_version = 0
-_asset_version = os.environ.get('ASSET_VERSION') or (str(int(time.time())) + '-' + str(_css_mtime_for_version))
+# Prefer Railway deployment ID so every deploy gets a new cache-buster; else ASSET_VERSION or timestamp+mtime
+_asset_version = (
+    os.environ.get('RAILWAY_DEPLOYMENT_ID')
+    or os.environ.get('ASSET_VERSION')
+    or (str(int(time.time())) + '-' + str(_css_mtime_for_version))
+)
 
 # #region agent log
 _DEBUG_LOG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.cursor', 'debug.log')
@@ -64,6 +69,35 @@ app.register_blueprint(outreach_bp)
 app.register_blueprint(captions_bp)
 app.register_blueprint(auth_bp)
 app.register_blueprint(billing_bp)
+
+# Captions pre-pack reminder: run daily at 9am UTC (no separate cron service needed)
+def _start_captions_reminder_scheduler():
+    try:
+        from apscheduler.schedulers.background import BackgroundScheduler
+        from apscheduler.triggers.cron import CronTrigger
+
+        def run_reminders_job():
+            with app.app_context():
+                try:
+                    from services.caption_reminder_service import run_reminders
+                    r = run_reminders()
+                    print(f"[Captions reminder] sent={r.get('sent', 0)} skipped={r.get('skipped', 0)} errors={r.get('errors', [])}")
+                except Exception as e:
+                    print(f"[Captions reminder] error: {e}")
+
+        sched = BackgroundScheduler(daemon=True)
+        sched.add_job(run_reminders_job, CronTrigger(hour=9, minute=0, timezone="UTC"))
+        sched.start()
+        print("[Captions reminder] scheduler started (daily 9am UTC)")
+    except Exception as e:
+        print(f"[Captions reminder] scheduler not started: {e}")
+
+_start_captions_reminder_scheduler()
+
+@app.route('/favicon.ico')
+def favicon():
+    """Serve logo as favicon."""
+    return send_from_directory(os.path.join(app.root_path, 'static', 'images'), 'logo.png', mimetype='image/png')
 
 @app.route('/')
 def index():
@@ -107,44 +141,124 @@ def captions_page():
     subscription_available = bool(
         Config.STRIPE_SECRET_KEY and getattr(Config, 'STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID', None)
     )
+    extra_oneoff = bool((getattr(Config, 'STRIPE_CAPTIONS_EXTRA_PLATFORM_PRICE_ID', None) or '').strip())
+    extra_sub = bool((getattr(Config, 'STRIPE_CAPTIONS_EXTRA_PLATFORM_SUBSCRIPTION_PRICE_ID', None) or '').strip())
+    # Only show multi-platform when one-off uses our checkout (not payment link) and has extra prices
+    supports_multi_platform = use_checkout_redirect and (extra_oneoff or (subscription_available and extra_sub))
+    checkout_error = request.args.get('error', '').strip()
     return render_template(
         'captions.html',
         captions_payment_link=Config.CAPTIONS_PAYMENT_LINK,
         use_checkout_redirect=use_checkout_redirect,
         captions_subscription_available=subscription_available,
+        supports_multi_platform=supports_multi_platform,
+        checkout_error=checkout_error,
     )
 
 @app.route('/captions-intake')
 def captions_intake_page():
     """Intake form for 30 Days Captions (sent to client after payment). Token in ?t= links form to order."""
+    from datetime import datetime
     token = request.args.get('t', '').strip()
     existing_intake = {}
+    platforms_count = 1
+    selected_platforms = ""
     if token:
         try:
             from services.caption_order_service import CaptionOrderService
             svc = CaptionOrderService()
             order = svc.get_by_token(token)
-            if order and order.get("intake"):
-                existing_intake = order.get("intake") or {}
+            if order:
+                if order.get("intake"):
+                    existing_intake = order.get("intake") or {}
+                platforms_count = max(1, int(order.get("platforms_count", 1)))
+                selected_platforms = (order.get("selected_platforms") or "").strip() or ""
         except Exception:
             pass
-    return render_template('captions_intake.html', intake_token=token, existing_intake=existing_intake)
+    # Prefill platform from order (chosen at checkout) when they haven't saved intake yet
+    prefilled_platform = (existing_intake.get("platform") or "").strip() if existing_intake else ""
+    if not prefilled_platform and selected_platforms:
+        prefilled_platform = selected_platforms
+    # Normalise legacy "Instagram" / "Facebook" to grouped "Instagram & Facebook"
+    if prefilled_platform in ("Instagram", "Facebook"):
+        prefilled_platform = "Instagram & Facebook"
+    elif prefilled_platform and "," in prefilled_platform:
+        parts = [p.strip() for p in prefilled_platform.split(",") if p.strip()]
+        normalized = []
+        seen = set()
+        for p in parts:
+            if p in ("Instagram", "Facebook"):
+                p = "Instagram & Facebook"
+            if p and p not in seen:
+                seen.add(p)
+                normalized.append(p)
+        prefilled_platform = ", ".join(normalized)
+    now = datetime.utcnow()
+    r = make_response(render_template('captions_intake.html', intake_token=token, existing_intake=existing_intake, platforms_count=platforms_count, prefilled_platform=prefilled_platform, now=now))
+    r.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    r.headers['Pragma'] = 'no-cache'
+    return r
 
 @app.route('/captions-thank-you')
 def captions_thank_you_page():
     """Thank-you page after Stripe payment (set as redirect URL in Stripe)"""
     return render_template('captions_thank_you.html')
 
+
+@app.route('/captions-deliver-helper')
+def captions_deliver_helper_page():
+    """Simple page: paste intake or thank-you link, click button to run deliver-test and see result."""
+    return render_template('captions_deliver_helper.html')
+
+def _parse_platforms_from_request():
+    """Parse platforms from request args; clamp 1-4."""
+    try:
+        n = int(request.args.get("platforms", 1))
+        return max(1, min(4, n))
+    except (TypeError, ValueError):
+        return 1
+
+
 @app.route('/captions-checkout')
 def captions_checkout_page():
     """Pre-checkout page: agree to T&Cs then continue to Stripe (one-off £97)."""
-    return render_template('captions_checkout.html')
+    from urllib.parse import urlencode
+    platforms = _parse_platforms_from_request()
+    selected = (request.args.get("selected") or request.args.get("selected_platforms") or "").strip()
+    selected_count = len([p.strip() for p in selected.split(",") if p.strip()]) if selected else 0
+    platforms_invalid = platforms > 1 and selected_count != platforms
+    q = urlencode({"platforms": platforms, **({"selected": selected} if selected else {})})
+    api_url = f"/api/captions-checkout?{q}" if not platforms_invalid else None
+    total = 97 + (platforms - 1) * 29
+    return render_template(
+        'captions_checkout.html',
+        platforms=platforms,
+        selected=selected,
+        api_url=api_url,
+        total_oneoff=total,
+        platforms_invalid=platforms_invalid,
+    )
 
 
 @app.route('/captions-checkout-subscription')
 def captions_checkout_subscription_page():
     """Pre-checkout page for Captions subscription (£79/mo): agree to T&Cs then continue to Stripe."""
-    return render_template('captions_checkout_subscription.html')
+    from urllib.parse import urlencode
+    platforms = _parse_platforms_from_request()
+    selected = (request.args.get("selected") or request.args.get("selected_platforms") or "").strip()
+    selected_count = len([p.strip() for p in selected.split(",") if p.strip()]) if selected else 0
+    platforms_invalid = platforms > 1 and selected_count != platforms
+    q = urlencode({"platforms": platforms, **({"selected": selected} if selected else {})})
+    api_url = f"/api/captions-checkout-subscription?{q}" if not platforms_invalid else None
+    total = 79 + (platforms - 1) * 19
+    return render_template(
+        'captions_checkout_subscription.html',
+        platforms=platforms,
+        selected=selected,
+        api_url=api_url,
+        total_sub=total,
+        platforms_invalid=platforms_invalid,
+    )
 
 @app.route('/terms')
 def terms_page():
@@ -170,9 +284,14 @@ def booking_page():
 
 @app.route('/website-chat')
 def website_chat_page():
-    """Chat Assistant product page — fixed price, standalone or bundle with email."""
-    chat_payment_link = getattr(Config, 'CHAT_PAYMENT_LINK', None)
-    return render_template('website_chat.html', chat_payment_link=chat_payment_link)
+    """Chat Assistant removed — redirect to Digital Front Desk."""
+    return redirect(url_for('digital_front_desk_page'))
+
+
+@app.route('/website-chat-success')
+def website_chat_success_page():
+    """Chat Assistant removed — redirect to Digital Front Desk."""
+    return redirect(url_for('digital_front_desk_page'))
 
 def customer_login_required(f):
     """Redirect to login if customer not in session."""
@@ -219,15 +338,36 @@ def account_page():
     email = customer.get('email', '')
     setups = []
     caption_orders = []
+    referral_code = None
     try:
         from services.front_desk_setup_service import FrontDeskSetupService
         from services.caption_order_service import CaptionOrderService
+        from services.customer_auth_service import CustomerAuthService
         fd_svc = FrontDeskSetupService()
         co_svc = CaptionOrderService()
+        auth_svc = CustomerAuthService()
         setups = fd_svc.get_by_customer_email(email)
         caption_orders = co_svc.get_by_customer_email(email)
+        referral_code = auth_svc.ensure_referral_code(str(customer["id"]))
+        # Enrich caption orders with subscription pause status (for subscription orders)
+        try:
+            from api.captions_routes import _get_subscription_pause_info
+            for o in caption_orders:
+                sub_id = (o.get("stripe_subscription_id") or "").strip()
+                if sub_id:
+                    try:
+                        info = _get_subscription_pause_info(sub_id)
+                        o["subscription_pause"] = info or {"paused": False, "resumes_at": None}
+                    except Exception:
+                        o["subscription_pause"] = {"paused": False, "resumes_at": None}
+                else:
+                    o["subscription_pause"] = None
+        except Exception:
+            for o in caption_orders:
+                o["subscription_pause"] = None
     except Exception as e:
         print(f"[account] Error loading data: {e}")
+        referral_code = None
     base = (Config.BASE_URL or request.url_root or "").strip().rstrip("/")
     if base and not base.startswith("http"):
         base = "https://" + base
@@ -236,6 +376,7 @@ def account_page():
         setups=setups,
         caption_orders=caption_orders,
         base_url=base,
+        referral_code=referral_code or "",
     )
 
 
@@ -280,16 +421,12 @@ def activate_success_page():
     return render_template('activate_success.html')
 
 
-@app.route('/website-chat-success')
-def website_chat_success_page():
-    """Thank-you page after Website Chat Widget payment. Set this URL as the success URL for the chat product Payment Link only."""
-    return render_template('website_chat_success.html')
-
-
 @app.route('/front-desk-setup')
 def front_desk_setup_page():
-    """Setup form for Digital Front Desk or chat-only (product=chat&t=TOKEN from email)."""
+    """Setup form for Digital Front Desk. Chat product removed — redirect chat links to DFD."""
     product = request.args.get('product', '').strip().lower()
+    if product == 'chat':
+        return redirect(url_for('digital_front_desk_page'))
     setup_token = request.args.get('t', '').strip()
     return render_template('front_desk_setup.html', product=product, setup_token=setup_token)
 

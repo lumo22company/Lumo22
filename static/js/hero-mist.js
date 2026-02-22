@@ -1,10 +1,10 @@
 /**
- * Hero mist — smoky light animation around the logo.
- * Mist is densest at center (where "Lumo 22" sits), gently moves and dissipates, fades to black at viewport edges.
- * No parallax; section-scoped to hero. GPU-friendly: single canvas, requestAnimationFrame.
+ * Hero mist — x.ai style: smoky light around "Lumo 22", fades to black at edges.
+ * Cursor gently disrupts the smoke (small radius, smooth lerp). Cursor does NOT glow.
+ * Section-scoped to hero. GPU-friendly: single canvas, requestAnimationFrame.
  *
- * TWEAK: Mist intensity — adjust CENTER_DENSITY (higher = denser near logo) and EDGE_FALLOFF (lower = sharper edge).
- * TWEAK: Animation speed — change the multiplier in (Date.now() - startTime) * 0.00004 for slower/faster drift.
+ * TWEAK: CURSOR_RADIUS — interaction size (px). CURSOR_SMOOTH — lerp for no jitter.
+ * TWEAK: CENTER_DENSITY / EDGE_FALLOFF — mist intensity and halo size.
  */
 (function () {
   'use strict';
@@ -18,10 +18,31 @@
   var H = 0;
   var startTime = Date.now();
 
-  /* Mist intensity: density at center (around logo). Range ~0.2–0.6. */
+  /* Mist: denser near logo, fade to black at edges. */
   var CENTER_DENSITY = 0.45;
-  /* How quickly mist fades toward viewport edges. Lower = tighter halo around center. */
   var EDGE_FALLOFF = 0.5;
+
+  /* Cursor disrupt: small radius, smooth (no jitter). Cursor itself does not glow. */
+  var CURSOR_RADIUS = 120;
+  var CURSOR_SMOOTH = 0.08;
+  var cursorTargetX = -1e5;
+  var cursorTargetY = -1e5;
+  var cursorX = -1e5;
+  var cursorY = -1e5;
+  var cursorActive = false;
+
+  hero.addEventListener('mousemove', function (e) {
+    var rect = hero.getBoundingClientRect();
+    if (rect.bottom < 0 || rect.top > window.innerHeight) return;
+    cursorTargetX = e.clientX;
+    cursorTargetY = e.clientY;
+    cursorActive = true;
+  });
+  hero.addEventListener('mouseleave', function () {
+    cursorActive = false;
+    cursorTargetX = -1e5;
+    cursorTargetY = -1e5;
+  });
 
   var perm = [];
   for (var i = 0; i < 256; i++) perm[i] = Math.floor(Math.random() * 256);
@@ -53,7 +74,10 @@
   }
 
   function draw() {
-    /* Animation speed: increase 0.00004 for faster drift. */
+    /* Smooth cursor follow — avoids jitter. */
+    cursorX = lerp(cursorX, cursorTargetX, CURSOR_SMOOTH);
+    cursorY = lerp(cursorY, cursorTargetY, CURSOR_SMOOTH);
+
     var t = (Date.now() - startTime) * 0.00004;
     var centerX = W * 0.5;
     var centerY = H * 0.5;
@@ -85,13 +109,23 @@
         var dy = j - centerY;
         var dist = Math.sqrt(dx * dx + dy * dy);
         var normDist = Math.min(1, dist / maxDist);
-        /* Denser at center (logo), fade to zero at edges. */
         var density = normDist < 0.35
           ? lerp(CENTER_DENSITY, 0.12, normDist / 0.35)
           : lerp(0.12, 0, (normDist - 0.35) / 0.65);
         n *= density;
 
-        /* Deep black at edges; subtle warm gray at center (no harsh glow). */
+        /* Cursor disrupt: reduce smoke density near cursor (gentle push-away). No glow on cursor. */
+        if (cursorActive && CURSOR_RADIUS > 0) {
+          var cdx = i - cursorX;
+          var cdy = j - cursorY;
+          var cdist = Math.sqrt(cdx * cdx + cdy * cdy);
+          if (cdist < CURSOR_RADIUS) {
+            var falloff = cdist / CURSOR_RADIUS;
+            falloff = falloff * falloff;
+            n *= lerp(0.25, 1, falloff);
+          }
+        }
+
         var r = Math.floor(lerp(8, 18, n1));
         var g = Math.floor(lerp(10, 20, n2));
         var b = Math.floor(lerp(16, 28, n));

@@ -23,7 +23,6 @@
     <div class="lumo-nav-links">
       <a href="/captions">Captions</a>
       <a href="/digital-front-desk">Front Desk</a>
-      <a href="/digital-front-desk#pricing">Pricing</a>
     </div>
     {% if current_customer %}<a href="/account" class="lumo-nav-cta">Account</a>{% else %}<span style="display: inline-flex; align-items: center; gap: 0.75rem;"><a href="/login" style="color: var(--lum-text-muted); text-decoration: none; font-size: 0.9rem;">Log in</a><a href="/signup" class="lumo-nav-cta">Sign up</a></span>{% endif %}
   </nav>
@@ -75,7 +74,7 @@
   </section>
 
   <!-- 3. TESTIMONIALS — social proof -->
-  <section class="dfd-section dfd-section--dark dfd-testimonials-section" id="testimonials">
+  <section class="dfd-section dfd-section--light dfd-testimonials-section" id="testimonials">
     <div class="dfd-section-inner">
       <h2 class="dfd-heading">What people say</h2>
       <div class="dfd-testimonials dfd-testimonials--two">
@@ -94,6 +93,7 @@
   <!-- 4. PRICING -->
   <section class="product-section product-section--dark" id="pricing">
     <div class="product-section-inner">
+      <p class="product-section-label">Pricing</p>
       <h2 class="product-section-title">Choose your plan</h2>
       <p class="product-section-desc">One-off pack or monthly subscription. Same form and delivery. Cancel anytime on subscription.</p>
       {% if checkout_error == 'extra_platform_not_configured' %}
@@ -124,13 +124,13 @@
       </div>
       <div class="lumo-pricing-grid">
         {% if captions_subscription_available %}
-        <div class="lumo-pricing-card glass-card">
-          <span class="product-badge-captions">Best value</span>
-          <h3>Subscription</h3>
-          <p class="lumo-pricing-subtitle">New 30-day pack each month</p>
-          <div class="lumo-offer-price" id="captions-sub-price">£79 <span>/month</span></div>
+        <div class="lumo-pricing-card glass-card featured" style="position: relative;">
+          <span class="product-badge-recommended">Recommended</span>
+          <h3 style="margin-bottom: 0.5rem;">Subscription</h3>
+          <p class="lumo-pricing-subtitle" style="color: var(--lum-text-muted); font-size: 0.95rem; margin-bottom: 1rem;">New 30-day pack each month</p>
+          <div class="lumo-offer-price" id="captions-sub-price" style="margin: 1rem 0;">£79 <span>/month</span></div>
           <p class="lumo-pricing-save" id="captions-sub-save">Save £18 vs one-off</p>
-          <ul class="lumo-offer-includes">
+          <ul class="lumo-offer-includes" style="margin: 1rem 0;">
             <li>30 captions every month</li>
             <li>Algorithm-optimised hashtags for each post</li>
             <li>Same form, same categories</li>
@@ -142,10 +142,10 @@
         </div>
         {% endif %}
         <div class="lumo-pricing-card glass-card">
-          <h3>One-off</h3>
-          <p class="lumo-pricing-subtitle">Single 30-day pack</p>
-          <div class="lumo-offer-price" id="captions-oneoff-price">£97 <span>one-time</span></div>
-          <ul class="lumo-offer-includes">
+          <h3 style="margin-bottom: 0.5rem;">One-off</h3>
+          <p class="lumo-pricing-subtitle" style="color: var(--lum-text-muted); font-size: 0.95rem; margin-bottom: 1rem;">Single 30-day pack</p>
+          <div class="lumo-offer-price" id="captions-oneoff-price" style="margin: 1rem 0;">£97 <span>one-time</span></div>
+          <ul class="lumo-offer-includes" style="margin: 1rem 0;">
             <li>30 captions, one delivery</li>
             <li>Algorithm-optimised hashtags for each post</li>
             <li>Same form and format</li>
@@ -199,21 +199,6 @@
           <summary class="dfd-faq-question">I have a product launch, sale, or event. Can you tailor the captions?</summary>
           <p class="dfd-faq-answer">Yes. In the form, fill in the Key date section and tell us what’s happening and when (must be within the next 30 days of your caption set). We’ll tailor your captions: pre-date builds anticipation, on the day we announce, after we shift to thank-you and feedback. Include dates in your description for accuracy (e.g. Valentine’s sale Feb 10–14, 20% off ends 28 Feb, Black Friday weekend).</p>
         </details>
-        <details class="dfd-faq-item">
-          <summary class="dfd-faq-question">What if I’m not happy with my pack?</summary>
-          <p class="dfd-faq-answer">We’ll make it right — just get in touch and we’ll sort it.</p>
-        </details>
-      </div>
-    </div>
-  </section>
-
-  <!-- Final CTA — same container style as DFD -->
-  <section class="dfd-cta-section" aria-label="Get started">
-    <div class="dfd-cta-inner">
-      <h2 class="dfd-cta-heading">Ready for 30 days of content?</h2>
-      <p class="dfd-cta-lead">One short form, 30 captions. Copy, edit, post.</p>
-      <div class="dfd-cta-btn-wrap">
-        <a href="#pricing" class="dfd-btn dfd-btn-accent">Get my 30 days</a>
       </div>
     </div>
   </section>

@@ -1,6 +1,12 @@
 """
 Automated booking service using Calendly API.
 Creates booking links and manages appointments.
+
+When you add an endpoint that returns available appointment slots (e.g. from Calendly
+or a calendar), use services.availability.filter_slots_tight_scheduling with the
+front_desk_setup's tight_scheduling_enabled and minimum_gap_between_appointments:
+if enabled, only show slots within that many minutes of existing same-day bookings;
+if no bookings that day, show all slots. If tight scheduling is off, show all slots.
 """
 import requests
 from typing import Dict, Any, Optional

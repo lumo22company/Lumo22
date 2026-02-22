@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Captions delivery test helper | Lumo 22</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, sans-serif; max-width: 560px; margin: 3rem auto; padding: 0 1.5rem; line-height: 1.6; color: #1a1a1a; }
+    h1 { font-size: 1.35rem; margin-bottom: 0.5rem; }
+    p { color: #444; margin-bottom: 1rem; }
+    label { display: block; font-weight: 600; margin-bottom: 0.35rem; }
+    input[type="text"] { width: 100%; padding: 0.6rem 0.75rem; font-size: 1rem; border: 1px solid #ccc; border-radius: 6px; margin-bottom: 1rem; }
+    button { padding: 0.65rem 1.25rem; font-size: 1rem; background: #1a1a1a; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
+    button:hover { background: #333; }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    #result { margin-top: 1.5rem; padding: 1rem; border-radius: 8px; white-space: pre-wrap; word-break: break-all; font-size: 0.95rem; }
+    #result.success { background: #e8f5e9; border: 1px solid #a5d6a7; color: #1b5e20; }
+    #result.error { background: #ffebee; border: 1px solid #ef9a9a; color: #b71c1c; }
+    #result.info { background: #e3f2fd; border: 1px solid #90caf9; color: #0d47a1; }
+    .back { margin-top: 2rem; }
+    .back a { color: #666; }
+  </style>
+</head>
+<body>
+  <h1>Captions delivery test</h1>
+  <p>Paste the full link from your email or browser below, then click the button. We’ll run the delivery test and show you what happened.</p>
+
+  <label for="url">Paste your intake form link or thank-you page link</label>
+  <input type="text" id="url" name="url" placeholder="e.g. https://lumo-22-production.up.railway.app/captions-intake?t=abc123... or .../captions-thank-you?session_id=cs_...">
+  <button type="button" id="run">Run delivery test</button>
+
+  <div id="result" style="display: none;"></div>
+
+  <p class="back"><a href="/captions">← Back to Captions</a></p>
+
+  <script>
+    (function() {
+      var input = document.getElementById('url');
+      var btn = document.getElementById('run');
+      var resultEl = document.getElementById('result');
+
+      function showResult(text, type) {
+        resultEl.textContent = text;
+        resultEl.className = type || 'info';
+        resultEl.style.display = 'block';
+      }
+
+      btn.addEventListener('click', function() {
+        var raw = (input.value || '').trim();
+        if (!raw) {
+          showResult('Please paste your intake or thank-you link in the box above.', 'info');
+          return;
+        }
+        try {
+          var url = raw.indexOf('http') === 0 ? raw : 'https://' + raw.replace(/^\/+/, '');
+          var u = new URL(url);
+          var t = u.searchParams.get('t') || u.searchParams.get('token') || '';
+          var sessionId = u.searchParams.get('session_id') || '';
+          t = (t || '').trim();
+          sessionId = (sessionId || '').trim();
+          if (!t && !sessionId) {
+            showResult('That link doesn’t contain a token or session_id.\n\nUse the full link from your order email (intake form) or the thank-you page right after payment (it has session_id= in the address bar).', 'error');
+            return;
+          }
+          var apiUrl = window.location.origin + '/api/captions-deliver-test?';
+          if (t) apiUrl += 't=' + encodeURIComponent(t);
+          else apiUrl += 'session_id=' + encodeURIComponent(sessionId);
+          showResult('Running test…', 'info');
+          btn.disabled = true;
+          fetch(apiUrl)
+            .then(function(r) {
+              if (!r.ok) return r.text().then(function(t) { throw new Error('Server ' + r.status + ': ' + (t || r.statusText).slice(0, 300)); });
+              return r.json();
+            })
+            .then(function(data) {
+              btn.disabled = false;
+              if (data && data.ok) {
+                showResult('Success!\n\n' + (data.message || 'Generation started. Check your email in a few minutes (and spam).'), 'success');
+              } else {
+                var msg = (data && data.error);
+                if (typeof msg === 'object') msg = (msg && msg.message) || JSON.stringify(msg);
+                if (!msg || !String(msg).trim()) msg = 'No error message returned. Full response: ' + JSON.stringify(data);
+                showResult('Result:\n\n' + msg, 'error');
+              }
+            })
+            .catch(function(err) {
+              btn.disabled = false;
+              showResult('Request failed: ' + (err.message || String(err)), 'error');
+            });
+        } catch (e) {
+          showResult('Could not read the link. Paste the full URL (e.g. https://lumo-22-production.up.railway.app/captions-intake?t=... or .../captions-thank-you?session_id=...)', 'error');
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

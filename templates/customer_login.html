@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Log in | Lumo 22</title>
-  <meta name="description" content="Log in to your Lumo 22 account. Access your Digital Front Desk, Chat, and Captions in one place.">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
+  <meta name="description" content="Log in to your Lumo 22 account. Access your Digital Front Desk and Captions in one place.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Encode+Sans+Condensed:wght@400;500;600;700;800;900&family=PT+Sans+Narrow:wght@400;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
@@ -37,7 +38,6 @@
     <div class="lumo-nav-links">
       <a href="/captions">Captions</a>
       <a href="/digital-front-desk">Front Desk</a>
-      <a href="/digital-front-desk#pricing">Pricing</a>
     </div>
     <a href="/signup" class="lumo-nav-cta">Sign up</a>
   </nav>
@@ -47,7 +47,7 @@
       <div class="block-inner auth-form-wrap">
         <p class="block-label">Your account</p>
         <h1 class="block-title">Log in</h1>
-        <p class="block-desc">Access your Digital Front Desk, Chat, and Captions in one place.</p>
+        <p class="block-desc">Access your Digital Front Desk and Captions in one place.</p>
 
         <form id="login-form">
           <label for="email">Email</label>
@@ -69,23 +69,7 @@
     </div>
   </section>
 
-  <footer class="footer">
-    <div class="footer-inner">
-      <div>
-        <a href="/" class="footer-brand">Lumo 22</a>
-        <p class="footer-tagline">Lighting the way to better business</p>
-        <p class="footer-questions">Questions? <a href="mailto:hello@lumo22.com">hello@lumo22.com</a></p>
-      </div>
-      <div class="footer-links">
-        <a href="/captions">Captions</a>
-        <a href="/digital-front-desk">Front Desk</a>
-        <a href="/digital-front-desk#pricing">Pricing</a>
-        <a href="/terms">Terms</a>
-        <a href="mailto:hello@lumo22.com">Contact</a>
-      </div>
-    </div>
-    <div class="footer-bottom">© Lumo 22. All rights reserved.</div>
-  </footer>
+  {% include '_footer.html' %}
 
   <script>
     (function() {
@@ -112,12 +96,12 @@
         .then(function(data) {
           if (data.ok) {
             msg.className = 'auth-msg success';
-            msg.textContent = 'Logged in. Redirecting…';
+            msg.textContent = 'You\'re in. Taking you to your account…';
             msg.style.display = 'block';
             window.location.href = next;
           } else {
             msg.className = 'auth-msg error';
-            msg.textContent = data.error || 'Invalid email or password';
+            msg.textContent = data.error || 'That email or password doesn't look right.';
             msg.style.display = 'block';
             btn.disabled = false;
             btn.textContent = 'Log in';
@@ -125,7 +109,7 @@
         })
         .catch(function() {
           msg.className = 'auth-msg error';
-          msg.textContent = 'Network error. Please try again.';
+          msg.textContent = 'Something didn\'t send — try again.';
           msg.style.display = 'block';
           btn.disabled = false;
           btn.textContent = 'Log in';

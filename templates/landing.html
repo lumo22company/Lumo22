@@ -5,10 +5,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Lumo 22 | Social Captions & Digital Front Desk</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='images/logo.png') }}">
+  <link rel="icon" type="image/png" sizes="48x48" href="{{ url_for('static', filename='images/logo.png') }}">
+  <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='images/logo.png') }}">
   <meta name="description" content="30 days of social media captions for small businesses. A digital front desk that replies instantly, qualifies, and converts.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Encode+Sans+Condensed:wght@400;500;600;700;800;900&family=PT+Sans+Narrow:wght@400;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v={{ asset_version }}">
 </head>
 <body class="lumo-landing">
@@ -18,30 +22,76 @@
     <div class="lumo-nav-links">
       <a href="/captions">Captions</a>
       <a href="/digital-front-desk">Front Desk</a>
-      <a href="/digital-front-desk#pricing">Pricing</a>
     </div>
-    {% if current_customer %}<a href="/account" class="lumo-nav-cta">Account</a>{% else %}<a href="/login" class="lumo-nav-cta">Log in</a>{% endif %}
+    {% if current_customer %}<a href="/account" class="lumo-nav-cta">Account</a>{% else %}<span style="display: inline-flex; align-items: center; gap: 0.75rem;"><a href="/login" style="color: var(--lum-text-muted); text-decoration: none; font-size: 0.9rem;">Log in</a><a href="/signup" class="lumo-nav-cta">Sign up</a></span>{% endif %}
   </nav>
 
-  <!-- SECTION 1 — Full-screen canvas hero. Volumetric mist + cursor displace. Fallback: static gradient if no canvas / reduced motion. -->
-  <section class="hero section-dark" id="hero" aria-label="Hero">
-    <div class="hero-fallback" aria-hidden="true" style="display: none;"></div>
-    <canvas id="hero-canvas" class="hero-canvas" aria-hidden="true"></canvas>
+  <!-- SECTION 1 — Full-screen hero. Solid dark background (no mist) so logo matches. -->
+  <section class="hero section-dark hero-use-fallback" id="hero" aria-label="Hero">
+    <div class="hero-fallback" aria-hidden="true"></div>
     <div class="section-inner">
-      <h1 class="hero-wordmark">Lumo 22</h1>
+      <h1 class="hero-wordmark">
+        <span class="hero-logo-wrap">
+          <span class="hero-logo-mask">
+            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="" class="hero-logo" onerror="this.style.display='none';this.parentNode.nextElementSibling.style.display='block';this.parentNode.nextElementSibling.nextElementSibling.style.display='none';">
+          </span>
+          <span class="hero-wordmark-fallback">LUMO 22</span>
+          <span class="hero-wordmark-text">LUMO 22</span>
+        </span>
+      </h1>
     </div>
-    <p class="hero-scroll" id="hero-scroll">Scroll to explore <span aria-hidden="true">↓</span></p>
+    <p class="hero-scroll" id="hero-scroll" aria-label="Scroll to explore"><span aria-hidden="true">↓</span></p>
   </section>
 
   <!-- SECTION 2 — Intro: light section above split, full width -->
   <section class="intro section-light" id="what-is-lumo" aria-label="Intro">
     <div class="section-inner">
-      <h2 class="intro-headline">Two simple tools that save time and mental space.</h2>
+      <h2 class="intro-headline">Two simple tools that keep your enquiries moving and your marketing consistent</h2>
       <div class="intro-body">
         <p>Bring clarity and order to your enquiries and social content — without extra workload.</p>
-        <p>Lumo 22 builds practical tools for small businesses and independents — designed to handle communication, content, and enquiries without noise.</p>
-        <p>No dashboards to babysit.<br>No robotic tone.<br>Just smart systems that do their job so you can concentrate on doing yours.</p>
+        <p>We help small businesses and independents stay on top of enquiries, content, and communication.</p>
+        <p>Written to sound like you — smart systems that do their job so you can concentrate on doing yours.</p>
       </div>
+    </div>
+  </section>
+
+  <section class="block block-who section-light" data-reveal>
+    <div class="section-inner">
+      <div class="block-inner block-who-inner">
+        <h2 class="block-title">Built for businesses that don't have time for admin</h2>
+        <div class="who-cards">
+          <div class="who-card">
+            <h3 class="who-card-title">Solo service providers</h3>
+            <p class="who-card-desc">If you run everything yourself, Lumo 22 handles enquiries so you don't have to.</p>
+          </div>
+          <div class="who-card">
+            <h3 class="who-card-title">Busy studios & small teams</h3>
+            <p class="who-card-desc">When messages and bookings pile up, Lumo 22 keeps everything moving.</p>
+          </div>
+          <div class="who-card">
+            <h3 class="who-card-title">Anyone tired of managing availability manually</h3>
+            <p class="who-card-desc">Stop juggling calendars and let Lumo 22 organise your schedule.</p>
+          </div>
+          <div class="who-card">
+            <h3 class="who-card-title">Anyone who wants to show up on social without the grind</h3>
+            <p class="who-card-desc">Get a month of captions written for you so your marketing actually happens.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block block-trust section-dark" data-reveal>
+    <div class="section-inner">
+    <div class="block-inner block-trust-inner">
+      <h2 class="block-title">Why Lumo 22?</h2>
+      <p class="block-trust-proof">Trusted by independents and small teams.</p>
+      <div class="trust-grid">
+        <div class="trust-item"><h4>No lock-in</h4><p>One-off and flexible plans.</p></div>
+        <div class="trust-item"><h4>Human-led, AI-assisted</h4><p>Tools that scale your work.</p></div>
+        <div class="trust-item"><h4>Built for busy people</h4><p>For founders and small teams.</p></div>
+      </div>
+    </div>
     </div>
   </section>
 
@@ -52,14 +102,14 @@
       <a href="/digital-front-desk" class="split-panel split-left">
         <div class="split-content">
           <h2 class="split-title">Digital Front Desk</h2>
-          <p class="split-desc">Your virtual receptionist, 24/7. Replies to every enquiry, qualifies leads, books appointments.</p>
+          <p class="split-desc">Never miss an enquiry. We reply, book, and keep your schedule sorted.</p>
           <span class="split-cta">Explore Digital Front Desk</span>
         </div>
       </a>
       <a href="/captions" class="split-panel split-right">
         <div class="split-content">
           <h2 class="split-title">30 Days of Social Captions</h2>
-          <p class="split-desc">A month of copy, written for you. Done-for-you captions. Copy, edit, post.</p>
+          <p class="split-desc">Show up consistently without the grind. A month of posts, planned and written for you.</p>
           <span class="split-cta">View Caption Plans</span>
         </div>
       </a>
@@ -67,37 +117,7 @@
     </div>
   </section>
 
-  <section class="block block-trust section-dark" data-reveal>
-    <div class="section-inner">
-    <div class="block-inner block-trust-inner">
-      <p class="block-label">Why Lumo 22</p>
-      <h2 class="block-title">Clarity. Experience. Outcomes.</h2>
-      <div class="trust-grid">
-        <div class="trust-item"><h4>No lock-in</h4><p>One-off and flexible plans.</p></div>
-        <div class="trust-item"><h4>Human-led, AI-assisted</h4><p>Tools that scale your work.</p></div>
-        <div class="trust-item"><h4>Built for busy people</h4><p>For founders and small teams.</p></div>
-      </div>
-    </div>
-    </div>
-  </section>
-
-  <footer class="footer">
-    <div class="footer-inner">
-      <div>
-        <a href="/" class="footer-brand">Lumo 22</a>
-        <p class="footer-tagline">Lighting the way to better business</p>
-        <p class="footer-questions">Questions or want to chat? Drop us a line → <a href="mailto:hello@lumo22.com">hello@lumo22.com</a></p>
-      </div>
-      <div class="footer-links">
-        <a href="/captions">Captions</a>
-        <a href="/digital-front-desk">Front Desk</a>
-        <a href="/digital-front-desk#pricing">Pricing</a>
-        <a href="/terms">Terms</a>
-        <a href="mailto:hello@lumo22.com">Contact</a>
-      </div>
-    </div>
-    <div class="footer-bottom">© Lumo 22. All rights reserved.</div>
-  </footer>
+  {% include '_footer.html' %}
 
   <script src="https://unpkg.com/lenis@1.1.13/dist/lenis.min.js"></script>
   <script src="{{ url_for('static', filename='js/lenis-smooth-scroll.js') }}?v={{ asset_version }}"></script>

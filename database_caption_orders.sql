@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS caption_orders (
 );
 
 CREATE INDEX IF NOT EXISTS idx_caption_orders_token ON caption_orders(token);
+CREATE INDEX IF NOT EXISTS idx_caption_orders_stripe_session_id ON caption_orders(stripe_session_id);
 CREATE INDEX IF NOT EXISTS idx_caption_orders_status ON caption_orders(status);
 CREATE INDEX IF NOT EXISTS idx_caption_orders_created_at ON caption_orders(created_at DESC);
 

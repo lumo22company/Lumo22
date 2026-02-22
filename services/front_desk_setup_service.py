@@ -35,22 +35,38 @@ class FrontDeskSetupService:
         business_name: str,
         enquiry_email: str,
         booking_link: Optional[str] = None,
+        tone: Optional[str] = None,
+        reply_style_examples: Optional[str] = None,
+        tight_scheduling_enabled: bool = False,
+        minimum_gap_between_appointments: int = 60,
+        auto_reply_enabled: bool = True,
+        skip_reply_domains: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Insert a full Front Desk setup. Returns dict with id, done_token, forwarding_email, status."""
         done_token = secrets.token_urlsafe(24)
         short_id = secrets.token_hex(6)
         domain = (Config.INBOUND_EMAIL_DOMAIN or "inbound.lumo22.com").strip().lower()
         forwarding_email = f"reply-{short_id}@{domain}"
+        gap = max(15, min(480, minimum_gap_between_appointments))  # clamp 15–480 minutes
+        skip_domains = (skip_reply_domains or "").strip() or None
+        tone_val = (tone or "").strip() or None
+        examples_val = (reply_style_examples or "").strip() or None
         row = {
             "done_token": done_token,
             "customer_email": customer_email,
             "business_name": business_name,
             "enquiry_email": enquiry_email,
             "booking_link": booking_link,
+            "tone": tone_val,
+            "reply_style_examples": examples_val,
             "forwarding_email": forwarding_email,
-            "status": "pending",
+            "status": "connected",
             "product_type": "front_desk",
             "chat_enabled": False,
+            "tight_scheduling_enabled": tight_scheduling_enabled,
+            "minimum_gap_between_appointments": gap,
+            "auto_reply_enabled": auto_reply_enabled,
+            "skip_reply_domains": skip_domains,
         }
         result = self.client.table(self.table).insert(row).execute()
         if not result.data:
@@ -82,13 +98,19 @@ class FrontDeskSetupService:
         enquiry_email: str,
         booking_link: Optional[str] = None,
         business_description: Optional[str] = None,
+        enquiry_types: Optional[list] = None,
+        opening_hours: Optional[str] = None,
+        reply_same_day: bool = False,
+        reply_24h: bool = False,
+        tone: Optional[str] = None,
+        good_lead_rules: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
         """Update a chat_only setup with form data and set chat_widget_key, chat_enabled. Returns updated row or None."""
         setup = self.get_by_done_token(done_token)
         if not setup or (setup.get("product_type") or "front_desk") != "chat_only":
             return None
         chat_widget_key = secrets.token_urlsafe(20)
-        result = self.client.table(self.table).update({
+        update_data = {
             "business_name": (business_name or "").strip(),
             "enquiry_email": (enquiry_email or "").strip(),
             "booking_link": (booking_link or "").strip() or None,
@@ -96,7 +118,18 @@ class FrontDeskSetupService:
             "chat_widget_key": chat_widget_key,
             "chat_enabled": True,
             "updated_at": datetime.utcnow().isoformat(),
-        }).eq("id", setup["id"]).execute()
+        }
+        if enquiry_types is not None:
+            update_data["enquiry_types"] = enquiry_types
+        if opening_hours is not None:
+            update_data["opening_hours"] = (opening_hours or "").strip() or None
+        update_data["reply_same_day"] = bool(reply_same_day)
+        update_data["reply_24h"] = bool(reply_24h)
+        if tone is not None:
+            update_data["tone"] = (tone or "").strip() or None
+        if good_lead_rules is not None:
+            update_data["good_lead_rules"] = (good_lead_rules or "").strip() or None
+        result = self.client.table(self.table).update(update_data).eq("id", setup["id"]).execute()
         if not result.data:
             return None
         out = result.data[0]
@@ -125,6 +158,14 @@ class FrontDeskSetupService:
             return result.data[0]
         return None
 
+    def get_by_customer_email(self, email: str) -> list:
+        """Get all setups (DFD + chat) for a customer email."""
+        if not email or "@" not in email:
+            return []
+        e = email.strip().lower()
+        result = self.client.table(self.table).select("*").eq("customer_email", e).order("created_at", desc=True).execute()
+        return result.data or []
+
     def get_by_chat_widget_key(self, widget_key: str) -> Optional[Dict[str, Any]]:
         """Get setup by chat_widget_key (for /api/chat)."""
         if not widget_key:
@@ -141,3 +182,36 @@ class FrontDeskSetupService:
             "updated_at": datetime.utcnow().isoformat(),
         }).eq("id", setup_id).execute()
         return bool(result.data)
+
+    def set_auto_reply_by_done_token(self, done_token: str, enabled: bool) -> bool:
+        """Turn auto-reply on or off for a setup (by secret done_token). Returns True if updated."""
+        if not done_token:
+            return False
+        setup = self.get_by_done_token(done_token)
+        if not setup or (setup.get("product_type") or "front_desk") != "front_desk":
+            return False
+        result = self.client.table(self.table).update({
+            "auto_reply_enabled": bool(enabled),
+            "updated_at": datetime.utcnow().isoformat(),
+        }).eq("id", setup["id"]).execute()
+        return bool(result.data)
+
+    def disable_chat_for_customer(self, customer_email: str) -> int:
+        """
+        Set chat_enabled=False for all setups with this customer_email that have chat.
+        Used when DFD/chat subscription is cancelled so the embedded widget stops working.
+        Returns number of setups updated.
+        """
+        if not customer_email or "@" not in customer_email:
+            return 0
+        setups = self.get_by_customer_email(customer_email)
+        count = 0
+        for s in setups:
+            if s.get("chat_enabled") and s.get("chat_widget_key"):
+                result = self.client.table(self.table).update({
+                    "chat_enabled": False,
+                    "updated_at": datetime.utcnow().isoformat(),
+                }).eq("id", s["id"]).execute()
+                if result.data:
+                    count += 1
+        return count

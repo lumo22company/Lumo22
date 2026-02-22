@@ -4,10 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Complete your setup | Lumo 22 Digital Front Desk</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Encode+Sans+Condensed:wght@400;500;600;700&family=PT+Sans+Narrow:wght@400;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v={{ asset_version }}">
   <style>
     .setup-page { padding: 6rem 1.5rem 4rem; max-width: 520px; margin: 0 auto; }
     .setup-page h1 { font-family: var(--font-display); font-size: 1.75rem; margin-bottom: 0.5rem; }
@@ -54,7 +55,6 @@
     <div class="lumo-nav-links">
       <a href="/captions">Captions</a>
       <a href="/digital-front-desk">Front Desk</a>
-      <a href="/digital-front-desk#pricing">Pricing</a>
     </div>
     {% if current_customer %}<a href="/account" class="lumo-nav-cta">Account</a>{% else %}<a href="/login" class="lumo-nav-cta">Log in</a>{% endif %}
   </nav>
@@ -88,10 +88,10 @@
 
           <label for="business_description">About your business <span style="font-weight:400;color:var(--lum-text-muted);">(optional)</span></label>
           <textarea id="business_description" name="business_description" rows="3" placeholder="e.g. We're a beauty salon in London. We offer facials, lashes, and brows. Open Tue–Sat."></textarea>
-          <p class="hint">A short description helps the chat answer visitors in your voice.</p>
+          <p class="hint">A couple of sentences is enough — helps the chat answer in your voice.</p>
 
           <div class="step-actions">
-            <button type="button" class="btn-submit" id="btn-continue">Continue</button>
+            <button type="button" class="btn-submit" id="btn-continue">Next step</button>
             <a href="#" class="step-skip" id="link-skip-step">Skip this step — get my embed code</a>
           </div>
         </div>
@@ -137,7 +137,7 @@
 
           <div class="step-actions" style="margin-top: 1.5rem;">
             <button type="button" class="btn-submit" id="btn-back-step">← Back</button>
-            <button type="button" class="btn-submit" id="chat-btn-review">Review my answers</button>
+            <button type="button" class="btn-submit" id="chat-btn-review">Next step</button>
           </div>
         </div>
         <div id="chat-review-step" class="form-step">
@@ -147,7 +147,7 @@
           <div id="chat-review-content"></div>
           <div class="step-actions" style="margin-top: 1.5rem;">
             <button type="button" class="btn-submit btn-secondary" id="chat-btn-edit">← Edit</button>
-            <button type="button" class="btn-submit" id="submit-btn">Finish setup &amp; get embed code</button>
+            <button type="button" class="btn-submit" id="submit-btn">Send request</button>
           </div>
         </div>
       </form>
@@ -180,7 +180,7 @@
       <form id="front-desk-setup-form" action="#" method="post">
         <label for="customer_email">Your email</label>
         <input type="email" id="customer_email" name="customer_email" placeholder="you@yourbusiness.com" required>
-        <p class="hint">The email we'll use to contact you about your account.</p>
+        <p class="hint">Just so we know who to reply to.</p>
 
         <label for="business_name">Business name</label>
         <input type="text" id="business_name" name="business_name" placeholder="Your business or practice name" required>
@@ -192,6 +192,20 @@
         <label for="booking_link">Booking link <span style="font-weight:400;color:var(--lum-text-muted);">(Growth & Pro)</span></label>
         <input type="url" id="booking_link" name="booking_link" placeholder="https://calendly.com/you or https://fresha.com/...">
         <p class="hint">Your Calendly, Fresha, or other booking page. Leave blank if you're on Starter or don't use one yet.</p>
+
+        <fieldset style="border:0; padding:0; margin:0 0 1.25rem;">
+          <legend style="font-size:0.9rem; font-weight:500; margin-bottom:0.5rem; color:var(--lum-text);">Reply tone & voice</legend>
+          <label style="display:block; font-size:0.9rem; font-weight:500; margin-bottom:0.5rem; color:var(--lum-text);">How should replies sound?</label>
+          <div class="radio-group">
+            <label class="radio-item"><input type="radio" name="tone" value="friendly_relaxed"> <span>Friendly & relaxed</span></label>
+            <label class="radio-item"><input type="radio" name="tone" value="professional_smart" checked> <span>Professional & smart</span></label>
+            <label class="radio-item"><input type="radio" name="tone" value="warm_reassuring"> <span>Warm & reassuring</span></label>
+            <label class="radio-item"><input type="radio" name="tone" value="short_direct"> <span>Short & direct</span></label>
+          </div>
+          <label for="reply_style_examples">Optional: example replies <span style="font-weight:400;color:var(--lum-text-muted);">(for a closer match)</span></label>
+          <textarea id="reply_style_examples" name="reply_style_examples" rows="3" placeholder="Paste 1–2 example replies you've sent to clients. We'll match your style. Skip if you prefer."></textarea>
+          <p class="hint">Helps us write in your voice. Optional — the tone above is enough for most.</p>
+        </fieldset>
 
         <fieldset style="border:0; padding:0; margin:0 0 1.25rem;">
           <legend style="font-size:0.9rem; font-weight:500; margin-bottom:0.5rem; color:var(--lum-text);">Who gets auto-replies</legend>
@@ -227,14 +241,14 @@
         <div id="dfd-review-content"></div>
         <div class="review-actions">
           <button type="button" class="btn-submit btn-secondary" id="dfd-btn-edit">Edit</button>
-          <button type="button" class="btn-submit" id="dfd-btn-confirm">Confirm &amp; submit</button>
+          <button type="button" class="btn-submit" id="dfd-btn-confirm">Send details</button>
         </div>
       </div>
       <p class="back"><a href="/digital-front-desk">← Back to Digital Front Desk</a></p>
     </div>
 
     <div id="success-msg">
-      <p style="margin:0 0 0.5rem; font-weight: 600;">We've received your setup.</p>
+      <p style="margin:0 0 0.5rem; font-weight: 600;">Request received. We'll take it from here.</p>
       <p style="margin:0; color: var(--lum-text-muted); line-height: 1.6;">We'll connect your enquiry email and booking link and have you live within 24 hours. If we need anything else we'll email you.</p>
       <div id="create-account-box" style="margin-top: 1.5rem; padding: 1.25rem; background: var(--lum-surface-elevated); border: 1px solid var(--lum-border); border-radius: 8px;">
         <p style="margin:0 0 0.75rem; font-weight: 600; font-size: 0.95rem;">Create an account</p>
@@ -357,9 +371,6 @@
           var toneEl = form.querySelector('input[name="tone"]:checked');
           payload.tone = toneEl ? toneEl.value : null;
           payload.good_lead_rules = (form.good_lead_rules && form.good_lead_rules.value || '').trim() || null;
-          // TODO: Backend — persist enquiry_types, opening_hours, reply_same_day, reply_24h, tone, good_lead_rules to database (e.g. front_desk_setups or chat_config table).
-          // TODO: Chat logic — pass tone + good_lead_rules (and availability) into reply generation for tailored, on-brand conversations.
-          // TODO: Per-plan feature gating — optional step 2 or richer fields could be gated by plan later.
         }
         return payload;
       }
@@ -389,12 +400,12 @@
               if (caEmail && data.customer_email) caEmail.value = (data.customer_email || '').trim();
             } else {
               if (btn) { btn.disabled = false; btn.textContent = origText; }
-              alert(data.error || 'Something went wrong. Please try again or email hello@lumo22.com.');
+              alert(data.error || 'Something didn\'t send — try again or email hello@lumo22.com.');
             }
           })
           .catch(function() {
             if (btn) { btn.disabled = false; btn.textContent = origText; }
-            alert('Network error. Please try again or email hello@lumo22.com.');
+            alert('Something didn\'t send — try again or email hello@lumo22.com.');
           });
       }
 
@@ -413,11 +424,15 @@
         var gapInput = form.querySelector('#minimum_gap_between_appointments');
         var autoReplyCheck = form.querySelector('#auto_reply_enabled');
         var skipDomainsInput = form.querySelector('#skip_reply_domains');
+        var toneEl = form.querySelector('input[name="tone"]:checked');
+        var examplesEl = form.querySelector('#reply_style_examples');
         return {
           customer_email: (form.customer_email && form.customer_email.value || '').trim(),
           business_name: (form.business_name && form.business_name.value || '').trim(),
           enquiry_email: (form.enquiry_email && form.enquiry_email.value || '').trim(),
           booking_link: (form.booking_link && form.booking_link.value || '').trim() || null,
+          tone: toneEl ? toneEl.value : null,
+          reply_style_examples: (examplesEl && examplesEl.value || '').trim() || null,
           tight_scheduling_enabled: !!(tightCheck && tightCheck.checked),
           minimum_gap_between_appointments: (gapInput && gapInput.value) ? parseInt(gapInput.value, 10) : 60,
           auto_reply_enabled: !!(autoReplyCheck && autoReplyCheck.checked),
@@ -428,8 +443,8 @@
       function submitDfdForm() {
         var btn = document.getElementById('dfd-btn-confirm');
         if (!btn) btn = document.getElementById('submit-btn');
-        var origText = btn ? btn.textContent : 'Submit setup';
-        if (btn) { btn.disabled = true; btn.textContent = 'Submitting…'; }
+        var origText = btn ? btn.textContent : 'Send request';
+        if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
         var payload = buildDfdPayload();
         fetch('/api/front-desk-setup', {
           method: 'POST',
@@ -445,12 +460,12 @@
               if (caEmail && data.customer_email) caEmail.value = (data.customer_email || '').trim();
             } else {
               if (btn) { btn.disabled = false; btn.textContent = origText; }
-              alert(data.error || 'Something went wrong. Please try again or email hello@lumo22.com.');
+              alert(data.error || 'Something didn\'t send — try again or email hello@lumo22.com.');
             }
           })
           .catch(function() {
             if (btn) { btn.disabled = false; btn.textContent = origText; }
-            alert('Network error. Please try again or email hello@lumo22.com.');
+            alert('Something didn\'t send — try again or email hello@lumo22.com.');
           });
       }
 
@@ -480,6 +495,9 @@
           dfdReviewContent.appendChild(dfdSect('Business name', p.business_name));
           dfdReviewContent.appendChild(dfdSect('Enquiry email to monitor', p.enquiry_email));
           dfdReviewContent.appendChild(dfdSect('Booking link', p.booking_link));
+          var toneLabels = { friendly_relaxed: 'Friendly & relaxed', professional_smart: 'Professional & smart', warm_reassuring: 'Warm & reassuring', short_direct: 'Short & direct' };
+          dfdReviewContent.appendChild(dfdSect('Reply tone', toneLabels[p.tone] || p.tone || 'Professional & smart'));
+          if (p.reply_style_examples) dfdReviewContent.appendChild(dfdSect('Example replies', p.reply_style_examples));
           dfdReviewContent.appendChild(dfdSect('Domains to never auto-reply', p.skip_reply_domains));
           dfdReviewContent.appendChild(dfdSect('Auto-reply', p.auto_reply_enabled ? 'Yes' : 'No'));
           dfdReviewContent.appendChild(dfdSect('Tight scheduling', p.tight_scheduling_enabled ? 'Yes (gap: ' + p.minimum_gap_between_appointments + ' min)' : 'No'));
@@ -518,7 +536,7 @@
           e.preventDefault();
           var email = document.getElementById('ca-email').value.trim();
           var pw = document.getElementById('ca-password').value;
-          if (!email) { alert('Email is required.'); return; }
+          if (!email) { alert('Just need your email to continue.'); return; }
           if (pw.length < 6) { alert('Password must be at least 6 characters.'); return; }
           var btn = document.getElementById('ca-btn');
           btn.disabled = true;
@@ -534,13 +552,13 @@
               document.getElementById('create-account-form').style.display = 'none';
               document.getElementById('ca-done').style.display = 'block';
             } else {
-              alert(data.error || 'Something went wrong.');
+              alert(data.error || 'Something didn\'t go through — try again.');
               btn.disabled = false;
               btn.textContent = 'Create account';
             }
           })
           .catch(function() {
-            alert('Network error. Please try again.');
+            alert('Something didn\'t send — try again.');
             btn.disabled = false;
             btn.textContent = 'Create account';
           });
@@ -548,5 +566,6 @@
       }
     })();
   </script>
+  {% include '_footer.html' %}
 </body>
 </html>

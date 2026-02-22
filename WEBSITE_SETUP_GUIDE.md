@@ -1,52 +1,31 @@
-# Website Setup Guide - Pricing Page
+# Website Setup Guide - Lumo 22
 
-Create a professional pricing page where customers can choose their tier.
+The Lumo 22 app includes a full site with landing page, product pages, and pricing.
 
 ---
 
-## Option 1: Use the HTML File I Created (Easiest)
+## Option 1: Use the Built-in App (Current Setup)
 
-I've created `pricing-page.html` for you. Here's how to use it:
+The app serves:
+- **Landing:** `/` — Hero, split panels (Digital Front Desk + Captions)
+- **Pricing:** `/digital-front-desk#pricing` — Starter, Growth, Pro with Stripe links
+- **Activate:** `/activate` — Plan selection, T&Cs, checkout
+- **Captions:** `/captions` — 30 Days Captions product
+- **Website Chat:** `/website-chat` — Chat Assistant £59
 
-### Step 1: Edit the Payment Links
+### Stripe Links
 
-1. Open `pricing-page.html` in a text editor
-2. Find these three lines and replace with your Stripe links:
-   - `YOUR_STRIPE_STARTER_LINK_HERE` → Your £79/month Stripe link
-   - `YOUR_STRIPE_STANDARD_LINK_HERE` → Your £149/month Stripe link
-   - `YOUR_STRIPE_PREMIUM_LINK_HERE` → Your £299/month Stripe link
+Payment links are configured in Railway (or `.env`):
+- `ACTIVATION_LINK_STARTER`, `ACTIVATION_LINK_STANDARD`, `ACTIVATION_LINK_PREMIUM`
+- `CHAT_PAYMENT_LINK` — standalone chat £59
+- Bundle links: `ACTIVATION_LINK_STARTER_BUNDLE`, etc.
 
-### Step 2: Host It
+### Success URLs
 
-**Option A: Free Hosting (Easiest)**
-- **Netlify Drop:** https://app.netlify.com/drop
-  - Drag and drop your HTML file
-  - Get instant URL (e.g., `yourname.netlify.app`)
-- **GitHub Pages:** Upload to GitHub, enable Pages
-- **Vercel:** Drag and drop, instant hosting
-
-**Option B: Simple Website Builder**
-- **Carrd:** https://carrd.co (free tier available)
-  - Copy/paste the content
-  - Add your Stripe links as buttons
-- **Notion:** Create a page, publish it
-- **Google Sites:** Free, simple
-
-**Option C: Your Own Domain**
-- Buy domain (e.g., `aireceptionist.co.uk`)
-- Host on Netlify/Vercel (free)
-- Connect domain
-
-### Step 3: Update Your AI Email
-
-Instead of linking directly to Stripe, link to your pricing page:
-
-```
-Activate your AI receptionist here:
-https://your-pricing-page.com
-
-Choose the plan that works for you and activate instantly.
-```
+In Stripe, set each payment link's Success URL:
+- Front Desk / Bundles: `{BASE_URL}/activate-success`
+- Chat only: `{BASE_URL}/website-chat-success`
+- Captions: `{BASE_URL}/captions-thank-you`
 
 ---
 

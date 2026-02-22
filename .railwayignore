@@ -1,0 +1,27 @@
+# Railway deploy: exclude only these (used with railway up --no-gitignore)
+# Everything else in the folder is uploaded, including uncommitted changes.
+
+.env
+.env.*
+!.env.example
+
+.git/
+.cursor/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+venv/
+.venv/
+ENV/
+env/
+
+*.log
+logs/
+.DS_Store
+
+*.db
+*.sqlite
+*.sqlite3

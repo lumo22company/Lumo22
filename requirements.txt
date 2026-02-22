@@ -10,3 +10,7 @@ sendgrid==6.11.0
 stripe==8.0.0
 gunicorn==21.2.0
 werkzeug==3.0.1
+psycopg2-binary==2.9.9
+reportlab==4.0.7
+pypdf==4.0.0
+apscheduler==3.10.4

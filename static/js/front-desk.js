@@ -177,8 +177,8 @@
       showTyping(function () {
         showResult(
           'Get my 30 days',
-          '/captions-checkout',
-          'Based on what you shared, the 30 Days of Social Captions is a strong fit. You’ll get tailored content for your business. Hit the button to order — you’ll go through checkout and then complete a short intake form.'
+          '/captions',
+          'Based on what you shared, the 30 Days of Social Captions is a strong fit. You’ll get tailored content for your business. Hit the button to order — you’ll go through checkout and then complete a short form.'
         );
       });
       return;

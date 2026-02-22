@@ -29,6 +29,17 @@ class CustomerAuthService:
         self.client: Client = create_client(url, (Config.SUPABASE_KEY or "").strip())
         self.table = "customers"
 
+    def _generate_referral_code(self) -> str:
+        """Generate unique 8-char alphanumeric referral code."""
+        import string
+        chars = string.ascii_uppercase + string.digits
+        for _ in range(20):
+            code = "".join(secrets.choice(chars) for _ in range(8))
+            existing = self.get_by_referral_code(code)
+            if not existing:
+                return code
+        return secrets.token_urlsafe(6).upper().replace("-", "").replace("_", "")[:8]
+
     def get_by_email(self, email: str) -> Optional[Dict[str, Any]]:
         """Get customer by email."""
         if not email or "@" not in email:
@@ -39,7 +50,36 @@ class CustomerAuthService:
             return result.data[0]
         return None
 
-    def create(self, email: str, password: str) -> Dict[str, Any]:
+    def get_by_referral_code(self, code: str) -> Optional[Dict[str, Any]]:
+        """Get customer by referral code (case-insensitive)."""
+        if not code or len(code) < 4:
+            return None
+        c = code.strip().upper()
+        result = self.client.table(self.table).select("id, email").eq("referral_code", c).execute()
+        if result.data and len(result.data) > 0:
+            return result.data[0]
+        return None
+
+    def ensure_referral_code(self, customer_id: str) -> Optional[str]:
+        """Ensure customer has a referral code; generate if missing. Returns code or None."""
+        result = self.client.table(self.table).select("referral_code").eq("id", customer_id).execute()
+        if not result.data or len(result.data) == 0:
+            return None
+        c = result.data[0]
+        code = (c.get("referral_code") or "").strip()
+        if code:
+            return code
+        code = self._generate_referral_code()
+        try:
+            self.client.table(self.table).update({
+                "referral_code": code,
+                "updated_at": datetime.utcnow().isoformat(),
+            }).eq("id", customer_id).execute()
+            return code
+        except Exception:
+            return None
+
+    def create(self, email: str, password: str, referral_code: Optional[str] = None) -> Dict[str, Any]:
         """Create customer with hashed password. Raises if email exists."""
         if not email or "@" not in email:
             raise ValueError("Valid email required")
@@ -49,9 +89,16 @@ class CustomerAuthService:
         if existing:
             raise ValueError("An account with this email already exists")
         pw_hash = generate_password_hash(password, method="pbkdf2:sha256")
+        referrer_id = None
+        if referral_code:
+            referrer = self.get_by_referral_code(referral_code)
+            if referrer:
+                referrer_id = referrer.get("id")
         row = {
             "email": email.strip().lower(),
             "password_hash": pw_hash,
+            "referral_code": self._generate_referral_code().upper(),
+            "referred_by_customer_id": referrer_id,
         }
         result = self.client.table(self.table).insert(row).execute()
         if not result.data:

@@ -4,11 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>You're in | Lumo 22</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
   <meta name="description" content="Thanks for activating your Digital Front Desk. We've sent next steps to your email.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
+  <link href="https://fonts.googleapis.com/css2?family=PT+Sans+Narrow:wght@400;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v={{ asset_version }}">
   <style>
     .success-section { padding-top: 8rem; padding-bottom: 4rem; min-height: 60vh; display: flex; align-items: center; justify-content: center; }
     .success-card { max-width: 480px; margin: 0 auto; padding: 2.5rem; background: var(--lum-card-bg, rgba(255,255,255,0.03)); border-radius: 16px; border: 1px solid var(--lum-border); text-align: center; }
@@ -26,7 +27,6 @@
     <div class="lumo-nav-links">
       <a href="/captions">Captions</a>
       <a href="/digital-front-desk">Front Desk</a>
-      <a href="/plans">Pricing</a>
     </div>
     <a href="/digital-front-desk" class="lumo-nav-cta">Front Desk</a>
   </nav>
@@ -34,8 +34,7 @@
   <section class="lumo-section success-section">
     <div class="success-card">
       <h1>You're in</h1>
-      <p>Thanks for activating your Digital Front Desk. We've sent next steps to your email — check your inbox (and spam folder) for a message from us.</p>
-      <p style="font-size: 0.95rem;">We'll be in touch within 24 hours with your setup details. If you have any questions in the meantime, reply to that email.</p>
+      <p>Thanks for activating your Digital Front Desk. Check your inbox (and spam) for an email from us with a link to complete setup — about 2 minutes to get live.</p>
       <div class="back-links">
         <a href="/digital-front-desk">Digital Front Desk</a>
         <span>·</span>
@@ -44,21 +43,6 @@
     </div>
   </section>
 
-  <footer class="lumo-footer">
-    <div class="lumo-footer-inner">
-      <div>
-        <a href="/" class="lumo-footer-brand">Lumo 22</a>
-        <p class="lumo-footer-tagline">Lighting the way to better business</p>
-      </div>
-      <div class="lumo-footer-links">
-        <a href="/captions">Captions</a>
-        <a href="/digital-front-desk">Front Desk</a>
-        <a href="/plans">Pricing</a>
-        <a href="/terms">Terms</a>
-        <a href="mailto:hello@lumo22.com">Contact</a>
-      </div>
-    </div>
-    <div class="lumo-footer-bottom">© Lumo 22. All rights reserved.</div>
-  </footer>
+  {% include '_footer.html' %}
 </body>
 </html>
