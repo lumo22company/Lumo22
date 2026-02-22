@@ -55,13 +55,15 @@
       <div class="checkbox-group">
         <label class="checkbox-item">
           <input type="checkbox" id="group-appointments" name="group_appointments" value="1">
-          <span><strong>Group appointments together</strong></span>
+          <span><strong>Group appointments together</strong> (optional)</span>
         </label>
       </div>
-      <p class="hint">Only show times close to existing bookings to avoid gaps.</p>
-      <label for="gap-minutes">Maximum gap between appointments (minutes)</label>
-      <input type="number" id="gap-minutes" name="gap_minutes" value="60" min="5" max="480" step="5">
-      <p class="hint" title="If enabled, new bookings will be placed close to existing appointments. If your day is empty, all times will still be available.">If enabled, new bookings will be placed close to existing appointments. If your day is empty, all times will still be available.</p>
+      <p class="hint">Turn <strong>off</strong> to see the full timetable—full control over your day. Turn <strong>on</strong> to only show times near existing bookings and avoid gaps.</p>
+      <div id="gap-options" style="display:none; margin-top:0.75rem;">
+        <label for="gap-minutes">Show slots within how many minutes of existing appointments?</label>
+        <input type="number" id="gap-minutes" name="gap_minutes" value="60" min="5" max="480" step="5">
+        <p class="hint">e.g. 60 = within an hour before or after. Empty days always show all times.</p>
+      </div>
     </fieldset>
 
     <section class="slots-section" aria-live="polite">
@@ -141,14 +143,15 @@
           });
       }
 
-      function updateGapDisabled() {
-        gapInput.disabled = !groupCheck.checked;
+      var gapOptions = document.getElementById('gap-options');
+      function updateGapVisibility() {
+        var on = groupCheck.checked;
+        if (gapOptions) gapOptions.style.display = on ? 'block' : 'none';
+        gapInput.disabled = !on;
+        if (dateInput.value) fetchSlots();
       }
-      groupCheck.addEventListener('change', function() {
-        updateGapDisabled();
-        fetchSlots();
-      });
-      updateGapDisabled();
+      groupCheck.addEventListener('change', updateGapVisibility);
+      updateGapVisibility();
 
       dateInput.addEventListener('change', fetchSlots);
       gapInput.addEventListener('change', fetchSlots);

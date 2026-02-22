@@ -221,16 +221,19 @@
         </fieldset>
 
         <fieldset style="border:0; padding:0; margin:0 0 1.25rem;">
-          <legend style="font-size:0.9rem; font-weight:500; margin-bottom:0.5rem; color:var(--lum-text);">Scheduling (optional)</legend>
+          <legend style="font-size:0.9rem; font-weight:500; margin-bottom:0.5rem; color:var(--lum-text);">Group appointments together (optional)</legend>
+          <p class="hint" style="margin-bottom:0.75rem;">Turn <strong>off</strong> for full control—customers see the full timetable. Turn <strong>on</strong> to only offer slots near existing bookings (e.g. if you have 2pm, show 1pm, 2pm, 3pm). Empty days always show all times.</p>
           <div class="checkbox-group" style="margin-bottom:0.75rem;">
             <label class="checkbox-item">
               <input type="checkbox" id="tight_scheduling_enabled" name="tight_scheduling_enabled" value="1">
-              <span>Enable tight scheduling</span>
+              <span>Yes, only show slots near my existing bookings</span>
             </label>
           </div>
-          <label for="minimum_gap_between_appointments">Minimum gap between appointments (minutes)</label>
-          <input type="number" id="minimum_gap_between_appointments" name="minimum_gap_between_appointments" value="60" min="15" max="480" step="15" style="width:6rem; margin-bottom:0.25rem;">
-          <p class="hint" title="If enabled, new appointments will only be scheduled within this time of existing bookings. If no bookings exist, all times are available.">If enabled, new appointments will only be scheduled within this time of existing bookings. If no bookings exist, all times are available.</p>
+          <div id="gap-options-setup" style="display:none; margin-top:0.5rem;">
+            <label for="minimum_gap_between_appointments">Show slots within how many minutes of my appointments?</label>
+            <input type="number" id="minimum_gap_between_appointments" name="minimum_gap_between_appointments" value="60" min="15" max="480" step="15" style="width:6rem; margin-bottom:0.25rem;">
+            <p class="hint">e.g. 60 = within an hour before or after. 30 = tighter grouping.</p>
+          </div>
         </fieldset>
 
         <button type="button" class="btn-submit" id="dfd-btn-review">Review my setup</button>
@@ -412,10 +415,15 @@
       (function() {
         var tightCheck = document.getElementById('tight_scheduling_enabled');
         var gapInput = document.getElementById('minimum_gap_between_appointments');
+        var gapOptions = document.getElementById('gap-options-setup');
         if (tightCheck && gapInput) {
-          function updateGapDisabled() { gapInput.disabled = !tightCheck.checked; }
-          tightCheck.addEventListener('change', updateGapDisabled);
-          updateGapDisabled();
+          function updateGapVisibility() {
+            var on = tightCheck.checked;
+            if (gapOptions) gapOptions.style.display = on ? 'block' : 'none';
+            gapInput.disabled = !on;
+          }
+          tightCheck.addEventListener('change', updateGapVisibility);
+          updateGapVisibility();
         }
       })();
 
@@ -500,7 +508,7 @@
           if (p.reply_style_examples) dfdReviewContent.appendChild(dfdSect('Example replies', p.reply_style_examples));
           dfdReviewContent.appendChild(dfdSect('Domains to never auto-reply', p.skip_reply_domains));
           dfdReviewContent.appendChild(dfdSect('Auto-reply', p.auto_reply_enabled ? 'Yes' : 'No'));
-          dfdReviewContent.appendChild(dfdSect('Tight scheduling', p.tight_scheduling_enabled ? 'Yes (gap: ' + p.minimum_gap_between_appointments + ' min)' : 'No'));
+          dfdReviewContent.appendChild(dfdSect('Group appointments together', p.tight_scheduling_enabled ? 'Yes (within ' + p.minimum_gap_between_appointments + ' min of existing)' : 'No — full timetable, full control'));
           form.style.display = 'none';
           dfdReviewStep.classList.add('show');
         });

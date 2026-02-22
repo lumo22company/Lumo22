@@ -6,31 +6,55 @@ import sys
 def test_filter_slots_tight_scheduling():
     from services.availability import filter_slots_tight_scheduling
 
-    # Slots every hour 9–17
+    # Slots every hour 9–17 (slot_minutes=60)
     base = datetime(2025, 2, 1, 9, 0)
     slot_times = [base + timedelta(hours=i) for i in range(9)]
+    slot_minutes = 60
+    # Existing booking 12:00–13:00
+    existing = [(base + timedelta(hours=3), base + timedelta(hours=4))]
 
-    # Disabled → all slots returned
-    out = filter_slots_tight_scheduling(slot_times, [base + timedelta(hours=12)], enabled=False, window_minutes=60)
-    assert len(out) == 9, f"disabled: expected 9 slots, got {len(out)}"
-    print("  OK disabled → all slots")
+    # Disabled → all non-overlapping slots (12:00 overlaps 12–13, so 8 slots)
+    out = filter_slots_tight_scheduling(
+        slot_times, existing, slot_minutes=slot_minutes, enabled=False, window_minutes=60
+    )
+    assert len(out) == 8, f"disabled: expected 8 slots (12 excluded), got {len(out)}"
+    assert 12 not in [s.hour for s in out]
+    print("  OK disabled → 8 slots (12 excluded by overlap)")
 
     # Enabled, no existing bookings → all slots
-    out = filter_slots_tight_scheduling(slot_times, [], enabled=True, window_minutes=60)
+    out = filter_slots_tight_scheduling(
+        slot_times, [], slot_minutes=slot_minutes, enabled=True, window_minutes=60
+    )
     assert len(out) == 9, f"enabled no bookings: expected 9, got {len(out)}"
     print("  OK enabled, no bookings → all slots")
 
-    # Enabled, one booking at 12:00 → only slots within ±60 min (11, 12, 13)
-    existing = [base + timedelta(hours=3)]  # 12:00
-    out = filter_slots_tight_scheduling(slot_times, existing, enabled=True, window_minutes=60)
-    assert len(out) == 3, f"enabled 1 booking 60min: expected 3, got {len(out)}"
-    assert out[0].hour == 11 and out[1].hour == 12 and out[2].hour == 13
-    print("  OK enabled, 1 booking ±60min → 3 slots")
+    # Enabled, one booking 12:00–13:00 → slots within 60min of range: 10–11 (dist 60m), 11–12 (0), 13–14 (0), 14–15 (60m). 12 excluded overlap.
+    out = filter_slots_tight_scheduling(
+        slot_times, existing, slot_minutes=slot_minutes, enabled=True, window_minutes=60
+    )
+    assert len(out) == 4 and set(s.hour for s in out) == {10, 11, 13, 14}, (
+        f"enabled 1 booking 60min: expected [10,11,13,14], got {[s.hour for s in out]}"
+    )
+    print("  OK enabled, 1 booking ±60min → 4 slots (10, 11, 13, 14; 12 excluded overlap)")
 
-    # 30 min window → only 12:00 slot (and 11:30/12:30 if we had half-hour slots; with hourly we get 11,12,13 still since 11 is 60min away - actually 11 is 1hr from 12, so outside 30min. So we get 12 only? No: window is ±30min so 11:30-12:30. Our slots are 9,10,11,12,13... So 12 is in range. 11 is 60min before 12 so outside 30min. 13 is 60min after 12 so outside. So we get just [12]. Let me verify.
-    out30 = filter_slots_tight_scheduling(slot_times, existing, enabled=True, window_minutes=30)
-    assert len(out30) == 1 and out30[0].hour == 12, f"30min window: expected 1 slot (12), got {len(out30)}"
-    print("  OK enabled, 1 booking ±30min → 1 slot")
+    # 30 min window → 11 (11–12) touches 12–13 at 12, dist=0. 13 (13–14) touches at 13, dist=0. Both in.
+    out30 = filter_slots_tight_scheduling(
+        slot_times, existing, slot_minutes=slot_minutes, enabled=True, window_minutes=30
+    )
+    assert len(out30) == 2 and out30[0].hour == 11 and out30[1].hour == 13, (
+        f"30min: expected [11,13], got {[s.hour for s in out30]}"
+    )
+    print("  OK enabled, 1 booking ±30min → 2 slots (11, 13)")
+
+    # Duration-aware overlap: 90-min slots, booking 12:00–13:00. 11:00 slot = 11:00–12:30, overlaps.
+    slot_times_90 = [base + timedelta(hours=i) for i in range(9)]
+    out90 = filter_slots_tight_scheduling(
+        slot_times_90, existing, slot_minutes=90, enabled=False, window_minutes=60
+    )
+    # 11–12:30 overlaps 12–13; 12–13:30 overlaps. So 11 and 12 excluded. 9,10,13,14,15,16,17 = 7
+    assert 11 not in [s.hour for s in out90], "11:00 90min should be excluded (overlaps 12–13)"
+    assert 12 not in [s.hour for s in out90], "12:00 90min should be excluded (overlaps 12–13)"
+    print("  OK duration-aware: 90min slots exclude overlapping 11 and 12")
 
     print("availability.filter_slots_tight_scheduling: all checks passed")
     return True

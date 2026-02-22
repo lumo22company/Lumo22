@@ -341,11 +341,10 @@ def available_slots():
         work_end = request.args.get("work_end") or None
 
         from services.availability import get_available_slots
-        from services.appointments_service import get_appointment_starts_for_date
-        from datetime import date as date_type
+        from services.appointments_service import get_appointments_for_date
 
         day = datetime.strptime(date_str[:10], "%Y-%m-%d").date()
-        existing = get_appointment_starts_for_date(day)
+        existing = get_appointments_for_date(day, default_duration_minutes=slot_minutes)
         slots = get_available_slots(
             date_str,
             existing,

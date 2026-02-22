@@ -4,9 +4,11 @@ Booking availability for Digital Front Desk.
 - Generates available slot times for a day from working hours and slot length.
 - Optional "tight scheduling": only show slots within a configurable time window
   of existing same-day bookings. If no bookings that day, show all slots.
+- Duration-aware: uses existing booking (start, end) and new appointment duration
+  to exclude overlaps and consider full appointment ranges when clustering.
 """
 from datetime import datetime, timedelta, time
-from typing import List, Union
+from typing import List, Tuple, Union
 
 
 def _parse_work_time(value: Union[str, tuple, None], default_hour: int, default_minute: int) -> time:
@@ -25,7 +27,7 @@ def _parse_work_time(value: Union[str, tuple, None], default_hour: int, default_
 
 def get_available_slots(
     date: Union[datetime, str],
-    existing_booking_times: List[datetime],
+    existing_bookings: Union[List[datetime], List[Tuple[datetime, datetime]]],
     slot_minutes: int = 30,
     work_start: Union[str, tuple, None] = None,
     work_end: Union[str, tuple, None] = None,
@@ -38,13 +40,15 @@ def get_available_slots(
     Slots are generated from work_start to work_end (default 09:00–17:00),
     every slot_minutes. If tight_schedule is True and there are existing
     bookings that day, only slots within gap_minutes of an existing booking
-    are returned. If tight_schedule is True but there are no bookings,
-    all slots are returned (no blocking).
+    are returned (duration-aware: considers booking end times too).
+    Overlapping slots are always excluded.
+    If tight_schedule is True but there are no bookings, all slots are returned.
 
     Args:
         date: The day (date or datetime; time part ignored).
-        existing_booking_times: Start times of existing bookings on that day.
-        slot_minutes: Length of each slot in minutes (default 30).
+        existing_bookings: List of (start, end) tuples, or list of start datetimes
+            (end inferred as start + slot_minutes for backward compat).
+        slot_minutes: Length of each slot / new appointment in minutes (default 30).
         work_start: Start of working day, e.g. "09:00" or (9, 0). Default 09:00.
         work_end: End of working day, e.g. "17:00" or (17, 0). Default 17:00.
         tight_schedule: If True, filter to slots near existing bookings when any exist.
@@ -68,46 +72,87 @@ def get_available_slots(
         slot_times.append(current)
         current += slot_delta
 
-    # Restrict to existing bookings on this day (ignore timezone for date comparison)
-    same_day = []
-    for t in existing_booking_times:
+    # Normalize existing_bookings to (start, end) tuples
+    same_day_ranges: List[Tuple[datetime, datetime]] = []
+    default_delta = timedelta(minutes=slot_minutes)
+    for item in existing_bookings:
         try:
-            dt = t.replace(tzinfo=None) if hasattr(t, "replace") and getattr(t, "tzinfo", None) else t
-            if getattr(dt, "date", None) and dt.date() == day:
-                same_day.append(dt)
+            if isinstance(item, (list, tuple)) and len(item) >= 2:
+                start_dt = item[0]
+                end_dt = item[1]
+            else:
+                start_dt = item
+                end_dt = start_dt + default_delta
+            start_dt = start_dt.replace(tzinfo=None) if getattr(start_dt, "tzinfo", None) else start_dt
+            if getattr(end_dt, "tzinfo", None):
+                end_dt = end_dt.replace(tzinfo=None)
+            if getattr(start_dt, "date", None) and start_dt.date() == day:
+                if end_dt is None or end_dt <= start_dt:
+                    end_dt = start_dt + default_delta
+                same_day_ranges.append((start_dt, end_dt))
         except Exception:
             pass
 
-    # Apply tight scheduling filter when enabled
+    # Apply overlap exclusion (always) and tight scheduling filter when enabled
     return filter_slots_tight_scheduling(
         slot_times,
-        same_day,
+        same_day_ranges,
+        slot_minutes=slot_minutes,
         enabled=tight_schedule,
         window_minutes=max(5, gap_minutes),
     )
 
 
+def _ranges_overlap(
+    a_start: datetime, a_end: datetime,
+    b_start: datetime, b_end: datetime,
+) -> bool:
+    """True if [a_start, a_end) overlaps [b_start, b_end)."""
+    return a_start < b_end and b_start < a_end
+
+
+def _min_distance_between_ranges(
+    a_start: datetime, a_end: datetime,
+    b_start: datetime, b_end: datetime,
+) -> float:
+    """Min distance in seconds between two ranges. 0 if they overlap."""
+    if _ranges_overlap(a_start, a_end, b_start, b_end):
+        return 0.0
+    if a_end <= b_start:
+        return (b_start - a_end).total_seconds()
+    return (a_start - b_end).total_seconds()
+
+
 def filter_slots_by_clustering(
     slot_times: List[datetime],
-    existing_booking_times_same_day: List[datetime],
-    window_hours: float = 1.0,
+    existing_bookings_same_day: List[Tuple[datetime, datetime]],
+    slot_minutes: int,
+    window_minutes: float,
 ) -> List[datetime]:
     """
-    Return slots to show for a given day.
-
-    - If the day has NO existing bookings: return all slot_times.
-    - If the day HAS one or more bookings: return only slots within ±window_hours
-      of any existing booking on that same day.
-
-    Call this before rendering available times (e.g. slot picker from Calendly).
+    Return slots that are within window_minutes of existing bookings.
+    Excludes slots that would overlap existing bookings.
+    Duration-aware: uses (start, end) of existing bookings and slot_minutes for new appt.
     """
-    if not existing_booking_times_same_day:
+    if not existing_bookings_same_day:
         return list(slot_times)
-    window = timedelta(hours=window_hours)
+    window_seconds = window_minutes * 60
+    slot_delta = timedelta(minutes=slot_minutes)
     result = []
     for slot in slot_times:
-        for existing in existing_booking_times_same_day:
-            if abs((slot - existing).total_seconds()) <= window.total_seconds():
+        new_start = slot
+        new_end = slot + slot_delta
+        # Exclude overlapping slots
+        overlaps = any(
+            _ranges_overlap(new_start, new_end, ex_start, ex_end)
+            for ex_start, ex_end in existing_bookings_same_day
+        )
+        if overlaps:
+            continue
+        # Include if within window of any existing booking
+        for ex_start, ex_end in existing_bookings_same_day:
+            dist = _min_distance_between_ranges(new_start, new_end, ex_start, ex_end)
+            if dist <= window_seconds:
                 result.append(slot)
                 break
     return result
@@ -115,26 +160,39 @@ def filter_slots_by_clustering(
 
 def filter_slots_tight_scheduling(
     slot_times: List[datetime],
-    existing_booking_times_same_day: List[datetime],
-    enabled: bool,
+    existing_bookings_same_day: List[Tuple[datetime, datetime]],
+    slot_minutes: int = 30,
+    enabled: bool = False,
     window_minutes: int = 60,
 ) -> List[datetime]:
     """
-    Apply optional tight scheduling: only show slots within window_minutes of
-    existing same-day bookings when enabled; otherwise return all slots.
+    Apply tight scheduling: exclude overlapping slots, and when enabled,
+    only show slots within window_minutes of existing same-day bookings.
 
-    - If enabled is False: return all slot_times (no filtering).
-    - If enabled is True and there are no existing bookings that day: return all slot_times.
-    - If enabled is True and there are existing bookings: return only slots within
-      ±window_minutes of any existing booking (same semantics as filter_slots_by_clustering).
-
-    window_minutes: configurable gap (default 60). Used as the ± window in minutes.
+    - Overlap exclusion: always applied (no double-booking).
+    - If enabled is False: return all non-overlapping slot_times.
+    - If enabled is True and no existing bookings: return all slot_times.
+    - If enabled is True and there are existing bookings: return only slots
+      within window_minutes of any existing booking (considering full ranges).
     """
-    if not enabled:
-        return list(slot_times)
-    window_hours = max(0, window_minutes) / 60.0
+    # Always exclude overlapping slots
+    slot_delta = timedelta(minutes=slot_minutes)
+    non_overlapping = []
+    for slot in slot_times:
+        new_start = slot
+        new_end = slot + slot_delta
+        overlaps = any(
+            _ranges_overlap(new_start, new_end, ex_start, ex_end)
+            for ex_start, ex_end in existing_bookings_same_day
+        )
+        if not overlaps:
+            non_overlapping.append(slot)
+
+    if not enabled or not existing_bookings_same_day:
+        return non_overlapping
     return filter_slots_by_clustering(
-        slot_times,
-        existing_booking_times_same_day,
-        window_hours=window_hours,
+        non_overlapping,
+        existing_bookings_same_day,
+        slot_minutes=slot_minutes,
+        window_minutes=float(window_minutes),
     )

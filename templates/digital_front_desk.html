@@ -57,8 +57,8 @@
           <p class="dfd-feature-desc">Never miss a lead. Reply instantly to every customer email while keeping control—flip the manual override switch whenever you want to step in.</p>
         </article>
         <article class="dfd-feature-card">
-          <h3 class="dfd-feature-title">Smart Scheduling</h3>
-          <p class="dfd-feature-desc">No new system—integrates with Calendly, Fresha, or whatever you already use. Set the duration between appointments or allow back-to-back. Smart Booking only offers slots next to existing ones—avoiding gaps. Toggle on or off; empty days show the full timetable. Your schedule, your rules.</p>
+          <h3 class="dfd-feature-title">Group Appointments Together</h3>
+          <p class="dfd-feature-desc">No new system—integrates with Calendly, Fresha, or whatever you already use. Optional: turn on "Group appointments together" to only offer slots near existing bookings, or leave it off for full control—customers see the full timetable. Empty days always show all times. Your schedule, your rules.</p>
         </article>
         <article class="dfd-feature-card">
           <h3 class="dfd-feature-title">Serious Enquiries Only</h3>
@@ -70,20 +70,25 @@
         </article>
       </div>
 
-      <!-- Smart Scheduling — screenshots demo -->
+      <!-- Group appointments — screenshots demo -->
       <div class="dfd-smart-booking-demo" id="smart-booking" style="margin-top: 3rem; padding-top: 2rem; border-top: 1px solid rgba(0,0,0,0.08);">
-        <h2 class="dfd-heading">Smart Scheduling in action</h2>
-        <p class="dfd-lead" style="color: #444; font-size: 0.95rem; margin-bottom: 1.5rem;">Toggle it on during setup. When enabled, we only show slots near your existing bookings—no more gaps in your day. If there are no appointments scheduled for a day, all available time slots are shown.</p>
+        <h2 class="dfd-heading">Group appointments together — how it works</h2>
+        <p class="dfd-lead" style="color: #444; font-size: 0.95rem; margin-bottom: 1.5rem;">Optional—turn it on or off anytime. When on, we only offer slots near your existing appointments to avoid gaps. When off, customers see the full timetable (full control). Empty days always show all times.</p>
         <div class="dfd-smart-booking-images" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; max-width: 900px;">
           <figure style="margin: 0;">
-            <img src="{{ url_for('static', filename='images/smart-booking-setup.png') }}" alt="Setup form showing Enable tight scheduling option" style="width: 100%; border-radius: 12px; border: 1px solid rgba(0,0,0,0.1); box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
-            <figcaption style="margin-top: 0.5rem; font-size: 0.85rem; color: #666;">1. Enable in setup — choose your gap (e.g. 60 min)</figcaption>
+            <img src="{{ url_for('static', filename='images/smart-booking-setup.png') }}" alt="Setup form: Group appointments together option" style="width: 100%; border-radius: 12px; border: 1px solid rgba(0,0,0,0.1); box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
+            <figcaption style="margin-top: 0.5rem; font-size: 0.85rem; color: #666;">1. Turn on during setup. Choose how close new slots must be to existing ones (e.g. 60 min).</figcaption>
           </figure>
           <figure style="margin: 0;">
             <img src="{{ url_for('static', filename='images/smart-booking-concept.png') }}" alt="Before and after: scattered slots vs slots grouped near existing bookings" style="width: 100%; border-radius: 12px; border: 1px solid rgba(0,0,0,0.1); box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
-            <figcaption style="margin-top: 0.5rem; font-size: 0.85rem; color: #666;">2. Slots cluster near existing bookings — empty days show full availability</figcaption>
+            <figcaption style="margin-top: 0.5rem; font-size: 0.85rem; color: #666;">2. Result: new slots appear near existing bookings (e.g. 1pm, 2pm, 3pm)—not scattered across the day.</figcaption>
+          </figure>
+          <figure style="margin: 0;">
+            <img src="{{ url_for('static', filename='images/smart-booking-slots-example.png') }}" alt="What customers see: available time slots to choose from" style="width: 100%; border-radius: 12px; border: 1px solid rgba(0,0,0,0.1); box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
+            <figcaption style="margin-top: 0.5rem; font-size: 0.85rem; color: #666;">3. What customers see when booking: grouped slots (right) instead of scattered ones (left).</figcaption>
           </figure>
         </div>
+        <p class="dfd-lead" style="color: #666; font-size: 0.9rem; margin-top: 1rem;">Example: You have a 2pm appointment. With 60 min, we only offer 1pm, 2pm, 3pm—not 9am or 5pm. Empty days show the full timetable.</p>
       </div>
     </div>
   </section>
@@ -288,8 +293,8 @@
           <p class="dfd-faq-answer">Absolutely. You can set appointment blocks or allow consecutive bookings—your schedule, your rules.</p>
         </details>
         <details class="dfd-faq-item">
-          <summary class="dfd-faq-question">What is Smart Booking and can I turn it off?</summary>
-          <p class="dfd-faq-answer">Smart Booking only shows time slots next to your existing appointments, helping you avoid long gaps in your day. You can switch it on or off whenever you like. On days with no bookings, the full timetable is always shown.</p>
+          <summary class="dfd-faq-question">What is "Group appointments together" and can I turn it off?</summary>
+          <p class="dfd-faq-answer">It's optional. When <strong>off</strong>, customers see the full timetable—you have full control over your day. When <strong>on</strong>, we only offer slots near your existing appointments to avoid gaps (e.g. 9am and 5pm with nothing in between). You can switch it on or off anytime. Empty days always show all times.</p>
         </details>
         <details class="dfd-faq-item">
           <summary class="dfd-faq-question">Can I customise the email tone?</summary>
