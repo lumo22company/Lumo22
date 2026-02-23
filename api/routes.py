@@ -388,11 +388,14 @@ def available_slots():
             tight_schedule=tight_schedule,
             gap_minutes=gap_minutes,
         )
-        return jsonify({
+        out = {
             "date": date_str[:10],
             "slots": [s.strftime("%H:%M") for s in slots],
             "count": len(slots),
-        }), 200
+        }
+        if request.args.get("debug"):
+            out["existing_bookings"] = len(existing)
+        return jsonify(out), 200
     except Exception as e:
         print(f"[available-slots] Error: {e}")
         return jsonify({"error": "Could not compute slots"}), 500

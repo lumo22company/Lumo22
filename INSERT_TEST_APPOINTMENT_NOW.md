@@ -3,15 +3,17 @@
 Run this in **Supabase SQL Editor** (bypasses RLS, no local setup needed):
 
 1. Open https://supabase.com/dashboard → your project → **SQL Editor**
-2. Paste and run:
+2. (Optional) Clear old test data: `DELETE FROM public.appointments;`
+3. Paste and run:
 
 ```sql
--- Tomorrow: 10am–11am and 2pm–3pm already booked
+-- Tomorrow (UTC): 10am–11am and 2pm–3pm already booked
 -- Slots at 10:00 and 14:00 will be excluded (overlap)
+-- Uses AT TIME ZONE 'UTC' for reliable storage regardless of session
 INSERT INTO public.appointments (slot_start, slot_end)
 VALUES 
-  ((CURRENT_DATE + INTERVAL '1 day') + TIME '10:00', (CURRENT_DATE + INTERVAL '1 day') + TIME '11:00'),
-  ((CURRENT_DATE + INTERVAL '1 day') + TIME '14:00', (CURRENT_DATE + INTERVAL '1 day') + TIME '15:00')
+  (((CURRENT_DATE + INTERVAL '1 day')::timestamp + TIME '10:00') AT TIME ZONE 'UTC', ((CURRENT_DATE + INTERVAL '1 day')::timestamp + TIME '11:00') AT TIME ZONE 'UTC'),
+  (((CURRENT_DATE + INTERVAL '1 day')::timestamp + TIME '14:00') AT TIME ZONE 'UTC', ((CURRENT_DATE + INTERVAL '1 day')::timestamp + TIME '15:00') AT TIME ZONE 'UTC')
 RETURNING id, slot_start, slot_end;
 ```
 

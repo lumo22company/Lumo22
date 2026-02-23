@@ -44,8 +44,9 @@ def get_appointments_for_date(day: date, default_duration_minutes: int = 30) -> 
     if not client:
         return []
     try:
-        start_str = day.isoformat() + "T00:00:00"
-        next_day = (day + timedelta(days=1)).isoformat() + "T00:00:00"
+        # Use explicit UTC to match Supabase's default timezone
+        start_str = day.isoformat() + "T00:00:00Z"
+        next_day = (day + timedelta(days=1)).isoformat() + "T00:00:00Z"
         result = (
             client.table("appointments")
             .select("slot_start, slot_end")
