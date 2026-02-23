@@ -20,6 +20,7 @@
     .checkout-card .back { margin-top: 1.5rem; }
     .checkout-card .back a { color: var(--lum-text-muted); text-decoration: none; font-size: 0.95rem; }
     .checkout-card .back a:hover { color: var(--lum-text); }
+    .checkout-order-summary { color: #fff; font-weight: 600; font-size: 1rem; margin-bottom: 0; }
   </style>
 </head>
 <body class="lumo-landing">
@@ -38,7 +39,7 @@
       {% if platforms_invalid %}
       <p class="checkout-platform-error" style="margin-bottom: 1rem; padding: 0.75rem 1rem; background: rgba(220,50,50,0.15); border: 1px solid rgba(220,50,50,0.4); border-radius: 8px; color: #ff9999; font-size: 0.9rem;">Please go back and select which {{ platforms }} platform(s) you want on the captions page.</p>
       {% else %}
-      <p id="checkout-platform-note" style="color: var(--lum-text-muted); margin-bottom: 0; font-size: 0.9rem;">{% if selected %}Platforms: {{ selected }}{% elif platforms|default(1) > 1 %}{{ platforms }} platforms included.{% endif %}{% if stories %} + 30 Days Story Ideas.{% endif %}</p>
+      <p id="checkout-platform-note" class="checkout-order-summary">{% if selected %}Platforms: {{ selected }}{% if stories %} + 30 Days Story Ideas{% endif %}{% elif platforms|default(1) > 1 %}{{ platforms }} platforms included.{% if stories %} + 30 Days Story Ideas{% endif %}{% elif stories %}30 Days Story Ideas{% endif %}</p>
       {% endif %}
       <p style="color: var(--lum-text-muted); margin-bottom: 0;">You’ll complete a short form after payment so we can tailor your captions. Ready within 15 minutes of submitting the form.</p>
 
