@@ -582,16 +582,20 @@
       var wrap = document.getElementById('stories-addon-wrap');
       var platformSelect = document.getElementById('platform');
       if (!wrap || !platformSelect || platformSelect.tagName !== 'SELECT') return;
-      platformSelect.addEventListener('change', function() {
-        var hasIGFB = (platformSelect.value || '').indexOf('Instagram') !== -1;
+      function hasInstagramFacebook(val) {
+        var s = (val || '').toLowerCase();
+        return s.indexOf('instagram') !== -1 || s.indexOf('facebook') !== -1;
+      }
+      function toggleStories() {
+        var hasIGFB = hasInstagramFacebook(platformSelect.value);
         wrap.style.display = hasIGFB ? 'block' : 'none';
         if (!hasIGFB) {
           var cb = document.getElementById('include_stories');
           if (cb) cb.checked = false;
         }
-      });
-      var hasIGFB = (platformSelect.value || '').indexOf('Instagram') !== -1;
-      wrap.style.display = hasIGFB ? 'block' : 'none';
+      }
+      platformSelect.addEventListener('change', toggleStories);
+      toggleStories();
     })();
     var caForm = document.getElementById('create-account-form');
     if (caForm) {
