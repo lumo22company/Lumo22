@@ -151,6 +151,8 @@ def front_desk_setup():
                 appointment_duration_minutes = max(15, min(120, int(raw_duration)))
             except (TypeError, ValueError):
                 pass
+        work_start = (data.get('work_start') or '').strip() or '09:00'
+        work_end = (data.get('work_end') or '').strip() or '17:00'
         auto_reply_enabled = data.get('auto_reply_enabled', True)
         if isinstance(auto_reply_enabled, str):
             auto_reply_enabled = auto_reply_enabled.strip().lower() in ('1', 'true', 'yes', 'on')
@@ -170,6 +172,8 @@ def front_desk_setup():
                 tight_scheduling_enabled=tight_scheduling_enabled,
                 minimum_gap_between_appointments=minimum_gap_between_appointments,
                 appointment_duration_minutes=appointment_duration_minutes,
+                work_start=work_start,
+                work_end=work_end,
                 auto_reply_enabled=auto_reply_enabled,
                 skip_reply_domains=skip_reply_domains,
             )
@@ -186,6 +190,7 @@ Customer email: {customer_email}
 Business name: {business_name}
 Enquiry email to monitor: {enquiry_email}
 Booking link: {booking_link or '(none)'}
+Opening hours: {work_start}–{work_end}
 Appointment duration (from their booking system): {appointment_duration_minutes} min
 Reply tone: {tone or '(default)'}
 Forwarding address (for auto-reply): {forwarding_email or '(not set)'}
@@ -338,6 +343,8 @@ def available_slots():
 
         setup_token = (request.args.get("setup") or "").strip()
         use_setup_config = False
+        work_start = request.args.get("work_start") or None
+        work_end = request.args.get("work_end") or None
         if setup_token:
             from services.front_desk_setup_service import FrontDeskSetupService
             try:
@@ -347,7 +354,9 @@ def available_slots():
                     slot_minutes = max(15, min(120, setup.get("appointment_duration_minutes") or 60))
                     tight_schedule = bool(setup.get("tight_scheduling_enabled"))
                     gap_minutes = max(5, min(480, setup.get("minimum_gap_between_appointments") or 60))
-                    use_setup_config = True  # customer cannot override duration/gap from their booking system
+                    work_start = (setup.get("work_start") or "").strip() or "09:00"
+                    work_end = (setup.get("work_end") or "").strip() or "17:00"
+                    use_setup_config = True  # customer cannot override; use business's booking platform settings
             except Exception:
                 pass
 
@@ -362,9 +371,8 @@ def available_slots():
                     slot_minutes = max(5, min(120, int(raw_slot)))
                 except (TypeError, ValueError):
                     pass
-
-        work_start = request.args.get("work_start") or None
-        work_end = request.args.get("work_end") or None
+            work_start = request.args.get("work_start") or None
+            work_end = request.args.get("work_end") or None
 
         from services.availability import get_available_slots
         from services.appointments_service import get_appointments_for_date

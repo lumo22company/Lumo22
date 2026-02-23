@@ -9,18 +9,17 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Encode+Sans+Condensed:wght@400;500;600;700&family=PT+Sans+Narrow:wght@400;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v={{ asset_version }}">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <style>
     .booking-page { padding: 6rem 1.5rem 4rem; max-width: 560px; margin: 0 auto; }
     .booking-page h1 { font-family: var(--font-display); font-size: 1.75rem; margin-bottom: 0.5rem; }
     .booking-page .sub { color: var(--lum-text-muted); margin-bottom: 1.5rem; line-height: 1.6; }
     .booking-page label { display: block; font-size: 0.9rem; font-weight: 500; margin-bottom: 0.5rem; color: var(--lum-text); }
     .booking-page input[type="date"],
+    .booking-page input[type="text"]#booking-date,
     .booking-page input[type="number"] { width: 100%; max-width: 12rem; padding: 0.75rem 1rem; background: var(--lum-surface-elevated); border: 1px solid var(--lum-border); border-radius: 8px; color: var(--lum-text); font-size: 1rem; margin-bottom: 1rem; }
+    .booking-page .flatpickr-input[readonly] { cursor: pointer; }
     .booking-page .hint { font-size: 0.85rem; color: var(--lum-text-muted); margin-top: -0.5rem; margin-bottom: 1rem; }
-    .booking-page .checkbox-group { margin-bottom: 1rem; }
-    .booking-page .checkbox-item { display: flex; align-items: flex-start; gap: 0.6rem; cursor: pointer; }
-    .booking-page .checkbox-item input { width: auto; margin: 0.35rem 0 0; }
-    .booking-page .checkbox-item span { font-weight: 400; color: var(--lum-text); }
     .booking-page .slots-section { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--lum-border); }
     .booking-page .slots-section h2 { font-family: 'Encode Sans Condensed', sans-serif; font-size: 1.1rem; margin-bottom: 0.75rem; }
     .booking-page .slots-list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
@@ -44,27 +43,11 @@
 
   <main class="booking-page">
     <h1>Book an appointment</h1>
-    <p class="sub">Choose a date and time. Available slots update as you change the options below.</p>
+    <p class="sub">Choose a date and time.</p>
 
     <label for="booking-date">Date</label>
-    <input type="date" id="booking-date" name="date" min="">
+    <input type="text" id="booking-date" name="date" placeholder="Pick a date" readonly>
     <p class="hint">Pick the day you want to book.</p>
-
-    <fieldset style="border:0; padding:0; margin:0;">
-      <legend style="font-size:0.9rem; font-weight:500; margin-bottom:0.5rem; color:var(--lum-text);">Scheduling options</legend>
-      <div class="checkbox-group">
-        <label class="checkbox-item">
-          <input type="checkbox" id="group-appointments" name="group_appointments" value="1">
-          <span><strong>Group appointments together</strong> (optional)</span>
-        </label>
-      </div>
-      <p class="hint">Turn <strong>off</strong> to see the full timetable—full control over your day. Turn <strong>on</strong> to only show times near existing bookings and avoid gaps.</p>
-      <div id="gap-options" style="display:none; margin-top:0.75rem;">
-        <label for="gap-minutes">Show slots within how many minutes of existing appointments?</label>
-        <input type="number" id="gap-minutes" name="gap_minutes" value="60" min="5" max="480" step="5">
-        <p class="hint">e.g. 60 = within an hour before or after. We take appointment durations into account—no overlapping slots. Empty days always show all times.</p>
-      </div>
-    </fieldset>
 
     <section class="slots-section" aria-live="polite">
       <h2>Available times</h2>
@@ -78,18 +61,26 @@
     <p class="back"><a href="/digital-front-desk">← Back to Digital Front Desk</a></p>
   </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script>
     (function() {
       var dateInput = document.getElementById('booking-date');
-      var groupCheck = document.getElementById('group-appointments');
-      var gapInput = document.getElementById('gap-minutes');
       var slotsLoading = document.getElementById('slots-loading');
       var slotsList = document.getElementById('slots-list');
       var slotsEmpty = document.getElementById('slots-empty');
 
-      // Set min date to today
-      var today = new Date();
-      dateInput.min = today.toISOString().slice(0, 10);
+      var urlParams = new URLSearchParams(window.location.search);
+      var setupToken = urlParams.get('setup') || '';
+
+      var picker = flatpickr(dateInput, {
+        altInput: true,
+        altFormat: 'D j M Y',
+        dateFormat: 'Y-m-d',
+        minDate: 'today',
+        onChange: function(selectedDates, dateStr) {
+          if (dateStr) fetchSlots();
+        }
+      });
 
       function fetchSlots() {
         var date = (dateInput.value || '').trim();
@@ -105,12 +96,8 @@
         slotsList.style.display = 'none';
         slotsEmpty.style.display = 'none';
 
-        var params = new URLSearchParams({
-          date: date,
-          slot_minutes: 60,
-          tight_schedule: groupCheck.checked ? 'true' : 'false',
-          gap_minutes: (gapInput.value && parseInt(gapInput.value, 10)) || 60
-        });
+        var params = new URLSearchParams({ date: date });
+        if (setupToken) params.set('setup', setupToken);
         fetch('/api/available-slots?' + params.toString())
           .then(function(r) { return r.json(); })
           .then(function(data) {
@@ -144,19 +131,6 @@
           });
       }
 
-      var gapOptions = document.getElementById('gap-options');
-      function updateGapVisibility() {
-        var on = groupCheck.checked;
-        if (gapOptions) gapOptions.style.display = on ? 'block' : 'none';
-        gapInput.disabled = !on;
-        if (dateInput.value) fetchSlots();
-      }
-      groupCheck.addEventListener('change', updateGapVisibility);
-      updateGapVisibility();
-
-      dateInput.addEventListener('change', fetchSlots);
-      gapInput.addEventListener('change', fetchSlots);
-      gapInput.addEventListener('input', fetchSlots);
     })();
   </script>
   {% include '_footer.html' %}
