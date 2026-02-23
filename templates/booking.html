@@ -13,6 +13,7 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 1.125rem;
       background: #ffffff;
       color: #1a1a1a;
       min-height: 100vh;
@@ -21,39 +22,40 @@
       -webkit-font-smoothing: antialiased;
     }
     .booking-page { max-width: 480px; margin: 0 auto; padding-top: 3rem; }
-    .booking-page h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.25rem; color: #1a1a1a; }
-    .booking-page .sub { color: #6b7280; font-size: 0.9375rem; margin-bottom: 1.5rem; }
-    .booking-page label { display: block; font-size: 0.875rem; font-weight: 500; margin-bottom: 0.375rem; color: #374151; }
+    .booking-page h1 { font-size: 1.75rem; font-weight: 600; margin-bottom: 0.25rem; color: #1a1a1a; }
+    .booking-page .sub { color: #6b7280; font-size: 1rem; margin-bottom: 1.5rem; }
+    .booking-page label { display: block; font-size: 1rem; font-weight: 500; margin-bottom: 0.375rem; color: #374151; }
     .booking-page input[type="date"],
     .booking-page input[type="text"]#booking-date,
     .booking-page input[type="number"] {
       width: 100%; max-width: 12rem; padding: 0.625rem 0.875rem;
       background: #ffffff; border: 1px solid #d1d5db; border-radius: 8px;
-      color: #1a1a1a; font-size: 0.9375rem; font-family: inherit;
+      color: #1a1a1a; font-size: 1.0625rem; font-family: inherit;
     }
     .booking-page input:focus { outline: none; border-color: #9ca3af; }
+    .booking-page input#booking-date { margin-bottom: 1.5rem; }
     .booking-page .flatpickr-input[readonly] { cursor: pointer; }
-    .booking-page .hint { font-size: 0.8125rem; color: #6b7280; margin-top: -0.25rem; margin-bottom: 1rem; }
+    .booking-page .hint { font-size: 0.9375rem; color: #6b7280; margin-top: 0.25rem; margin-bottom: 1rem; }
     .booking-page .slots-section { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb; }
-    .booking-page .slots-section h2 { font-size: 1rem; font-weight: 600; margin-bottom: 0.75rem; color: #374151; }
+    .booking-page .slots-section h2 { font-size: 1.125rem; font-weight: 600; margin-bottom: 0.75rem; color: #374151; }
     .booking-page .slots-list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
     .booking-page .slot-btn {
       padding: 0.5rem 1rem; background: #ffffff; border: 1px solid #d1d5db;
-      border-radius: 8px; color: #374151; font-size: 0.9375rem; font-family: inherit; cursor: pointer;
+      border-radius: 8px; color: #374151; font-size: 1.0625rem; font-family: inherit; cursor: pointer;
     }
     .booking-page .slot-btn:hover { border-color: #9ca3af; background: #f9fafb; }
     .booking-page .slot-btn.selected { border-color: #1a1a1a; background: #f3f4f6; color: #1a1a1a; font-weight: 500; }
-    .booking-page .slots-loading { color: #6b7280; font-size: 0.9rem; }
-    .booking-page .slots-empty { color: #6b7280; font-size: 0.9rem; }
+    .booking-page .slots-loading { color: #6b7280; font-size: 1rem; }
+    .booking-page .slots-empty { color: #6b7280; font-size: 1rem; }
     .booking-page .confirm-wrap { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb; display: none; }
     .booking-page .confirm-wrap.visible { display: block; }
     .booking-page .confirm-btn {
       display: inline-block; padding: 0.75rem 1.5rem; background: #1a1a1a; color: #fff;
-      border: none; border-radius: 8px; font-size: 1rem; font-weight: 500; font-family: inherit; cursor: pointer;
+      border: none; border-radius: 8px; font-size: 1.0625rem; font-weight: 500; font-family: inherit; cursor: pointer;
     }
     .booking-page .confirm-btn:hover { background: #374151; }
     .booking-page .confirm-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-    .booking-page .confirm-hint { font-size: 0.8125rem; color: #6b7280; margin-top: 0.5rem; }
+    .booking-page .confirm-hint { font-size: 0.9375rem; color: #6b7280; margin-top: 0.5rem; }
     /* Flatpickr light theme */
     .flatpickr-calendar { background: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
     .flatpickr-day.selected { background: #1a1a1a; border-color: #1a1a1a; }
