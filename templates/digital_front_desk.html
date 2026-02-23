@@ -127,7 +127,7 @@
     <div class="dfd-section-inner">
       <h2 class="dfd-heading">Smart Scheduling in action</h2>
       <p class="dfd-lead" style="margin-bottom: 1.5rem;">Optional—turn it on or off anytime. When on, we only offer slots near your existing appointments to avoid gaps. We take appointment durations into account—no overlapping bookings, and we use the full length of each appointment when deciding which slots to show. When off, customers see the full timetable (full control). Empty days always show all times.</p>
-      <div class="dfd-smart-booking-images" style="display: grid; grid-template-columns: 1fr; gap: 2.5rem; max-width: 1000px; margin: 0 auto;">
+      <div class="dfd-smart-booking-images" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 400px), 1fr)); gap: 2rem; max-width: 900px; margin: 0 auto;">
         <figure style="margin: 0;">
           <img src="{{ url_for('static', filename='images/smart-booking-setup.png') }}?v={{ asset_version }}" alt="Setup form: Group appointments together option" style="width: 100%; max-width: 100%; height: auto; border-radius: 12px; border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 8px 32px rgba(0,0,0,0.3);">
           <figcaption style="margin-top: 0.75rem; font-size: 0.95rem; color: var(--lum-text-muted);">1. Turn on during setup. Choose how close new slots must be to existing ones (e.g. within 60 min).</figcaption>
@@ -137,7 +137,7 @@
           <figcaption style="margin-top: 0.75rem; font-size: 0.95rem; color: var(--lum-text-muted);">2. Result: new slots appear near existing bookings (e.g. 1pm, 3pm)—not scattered. Slots that would overlap (e.g. 2pm) are excluded.</figcaption>
         </figure>
       </div>
-      <p class="dfd-lead" style="font-size: 0.9rem; color: var(--lum-text-muted); margin-top: 1rem;">Example: You have a 2pm–3pm appointment (60 min) already booked. With 60 minutes set, we only offer slots within 60 minutes of that block—and we exclude any that would overlap. Empty days show the full timetable.</p>
+      <p class="dfd-lead" style="font-size: 0.9rem; color: var(--lum-text-muted); margin-top: 1rem;">Example: You have a 2pm–3pm appointment (60 min) already booked. With a 60 minute buffer set, we only offer slots within 60 minutes of that block—and we exclude any that would overlap. Empty days show the full timetable.</p>
     </div>
   </section>
 
@@ -292,7 +292,7 @@
         </details>
         <details class="dfd-faq-item">
           <summary class="dfd-faq-question">What is "Group appointments together" and can I turn it off?</summary>
-          <p class="dfd-faq-answer">It's optional. When <strong>off</strong>, customers see the full timetable—you have full control over your day. When <strong>on</strong>, we only offer slots near your existing appointments to avoid gaps (e.g. 9am and 5pm with nothing in between). We take appointment durations into account—no overlapping bookings, and we use the full length of each appointment when filtering slots. You can switch it on or off anytime. Empty days always show all times.</p>
+          <p class="dfd-faq-answer">It's optional. When <strong>off</strong>, customers see the full timetable—you have full control over your day. When <strong>on</strong>, we only offer slots near your existing appointments to avoid gaps (e.g. 9am and 5pm with nothing in between). We take appointment durations into account—no overlapping bookings, and we use the full length of each appointment when filtering slots. Longer appointments need more space: a 90 min booking with a 1 hr window would show 11:30am as the earliest option before a 2pm existing appointment (2.5 hrs earlier). You can switch it on or off anytime. Empty days always show all times.</p>
         </details>
         <details class="dfd-faq-item">
           <summary class="dfd-faq-question">Can I customise the email tone?</summary>
