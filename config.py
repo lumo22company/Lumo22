@@ -39,6 +39,8 @@ class Config:
     # Supabase (sanitize URL so httpx doesn't raise InvalidURL from env newlines)
     SUPABASE_URL = _sanitize_url(os.getenv('SUPABASE_URL', '') or '')
     SUPABASE_KEY = (os.getenv('SUPABASE_KEY') or '').strip()
+    # Service role bypasses RLS; required for appointments table (slot availability)
+    SUPABASE_SERVICE_ROLE_KEY = (os.getenv('SUPABASE_SERVICE_ROLE_KEY') or '').strip()
     
     # Calendly
     CALENDLY_API_KEY = os.getenv('CALENDLY_API_KEY')

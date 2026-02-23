@@ -11,8 +11,9 @@ from supabase import create_client
 
 
 def _get_client():
+    """Use service_role key when available to bypass RLS on appointments table."""
     url = (Config.SUPABASE_URL or "").strip()
-    key = (Config.SUPABASE_KEY or "").strip()
+    key = (Config.SUPABASE_SERVICE_ROLE_KEY or Config.SUPABASE_KEY or "").strip()
     if not url or not key:
         return None
     return create_client(url, key)

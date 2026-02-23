@@ -1,5 +1,7 @@
 # Insert test appointments for booking demo — 2 minutes
 
+**Required:** Add `SUPABASE_SERVICE_ROLE_KEY` to Railway variables (Supabase → Settings → API → service_role). The appointments table uses RLS; the service role lets the app read existing bookings to exclude those slots.
+
 Run this in **Supabase SQL Editor** (bypasses RLS, no local setup needed):
 
 1. Open https://supabase.com/dashboard → your project → **SQL Editor**
