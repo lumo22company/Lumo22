@@ -273,7 +273,11 @@ def plans_page():
 @app.route('/digital-front-desk')
 def digital_front_desk_page():
     """Digital Front Desk product page: what it is + pricing, Activate now CTAs"""
-    return render_template('digital_front_desk.html')
+    resp = app.make_response(render_template('digital_front_desk.html'))
+    resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    resp.headers['Pragma'] = 'no-cache'
+    resp.headers['Expires'] = '0'
+    return resp
 
 
 @app.route('/book')
