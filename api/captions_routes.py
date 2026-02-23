@@ -28,6 +28,12 @@ def _parse_selected_platforms(request):
     return raw[:200] or None
 
 
+def _parse_stories(request) -> bool:
+    """True when ?stories=1 or stories=true (Stories add-on selected)."""
+    v = request.args.get("stories", "").strip().lower()
+    return v in ("1", "true", "yes", "on")
+
+
 def _normalize_error(err) -> str:
     """Turn any error from generation/delivery into a short ASCII string for JSON."""
     if err is None:
@@ -47,7 +53,8 @@ def _normalize_error(err) -> str:
 def captions_checkout():
     """
     Create a Stripe Checkout Session and redirect to it.
-    Query: ?platforms=N (1–4). Base price covers 1; extra platforms use add-on price if configured.
+    Query: ?platforms=N (1–4), ?selected=..., ?stories=1 for Stories add-on.
+    Base price covers 1; extra platforms and Stories use add-on prices if configured.
     After payment, Stripe redirects to /captions-thank-you?session_id=xxx.
     """
     import stripe
@@ -58,7 +65,9 @@ def captions_checkout():
     stripe.api_key = Config.STRIPE_SECRET_KEY
     platforms = _parse_platforms(request)
     selected = _parse_selected_platforms(request)
+    stories = _parse_stories(request)
     extra_price_id = (getattr(Config, "STRIPE_CAPTIONS_EXTRA_PLATFORM_PRICE_ID", None) or "").strip()
+    stories_price_id = (getattr(Config, "STRIPE_CAPTIONS_STORIES_PRICE_ID", None) or "").strip()
     if platforms > 1 and not extra_price_id:
         return redirect(f"{request.host_url.rstrip('/')}/captions?error=extra_platform_not_configured", code=302)
     base = (Config.BASE_URL or "").strip().rstrip("/")
@@ -81,7 +90,9 @@ def captions_checkout():
             },
             "quantity": addon_qty,
         })
-    metadata = {"product": "captions", "platforms": str(platforms)}
+    if stories and stories_price_id:
+        line_items.append({"price": stories_price_id, "quantity": 1})
+    metadata = {"product": "captions", "platforms": str(platforms), "include_stories": "1" if (stories and stories_price_id) else "0"}
     if selected:
         metadata["selected_platforms"] = selected
     try:
@@ -101,7 +112,8 @@ def captions_checkout():
 def captions_checkout_subscription():
     """
     Create a Stripe Checkout Session for Captions subscription (£79/month base).
-    Query: ?platforms=N (1–4). Extra platforms use add-on subscription price if configured.
+    Query: ?platforms=N (1–4), ?selected=..., ?stories=1 for Stories add-on.
+    Extra platforms and Stories use add-on subscription prices if configured.
     Same success flow as one-off: redirect to thank-you then intake. Webhook handles first payment.
     """
     import stripe
@@ -112,7 +124,9 @@ def captions_checkout_subscription():
     stripe.api_key = Config.STRIPE_SECRET_KEY
     platforms = _parse_platforms(request)
     selected = _parse_selected_platforms(request)
+    stories = _parse_stories(request)
     extra_sub_id = (getattr(Config, "STRIPE_CAPTIONS_EXTRA_PLATFORM_SUBSCRIPTION_PRICE_ID", None) or "").strip()
+    stories_sub_id = (getattr(Config, "STRIPE_CAPTIONS_STORIES_SUBSCRIPTION_PRICE_ID", None) or "").strip()
     if platforms > 1 and not extra_sub_id:
         return redirect(f"{request.host_url.rstrip('/')}/captions?error=extra_platform_not_configured", code=302)
     base = (Config.BASE_URL or "").strip().rstrip("/")
@@ -136,7 +150,9 @@ def captions_checkout_subscription():
             },
             "quantity": addon_qty,
         })
-    metadata = {"product": "captions_subscription", "platforms": str(platforms)}
+    if stories and stories_sub_id:
+        line_items.append({"price": stories_sub_id, "quantity": 1})
+    metadata = {"product": "captions_subscription", "platforms": str(platforms), "include_stories": "1" if (stories and stories_sub_id) else "0"}
     if selected:
         metadata["selected_platforms"] = selected
     try:
@@ -156,18 +172,21 @@ def captions_checkout_subscription():
 def captions_setup_check():
     """
     Check if captions checkout and multi-platform are correctly configured.
-    Returns JSON: checkout_configured, multi_platform_oneoff, multi_platform_sub.
+    Returns JSON: checkout_configured, multi_platform_oneoff, multi_platform_sub, stories_addon_available.
     Use to verify Railway env vars: visit /api/captions-setup-check
     """
     checkout_ok = bool(Config.STRIPE_SECRET_KEY and Config.STRIPE_CAPTIONS_PRICE_ID)
     extra_oneoff = bool((getattr(Config, "STRIPE_CAPTIONS_EXTRA_PLATFORM_PRICE_ID", None) or "").strip())
     sub_price = bool((getattr(Config, "STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID", None) or "").strip())
     extra_sub = bool((getattr(Config, "STRIPE_CAPTIONS_EXTRA_PLATFORM_SUBSCRIPTION_PRICE_ID", None) or "").strip())
+    stories_oneoff = bool((getattr(Config, "STRIPE_CAPTIONS_STORIES_PRICE_ID", None) or "").strip())
+    stories_sub = bool((getattr(Config, "STRIPE_CAPTIONS_STORIES_SUBSCRIPTION_PRICE_ID", None) or "").strip())
     return jsonify({
         "checkout_configured": checkout_ok,
         "multi_platform_oneoff": checkout_ok and extra_oneoff,
         "subscription_available": bool(Config.STRIPE_SECRET_KEY and sub_price),
         "multi_platform_sub": bool(Config.STRIPE_SECRET_KEY and sub_price and extra_sub),
+        "stories_addon_available": stories_oneoff and stories_sub,
     })
 
 
@@ -426,7 +445,7 @@ def captions_intake_submit():
         "launch_event_description": (data.get("launch_event_description") or "").strip(),
         "caption_examples": (data.get("caption_examples") or "").strip(),
         "caption_language": (data.get("caption_language") or "English (UK)").strip(),
-        "include_stories": bool(data.get("include_stories")),
+        "include_stories": bool(data.get("include_stories")) or bool(order.get("include_stories")),
     }
 
     try:
