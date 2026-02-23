@@ -3,45 +3,64 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Book an appointment | Lumo 22</title>
+  <title>Book an appointment</title>
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Encode+Sans+Condensed:wght@400;500;600;700&family=PT+Sans+Narrow:wght@400;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v={{ asset_version }}">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <style>
-    .booking-page { padding: 6rem 1.5rem 4rem; max-width: 560px; margin: 0 auto; }
-    .booking-page h1 { font-family: var(--font-display); font-size: 1.75rem; margin-bottom: 0.5rem; }
-    .booking-page .sub { color: var(--lum-text-muted); margin-bottom: 1.5rem; line-height: 1.6; }
-    .booking-page label { display: block; font-size: 0.9rem; font-weight: 500; margin-bottom: 0.5rem; color: var(--lum-text); }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #ffffff;
+      color: #1a1a1a;
+      min-height: 100vh;
+      padding: 2rem 1.5rem;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+    .booking-page { max-width: 480px; margin: 0 auto; }
+    .booking-page h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.25rem; color: #1a1a1a; }
+    .booking-page .sub { color: #6b7280; font-size: 0.9375rem; margin-bottom: 1.5rem; }
+    .booking-page label { display: block; font-size: 0.875rem; font-weight: 500; margin-bottom: 0.375rem; color: #374151; }
     .booking-page input[type="date"],
     .booking-page input[type="text"]#booking-date,
-    .booking-page input[type="number"] { width: 100%; max-width: 12rem; padding: 0.75rem 1rem; background: var(--lum-surface-elevated); border: 1px solid var(--lum-border); border-radius: 8px; color: var(--lum-text); font-size: 1rem; margin-bottom: 1rem; }
+    .booking-page input[type="number"] {
+      width: 100%; max-width: 12rem; padding: 0.625rem 0.875rem;
+      background: #ffffff; border: 1px solid #d1d5db; border-radius: 8px;
+      color: #1a1a1a; font-size: 0.9375rem; font-family: inherit;
+    }
+    .booking-page input:focus { outline: none; border-color: #9ca3af; }
     .booking-page .flatpickr-input[readonly] { cursor: pointer; }
-    .booking-page .hint { font-size: 0.85rem; color: var(--lum-text-muted); margin-top: -0.5rem; margin-bottom: 1rem; }
-    .booking-page .slots-section { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--lum-border); }
-    .booking-page .slots-section h2 { font-family: 'Encode Sans Condensed', sans-serif; font-size: 1.1rem; margin-bottom: 0.75rem; }
+    .booking-page .hint { font-size: 0.8125rem; color: #6b7280; margin-top: -0.25rem; margin-bottom: 1rem; }
+    .booking-page .slots-section { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb; }
+    .booking-page .slots-section h2 { font-size: 1rem; font-weight: 600; margin-bottom: 0.75rem; color: #374151; }
     .booking-page .slots-list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-    .booking-page .slot-btn { padding: 0.5rem 1rem; background: var(--lum-surface-elevated); border: 1px solid var(--lum-border); border-radius: 8px; color: var(--lum-text); font-size: 0.95rem; cursor: pointer; }
-    .booking-page .slot-btn:hover { border-color: var(--lum-gold); color: var(--lum-gold); }
-    .booking-page .slot-btn.selected { border-color: var(--lum-gold); background: rgba(212,175,55,0.15); color: var(--lum-gold); }
-    .booking-page .slots-loading { color: var(--lum-text-muted); font-size: 0.9rem; }
-    .booking-page .slots-empty { color: var(--lum-text-muted); font-size: 0.9rem; }
-    .booking-page .back { margin-top: 2rem; }
-    .booking-page .back a { color: var(--lum-text-muted); text-decoration: none; font-size: 0.95rem; }
-    .booking-page .back a:hover { color: var(--lum-text); }
+    .booking-page .slot-btn {
+      padding: 0.5rem 1rem; background: #ffffff; border: 1px solid #d1d5db;
+      border-radius: 8px; color: #374151; font-size: 0.9375rem; font-family: inherit; cursor: pointer;
+    }
+    .booking-page .slot-btn:hover { border-color: #9ca3af; background: #f9fafb; }
+    .booking-page .slot-btn.selected { border-color: #1a1a1a; background: #f3f4f6; color: #1a1a1a; font-weight: 500; }
+    .booking-page .slots-loading { color: #6b7280; font-size: 0.9rem; }
+    .booking-page .slots-empty { color: #6b7280; font-size: 0.9rem; }
+    .booking-page .confirm-wrap { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb; display: none; }
+    .booking-page .confirm-wrap.visible { display: block; }
+    .booking-page .confirm-btn {
+      display: inline-block; padding: 0.75rem 1.5rem; background: #1a1a1a; color: #fff;
+      border: none; border-radius: 8px; font-size: 1rem; font-weight: 500; font-family: inherit; cursor: pointer;
+    }
+    .booking-page .confirm-btn:hover { background: #374151; }
+    .booking-page .confirm-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .booking-page .confirm-hint { font-size: 0.8125rem; color: #6b7280; margin-top: 0.5rem; }
+    /* Flatpickr light theme */
+    .flatpickr-calendar { background: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+    .flatpickr-day.selected { background: #1a1a1a; border-color: #1a1a1a; }
+    .flatpickr-day:hover { background: #f3f4f6; }
   </style>
 </head>
-<body class="lumo-landing">
-  <nav class="lumo-nav lumo-nav-scrolled">
-    <a href="/" class="lumo-nav-logo">Lumo 22</a>
-    <div class="lumo-nav-links">
-      <a href="/digital-front-desk">Front Desk</a>
-    </div>
-    <a href="/digital-front-desk" class="lumo-nav-cta">Front Desk</a>
-  </nav>
-
+<body>
   <main class="booking-page">
     <h1>Book an appointment</h1>
     <p class="sub">Choose a date and time.</p>
@@ -58,9 +77,11 @@
         <div class="slots-list" id="slots-list" style="display:none;"></div>
         <p class="slots-empty" id="slots-empty" style="display:none;"></p>
       </div>
+      <div id="confirm-wrap" class="confirm-wrap">
+        <button type="button" id="confirm-btn" class="confirm-btn">Confirm and book</button>
+        <p id="confirm-hint" class="confirm-hint"></p>
+      </div>
     </section>
-
-    <p class="back"><a href="/digital-front-desk">← Back to Digital Front Desk</a></p>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
@@ -73,6 +94,20 @@
 
       var urlParams = new URLSearchParams(window.location.search);
       var setupToken = urlParams.get('setup') || '';
+      var bookingLink = null;
+      var businessName = null;
+      var bookingInfoLoaded = !setupToken;
+
+      if (setupToken) {
+        fetch('/api/booking-info?setup=' + encodeURIComponent(setupToken))
+          .then(function(r) { return r.json(); })
+          .then(function(d) {
+            bookingLink = d.booking_link || null;
+            businessName = d.business_name || null;
+            bookingInfoLoaded = true;
+            updateConfirmState();
+          });
+      }
 
       var picker = flatpickr(dateInput, {
         altInput: true,
@@ -99,6 +134,8 @@
         slotsEmpty.style.display = 'none';
         var selMsg = document.getElementById('selected-msg');
         if (selMsg) selMsg.style.display = 'none';
+        var confirmWrap = document.getElementById('confirm-wrap');
+        if (confirmWrap) confirmWrap.classList.remove('visible');
 
         var params = new URLSearchParams({ date: date });
         if (setupToken) params.set('setup', setupToken);
@@ -118,19 +155,19 @@
               return;
             }
             slotsList.innerHTML = '';
-            var selectedDate = date;
+            var slotDate = date;
             slots.forEach(function(time) {
               var btn = document.createElement('button');
               btn.type = 'button';
               btn.className = 'slot-btn';
               btn.textContent = time;
               btn.dataset.time = time;
-              btn.dataset.date = selectedDate;
+              btn.dataset.date = slotDate;
               btn.setAttribute('aria-label', 'Select ' + time);
               btn.addEventListener('click', function() {
                 slotsList.querySelectorAll('.slot-btn').forEach(function(b) { b.classList.remove('selected'); });
                 btn.classList.add('selected');
-                selectSlot(selectedDate, time);
+                selectSlot(slotDate, time);
               });
               slotsList.appendChild(btn);
             });
@@ -143,15 +180,64 @@
           });
       }
 
-      function selectSlot(date, time) {
-        var msg = document.getElementById('selected-msg');
-        if (!msg) return;
-        msg.textContent = 'Selected: ' + date + ' at ' + time;
-        msg.style.display = 'block';
+      var selectedDate = null;
+      var selectedTime = null;
+
+      function updateConfirmState() {
+        var confirmWrap = document.getElementById('confirm-wrap');
+        var confirmBtn = document.getElementById('confirm-btn');
+        var confirmHint = document.getElementById('confirm-hint');
+        if (!confirmWrap || !confirmBtn || !confirmWrap.classList.contains('visible')) return;
+        if (!bookingInfoLoaded && setupToken) {
+          confirmBtn.disabled = true;
+          confirmBtn.textContent = 'Loading…';
+          if (confirmHint) confirmHint.textContent = '';
+        } else {
+          confirmBtn.disabled = false;
+          confirmBtn.textContent = 'Confirm and book';
+          if (confirmHint) {
+            confirmHint.textContent = bookingLink
+              ? 'You\'ll complete your booking on ' + (businessName || 'their booking page') + '.'
+              : (setupToken ? 'This business hasn\'t added a booking link yet — contact them directly.' : 'This is a demo — in production you\'d go to the business\'s Calendly or Fresha.');
+          }
+        }
       }
+
+      function selectSlot(date, time) {
+        selectedDate = date;
+        selectedTime = time;
+        var msg = document.getElementById('selected-msg');
+        if (msg) {
+          msg.textContent = 'Selected: ' + date + ' at ' + time;
+          msg.style.display = 'block';
+        }
+        var confirmWrap = document.getElementById('confirm-wrap');
+        var confirmBtn = document.getElementById('confirm-btn');
+        if (confirmWrap && confirmBtn) {
+          confirmWrap.classList.add('visible');
+          updateConfirmState();
+        }
+      }
+
+      document.getElementById('confirm-btn').addEventListener('click', function() {
+        var btn = this;
+        if (btn.disabled || !selectedDate || !selectedTime) return;
+        if (bookingLink) {
+          var url = bookingLink;
+          try {
+            var sep = url.indexOf('?') !== -1 ? '&' : '?';
+            if (url.indexOf('calendly.com') !== -1 || url.indexOf('fresha.com') !== -1) {
+              url += sep + 'date=' + selectedDate;
+            }
+          } catch (e) {}
+          window.location.href = url;
+        } else {
+          btn.disabled = true;
+          btn.textContent = setupToken ? 'No booking link' : 'Demo only';
+        }
+      });
 
     })();
   </script>
-  {% include '_footer.html' %}
 </body>
 </html>

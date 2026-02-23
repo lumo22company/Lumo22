@@ -401,6 +401,28 @@ def available_slots():
         return jsonify({"error": "Could not compute slots"}), 500
 
 
+@api_bp.route('/booking-info', methods=['GET'])
+def booking_info():
+    """
+    Return booking_link and business_name for a setup token.
+    Used by the booking page so customers can confirm and go to Calendly/Fresha.
+    """
+    setup_token = (request.args.get("setup") or "").strip()
+    if not setup_token:
+        return jsonify({"booking_link": None, "business_name": None}), 200
+    try:
+        from services.front_desk_setup_service import FrontDeskSetupService
+        svc = FrontDeskSetupService()
+        setup = svc.get_by_done_token(setup_token)
+        if not setup or (setup.get("product_type") or "front_desk") != "front_desk":
+            return jsonify({"booking_link": None, "business_name": None}), 200
+        booking_link = (setup.get("booking_link") or "").strip() or None
+        business_name = (setup.get("business_name") or "").strip() or None
+        return jsonify({"booking_link": booking_link, "business_name": business_name}), 200
+    except Exception:
+        return jsonify({"booking_link": None, "business_name": None}), 200
+
+
 @api_bp.route('/capture', methods=['POST'])
 def capture_lead():
     """
