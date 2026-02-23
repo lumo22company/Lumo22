@@ -14,8 +14,8 @@
   <style>
     .captions-platform-checkboxes { display: flex; flex-wrap: nowrap; gap: 0.5rem 1.25rem; margin-bottom: 0.25rem; }
     @media (max-width: 640px) { .captions-platform-checkboxes { flex-wrap: wrap; } }
-    .dfd-btn.btn-disabled { opacity: 0.5; cursor: not-allowed; }
-    .dfd-btn.btn-disabled:hover { opacity: 0.6; }
+    .dfd-btn.btn-disabled { opacity: 0.6; }
+    .dfd-btn.btn-disabled:hover { opacity: 0.75; }
   </style>
 </head>
 <body class="lumo-landing product-page-captions">
@@ -283,7 +283,7 @@
       var isValid = selected !== null;
       var targetHref = '/captions-checkout?' + q;
       var subHref = '/captions-checkout-subscription?' + q;
-      if (oneoffCta && oneoffCta.getAttribute('href') && oneoffCta.getAttribute('href').indexOf('captions-checkout') !== -1) {
+      if (oneoffCta) {
         oneoffCta.href = isValid ? targetHref : '#pricing';
         oneoffCta.classList.toggle('btn-disabled', !isValid);
         oneoffCta.setAttribute('aria-disabled', !isValid);
