@@ -147,9 +147,11 @@ def _handle_captions_payment(session):
     if hasattr(meta, "get"):
         platforms_count = meta.get("platforms")
         selected_platforms = meta.get("selected_platforms")
+        include_stories = meta.get("include_stories") in ("1", "true", "yes")
     else:
         platforms_count = getattr(meta, "platforms", None)
         selected_platforms = getattr(meta, "selected_platforms", None)
+        include_stories = getattr(meta, "include_stories", None) in ("1", "true", "yes")
     try:
         platforms_count = max(1, int(platforms_count)) if platforms_count is not None else 1
     except (TypeError, ValueError):
@@ -180,6 +182,7 @@ def _handle_captions_payment(session):
                 stripe_subscription_id=stripe_subscription_id,
                 platforms_count=platforms_count,
                 selected_platforms=selected_platforms,
+                include_stories=include_stories,
             )
         except Exception as e:
             print(f"[Stripe webhook] Failed to create order in Supabase: {e}")

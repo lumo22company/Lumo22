@@ -42,10 +42,12 @@ class CaptionOrderService:
         stripe_subscription_id: Optional[str] = None,
         platforms_count: int = 1,
         selected_platforms: Optional[str] = None,
+        include_stories: bool = False,
     ) -> Dict[str, Any]:
         """Create order after payment. Returns dict with id, token, customer_email, status.
         platforms_count: number of platforms paid for (1 = base, 2+ = base + add-ons).
-        selected_platforms: comma-separated platforms chosen at checkout (e.g. Instagram, LinkedIn)."""
+        selected_platforms: comma-separated platforms chosen at checkout (e.g. Instagram, LinkedIn).
+        include_stories: True when customer paid for 30 Days Story Ideas add-on at checkout."""
         token = _token()
         row = {
             "token": token,
@@ -56,6 +58,7 @@ class CaptionOrderService:
             "stripe_subscription_id": (stripe_subscription_id or "").strip() or None,
             "platforms_count": max(1, int(platforms_count)),
             "selected_platforms": (selected_platforms or "").strip() or None,
+            "include_stories": bool(include_stories),
         }
         result = self.client.table(self.table).insert(row).execute()
         if not result.data:

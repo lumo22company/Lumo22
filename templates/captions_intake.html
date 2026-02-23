@@ -221,8 +221,8 @@
         <input type="text" id="platform_habits" name="platform_habits" placeholder="e.g. shorter on Instagram, longer on LinkedIn (optional)" value="{{ existing_intake.get('platform_habits', '') }}">
         <div id="stories-addon-wrap" class="intake-other-wrap" style="display: none; margin-top: 1rem; padding: 1rem; background: rgba(255,255,255,0.5); border-radius: 8px; border: 1px solid #ddd;">
           <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; margin-bottom: 0.25rem;">
-            <input type="checkbox" id="include_stories" name="include_stories" {% if existing_intake.get('include_stories') %}checked{% endif %} style="width: auto;">
-            <span>Add 30 Stories prompts (+£19 one-off / +£12/mo)</span>
+            <input type="checkbox" id="include_stories" name="include_stories" {% if existing_intake.get('include_stories') or stories_paid %}checked{% endif %} {% if stories_paid %}disabled{% endif %} style="width: auto;">
+            <span>{% if stories_paid %}30 Stories included (already paid){% else %}Add 30 Stories prompts (+£19 one-off / +£12/mo){% endif %}</span>
           </label>
           <p class="field-helper" style="margin: 0.5rem 0 0;">One-line prompts for Instagram/Facebook Stories each day — your complete social content pack.</p>
         </div>

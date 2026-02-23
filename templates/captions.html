@@ -117,6 +117,15 @@
             <label style="display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer; font-size: 0.9rem;"><input type="checkbox" name="which_platform" value="Pinterest" class="captions-which-cb"> Pinterest</label>
           </div>
           <p id="captions-which-hint" style="font-size: 0.8rem; color: var(--lum-text-muted); margin: 0.5rem 0 0;"></p>
+          {% if stories_addon_available|default(false) %}
+          <div id="captions-stories-wrap" style="display: none; margin-top: 1rem; padding: 0.75rem 1rem; background: rgba(255,255,255,0.08); border-radius: 8px; border: 1px solid rgba(255,255,255,0.15);">
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.95rem;">
+              <input type="checkbox" id="captions-stories-cb" name="stories" style="width: auto;">
+              <span>Add 30 Days Story Ideas (+£19 one-off / +£12/mo)</span>
+            </label>
+            <p style="font-size: 0.8rem; color: var(--lum-text-muted); margin: 0.25rem 0 0 1.6rem;">One-line prompts for Instagram/Facebook Stories each day.</p>
+          </div>
+          {% endif %}
         </div>
         <p id="captions-platform-error" role="alert" style="display: none; margin-top: 0.75rem; padding: 0.75rem 1rem; background: rgba(220,50,50,0.15); border: 1px solid rgba(220,50,50,0.4); border-radius: 8px; color: #ff9999; font-size: 0.9rem;">Please select which platform(s) you want above. You cannot proceed to checkout until this is complete.</p>
         <p style="font-size: 0.8rem; color: var(--lum-text-muted); margin: 0.5rem 0 0;">Your choice will be prefilled on the form after payment.</p>
@@ -236,8 +245,14 @@
     var whichHint = document.getElementById('captions-which-hint');
     var errEl = document.getElementById('captions-platform-error');
     if (!sel) return;
-    function oneoffTotal(n) { return 97 + (n - 1) * 29; }
-    function subTotal(n) { return 79 + (n - 1) * 19; }
+    function oneoffTotal(n, stories) { return 97 + (n - 1) * 29 + (stories ? 19 : 0); }
+    function subTotal(n, stories) { return 79 + (n - 1) * 19 + (stories ? 12 : 0); }
+    function hasStoriesChecked() { var cb = document.getElementById('captions-stories-cb'); return cb && cb.checked; }
+    function hasInstagramFacebook() {
+      var cbs = document.querySelectorAll('.captions-which-cb:checked');
+      for (var i = 0; i < cbs.length; i++) if ((cbs[i].value || '').toLowerCase().indexOf('instagram') !== -1 || (cbs[i].value || '').toLowerCase().indexOf('facebook') !== -1) return true;
+      return false;
+    }
     function getN() { return Math.max(1, Math.min(4, parseInt(sel.value, 10) || 1)); }
     function getSelectedPlatforms() {
       var n = getN();
@@ -255,9 +270,11 @@
     function updateLinks() {
       var n = getN();
       var selected = getSelectedPlatforms();
+      var stories = hasStoriesChecked();
       var q = 'platforms=' + n;
       if (selected) q += '&selected=' + encodeURIComponent(selected);
-      if (oneoffPrice) oneoffPrice.innerHTML = '£' + oneoffTotal(n) + ' <span>one-time</span>';
+      if (stories) q += '&stories=1';
+      if (oneoffPrice) oneoffPrice.innerHTML = '£' + oneoffTotal(n, stories) + ' <span>one-time</span>';
       var isValid = selected !== null;
       var targetHref = '/captions-checkout?' + q;
       var subHref = '/captions-checkout-subscription?' + q;
@@ -266,11 +283,11 @@
         oneoffCta.classList.toggle('btn-disabled', !isValid);
         oneoffCta.setAttribute('aria-disabled', !isValid);
       }
-      if (subPrice) subPrice.innerHTML = '£' + subTotal(n) + ' <span>/month</span>';
-      if (subSave) subSave.textContent = 'Save £' + (oneoffTotal(n) - subTotal(n)) + ' vs one-off';
+      if (subPrice) subPrice.innerHTML = '£' + subTotal(n, stories) + ' <span>/month</span>';
+      if (subSave) subSave.textContent = 'Save £' + (oneoffTotal(n, stories) - subTotal(n, stories)) + ' vs one-off';
       if (subCta) {
         subCta.href = isValid ? subHref : '#pricing';
-        subCta.textContent = 'Subscribe — £' + subTotal(n) + '/month';
+        subCta.textContent = 'Subscribe — £' + subTotal(n, stories) + '/month';
         subCta.classList.toggle('btn-disabled', !isValid);
         subCta.setAttribute('aria-disabled', !isValid);
       }
@@ -286,13 +303,23 @@
       var n = getN();
       var checked = document.querySelectorAll('.captions-which-cb:checked');
       if (checked.length > n && this.checked) this.checked = false;
+      var storiesWrap = document.getElementById('captions-stories-wrap');
+      if (storiesWrap) storiesWrap.style.display = hasInstagramFacebook() ? 'block' : 'none';
+      var storiesCb = document.getElementById('captions-stories-cb');
+      if (storiesCb && !hasInstagramFacebook()) storiesCb.checked = false;
       updateWhichUI();
       updateLinks();
     }
     document.querySelectorAll('.captions-which-cb').forEach(function(cb) {
       cb.addEventListener('change', onCheckboxChange);
     });
+    var storiesCb = document.getElementById('captions-stories-cb');
+    if (storiesCb) storiesCb.addEventListener('change', function() { updateLinks(); });
     sel.addEventListener('change', onPlatformChange);
+    (function initStoriesWrap() {
+      var wrap = document.getElementById('captions-stories-wrap');
+      if (wrap) wrap.style.display = hasInstagramFacebook() ? 'block' : 'none';
+    })();
     updateWhichUI();
     updateLinks();
 

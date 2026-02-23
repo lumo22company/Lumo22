@@ -39,7 +39,7 @@
       {% if platforms_invalid|default(false) %}
       <p class="checkout-platform-error" style="margin-bottom: 1rem; padding: 0.75rem 1rem; background: rgba(220,50,50,0.15); border: 1px solid rgba(220,50,50,0.4); border-radius: 8px; color: #ff9999; font-size: 0.9rem;">Please go back and select which {{ platforms }} platform(s) you want on the captions page.</p>
       {% else %}
-      <p id="checkout-platform-note" style="font-size: 0.9rem; color: var(--lum-text-muted); margin-bottom: 0;">{% if selected %}Platforms: {{ selected }}{% elif platforms|default(1) > 1 %}{{ platforms }} platforms included.{% endif %}</p>
+      <p id="checkout-platform-note" style="font-size: 0.9rem; color: var(--lum-text-muted); margin-bottom: 0;">{% if selected %}Platforms: {{ selected }}{% elif platforms|default(1) > 1 %}{{ platforms }} platforms included.{% endif %}{% if stories %} + 30 Days Story Ideas.{% endif %}</p>
       {% endif %}
       <p class="price-note">New 30-day caption pack each month. Renews monthly until you cancel. Cancel anytime from your Stripe customer portal. You’ll complete a short form after payment; your captions are ready within 15 minutes.</p>
 

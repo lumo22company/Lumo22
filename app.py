@@ -145,6 +145,9 @@ def captions_page():
     extra_sub = bool((getattr(Config, 'STRIPE_CAPTIONS_EXTRA_PLATFORM_SUBSCRIPTION_PRICE_ID', None) or '').strip())
     # Only show multi-platform when one-off uses our checkout (not payment link) and has extra prices
     supports_multi_platform = use_checkout_redirect and (extra_oneoff or (subscription_available and extra_sub))
+    stories_oneoff = bool((getattr(Config, 'STRIPE_CAPTIONS_STORIES_PRICE_ID', None) or '').strip())
+    stories_sub = bool((getattr(Config, 'STRIPE_CAPTIONS_STORIES_SUBSCRIPTION_PRICE_ID', None) or '').strip())
+    stories_addon_available = stories_oneoff and stories_sub
     checkout_error = request.args.get('error', '').strip()
     return render_template(
         'captions.html',
@@ -152,6 +155,7 @@ def captions_page():
         use_checkout_redirect=use_checkout_redirect,
         captions_subscription_available=subscription_available,
         supports_multi_platform=supports_multi_platform,
+        stories_addon_available=stories_addon_available,
         checkout_error=checkout_error,
     )
 
@@ -163,6 +167,7 @@ def captions_intake_page():
     existing_intake = {}
     platforms_count = 1
     selected_platforms = ""
+    stories_paid = False
     if token:
         try:
             from services.caption_order_service import CaptionOrderService
@@ -173,6 +178,7 @@ def captions_intake_page():
                     existing_intake = order.get("intake") or {}
                 platforms_count = max(1, int(order.get("platforms_count", 1)))
                 selected_platforms = (order.get("selected_platforms") or "").strip() or ""
+                stories_paid = bool(order.get("include_stories"))
         except Exception:
             pass
     # Prefill platform from order (chosen at checkout) when they haven't saved intake yet
@@ -194,7 +200,7 @@ def captions_intake_page():
                 normalized.append(p)
         prefilled_platform = ", ".join(normalized)
     now = datetime.utcnow()
-    r = make_response(render_template('captions_intake.html', intake_token=token, existing_intake=existing_intake, platforms_count=platforms_count, prefilled_platform=prefilled_platform, now=now))
+    r = make_response(render_template('captions_intake.html', intake_token=token, existing_intake=existing_intake, platforms_count=platforms_count, prefilled_platform=prefilled_platform, stories_paid=stories_paid, now=now))
     r.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     r.headers['Pragma'] = 'no-cache'
     return r
@@ -225,15 +231,22 @@ def captions_checkout_page():
     from urllib.parse import urlencode
     platforms = _parse_platforms_from_request()
     selected = (request.args.get("selected") or request.args.get("selected_platforms") or "").strip()
+    stories = request.args.get("stories", "").strip().lower() in ("1", "true", "yes", "on")
     selected_count = len([p.strip() for p in selected.split(",") if p.strip()]) if selected else 0
     platforms_invalid = platforms > 1 and selected_count != platforms
-    q = urlencode({"platforms": platforms, **({"selected": selected} if selected else {})})
+    params = {"platforms": platforms}
+    if selected:
+        params["selected"] = selected
+    if stories:
+        params["stories"] = "1"
+    q = urlencode(params)
     api_url = f"/api/captions-checkout?{q}" if not platforms_invalid else None
-    total = 97 + (platforms - 1) * 29
+    total = 97 + (platforms - 1) * 29 + (19 if stories else 0)
     return render_template(
         'captions_checkout.html',
         platforms=platforms,
         selected=selected,
+        stories=stories,
         api_url=api_url,
         total_oneoff=total,
         platforms_invalid=platforms_invalid,
@@ -246,15 +259,22 @@ def captions_checkout_subscription_page():
     from urllib.parse import urlencode
     platforms = _parse_platforms_from_request()
     selected = (request.args.get("selected") or request.args.get("selected_platforms") or "").strip()
+    stories = request.args.get("stories", "").strip().lower() in ("1", "true", "yes", "on")
     selected_count = len([p.strip() for p in selected.split(",") if p.strip()]) if selected else 0
     platforms_invalid = platforms > 1 and selected_count != platforms
-    q = urlencode({"platforms": platforms, **({"selected": selected} if selected else {})})
+    params = {"platforms": platforms}
+    if selected:
+        params["selected"] = selected
+    if stories:
+        params["stories"] = "1"
+    q = urlencode(params)
     api_url = f"/api/captions-checkout-subscription?{q}" if not platforms_invalid else None
-    total = 79 + (platforms - 1) * 19
+    total = 79 + (platforms - 1) * 19 + (12 if stories else 0)
     return render_template(
         'captions_checkout_subscription.html',
         platforms=platforms,
         selected=selected,
+        stories=stories,
         api_url=api_url,
         total_sub=total,
         platforms_invalid=platforms_invalid,
