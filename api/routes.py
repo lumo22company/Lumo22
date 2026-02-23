@@ -144,6 +144,13 @@ def front_desk_setup():
                 minimum_gap_between_appointments = max(15, min(480, int(raw_gap)))
             except (TypeError, ValueError):
                 pass
+        raw_duration = data.get('appointment_duration_minutes')
+        appointment_duration_minutes = 60
+        if raw_duration is not None:
+            try:
+                appointment_duration_minutes = max(15, min(120, int(raw_duration)))
+            except (TypeError, ValueError):
+                pass
         auto_reply_enabled = data.get('auto_reply_enabled', True)
         if isinstance(auto_reply_enabled, str):
             auto_reply_enabled = auto_reply_enabled.strip().lower() in ('1', 'true', 'yes', 'on')
@@ -162,6 +169,7 @@ def front_desk_setup():
                 reply_style_examples=reply_style_examples,
                 tight_scheduling_enabled=tight_scheduling_enabled,
                 minimum_gap_between_appointments=minimum_gap_between_appointments,
+                appointment_duration_minutes=appointment_duration_minutes,
                 auto_reply_enabled=auto_reply_enabled,
                 skip_reply_domains=skip_reply_domains,
             )
@@ -178,6 +186,7 @@ Customer email: {customer_email}
 Business name: {business_name}
 Enquiry email to monitor: {enquiry_email}
 Booking link: {booking_link or '(none)'}
+Appointment duration (from their booking system): {appointment_duration_minutes} min
 Reply tone: {tone or '(default)'}
 Forwarding address (for auto-reply): {forwarding_email or '(not set)'}
 Auto-reply: {'on' if auto_reply_enabled else 'off (customer will use pause link to turn on)'}
@@ -308,6 +317,7 @@ def available_slots():
     Return available appointment slot start times for a given day.
     Query params: date (YYYY-MM-DD), tight_schedule (true|false), gap_minutes (int),
     optional slot_minutes, work_start (HH:MM), work_end (HH:MM).
+    Optional setup=TOKEN: use business's appointment_duration_minutes, tight_scheduling, gap from front_desk_setups.
     When tight_schedule is true and there are existing bookings that day, only slots
     within gap_minutes of a booking are returned; if no bookings, all slots are returned.
     """
@@ -320,22 +330,38 @@ def available_slots():
         except ValueError:
             return jsonify({"error": "Invalid date; use YYYY-MM-DD"}), 400
 
-        tight_schedule = (request.args.get("tight_schedule") or "").strip().lower() in ("1", "true", "yes")
         raw_gap = request.args.get("gap_minutes")
+        raw_slot = request.args.get("slot_minutes")
+        tight_schedule = (request.args.get("tight_schedule") or "").strip().lower() in ("1", "true", "yes")
         gap_minutes = 60
-        if raw_gap is not None:
+        slot_minutes = 60
+
+        setup_token = (request.args.get("setup") or "").strip()
+        use_setup_config = False
+        if setup_token:
+            from services.front_desk_setup_service import FrontDeskSetupService
             try:
-                gap_minutes = max(5, min(480, int(raw_gap)))
-            except (TypeError, ValueError):
+                svc = FrontDeskSetupService()
+                setup = svc.get_by_done_token(setup_token)
+                if setup and (setup.get("product_type") or "front_desk") == "front_desk":
+                    slot_minutes = max(15, min(120, setup.get("appointment_duration_minutes") or 60))
+                    tight_schedule = bool(setup.get("tight_scheduling_enabled"))
+                    gap_minutes = max(5, min(480, setup.get("minimum_gap_between_appointments") or 60))
+                    use_setup_config = True  # customer cannot override duration/gap from their booking system
+            except Exception:
                 pass
 
-        slot_minutes = 30
-        raw_slot = request.args.get("slot_minutes")
-        if raw_slot is not None:
-            try:
-                slot_minutes = max(5, min(120, int(raw_slot)))
-            except (TypeError, ValueError):
-                pass
+        if not use_setup_config:
+            if raw_gap is not None:
+                try:
+                    gap_minutes = max(5, min(480, int(raw_gap)))
+                except (TypeError, ValueError):
+                    pass
+            if raw_slot is not None:
+                try:
+                    slot_minutes = max(5, min(120, int(raw_slot)))
+                except (TypeError, ValueError):
+                    pass
 
         work_start = request.args.get("work_start") or None
         work_end = request.args.get("work_end") or None

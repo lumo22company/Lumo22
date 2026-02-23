@@ -39,6 +39,7 @@ class FrontDeskSetupService:
         reply_style_examples: Optional[str] = None,
         tight_scheduling_enabled: bool = False,
         minimum_gap_between_appointments: int = 60,
+        appointment_duration_minutes: int = 60,
         auto_reply_enabled: bool = True,
         skip_reply_domains: Optional[str] = None,
     ) -> Dict[str, Any]:
@@ -48,6 +49,7 @@ class FrontDeskSetupService:
         domain = (Config.INBOUND_EMAIL_DOMAIN or "inbound.lumo22.com").strip().lower()
         forwarding_email = f"reply-{short_id}@{domain}"
         gap = max(15, min(480, minimum_gap_between_appointments))  # clamp 15–480 minutes
+        duration = max(15, min(120, appointment_duration_minutes))  # clamp 15–120 minutes
         skip_domains = (skip_reply_domains or "").strip() or None
         tone_val = (tone or "").strip() or None
         examples_val = (reply_style_examples or "").strip() or None
@@ -65,6 +67,7 @@ class FrontDeskSetupService:
             "chat_enabled": False,
             "tight_scheduling_enabled": tight_scheduling_enabled,
             "minimum_gap_between_appointments": gap,
+            "appointment_duration_minutes": duration,
             "auto_reply_enabled": auto_reply_enabled,
             "skip_reply_domains": skip_domains,
         }

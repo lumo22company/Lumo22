@@ -50,10 +50,6 @@
     <input type="date" id="booking-date" name="date" min="">
     <p class="hint">Pick the day you want to book.</p>
 
-    <label for="slot-minutes">Appointment duration (minutes)</label>
-    <input type="number" id="slot-minutes" name="slot_minutes" value="60" min="15" max="120" step="15" style="width:6rem;">
-    <p class="hint">How long is the appointment? We use this to avoid overlaps and to show the correct slots (e.g. a 90 min booking needs more space).</p>
-
     <fieldset style="border:0; padding:0; margin:0;">
       <legend style="font-size:0.9rem; font-weight:500; margin-bottom:0.5rem; color:var(--lum-text);">Scheduling options</legend>
       <div class="checkbox-group">
@@ -85,7 +81,6 @@
   <script>
     (function() {
       var dateInput = document.getElementById('booking-date');
-      var slotMinutesInput = document.getElementById('slot-minutes');
       var groupCheck = document.getElementById('group-appointments');
       var gapInput = document.getElementById('gap-minutes');
       var slotsLoading = document.getElementById('slots-loading');
@@ -112,7 +107,7 @@
 
         var params = new URLSearchParams({
           date: date,
-          slot_minutes: (slotMinutesInput && slotMinutesInput.value && parseInt(slotMinutesInput.value, 10)) || 60,
+          slot_minutes: 60,
           tight_schedule: groupCheck.checked ? 'true' : 'false',
           gap_minutes: (gapInput.value && parseInt(gapInput.value, 10)) || 60
         });
@@ -160,8 +155,6 @@
       updateGapVisibility();
 
       dateInput.addEventListener('change', fetchSlots);
-      if (slotMinutesInput) slotMinutesInput.addEventListener('change', fetchSlots);
-      if (slotMinutesInput) slotMinutesInput.addEventListener('input', fetchSlots);
       gapInput.addEventListener('change', fetchSlots);
       gapInput.addEventListener('input', fetchSlots);
     })();

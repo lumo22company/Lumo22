@@ -223,6 +223,9 @@
         <fieldset style="border:0; padding:0; margin:0 0 1.25rem;">
           <legend style="font-size:0.9rem; font-weight:500; margin-bottom:0.5rem; color:var(--lum-text);">Group appointments together (optional)</legend>
           <p class="hint" style="margin-bottom:0.75rem;">Turn <strong>off</strong> for full control—customers see the full timetable. Turn <strong>on</strong> to only offer slots near existing bookings (e.g. if you have 2pm, show 1pm, 2pm, 3pm). Empty days always show all times.</p>
+          <label for="appointment_duration_minutes">Appointment duration (minutes)</label>
+          <input type="number" id="appointment_duration_minutes" name="appointment_duration_minutes" value="60" min="15" max="120" step="15" style="width:6rem; margin-bottom:0.5rem;">
+          <p class="hint" style="margin-bottom:0.75rem;">From your Calendly/Fresha (e.g. 30, 60, 90). Used to avoid overlaps—customers cannot change this.</p>
           <div class="checkbox-group" style="margin-bottom:0.75rem;">
             <label class="checkbox-item">
               <input type="checkbox" id="tight_scheduling_enabled" name="tight_scheduling_enabled" value="1">
@@ -430,6 +433,7 @@
       function buildDfdPayload() {
         var tightCheck = form.querySelector('#tight_scheduling_enabled');
         var gapInput = form.querySelector('#minimum_gap_between_appointments');
+        var durationInput = form.querySelector('#appointment_duration_minutes');
         var autoReplyCheck = form.querySelector('#auto_reply_enabled');
         var skipDomainsInput = form.querySelector('#skip_reply_domains');
         var toneEl = form.querySelector('input[name="tone"]:checked');
@@ -443,6 +447,7 @@
           reply_style_examples: (examplesEl && examplesEl.value || '').trim() || null,
           tight_scheduling_enabled: !!(tightCheck && tightCheck.checked),
           minimum_gap_between_appointments: (gapInput && gapInput.value) ? parseInt(gapInput.value, 10) : 60,
+          appointment_duration_minutes: (durationInput && durationInput.value) ? parseInt(durationInput.value, 10) : 60,
           auto_reply_enabled: !!(autoReplyCheck && autoReplyCheck.checked),
           skip_reply_domains: (skipDomainsInput && skipDomainsInput.value || '').trim() || null
         };
@@ -508,6 +513,7 @@
           if (p.reply_style_examples) dfdReviewContent.appendChild(dfdSect('Example replies', p.reply_style_examples));
           dfdReviewContent.appendChild(dfdSect('Domains to never auto-reply', p.skip_reply_domains));
           dfdReviewContent.appendChild(dfdSect('Auto-reply', p.auto_reply_enabled ? 'Yes' : 'No'));
+          dfdReviewContent.appendChild(dfdSect('Appointment duration', (p.appointment_duration_minutes || 60) + ' min (from your booking system)'));
           dfdReviewContent.appendChild(dfdSect('Group appointments together', p.tight_scheduling_enabled ? 'Yes (within ' + p.minimum_gap_between_appointments + ' min of existing)' : 'No — full timetable, full control'));
           form.style.display = 'none';
           dfdReviewStep.classList.add('show');
