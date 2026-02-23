@@ -229,8 +229,10 @@ This is an automated notification from your lead capture system.
         file_content: Optional[str] = None,
         file_content_bytes: Optional[bytes] = None,
         mime_type: str = "text/plain",
+        extra_attachments: Optional[list] = None,
     ) -> tuple:
-        """Send email with a single attachment. Returns (True, None) on success, (False, error_message) on failure."""
+        """Send email with one or more attachments. Returns (True, None) on success, (False, error_message) on failure.
+        extra_attachments: optional list of {"filename": str, "content": bytes, "mime_type": str} for additional files."""
         to_email = _sanitize_email_value(to_email or "")
         if not to_email or "@" not in to_email:
             msg = "Invalid or missing recipient email"
@@ -240,12 +242,25 @@ This is an automated notification from your lead capture system.
             msg = "SendGrid not configured (missing SENDGRID_API_KEY)"
             print(f"[SendGrid] Email with attachment NOT sent (no API key): subject={subject!r} to={to_email}")
             return (False, msg)
+
+        def b64_for(data: bytes) -> str:
+            return base64.b64encode(data).decode("ascii")
+
+        attachments_to_add = []
         if file_content_bytes is not None:
-            encoded = base64.b64encode(file_content_bytes).decode("ascii")
+            attachments_to_add.append((filename, b64_for(file_content_bytes), mime_type))
         elif file_content is not None:
-            encoded = base64.b64encode(file_content.encode("utf-8")).decode("utf-8")
-        else:
-            msg = "No attachment content (need file_content or file_content_bytes)"
+            attachments_to_add.append((filename, b64_for(file_content.encode("utf-8")), mime_type))
+
+        for extra in (extra_attachments or []):
+            fn = extra.get("filename")
+            content = extra.get("content")
+            mt = extra.get("mime_type", "application/octet-stream")
+            if fn and content is not None:
+                attachments_to_add.append((fn, b64_for(content), mt))
+
+        if not attachments_to_add:
+            msg = "No attachment content (need file_content/file_content_bytes or extra_attachments)"
             print("[SendGrid] send_email_with_attachment: " + msg)
             return (False, msg)
         try:
@@ -259,12 +274,15 @@ This is an automated notification from your lead capture system.
                 plain_text_content=body,
                 html_content=html_content,
             )
-            attachment = Attachment(
-                file_content=FileContent(encoded),
-                file_name=FileName(filename),
-                file_type=FileType(mime_type),
-            )
-            message.attachment = attachment
+            attachment_list = []
+            for fn, enc, mt in attachments_to_add:
+                att = Attachment(
+                    file_content=FileContent(enc),
+                    file_name=FileName(fn),
+                    file_type=FileType(mt),
+                )
+                attachment_list.append(att)
+            message.attachment = attachment_list
             response = self.sendgrid_client.send(message)
             ok = response.status_code in [200, 201, 202]
             if ok:

@@ -85,7 +85,6 @@
     <a href="/" class="lumo-nav-logo">Lumo 22</a>
     <div class="lumo-nav-links">
       <a href="/captions">Captions</a>
-      <a href="/digital-front-desk">Front Desk</a>
     </div>
     <a href="/captions" class="lumo-nav-cta">Get my 30 days</a>
   </nav>
@@ -185,6 +184,19 @@
         <textarea id="voice_avoid" name="voice_avoid" placeholder="e.g. jargon, hype, overly formal (optional)">{{ existing_intake.get('voice_avoid', '') }}</textarea>
       </div>
       <div class="form-section">
+        <h2>Language</h2>
+        <label for="caption_language">What language should your captions be written in?</label>
+        <select id="caption_language" name="caption_language">
+          <option value="English (UK)" {% if existing_intake.get('caption_language') == 'English (UK)' or not existing_intake.get('caption_language') %}selected{% endif %}>English (UK)</option>
+          <option value="English (US)" {% if existing_intake.get('caption_language') == 'English (US)' %}selected{% endif %}>English (US)</option>
+          <option value="Spanish" {% if existing_intake.get('caption_language') == 'Spanish' %}selected{% endif %}>Spanish</option>
+          <option value="French" {% if existing_intake.get('caption_language') == 'French' %}selected{% endif %}>French</option>
+          <option value="German" {% if existing_intake.get('caption_language') == 'German' %}selected{% endif %}>German</option>
+          <option value="Portuguese" {% if existing_intake.get('caption_language') == 'Portuguese' %}selected{% endif %}>Portuguese</option>
+        </select>
+        <p class="field-helper">Spelling, idioms, and tone will match this variety (e.g. American vs British English).</p>
+      </div>
+      <div class="form-section">
         <h2>Platform</h2>
         {% if platforms_count > 1 %}
         <p class="field-helper" style="margin-bottom: 0.5rem;">Select up to {{ platforms_count }} platforms (included in your order). You cannot exceed the number you paid for.</p>
@@ -207,6 +219,13 @@
         {% endif %}
         <label for="platform_habits">Any platform-specific habits?</label>
         <input type="text" id="platform_habits" name="platform_habits" placeholder="e.g. shorter on Instagram, longer on LinkedIn (optional)" value="{{ existing_intake.get('platform_habits', '') }}">
+        <div id="stories-addon-wrap" class="intake-other-wrap" style="display: none; margin-top: 1rem; padding: 1rem; background: rgba(255,255,255,0.5); border-radius: 8px; border: 1px solid #ddd;">
+          <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; margin-bottom: 0.25rem;">
+            <input type="checkbox" id="include_stories" name="include_stories" {% if existing_intake.get('include_stories') %}checked{% endif %} style="width: auto;">
+            <span>Add 30 Stories prompts (+£19 one-off / +£12/mo)</span>
+          </label>
+          <p class="field-helper" style="margin: 0.5rem 0 0;">One-line prompts for Instagram/Facebook Stories each day — your complete social content pack.</p>
+        </div>
       </div>
       <div class="form-section">
         <h2 style="display: flex; align-items: center;">Hashtags<span class="help-trigger" tabindex="0" role="button" aria-label="Hashtag guidelines"><span aria-hidden="true">?</span><span class="help-tooltip"><strong>Recommended by platform:</strong><br>Instagram &amp; Facebook 2–5 (or up to 30 on Instagram)<br>LinkedIn 2–5<br>TikTok 2–5<br>Pinterest 2–5<br><br>Quality over quantity. 3–10 is a safe range for most posts.</span></span></h2>
@@ -371,9 +390,12 @@
       reviewContent.appendChild(sect('What they care about', gv('audience_cares')));
       reviewContent.appendChild(sect('Voice (3–5 words)', gv('voice_words') || '(not provided)'));
       reviewContent.appendChild(sect('Language to avoid', gv('voice_avoid')));
+      reviewContent.appendChild(sect('Caption language', gv('caption_language') || 'English (UK)'));
       reviewContent.appendChild(sect('Primary platform', gv('platform') || '(not provided)'));
       reviewContent.appendChild(sect('Platform habits', gv('platform_habits')));
       var inc = document.getElementById('include_hashtags');
+      var storiesCb = document.getElementById('include_stories');
+      if (storiesCb && storiesCb.offsetParent) reviewContent.appendChild(sect('Stories add-on', storiesCb.checked ? 'Yes — 30 story prompts' : 'No'));
       reviewContent.appendChild(sect('Hashtags', inc && inc.checked ? 'Yes, ' + (gv('hashtag_min')||'3') + '–' + (gv('hashtag_max')||'10') + ' per caption' : 'No'));
       reviewContent.appendChild(sect('Goal for this month', gso('goal', 'goal_other') || '(not provided)'));
       var launchDesc = gv('launch_event_description');
@@ -426,7 +448,9 @@
         hashtag_max: maxH,
         goal: gso('goal', 'goal_other'),
         launch_event_description: gv('launch_event_description'),
-        caption_examples: gv('caption_examples')
+        caption_examples: gv('caption_examples'),
+        caption_language: gv('caption_language') || 'English (UK)',
+        include_stories: !!(document.getElementById('include_stories') && document.getElementById('include_stories').checked)
       };
       var btn = document.getElementById('btn-confirm');
       if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
@@ -536,6 +560,38 @@
         }
       }
       render();
+      function toggleStories() {
+        var wrap = document.getElementById('stories-addon-wrap');
+        if (!wrap) return;
+        var platformVal = (platformEl && platformEl.value || '').trim();
+        var hasIGFB = platformVal.toLowerCase().indexOf('instagram') !== -1 || platformVal.toLowerCase().indexOf('facebook') !== -1;
+        wrap.style.display = hasIGFB ? 'block' : 'none';
+        if (!hasIGFB) {
+          var cb = document.getElementById('include_stories');
+          if (cb) cb.checked = false;
+        }
+      }
+      toggleStories();
+      btns.forEach(function(btn) { btn.addEventListener('click', toggleStories); });
+      var platformSelect = document.getElementById('platform');
+      if (platformSelect && platformSelect.tagName === 'SELECT') {
+        platformSelect.addEventListener('change', toggleStories);
+      }
+    })();
+    (function setupStoriesForSinglePlatform() {
+      var wrap = document.getElementById('stories-addon-wrap');
+      var platformSelect = document.getElementById('platform');
+      if (!wrap || !platformSelect || platformSelect.tagName !== 'SELECT') return;
+      platformSelect.addEventListener('change', function() {
+        var hasIGFB = (platformSelect.value || '').indexOf('Instagram') !== -1;
+        wrap.style.display = hasIGFB ? 'block' : 'none';
+        if (!hasIGFB) {
+          var cb = document.getElementById('include_stories');
+          if (cb) cb.checked = false;
+        }
+      });
+      var hasIGFB = (platformSelect.value || '').indexOf('Instagram') !== -1;
+      wrap.style.display = hasIGFB ? 'block' : 'none';
     })();
     var caForm = document.getElementById('create-account-form');
     if (caForm) {
@@ -666,8 +722,11 @@
         reviewContent.appendChild(sect('What they care about', getVal('audience_cares')));
         reviewContent.appendChild(sect('Voice (3–5 words)', getVal('voice_words') || '(not provided)'));
         reviewContent.appendChild(sect('Language to avoid', getVal('voice_avoid')));
+        reviewContent.appendChild(sect('Caption language', getVal('caption_language') || 'English (UK)'));
         reviewContent.appendChild(sect('Primary platform', getVal('platform') || '(not provided)'));
         reviewContent.appendChild(sect('Platform habits', getVal('platform_habits')));
+        var storiesCb = document.getElementById('include_stories');
+        if (storiesCb && storiesCb.offsetParent) reviewContent.appendChild(sect('Stories add-on', storiesCb.checked ? 'Yes — 30 story prompts' : 'No'));
         var incCb = document.getElementById('include_hashtags');
         var hashtags = incCb && incCb.checked ? 'Yes, ' + (getVal('hashtag_min') || '3') + '–' + (getVal('hashtag_max') || '10') + ' per caption' : 'No';
         reviewContent.appendChild(sect('Hashtags', hashtags));

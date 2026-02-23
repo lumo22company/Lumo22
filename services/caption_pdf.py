@@ -246,12 +246,209 @@ def _make_story_table_vertical(cover: Dict, days: List, normal_style, heading_st
     return story
 
 
+def _parse_stories_section(md: str) -> List[Tuple[str, List[Dict[str, str]]]]:
+    """Parse ## 30 Story Ideas section; returns list of (day_heading, captions) for PDF."""
+    days: List[Tuple[str, List[Dict[str, str]]]] = []
+    if "## 30 Story Ideas" not in md and "## 30 story ideas" not in md.lower():
+        return days
+    for m in re.finditer(r"\*\*Day\s+(\d+)\s*:\*\*\s*([^\n]+)", md, re.I):
+        day_num = m.group(1).strip()
+        prompt = m.group(2).strip()
+        if not prompt:
+            continue
+        day_heading = f"Day {day_num} — Story"
+        days.append((day_heading, [{"platform": "Story", "hook": prompt, "body": "", "hashtags": ""}]))
+    return days
+
+
+def _parse_stories_cover_from_md(md: str, captions_cover: Dict) -> Dict:
+    """Extract business and month_year from Stories header; merge with captions cover for full metadata."""
+    cover = dict(captions_cover)
+    cover["title"] = "30 Days of Story Ideas"
+    # Stories section may have "## 30 Story Ideas | Business | Month Year"
+    for line in md.split("\n"):
+        s = line.strip()
+        if "## 30 Story Ideas" in s or "## 30 story ideas" in s.lower():
+            if "|" in s:
+                parts = [p.strip() for p in s.split("|")]
+                if len(parts) >= 2:
+                    cover["business"] = parts[1].strip()
+                if len(parts) >= 3:
+                    cover["month_year"] = parts[2].strip()
+            break
+    return cover
+
+
+def _make_stories_doc_flowables(cover: Dict, days: List, normal_style, heading_style, tight_style, logo_path: Optional[str] = None) -> list:
+    """Story Ideas PDF: same layout as captions — black day headers, content in white boxes. Each day = one idea."""
+    from reportlab.platypus import Paragraph, Spacer, Table, TableStyle, KeepTogether
+    from reportlab.lib import colors
+    from reportlab.lib.units import mm
+    from reportlab.lib.styles import ParagraphStyle
+
+    story = []
+    story.extend(_build_stories_header_flowables(cover, logo_path))
+    story.append(Spacer(1, 8))
+
+    lbl = ParagraphStyle("TblLbl", parent=tight_style, fontName="Helvetica-Bold")
+    day_hdr_style = ParagraphStyle("DayHdrTable", parent=heading_style, backColor=None, borderPadding=0)
+    for day_heading, caption_list in days:
+        day_para = Paragraph(f'<font color="#ffffff">{_escape(day_heading.upper())}</font>', day_hdr_style)
+        hdr_data = [[day_para, ""]]
+        hdr_t = Table(hdr_data, colWidths=[25 * mm, 155 * mm])
+        hdr_t.setStyle(TableStyle([
+            ("SPAN", (0, 0), (1, 0)),
+            ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor(BLACK)),
+            ("BOX", (0, 0), (-1, -1), 1, colors.HexColor("#cccccc")),
+            ("LEFTPADDING", (0, 0), (-1, -1), 4),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+            ("TOPPADDING", (0, 0), (-1, -1), 2),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ]))
+        prompt = ""
+        if caption_list:
+            prompt = (caption_list[0].get("hook") or caption_list[0].get("body", "") or "").strip()
+        data = [
+            [Paragraph("<nobr>Idea:</nobr>", lbl), Paragraph(_escape_and_breaks(prompt), tight_style)],
+        ]
+        content_t = Table(data, colWidths=[25 * mm, 155 * mm])
+        content_t.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#ffffff")),
+            ("BOX", (0, 0), (-1, -1), 1, colors.HexColor("#cccccc")),
+            ("LEFTPADDING", (0, 0), (-1, -1), 4),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+            ("TOPPADDING", (0, 0), (-1, -1), 2),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ]))
+        story.append(KeepTogether([hdr_t, content_t]))
+        story.append(Spacer(1, 4))
+    return story
+
+
+def _build_stories_header_flowables(cover: Dict, logo_path: Optional[str]) -> list:
+    """Stories PDF header — matches captions design: black bg, logo, gold labels, white values."""
+    from reportlab.platypus import Table, TableStyle, Image, Paragraph
+    from reportlab.lib import colors
+    from reportlab.lib.units import mm
+    from reportlab.lib.styles import ParagraphStyle
+
+    logo_path = logo_path or get_logo_path()
+    banner_title_style = ParagraphStyle("BannerTitle", fontName=_get_heading_font(), fontSize=28, leading=32, textColor=colors.HexColor("#ffffff"))
+    meta_font = _get_metadata_font()
+    month_style = ParagraphStyle("HdrMonth", fontName=meta_font, fontSize=10, leading=11, textColor=colors.HexColor(LUMO_GOLD))
+    lbl_style = ParagraphStyle("HdrLbl", fontName=meta_font, fontSize=9, leading=10, textColor=colors.HexColor(LUMO_GOLD))
+    val_style = ParagraphStyle("HdrVal", fontName=meta_font, fontSize=9, leading=10, textColor=colors.HexColor("#ffffff"))
+
+    logo_cell = Image(logo_path, width=40 * mm, height=40 * mm) if logo_path and os.path.isfile(logo_path) else Paragraph("", val_style)
+    tbl_data = [
+        [logo_cell, Paragraph('<font color="#ffffff">30 DAYS OF STORY IDEAS</font>', banner_title_style), Paragraph("", val_style)],
+        [Paragraph("", val_style), Paragraph((cover.get("month_year") or "").strip().upper().replace(" ", "\u00A0"), month_style), Paragraph("", val_style)],
+        [Paragraph("", val_style), Paragraph("Business:", lbl_style), Paragraph(_escape(cover.get("business", "") or ""), val_style)],
+        [Paragraph("", val_style), Paragraph("Audience:", lbl_style), Paragraph(_escape(cover.get("audience", "") or ""), val_style)],
+        [Paragraph("", val_style), Paragraph("Voice:", lbl_style), Paragraph(_escape(cover.get("voice", "") or ""), val_style)],
+        [Paragraph("", val_style), Paragraph("Platform(s):", lbl_style), Paragraph(_escape(cover.get("platform", "") or "Instagram & Facebook"), val_style)],
+        [Paragraph("", val_style), Paragraph("Goal:", lbl_style), Paragraph(_escape(cover.get("goal", "") or ""), val_style)],
+    ]
+    col_widths = [45 * mm, 28 * mm, 107 * mm]
+    tbl = Table(tbl_data, colWidths=col_widths)
+    tbl_style = [
+        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor(BLACK)),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("LEFTPADDING", (0, 0), (0, -1), 0),
+        ("RIGHTPADDING", (0, 0), (0, -1), 8),
+        ("LEFTPADDING", (1, 0), (1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -2), 2),
+        ("BOTTOMPADDING", (0, -1), (-1, -1), 10),
+        ("TOPPADDING", (0, 0), (-1, -1), 2),
+        ("SPAN", (0, 0), (0, -1)),
+        ("SPAN", (1, 0), (2, 0)),
+        ("SPAN", (1, 1), (2, 1)),
+        ("LEFTPADDING", (0, 0), (0, -1), 8),
+        ("LEFTPADDING", (1, 0), (1, -1), 4),
+        ("LEFTPADDING", (2, 0), (2, -1), 0),
+        ("RIGHTPADDING", (1, 2), (1, -1), 0),
+        ("TOPPADDING", (0, 0), (-1, 0), 12),
+        ("BOTTOMPADDING", (0, 0), (-1, 0), 6),
+        ("BOTTOMPADDING", (0, 1), (-1, 1), 10),
+    ]
+    tbl.setStyle(TableStyle(tbl_style))
+    return [tbl]
+
+
+def build_stories_pdf(captions_md: str, logo_path: Optional[str] = None) -> Optional[bytes]:
+    """Build a separate PDF for 30 Days of Story Ideas, matching the captions design. Returns None if no stories in md."""
+    stories_days = _parse_stories_section(captions_md)
+    if not stories_days:
+        return None
+    cover, _ = _parse_markdown_to_structure(captions_md)
+    cover = _parse_stories_cover_from_md(captions_md, cover)
+
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import mm
+    from reportlab.platypus import SimpleDocTemplate
+    from reportlab.lib.enums import TA_LEFT
+
+    buffer = BytesIO()
+    margin = 15 * mm
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        leftMargin=margin,
+        rightMargin=margin,
+        topMargin=0,
+        bottomMargin=0,
+    )
+    styles = getSampleStyleSheet()
+    normal = ParagraphStyle("Normal", parent=styles["Normal"], fontSize=10,
+        textColor=colors.HexColor(BLACK), fontName=_get_body_font(), alignment=TA_LEFT, leading=12, spaceAfter=6)
+    heading = ParagraphStyle("Heading", parent=normal, fontSize=14, fontName=_get_heading_font(), spaceBefore=10, spaceAfter=6,
+        textColor=colors.HexColor("#ffffff"), backColor=colors.HexColor(BLACK), borderPadding=4)
+    tight = ParagraphStyle("Tight", parent=normal, spaceAfter=1)
+
+    logo_path = logo_path or get_logo_path()
+    story_flowables = _make_stories_doc_flowables(cover, stories_days, normal, heading, tight, logo_path)
+    doc.build(story_flowables)
+    try:
+        from pypdf import PdfReader
+        n_total = len(PdfReader(buffer).pages)
+    except Exception:
+        n_total = 1
+
+    buffer2 = BytesIO()
+    doc2 = SimpleDocTemplate(
+        buffer2,
+        pagesize=A4,
+        leftMargin=margin,
+        rightMargin=margin,
+        topMargin=0,
+        bottomMargin=0,
+    )
+
+    def make_footer(n_total: int):
+        def _draw(canvas, doc):
+            p = canvas.getPageNumber()
+            canvas.saveState()
+            canvas.setFont("Helvetica", 8)
+            canvas.setFillColor(colors.HexColor("#666666"))
+            canvas.drawCentredString(A4[0] / 2, 10 * mm, f"-- {p} of {n_total} --")
+            canvas.restoreState()
+        return _draw
+
+    story_flowables2 = _make_stories_doc_flowables(cover, stories_days, normal, heading, tight, logo_path)
+    doc2.build(story_flowables2, onFirstPage=make_footer(n_total), onLaterPages=make_footer(n_total))
+    return buffer2.getvalue()
+
+
 def build_caption_pdf(captions_md: str, logo_path: Optional[str] = None) -> bytes:
-    """Build PDF using same format as 30_Days_Social_Media_Captions_FEBRUARY_2026.pdf (table_vertical)."""
+    """Build PDF using same format as 30_Days_Social_Media_Captions_FEBRUARY_2026.pdf (table_vertical). Stories are excluded — use build_stories_pdf separately."""
     cover, days = _parse_markdown_to_structure(captions_md)
     if not days and "## Day" in captions_md:
         cover, days = _parse_legacy_to_structure(captions_md, cover)
-
+    # Stories go in a separate PDF
     data = _cover_and_days_to_dict(cover, days)
     return build_caption_pdf_from_dict(data, logo_path=logo_path or get_logo_path())
 

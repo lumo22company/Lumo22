@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Digital Front Desk | Lumo 22 — Coming Soon</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
+  <meta name="description" content="Digital Front Desk is temporarily on hold. We're focusing on 30 Days of Social Captions.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Encode+Sans+Condensed:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v={{ asset_version }}">
+  <style>
+    .shelved-page { padding: 8rem 1.5rem 4rem; max-width: 520px; margin: 0 auto; text-align: center; }
+    .shelved-page h1 { font-family: var(--font-display); font-size: 1.75rem; margin-bottom: 1rem; }
+    .shelved-page p { color: var(--lum-text-muted); line-height: 1.7; margin-bottom: 1.5rem; }
+    .shelved-page .btn { display: inline-block; padding: 1rem 2rem; background: var(--lum-gold); color: var(--lum-black); text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1rem; margin-top: 0.5rem; }
+    .shelved-page .btn:hover { opacity: 0.95; }
+  </style>
+</head>
+<body class="lumo-landing">
+  <nav class="lumo-nav lumo-nav-scrolled">
+    <a href="/" class="lumo-nav-logo">Lumo 22</a>
+    <div class="lumo-nav-links">
+      <a href="/captions">Captions</a>
+    </div>
+    {% if current_customer %}<a href="/account" class="lumo-nav-cta">Account</a>{% else %}<span style="display: inline-flex; align-items: center; gap: 0.75rem;"><a href="/login" style="color: var(--lum-text-muted); text-decoration: none; font-size: 0.9rem;">Log in</a><a href="/signup" class="lumo-nav-cta">Sign up</a></span>{% endif %}
+  </nav>
+
+  <main class="shelved-page">
+    <h1>Digital Front Desk is on hold</h1>
+    <p>We're focusing on 30 Days of Social Captions for now. Digital Front Desk — our email receptionist — is temporarily shelved while we get the details right.</p>
+    <p>If you're looking for consistent social content without the daily grind, our caption plans are live and ready.</p>
+    <a href="/captions" class="btn">View Caption Plans</a>
+    <p style="margin-top: 2.5rem;"><a href="/" style="color: var(--lum-text-muted);">← Back to home</a></p>
+  </main>
+
+  {% include '_footer.html' %}
+</body>
+</html>

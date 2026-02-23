@@ -265,9 +265,10 @@ def _run_generation_and_deliver(order_id: str):
         gen = CaptionGenerator()
         print(f"[Captions] Calling OpenAI for order {order_id}")
         captions_md = gen.generate(intake)
-        from services.caption_pdf import build_caption_pdf, get_logo_path
+        from services.caption_pdf import build_caption_pdf, build_stories_pdf, get_logo_path
+        logo_path = get_logo_path()
         try:
-            pdf_bytes = build_caption_pdf(captions_md, logo_path=get_logo_path())
+            pdf_bytes = build_caption_pdf(captions_md, logo_path=logo_path)
             filename = "30_Days_Captions.pdf"
             mime_type = "application/pdf"
             file_content_bytes = pdf_bytes
@@ -278,15 +279,42 @@ def _run_generation_and_deliver(order_id: str):
             mime_type = "text/markdown"
             file_content_bytes = None
             file_content = captions_md
+        extra_attachments = []
+        if intake.get("include_stories"):
+            stories_pdf = build_stories_pdf(captions_md, logo_path=logo_path)
+            if stories_pdf:
+                extra_attachments.append({
+                    "filename": "30_Days_Story_Ideas.pdf",
+                    "content": stories_pdf,
+                    "mime_type": "application/pdf",
+                })
         subject = "Your 30 Days of Social Media Captions"
-        body = """Hi,
+        if extra_attachments:
+            body = (
+                "Hi,
+
+Your 30 Days of Social Media Captions and 30 Days of Story Ideas are ready. "
+                "Both documents are attached.
+
+Copy each caption and story idea as you need them, or edit to fit. "
+                "If you'd like any changes to tone or topics, reply to this email and we'll adjust.
+
+Lumo 22
+"
+            )
+        else:
+            body = (
+                "Hi,
 
 Your 30 Days of Social Media Captions are ready. The document is attached.
 
-Copy each caption as you need it, or edit to fit. If you’d like any changes to tone or topics, reply to this email and we’ll adjust.
+"
+                "Copy each caption as you need it, or edit to fit. "
+                "If you'd like any changes to tone or topics, reply to this email and we'll adjust.
 
 Lumo 22
-"""
+"
+            )
         notif = NotificationService()
         print(f"[Captions] Sending delivery email to {customer_email} for order {order_id}")
         ok, send_error = notif.send_email_with_attachment(
@@ -297,6 +325,7 @@ Lumo 22
             file_content=file_content,
             file_content_bytes=file_content_bytes,
             mime_type=mime_type,
+            extra_attachments=extra_attachments if extra_attachments else None,
         )
         if not ok:
             print(f"[Captions] Delivery email FAILED for order {order_id} to {customer_email}: {send_error}")
@@ -410,6 +439,8 @@ def captions_intake_submit():
         "goal": (data.get("goal") or "").strip(),
         "launch_event_description": (data.get("launch_event_description") or "").strip(),
         "caption_examples": (data.get("caption_examples") or "").strip(),
+        "caption_language": (data.get("caption_language") or "English (UK)").strip(),
+        "include_stories": bool(data.get("include_stories")),
     }
 
     try:

@@ -26,10 +26,22 @@ CATEGORY_COUNTS = {
 }
 
 
-def _build_system_prompt() -> str:
-    return """You are a senior content strategist and conversion-focused copywriter. You write social media captions for professionals and founders.
+LANGUAGE_INSTRUCTIONS = {
+    "English (UK)": "Use British English (UK) throughout: spelling (e.g. colour, favour, organise, centre, recognised), punctuation (single quotes for quotations where appropriate), and vocabulary (e.g. whilst, amongst, towards). Do not use American spellings or conventions.",
+    "English (US)": "Use American English (US) throughout: spelling (e.g. color, favor, organize, center, recognized), punctuation (double quotes for quotations where appropriate), and vocabulary (e.g. while, among, toward). Do not use British spellings or conventions.",
+    "Spanish": "Write ALL captions and content in Spanish. Use clear, professional Spanish appropriate for social media. Match the regional variety to the audience if specified (e.g. Spain vs Latin American Spanish).",
+    "French": "Write ALL captions and content in French. Use clear, professional French appropriate for social media. Match the regional variety to the audience if specified (e.g. France vs Canadian French).",
+    "German": "Write ALL captions and content in German. Use clear, professional German appropriate for social media. Use formal 'Sie' unless the brand voice suggests informal 'du'.",
+    "Portuguese": "Write ALL captions and content in Portuguese. Prefer Brazilian Portuguese unless the audience suggests European Portuguese. Use clear, professional language appropriate for social media.",
+}
 
-Use British English (UK) throughout: spelling (e.g. colour, favour, organise, centre, recognised), punctuation (single quotes for quotations where appropriate), and vocabulary (e.g. whilst, amongst, towards). Do not use American spellings or conventions.
+
+def _build_system_prompt(intake: Dict[str, Any]) -> str:
+    lang = (intake.get("caption_language") or "English (UK)").strip()
+    lang_instruction = LANGUAGE_INSTRUCTIONS.get(lang, LANGUAGE_INSTRUCTIONS["English (UK)"])
+    return f"""You are a senior content strategist and conversion-focused copywriter. You write social media captions for professionals and founders.
+
+{lang_instruction}
 
 Tone: confident, editorial, modern, premium. No emojis. No buzzwords or marketing clichés. Smart, human, intelligent. Avoid hype and generic AI language.
 
@@ -60,6 +72,7 @@ Hashtag guidance (when HASHTAGS_REQUESTED is true): Choose hashtags that support
 Single platform: Write 30 distinct captions (one per day). Multiple platforms: Write 30 × [number of platforms] distinct captions — for each day, one caption per platform. Rotate through the five categories across days so the mix is balanced (roughly 6 days per category). Every caption must be tailored to the client's business, audience, voice, the platform it is for, and goal. Each caption must also be linguistically distinct: vary your vocabulary, sentence openings, and structure so the full set avoids repetition and feels varied. When a business name is provided, use it naturally where it fits (e.g. sign-offs, occasional mentions like "At [name] we...") — don't force it into every caption. No placeholder text. No "[insert X]". Each caption should be 2–6 short paragraphs (or 1–3 lines for TikTok days), copy-paste ready.
 
 Launch/event phasing (when LAUNCH_EVENT is provided): Days before launch = pre-launch (build anticipation, teasers, countdown). Launch day = announcement, go-live. Days after launch = post-launch (thank-you, feedback, early results — NOT hype or anticipation)."""
+
 
 
 def _build_user_prompt(intake: Dict[str, Any], day_start: int = 1, day_end: int = 30) -> str:
@@ -98,6 +111,7 @@ def _build_user_prompt(intake: Dict[str, Any], day_start: int = 1, day_end: int 
         f"- Platform(s): {platform_raw or 'Not specified'}",
         f"- Platform habits: {intake.get('platform_habits', '') or 'None'}",
         f"- Goal for the month: {intake.get('goal', '')}",
+        f"- Caption language: {intake.get('caption_language', 'English (UK)')}",
     ]
     if len(platform_list) > 1:
         parts.append("")
@@ -149,6 +163,7 @@ def _build_doc_header(intake: Dict[str, Any]) -> str:
         f"- Business: {intake.get('business_name', '') or 'Not specified'}",
         f"- Audience: {intake.get('audience', '') or 'Not specified'}",
         f"- Voice: {intake.get('voice_words', '') or intake.get('voice_avoid', '') or 'Not specified'}",
+        f"- Language: {intake.get('caption_language', 'English (UK)')}",
         f"- Platform(s): {(intake.get('platform') or '').strip() or 'Not specified'}",
         f"- Goal: {intake.get('goal', '') or 'Not specified'}",
     ]
@@ -178,9 +193,10 @@ class CaptionGenerator:
     def generate(self, intake: Dict[str, Any]) -> str:
         """
         Generate full 30-day caption document as markdown in 3 API calls (days 1–10, 11–20, 21–30).
+        If include_stories and platform has Instagram & Facebook, appends 30 Story prompts.
         Raises on API error.
         """
-        system = _build_system_prompt()
+        system = _build_system_prompt(intake)
         header = _build_doc_header(intake)
         parts = [header]
         for day_start, day_end in self.CHUNKS:
@@ -198,4 +214,59 @@ class CaptionGenerator:
             if not content:
                 raise RuntimeError(f"OpenAI returned empty content for days {day_start}-{day_end}")
             parts.append(content)
-        return "\n".join(parts)
+        result = "\n".join(parts)
+
+        # Stories add-on: when IG & FB selected and include_stories
+        platform_raw = (intake.get("platform") or "").strip().lower()
+        include_stories = bool(intake.get("include_stories"))
+        has_ig_fb = "instagram" in platform_raw or "facebook" in platform_raw
+        if include_stories and has_ig_fb:
+            stories_md = self._generate_stories(intake)
+            if stories_md:
+                result = result + "\n\n" + stories_md
+        return result
+
+    def _generate_stories(self, intake: Dict[str, Any]) -> str:
+        """Generate 30 one-line Story prompts for Instagram/Facebook."""
+        lang = (intake.get("caption_language") or "English (UK)").strip()
+        lang_instruction = LANGUAGE_INSTRUCTIONS.get(lang, LANGUAGE_INSTRUCTIONS["English (UK)"])
+        business = (intake.get("business_name") or "").strip() or "Client"
+        month_year = datetime.utcnow().strftime("%B %Y")
+        prompt = f"""Generate 30 one-line Story prompts for Instagram/Facebook Stories. One prompt per day (Day 1–30).
+
+{lang_instruction}
+
+INTAKE:
+- Business: {business}
+- What they offer: {intake.get('offer_one_line', '')}
+- Audience: {intake.get('audience', '')}
+- Goal: {intake.get('goal', '')}
+
+Each prompt should be a single short line (5–15 words) suggesting what to post in a Story that day. Mix: behind-the-scenes, tips, questions, polls, product highlights, testimonials, process reveals, day-in-the-life. Variety is key.
+
+Output format — markdown only:
+---
+## 30 Story Ideas | {business} | {month_year}
+
+**Day 1:** [one-line prompt]
+**Day 2:** [one-line prompt]
+...
+**Day 30:** [one-line prompt]
+---
+
+Output the complete list only. No preamble."""
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": "You write concise, actionable social media content prompts."},
+                    {"role": "user", "content": prompt},
+                ],
+                temperature=0.7,
+                max_tokens=1500,
+            )
+            content = (response.choices[0].message.content or "").strip()
+            return content if content else ""
+        except Exception as e:
+            print(f"[CaptionGenerator] Stories generation failed: {e}")
+            return ""

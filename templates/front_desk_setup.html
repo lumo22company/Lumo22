@@ -221,8 +221,30 @@
         </fieldset>
 
         <fieldset style="border:0; padding:0; margin:0 0 1.25rem;">
-          <legend style="font-size:0.9rem; font-weight:500; margin-bottom:0.5rem; color:var(--lum-text);">From your booking platform (Calendly/Fresha)</legend>
-          <p class="hint" style="margin-bottom:0.75rem;">We use these to show customers the right times. Match your Calendly or Fresha settings.</p>
+          <legend style="font-size:0.9rem; font-weight:500; margin-bottom:0.5rem; color:var(--lum-text);">From your booking platform</legend>
+          <label style="display:block; font-size:0.9rem; font-weight:500; margin-bottom:0.375rem;">Slot availability</label>
+          <div class="radio-group" style="margin-bottom:0.75rem;">
+            <label class="radio-item"><input type="radio" name="booking_platform" value="generic" checked> <span>Use my hours + manual sync</span></label>
+            <label class="radio-item"><input type="radio" name="booking_platform" value="calendly"> <span>Connect Calendly (real-time)</span></label>
+            <label class="radio-item"><input type="radio" name="booking_platform" value="vagaro"> <span>Connect Vagaro (real-time)</span></label>
+          </div>
+          <div id="calendly-creds" style="display:none; margin-bottom:0.75rem; padding:1rem; background:var(--lum-surface-elevated); border-radius:8px;">
+            <label for="calendly_api_token">Calendly API token</label>
+            <input type="password" id="calendly_api_token" name="calendly_api_token" placeholder="From Integrations → API & Webhooks" style="width:100%; margin-bottom:0.5rem;">
+            <label for="calendly_event_type_uri">Event Type URI</label>
+            <input type="url" id="calendly_event_type_uri" name="calendly_event_type_uri" placeholder="https://api.calendly.com/event_types/XXXXXXXX" style="width:100%; margin-bottom:0.25rem;">
+            <p class="hint">Calendly → Integrations → API & Webhooks → Event Types → copy URI</p>
+          </div>
+          <div id="vagaro-creds" style="display:none; margin-bottom:0.75rem; padding:1rem; background:var(--lum-surface-elevated); border-radius:8px;">
+            <label for="vagaro_access_token">Vagaro access token</label>
+            <input type="password" id="vagaro_access_token" name="vagaro_access_token" placeholder="From Vagaro API" style="width:100%; margin-bottom:0.5rem;">
+            <label for="vagaro_business_id">Business ID</label>
+            <input type="text" id="vagaro_business_id" name="vagaro_business_id" placeholder="Business location ID" style="width:100%; margin-bottom:0.5rem;">
+            <label for="vagaro_service_id">Service ID</label>
+            <input type="text" id="vagaro_service_id" name="vagaro_service_id" placeholder="Service to book" style="width:100%; margin-bottom:0.25rem;">
+            <p class="hint">From Vagaro developer API. Region defaults to us.</p>
+          </div>
+          <p class="hint" style="margin-bottom:0.75rem;">Or use hours + manual sync: we show slots from your hours and exclude any you add to our system.</p>
           <div style="display:flex; flex-wrap:wrap; gap:1rem; margin-bottom:0.75rem;">
             <div>
               <label for="work_start">Opening time</label>
@@ -438,6 +460,16 @@
           tightCheck.addEventListener('change', updateGapVisibility);
           updateGapVisibility();
         }
+        var platformRadios = form.querySelectorAll('input[name="booking_platform"]');
+        var calendlyCreds = document.getElementById('calendly-creds');
+        var vagaroCreds = document.getElementById('vagaro-creds');
+        function updatePlatformCreds() {
+          var val = (form.querySelector('input[name="booking_platform"]:checked') || {}).value || 'generic';
+          if (calendlyCreds) calendlyCreds.style.display = val === 'calendly' ? 'block' : 'none';
+          if (vagaroCreds) vagaroCreds.style.display = val === 'vagaro' ? 'block' : 'none';
+        }
+        platformRadios.forEach(function(r) { r.addEventListener('change', updatePlatformCreds); });
+        updatePlatformCreds();
       })();
 
       function buildDfdPayload() {
@@ -446,6 +478,12 @@
         var durationInput = form.querySelector('#appointment_duration_minutes');
         var workStartInput = form.querySelector('#work_start');
         var workEndInput = form.querySelector('#work_end');
+        var platformEl = form.querySelector('input[name="booking_platform"]:checked');
+        var calendlyToken = form.querySelector('#calendly_api_token');
+        var calendlyUri = form.querySelector('#calendly_event_type_uri');
+        var vagaroToken = form.querySelector('#vagaro_access_token');
+        var vagaroBiz = form.querySelector('#vagaro_business_id');
+        var vagaroSvc = form.querySelector('#vagaro_service_id');
         var autoReplyCheck = form.querySelector('#auto_reply_enabled');
         var skipDomainsInput = form.querySelector('#skip_reply_domains');
         var toneEl = form.querySelector('input[name="tone"]:checked');
@@ -459,6 +497,12 @@
           reply_style_examples: (examplesEl && examplesEl.value || '').trim() || null,
           work_start: (workStartInput && workStartInput.value) ? workStartInput.value : '09:00',
           work_end: (workEndInput && workEndInput.value) ? workEndInput.value : '17:00',
+          booking_platform: (platformEl && platformEl.value) || 'generic',
+          calendly_api_token: (calendlyToken && calendlyToken.value) ? calendlyToken.value : null,
+          calendly_event_type_uri: (calendlyUri && calendlyUri.value) ? calendlyUri.value.trim() : null,
+          vagaro_access_token: (vagaroToken && vagaroToken.value) ? vagaroToken.value : null,
+          vagaro_business_id: (vagaroBiz && vagaroBiz.value) ? vagaroBiz.value.trim() : null,
+          vagaro_service_id: (vagaroSvc && vagaroSvc.value) ? vagaroSvc.value.trim() : null,
           tight_scheduling_enabled: !!(tightCheck && tightCheck.checked),
           minimum_gap_between_appointments: (gapInput && gapInput.value) ? parseInt(gapInput.value, 10) : 60,
           appointment_duration_minutes: (durationInput && durationInput.value) ? parseInt(durationInput.value, 10) : 60,
@@ -528,6 +572,7 @@
           dfdReviewContent.appendChild(dfdSect('Domains to never auto-reply', p.skip_reply_domains));
           dfdReviewContent.appendChild(dfdSect('Auto-reply', p.auto_reply_enabled ? 'Yes' : 'No'));
           dfdReviewContent.appendChild(dfdSect('Opening hours', (p.work_start || '09:00') + ' – ' + (p.work_end || '17:00')));
+          dfdReviewContent.appendChild(dfdSect('Slot availability', p.booking_platform === 'calendly' ? 'Calendly (real-time)' : p.booking_platform === 'vagaro' ? 'Vagaro (real-time)' : 'Hours + manual sync'));
           dfdReviewContent.appendChild(dfdSect('Appointment duration', (p.appointment_duration_minutes || 60) + ' min (from your booking system)'));
           dfdReviewContent.appendChild(dfdSect('Group appointments together', p.tight_scheduling_enabled ? 'Yes (within ' + p.minimum_gap_between_appointments + ' min of existing)' : 'No — full timetable, full control'));
           form.style.display = 'none';

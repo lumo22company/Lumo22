@@ -267,23 +267,19 @@ def terms_page():
 
 @app.route('/plans')
 def plans_page():
-    """Redirect to Digital Front Desk pricing (single source of truth)."""
-    return redirect(url_for('digital_front_desk_page') + '#pricing')
+    """Redirect to Captions pricing."""
+    return redirect(url_for('captions_page') + '#pricing')
 
 @app.route('/digital-front-desk')
 def digital_front_desk_page():
-    """Digital Front Desk product page: what it is + pricing, Activate now CTAs"""
-    resp = app.make_response(render_template('digital_front_desk.html'))
-    resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-    resp.headers['Pragma'] = 'no-cache'
-    resp.headers['Expires'] = '0'
-    return resp
+    """Digital Front Desk shelved — show coming-soon page; code kept for existing links."""
+    return render_template('dfd_shelved.html')
 
 
 @app.route('/book')
 def booking_page():
-    """Redirect to Digital Front Desk; we integrate with the customer's booking system, not our own."""
-    return redirect(url_for('digital_front_desk_page'))
+    """Redirect to Captions (DFD shelved)."""
+    return redirect(url_for('captions_page'))
 
 
 @app.route('/book-demo')
@@ -294,14 +290,14 @@ def booking_demo_page():
 
 @app.route('/website-chat')
 def website_chat_page():
-    """Chat Assistant removed — redirect to Digital Front Desk."""
-    return redirect(url_for('digital_front_desk_page'))
+    """Redirect to Captions (DFD/Chat shelved)."""
+    return redirect(url_for('captions_page'))
 
 
 @app.route('/website-chat-success')
 def website_chat_success_page():
-    """Chat Assistant removed — redirect to Digital Front Desk."""
-    return redirect(url_for('digital_front_desk_page'))
+    """Redirect to Captions (DFD/Chat shelved)."""
+    return redirect(url_for('captions_page'))
 
 def customer_login_required(f):
     """Redirect to login if customer not in session."""
@@ -413,32 +409,20 @@ def outreach_dashboard():
 
 @app.route('/activate')
 def activate_page():
-    """Activation page: Email plan selection, optional Chat add-on, T&Cs, then Stripe."""
-    return render_template('activate.html', **{
-        'activation_link': Config.ACTIVATION_LINK,
-        'activation_link_starter': getattr(Config, 'ACTIVATION_LINK_STARTER', None),
-        'activation_link_standard': getattr(Config, 'ACTIVATION_LINK_STANDARD', None),
-        'activation_link_premium': getattr(Config, 'ACTIVATION_LINK_PREMIUM', None),
-        'activation_link_starter_bundle': getattr(Config, 'ACTIVATION_LINK_STARTER_BUNDLE', None),
-        'activation_link_standard_bundle': getattr(Config, 'ACTIVATION_LINK_STANDARD_BUNDLE', None),
-        'activation_link_premium_bundle': getattr(Config, 'ACTIVATION_LINK_PREMIUM_BUNDLE', None),
-    })
+    """DFD shelved — redirect to Captions."""
+    return redirect(url_for('captions_page'))
 
 
 @app.route('/activate-success')
 def activate_success_page():
-    """Thank-you page after Digital Front Desk payment. Set this URL as the success URL for Front Desk Stripe Payment Links only."""
-    return render_template('activate_success.html')
+    """DFD shelved — redirect to Captions."""
+    return redirect(url_for('captions_page'))
 
 
 @app.route('/front-desk-setup')
 def front_desk_setup_page():
-    """Setup form for Digital Front Desk. Chat product removed — redirect chat links to DFD."""
-    product = request.args.get('product', '').strip().lower()
-    if product == 'chat':
-        return redirect(url_for('digital_front_desk_page'))
-    setup_token = request.args.get('t', '').strip()
-    return render_template('front_desk_setup.html', product=product, setup_token=setup_token)
+    """DFD shelved — redirect to shelved page (setup form no longer active)."""
+    return redirect(url_for('digital_front_desk_page'))
 
 
 @app.route('/front-desk-setup-done')

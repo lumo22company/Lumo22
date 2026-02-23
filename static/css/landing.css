@@ -440,6 +440,11 @@ body.lumo-landing {
 }
 
 /* Exactly 50% each panel; reduced padding; centre divider; yellow grows from centre on hover */
+/* split-full: single panel spans full width */
+.split-panel.split-full {
+  flex: 1 1 100%;
+  width: 100%;
+}
 .split-panel {
   flex: 0 0 50%;
   width: 50%;

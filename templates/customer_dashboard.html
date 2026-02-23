@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Your Account | Lumo 22</title>
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
-  <meta name="description" content="Manage your Lumo 22 account: Digital Front Desk, Captions, and settings.">
+  <meta name="description" content="Manage your Lumo 22 account: Captions and settings.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Encode+Sans+Condensed:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -17,7 +17,6 @@
     <a href="/" class="lumo-nav-logo">Lumo 22</a>
     <div class="lumo-nav-links">
       <a href="/captions">Captions</a>
-      <a href="/digital-front-desk">Front Desk</a>
     </div>
     <a href="/account" class="lumo-nav-cta">Account</a>
   </nav>
@@ -28,8 +27,7 @@
         <h1>Your account</h1>
         <p class="account-email">{{ customer.email }}</p>
         <p class="account-quick-links">
-          <a href="/captions">Captions</a><span>·</span>
-          <a href="/digital-front-desk">Front Desk</a>
+          <a href="/captions">Captions</a>
         </p>
       </div>
       <form action="/api/auth/logout" method="POST" class="account-logout" style="margin: 0;">
@@ -54,7 +52,7 @@
 
   <section class="account-section account-section--light">
     <div class="account-section-inner">
-      <h2 class="account-section-heading">Digital Front Desk</h2>
+      <h2 class="account-section-heading">Digital Front Desk <span style="font-size: 0.7em; font-weight: 400; color: var(--lum-text-muted);">(no longer available for new signups)</span></h2>
       {% if setups %}
         <div class="account-card-grid">
           {% for s in setups %}
@@ -83,8 +81,7 @@
           {% endfor %}
         </div>
       {% else %}
-        <p class="account-empty">No Digital Front Desk setups yet.</p>
-        <p class="account-empty" style="margin-top: 0.5rem;"><a href="/digital-front-desk#pricing">Get started</a></p>
+        <p class="account-empty">No Digital Front Desk setups. This product is on hold. <a href="/captions">Try 30 Days Captions instead</a>.</p>
       {% endif %}
     </div>
   </section>

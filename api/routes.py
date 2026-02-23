@@ -153,6 +153,12 @@ def front_desk_setup():
                 pass
         work_start = (data.get('work_start') or '').strip() or '09:00'
         work_end = (data.get('work_end') or '').strip() or '17:00'
+        booking_platform = (data.get('booking_platform') or 'generic').strip().lower()
+        calendly_api_token = (data.get('calendly_api_token') or '').strip() or None
+        calendly_event_type_uri = (data.get('calendly_event_type_uri') or '').strip() or None
+        vagaro_access_token = (data.get('vagaro_access_token') or '').strip() or None
+        vagaro_business_id = (data.get('vagaro_business_id') or '').strip() or None
+        vagaro_service_id = (data.get('vagaro_service_id') or '').strip() or None
         auto_reply_enabled = data.get('auto_reply_enabled', True)
         if isinstance(auto_reply_enabled, str):
             auto_reply_enabled = auto_reply_enabled.strip().lower() in ('1', 'true', 'yes', 'on')
@@ -174,6 +180,12 @@ def front_desk_setup():
                 appointment_duration_minutes=appointment_duration_minutes,
                 work_start=work_start,
                 work_end=work_end,
+                booking_platform=booking_platform,
+                calendly_api_token=calendly_api_token,
+                calendly_event_type_uri=calendly_event_type_uri,
+                vagaro_access_token=vagaro_access_token,
+                vagaro_business_id=vagaro_business_id,
+                vagaro_service_id=vagaro_service_id,
                 auto_reply_enabled=auto_reply_enabled,
                 skip_reply_domains=skip_reply_domains,
             )
@@ -343,6 +355,7 @@ def available_slots():
 
         setup_token = (request.args.get("setup") or "").strip()
         use_setup_config = False
+        setup = None
         work_start = request.args.get("work_start") or None
         work_end = request.args.get("work_end") or None
         if setup_token:
@@ -374,26 +387,44 @@ def available_slots():
             work_start = request.args.get("work_start") or None
             work_end = request.args.get("work_end") or None
 
-        from services.availability import get_available_slots
-        from services.appointments_service import get_appointments_for_date
-
         day = datetime.strptime(date_str[:10], "%Y-%m-%d").date()
-        existing = get_appointments_for_date(day, default_duration_minutes=slot_minutes)
-        slots = get_available_slots(
-            date_str,
-            existing,
-            slot_minutes=slot_minutes,
-            work_start=work_start,
-            work_end=work_end,
-            tight_schedule=tight_schedule,
-            gap_minutes=gap_minutes,
-        )
+        slots = []
+
+        provider_used = False
+        if use_setup_config and setup:
+            platform = (setup.get("booking_platform") or "generic").strip().lower()
+            if platform in ("calendly", "vagaro"):
+                try:
+                    from services.booking_providers import get_available_slots_for_setup
+                    slots = get_available_slots_for_setup(setup, day)
+                    provider_used = True
+                except Exception as e:
+                    print(f"[available-slots] Provider error, falling back to generic: {e}")
+
+        if not provider_used and not slots:
+            from services.availability import get_available_slots
+            from services.appointments_service import get_appointments_for_date
+            existing = get_appointments_for_date(day, default_duration_minutes=slot_minutes)
+            slot_dt_list = get_available_slots(
+                date_str,
+                existing,
+                slot_minutes=slot_minutes,
+                work_start=work_start,
+                work_end=work_end,
+                tight_schedule=tight_schedule,
+                gap_minutes=gap_minutes,
+            )
+            slots = [s.strftime("%H:%M") for s in slot_dt_list]
+
+        slot_strs = slots if slots and isinstance(slots[0], str) else [s.strftime("%H:%M") for s in slots]
         out = {
             "date": date_str[:10],
-            "slots": [s.strftime("%H:%M") for s in slots],
-            "count": len(slots),
+            "slots": slot_strs,
+            "count": len(slot_strs),
         }
         if request.args.get("debug"):
+            from services.appointments_service import get_appointments_for_date
+            existing = get_appointments_for_date(day, default_duration_minutes=slot_minutes)
             out["existing_bookings"] = len(existing)
         return jsonify(out), 200
     except Exception as e:
