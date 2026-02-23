@@ -291,29 +291,15 @@ def _run_generation_and_deliver(order_id: str):
         subject = "Your 30 Days of Social Media Captions"
         if extra_attachments:
             body = (
-                "Hi,
-
-Your 30 Days of Social Media Captions and 30 Days of Story Ideas are ready. "
-                "Both documents are attached.
-
-Copy each caption and story idea as you need them, or edit to fit. "
-                "If you'd like any changes to tone or topics, reply to this email and we'll adjust.
-
-Lumo 22
-"
+                "Hi,\n\nYour 30 Days of Social Media Captions and 30 Days of Story Ideas are ready. "
+                "Both documents are attached.\n\nCopy each caption and story idea as you need them, or edit to fit. "
+                "If you'd like any changes to tone or topics, reply to this email and we'll adjust.\n\nLumo 22\n"
             )
         else:
             body = (
-                "Hi,
-
-Your 30 Days of Social Media Captions are ready. The document is attached.
-
-"
+                "Hi,\n\nYour 30 Days of Social Media Captions are ready. The document is attached.\n\n"
                 "Copy each caption as you need it, or edit to fit. "
-                "If you'd like any changes to tone or topics, reply to this email and we'll adjust.
-
-Lumo 22
-"
+                "If you'd like any changes to tone or topics, reply to this email and we'll adjust.\n\nLumo 22\n"
             )
         notif = NotificationService()
         print(f"[Captions] Sending delivery email to {customer_email} for order {order_id}")
