@@ -25,6 +25,7 @@
     .booking-page .slots-list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
     .booking-page .slot-btn { padding: 0.5rem 1rem; background: var(--lum-surface-elevated); border: 1px solid var(--lum-border); border-radius: 8px; color: var(--lum-text); font-size: 0.95rem; cursor: pointer; }
     .booking-page .slot-btn:hover { border-color: var(--lum-gold); color: var(--lum-gold); }
+    .booking-page .slot-btn.selected { border-color: var(--lum-gold); background: rgba(212,175,55,0.15); color: var(--lum-gold); }
     .booking-page .slots-loading { color: var(--lum-text-muted); font-size: 0.9rem; }
     .booking-page .slots-empty { color: var(--lum-text-muted); font-size: 0.9rem; }
     .booking-page .back { margin-top: 2rem; }
@@ -51,6 +52,7 @@
 
     <section class="slots-section" aria-live="polite">
       <h2>Available times</h2>
+      <p id="selected-msg" class="hint" style="display:none; margin-bottom:0.75rem;"></p>
       <div id="slots-container">
         <p class="slots-loading" id="slots-loading">Choose a date to see times.</p>
         <div class="slots-list" id="slots-list" style="display:none;"></div>
@@ -78,12 +80,12 @@
         dateFormat: 'Y-m-d',
         minDate: 'today',
         onChange: function(selectedDates, dateStr) {
-          if (dateStr) fetchSlots();
+          if (dateStr) fetchSlots(dateStr);
         }
       });
 
-      function fetchSlots() {
-        var date = (dateInput.value || '').trim();
+      function fetchSlots(dateOverride) {
+        var date = (dateOverride || dateInput.value || '').toString().trim();
         if (!date) {
           slotsLoading.textContent = 'Choose a date to see times.';
           slotsLoading.style.display = 'block';
@@ -95,6 +97,8 @@
         slotsLoading.style.display = 'block';
         slotsList.style.display = 'none';
         slotsEmpty.style.display = 'none';
+        var selMsg = document.getElementById('selected-msg');
+        if (selMsg) selMsg.style.display = 'none';
 
         var params = new URLSearchParams({ date: date });
         if (setupToken) params.set('setup', setupToken);
@@ -114,12 +118,20 @@
               return;
             }
             slotsList.innerHTML = '';
+            var selectedDate = date;
             slots.forEach(function(time) {
               var btn = document.createElement('button');
               btn.type = 'button';
               btn.className = 'slot-btn';
               btn.textContent = time;
-              btn.setAttribute('aria-label', 'Book at ' + time);
+              btn.dataset.time = time;
+              btn.dataset.date = selectedDate;
+              btn.setAttribute('aria-label', 'Select ' + time);
+              btn.addEventListener('click', function() {
+                slotsList.querySelectorAll('.slot-btn').forEach(function(b) { b.classList.remove('selected'); });
+                btn.classList.add('selected');
+                selectSlot(selectedDate, time);
+              });
               slotsList.appendChild(btn);
             });
             slotsList.style.display = 'flex';
@@ -129,6 +141,13 @@
             slotsEmpty.textContent = 'Could not load times. Please try again.';
             slotsEmpty.style.display = 'block';
           });
+      }
+
+      function selectSlot(date, time) {
+        var msg = document.getElementById('selected-msg');
+        if (!msg) return;
+        msg.textContent = 'Selected: ' + date + ' at ' + time;
+        msg.style.display = 'block';
       }
 
     })();
