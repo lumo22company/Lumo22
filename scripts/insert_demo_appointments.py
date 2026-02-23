@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Insert demo appointments (10–11am and 2–3pm tomorrow) for /book-demo testing.
-Slots at 10:00 and 14:00 will be excluded when picking times.
+Insert one demo appointment (2pm–3pm tomorrow) for /book-demo testing.
+The 14:00 slot will be excluded when picking times.
 Usage: python3 scripts/insert_demo_appointments.py [YYYY-MM-DD]
 Requires: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_KEY) in .env
 """
@@ -43,16 +43,15 @@ def main():
     except Exception:
         pass
 
-    # Insert 10–11am and 2–3pm (explicit UTC for Supabase)
+    # Insert one appointment: 2pm–3pm (explicit UTC for Supabase)
     rows = [
-        {"slot_start": day.isoformat() + "T10:00:00Z", "slot_end": day.isoformat() + "T11:00:00Z"},
         {"slot_start": day.isoformat() + "T14:00:00Z", "slot_end": day.isoformat() + "T15:00:00Z"},
     ]
     try:
         result = client.table("appointments").insert(rows).execute()
         if result.data:
-            print(f"Inserted 2 appointments for {day}: 10:00–11:00 and 14:00–15:00")
-            print("Go to /book-demo and pick that date — 10:00 and 14:00 should be missing.")
+            print(f"Inserted 1 appointment for {day}: 14:00–15:00 (2pm–3pm)")
+            print("Go to /book-demo and pick that date — 14:00 should be missing.")
         else:
             print("Insert failed (run database_appointments.sql in Supabase first)")
             sys.exit(1)
