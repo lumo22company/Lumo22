@@ -14,7 +14,8 @@
   <style>
     .captions-platform-checkboxes { display: flex; flex-wrap: nowrap; gap: 0.5rem 1.25rem; margin-bottom: 0.25rem; }
     @media (max-width: 640px) { .captions-platform-checkboxes { flex-wrap: wrap; } }
-    .dfd-btn.btn-disabled { opacity: 0.5; pointer-events: none; cursor: not-allowed; }
+    .dfd-btn.btn-disabled { opacity: 0.5; cursor: not-allowed; }
+    .dfd-btn.btn-disabled:hover { opacity: 0.6; }
   </style>
 </head>
 <body class="lumo-landing product-page-captions">
@@ -214,7 +215,11 @@
   <!-- Sticky CTA — appears on scroll past hero -->
   <div class="sticky-cta" id="sticky-cta-captions" aria-label="Quick action">
     <a href="#pricing" class="sticky-cta-btn">View options</a>
-    <a href="#pricing" class="sticky-cta-btn sticky-cta-btn-accent">Get my 30 days</a>
+    {% if use_checkout_redirect %}
+    <a href="/captions-checkout?platforms=1" id="captions-sticky-oneoff-cta" class="sticky-cta-btn sticky-cta-btn-accent">Get my 30 days</a>
+    {% else %}
+    <a href="{{ captions_payment_link|default('#pricing') }}" class="sticky-cta-btn sticky-cta-btn-accent">Get my 30 days</a>
+    {% endif %}
   </div>
 
   {% include '_footer.html' %}
@@ -283,6 +288,8 @@
         oneoffCta.classList.toggle('btn-disabled', !isValid);
         oneoffCta.setAttribute('aria-disabled', !isValid);
       }
+      var stickyOneoff = document.getElementById('captions-sticky-oneoff-cta');
+      if (stickyOneoff) stickyOneoff.href = isValid ? targetHref : '#pricing';
       if (subPrice) subPrice.innerHTML = '£' + subTotal(n, stories) + ' <span>/month</span>';
       if (subSave) subSave.textContent = 'Save £' + (oneoffTotal(n, stories) - subTotal(n, stories)) + ' vs one-off';
       if (subCta) {
@@ -342,6 +349,10 @@
     }
     if (subCta && subCta.href && subCta.href.indexOf('captions-checkout') !== -1) {
       subCta.addEventListener('click', handleCtaClick);
+    }
+    var stickyOneoffCta = document.getElementById('captions-sticky-oneoff-cta');
+    if (stickyOneoffCta && stickyOneoffCta.href && stickyOneoffCta.href.indexOf('captions-checkout') !== -1) {
+      stickyOneoffCta.addEventListener('click', handleCtaClick);
     }
     document.querySelectorAll('.captions-which-cb').forEach(function(cb) {
       cb.addEventListener('change', function() { if (errEl) errEl.style.display = 'none'; });
