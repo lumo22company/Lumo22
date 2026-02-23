@@ -286,6 +286,12 @@ def booking_page():
     return redirect(url_for('digital_front_desk_page'))
 
 
+@app.route('/book-demo')
+def booking_demo_page():
+    """Demo booking page to test Smart Scheduling: slot picker, duration, Group appointments together."""
+    return render_template('booking.html')
+
+
 @app.route('/website-chat')
 def website_chat_page():
     """Chat Assistant removed — redirect to Digital Front Desk."""
