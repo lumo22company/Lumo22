@@ -133,17 +133,25 @@ def forgot_password():
         if not email or "@" not in email:
             return jsonify({"ok": False, "error": "Valid email required"}), 400
 
+        # Diagnostic: confirm env so we can see in Railway logs what's in use
+        logging.info(
+            "[Forgot password] Request for %r | SUPABASE_SERVICE_ROLE_KEY set=%s | SENDGRID set=%s",
+            email,
+            bool(getattr(Config, "SUPABASE_SERVICE_ROLE_KEY", "")),
+            bool(getattr(Config, "SENDGRID_API_KEY", "")),
+        )
         svc = CustomerAuthService()
         ok, token = svc.request_password_reset(email)
         if not ok:
             return jsonify({"ok": False, "error": token or "Could not create reset link"}), 500
         if token is None:
             logging.info(
-                f"[Forgot password] No customer found for {email!r} — no email sent. "
-                "If the email is in the DB, set SUPABASE_SERVICE_ROLE_KEY in Railway (not just anon key) so RLS does not block the backend."
+                "[Forgot password] No customer found for %r — no email sent. Check: same Supabase project as DB? SUPABASE_SERVICE_ROLE_KEY set in this service?",
+                email,
             )
             return jsonify({"ok": True, "message": "If an account exists with that email, you'll receive a reset link shortly."}), 200
 
+        logging.info("[Forgot password] Customer found for %r, sending reset email", email)
         base = (Config.BASE_URL or request.url_root or "").strip().rstrip("/")
         if base and not base.startswith("http"):
             base = "https://" + base
@@ -168,15 +176,30 @@ If you didn't request this, you can ignore this email. Your password will stay t
         notif = NotificationService()
         sent = notif.send_email(email, subject, body)
         if not sent:
-            logging.warning(f"[Forgot password] SendGrid failed to send reset email to {email}")
+            logging.warning("[Forgot password] SendGrid failed to send reset email to %r", email)
             return jsonify({
                 "ok": False,
                 "error": "We couldn't send the reset email right now. Please try again in a few minutes, or contact hello@lumo22.com for help."
             }), 503
 
+        logging.info("[Forgot password] Reset email sent successfully to %r", email)
         return jsonify({"ok": True, "message": "If an account exists with that email, you'll receive a reset link shortly."}), 200
     except Exception as e:
+        logging.exception("[Forgot password] Error: %s", e)
         return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@auth_bp.route("/forgot-password/status", methods=["GET"])
+def forgot_password_status():
+    """Diagnostic: confirm backend has env needed for forgot-password (no secrets)."""
+    return jsonify({
+        "ok": True,
+        "SUPABASE_SERVICE_ROLE_KEY_set": bool(getattr(Config, "SUPABASE_SERVICE_ROLE_KEY", "")),
+        "SUPABASE_KEY_set": bool(getattr(Config, "SUPABASE_KEY", "")),
+        "SENDGRID_API_KEY_set": bool(getattr(Config, "SENDGRID_API_KEY", "")),
+        "FROM_EMAIL": (getattr(Config, "FROM_EMAIL", "") or "not set")[:50],
+        "BASE_URL_set": bool(getattr(Config, "BASE_URL", "")),
+    }), 200
 
 
 @auth_bp.route("/reset-password", methods=["POST"])
