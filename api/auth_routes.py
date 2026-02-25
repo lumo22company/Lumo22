@@ -57,7 +57,7 @@ def signup():
 def login():
     """Login: email + password."""
     try:
-        data = request.get_json() or {}
+        data = request.get_json(silent=True) or request.form or {}
         email = (data.get("email") or "").strip().lower()
         password = (data.get("password") or "").strip()
 

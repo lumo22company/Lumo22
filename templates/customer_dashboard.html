@@ -21,173 +21,189 @@
     <a href="/account" class="lumo-nav-cta">Account</a>
   </nav>
 
-  <header class="account-hero">
-    <div class="account-hero-inner">
-      <div>
-        <h1>Your account</h1>
-        <p class="account-email">{{ customer.email }}</p>
-        <p class="account-quick-links">
-          <a href="/captions">Captions</a>
-        </p>
+  <div class="account-layout">
+    <aside class="account-sidebar">
+      <h1 class="account-sidebar-title">Your account</h1>
+      <ul class="account-sidebar-nav">
+        <li><a href="#account-information">Account Information</a></li>
+        <li><a href="#history">History</a></li>
+        <li><a href="#edit-form">Edit form</a></li>
+        <li><a href="#pause-subscription">Pause Subscription</a></li>
+        <li><a href="#refer-a-friend">Refer a friend</a></li>
+      </ul>
+      <div class="account-sidebar-logout">
+        <form action="/api/auth/logout" method="POST" style="margin: 0;">
+          <button type="submit" class="dfd-btn dfd-btn-secondary">Log out</button>
+        </form>
       </div>
-      <form action="/api/auth/logout" method="POST" class="account-logout" style="margin: 0;">
-        <button type="submit" class="dfd-btn dfd-btn-secondary">Log out</button>
-      </form>
-    </div>
-  </header>
+    </aside>
 
-  {% if request.args.get('billing') == 'no_sub' %}
-  <div class="account-section account-section--light">
-    <div class="account-section-inner">
-      <p class="account-alert account-alert--warn">No subscription found. If you're on the monthly plan, use the link in your order emails to manage billing.</p>
-    </div>
-  </div>
-  {% elif request.args.get('billing') == 'error' %}
-  <div class="account-section account-section--light">
-    <div class="account-section-inner">
-      <p class="account-alert account-alert--error">Could not open billing portal. Please try again or email hello@lumo22.com.</p>
-    </div>
-  </div>
-  {% endif %}
+    <main class="account-main">
+      {% if request.args.get('billing') == 'no_sub' %}
+      <div class="account-info-panel" style="margin-bottom: 1rem; background: rgba(255,200,0,0.1); border-color: rgba(255,200,0,0.3);">
+        <p style="margin: 0; color: #333;">No subscription found. If you're on the monthly plan, use the link in your order emails to manage billing.</p>
+      </div>
+      {% elif request.args.get('billing') == 'error' %}
+      <div class="account-info-panel" style="margin-bottom: 1rem; background: rgba(200,80,80,0.08); border-color: rgba(200,80,80,0.25);">
+        <p style="margin: 0; color: #333;">Could not open billing portal. Please try again or email hello@lumo22.com.</p>
+      </div>
+      {% endif %}
 
-  <section class="account-section account-section--light">
-    <div class="account-section-inner">
-      <h2 class="account-section-heading">Digital Front Desk <span style="font-size: 0.7em; font-weight: 400; color: var(--lum-text-muted);">(no longer available for new signups)</span></h2>
-      {% if setups %}
-        <div class="account-card-grid">
-          {% for s in setups %}
-          <div class="account-card">
-            {% if (s.product_type or 'front_desk') == 'chat_only' %}
-            <span class="account-badge account-badge-chat">Chat Assistant</span>
-            {% else %}
-            <span class="account-badge account-badge-dfd">Digital Front Desk</span>
-            {% endif %}
-            <h3 class="account-card-title">{{ s.business_name or 'Setup' }}</h3>
-            <p class="account-card-meta">Enquiry email: {{ s.enquiry_email }}</p>
-            {% if (s.product_type or 'front_desk') == 'front_desk' %}
-            {% if s.forwarding_email %}
-            <p class="account-card-meta">Forwarding: {{ s.forwarding_email }}</p>
-            {% endif %}
-            <div class="account-card-actions">
-              <a href="/api/front-desk-setup/pause-auto-reply?token={{ s.done_token }}">Pause auto-reply</a>
-              <a href="/api/front-desk-setup/resume-auto-reply?token={{ s.done_token }}">Resume auto-reply</a>
+      <section id="account-information" class="account-section-block">
+        <h2>Account Information</h2>
+        <p>Update your email, password, and billing securely below.</p>
+        <div class="account-info-panel">
+          <div class="account-info-row">
+            <div>
+              <span class="account-info-label">Email</span>
+              <div class="account-info-value">{{ customer.email }}</div>
             </div>
-            {% elif (s.product_type or '') == 'chat_only' and s.chat_widget_key %}
-            <p class="account-card-meta">Embed code:</p>
-            <pre class="embed-pre">&lt;script src="{{ base_url or '' }}/static/js/chat-widget.js" data-key="{{ s.chat_widget_key }}" async&gt;&lt;/script&gt;</pre>
-            <p class="account-card-meta">Add this before the closing &lt;/body&gt; tag on your site.</p>
+          </div>
+          <div class="account-info-row">
+            <div>
+              <span class="account-info-label">Password</span>
+              <div class="account-info-value">••••••••</div>
+            </div>
+            <div class="account-info-actions">
+              <a href="/forgot-password">Change password</a>
+            </div>
+          </div>
+          <div class="account-info-row">
+            <div>
+              <span class="account-info-label">Billing</span>
+              <div class="account-info-value">Payment method and invoices</div>
+            </div>
+            <div class="account-info-actions">
+              <a href="/api/billing/portal">Manage billing</a>
+            </div>
+          </div>
+          <div class="account-info-row">
+            <div>
+              <span class="account-info-label">Marketing emails</span>
+              <div class="account-info-value">Tips, updates, and offers from Lumo 22</div>
+            </div>
+            <div id="marketing-toggle-wrap" role="button" tabindex="0" class="account-toggle {% if customer.get('marketing_opt_in', True) %}on{% endif %}" aria-label="Toggle marketing emails" onclick="toggleMarketing()" onkeydown="if(event.key==='Enter'||event.key===' ') { event.preventDefault(); toggleMarketing(); }"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="history" class="account-section-block">
+        <h2>History</h2>
+        {% set delivered_orders = caption_orders|selectattr('status', 'equalto', 'delivered')|list %}
+        {% if delivered_orders %}
+        <p>View or download your previous packs. Each pack is available as a PDF; if you added Story Ideas, you get a separate Stories PDF.</p>
+        <div class="account-history-list">
+          {% for o in delivered_orders %}
+          <div class="account-history-item">
+            <span>Pack {{ o.created_at[:10] if o.created_at else '—' }}</span>
+            <a href="/api/captions-download?t={{ o.token }}&inline=1" target="_blank" rel="noopener" class="account-btn-link account-btn-link--primary">View captions</a>
+            <a href="/api/captions-download?t={{ o.token }}" class="account-btn-link account-btn-link--secondary">Download captions PDF</a>
+            {% if o.include_stories %}
+            <a href="/api/captions-download?t={{ o.token }}&type=stories&inline=1" target="_blank" rel="noopener" class="account-btn-link account-btn-link--primary">View Stories</a>
+            <a href="/api/captions-download?t={{ o.token }}&type=stories" class="account-btn-link account-btn-link--secondary">Download Stories PDF</a>
             {% endif %}
           </div>
           {% endfor %}
         </div>
-      {% else %}
-        <p class="account-empty">No Digital Front Desk setups. This product is on hold. <a href="/captions">Try 30 Days Captions instead</a>.</p>
-      {% endif %}
-    </div>
-  </section>
+        {% else %}
+        <p>No delivered packs yet. When your first pack is ready, it will appear here with view and download options.</p>
+        <p><a href="/captions" style="color: #8b6914; font-weight: 500;">Get 30 Days Captions</a></p>
+        {% endif %}
+      </section>
 
-  <section class="account-section account-section--dark">
-    <div class="account-section-inner">
-      <h2 class="account-section-heading">30 Days Captions</h2>
-      {% set has_subscription = caption_orders and caption_orders|selectattr('stripe_customer_id')|list|length > 0 %}
-      {% if has_subscription %}
-      <p class="account-card-meta" style="margin-bottom: 1rem;">
-        <a href="/api/billing/portal" style="color: var(--lum-gold); text-decoration: none;">Manage subscription</a> — update payment, view invoices, or cancel
-      </p>
-      {% endif %}
-      {% if caption_orders %}
-        <div class="account-card-grid">
+      <section id="edit-form" class="account-section-block">
+        <h2>Edit form</h2>
+        {% if caption_orders %}
+        <p>Update your voice, topics, and preferences for future packs. Your next pack will use the latest form you submit.</p>
+        <ul class="account-edit-form-list">
           {% for o in caption_orders %}
-          <div class="account-card">
-            <span class="account-badge account-badge-captions">Order</span>
-            <h3 class="account-card-title">Order {{ o.created_at[:10] if o.created_at else '' }}</h3>
-            <p class="account-card-meta">Status: {{ o.status or '—' }}</p>
-            {% if o.stripe_subscription_id %}
-            <div class="account-settings-row" style="margin: 1rem 0 0.75rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.1);">
-              <div>
-                <div class="account-settings-label" style="font-size: 0.9rem;">Intake reminders</div>
-                <div class="account-settings-desc" style="font-size: 0.85rem;">Email me before each pack so I can update my intake</div>
-              </div>
-              <div id="reminder-toggle-{{ o.id }}" role="button" tabindex="0" class="account-toggle {% if not o.reminder_opt_out %}on{% endif %}" aria-label="Toggle intake reminders" data-order-id="{{ o.id }}" onclick="toggleReminder(this)" onkeydown="if(event.key==='Enter'||event.key===' ') { event.preventDefault(); toggleReminder(this); }"></div>
-            </div>
-            <div class="account-settings-row" style="margin: 0 0 0.75rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.1);">
-              <div>
-                <div class="account-settings-label" style="font-size: 0.9rem;">Pause subscription</div>
-                <div class="account-settings-desc" style="font-size: 0.85rem;">{% if o.subscription_pause and o.subscription_pause.paused %}Paused — resumes {{ o.subscription_pause.resumes_at or 'automatically' }}{% else %}Pause billing for 1 month (no charge, no pack){% endif %}</div>
-              </div>
-              {% if o.subscription_pause and o.subscription_pause.paused %}
-              <span class="account-pause-badge">Paused</span>
-              {% else %}
-              <button type="button" class="dfd-btn dfd-btn-secondary account-pause-btn" data-order-id="{{ o.id }}" onclick="pauseSubscription(this)">Pause for 1 month</button>
-              {% endif %}
-            </div>
+          <li>
+            {% if o.status == 'awaiting_intake' %}
+            <a href="/captions-intake?t={{ o.token }}">Complete the form — Order {{ o.created_at[:10] if o.created_at else '' }}</a>
+            {% else %}
+            <a href="/captions-intake?t={{ o.token }}">Edit form — Order {{ o.created_at[:10] if o.created_at else '' }}</a>
             {% endif %}
-            <div class="account-card-actions">
-              {% if o.status == 'awaiting_intake' %}
-              <a href="/captions-intake?t={{ o.token }}">Complete the form</a>
-              {% else %}
-              <a href="/captions-intake?t={{ o.token }}">Edit form</a>
-              {% if o.status == 'delivered' %}
-              <a href="/api/captions-download?t={{ o.token }}">Download captions</a>
-              <a href="mailto:hello@lumo22.com">Contact us</a>
-              {% else %}
-              <a href="mailto:hello@lumo22.com">Contact us</a>
-              {% endif %}
-              {% endif %}
-            </div>
-          </div>
+          </li>
           {% endfor %}
-        </div>
-      {% else %}
-        <p class="account-empty">No caption orders yet.</p>
-        <p class="account-empty" style="margin-top: 0.5rem;"><a href="/captions">Get 30 Days Captions</a></p>
-      {% endif %}
-    </div>
-  </section>
+        </ul>
+        {% else %}
+        <p>No caption orders yet. After you purchase, you can edit your intake form here.</p>
+        <p><a href="/captions" style="color: #8b6914; font-weight: 500;">Get 30 Days Captions</a></p>
+        {% endif %}
+      </section>
 
-  <section class="account-section account-section--light">
-    <div class="account-section-inner">
-      <h2 class="account-section-heading">Settings</h2>
-      <div class="account-settings-row">
-        <div>
-          <div class="account-settings-label">Marketing emails</div>
-          <div class="account-settings-desc">Tips, updates, and offers from Lumo 22</div>
+      <section id="pause-subscription" class="account-section-block">
+        <h2>Pause Subscription</h2>
+        {% set sub_orders = caption_orders|selectattr('stripe_subscription_id')|list if caption_orders else [] %}
+        {% if sub_orders %}
+        <p>Pause billing for one month (no charge, no pack). You can also manage intake reminders and billing in the blocks below.</p>
+        {% for o in sub_orders %}
+        <div class="account-pause-block" style="margin-bottom: 1rem;">
+          <div class="account-settings-row" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid rgba(0,0,0,0.06);">
+            <div>
+              <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Intake reminders</div>
+              <div class="account-settings-desc">Email me before each pack so I can update my intake</div>
+            </div>
+            <div id="reminder-toggle-{{ o.id }}" role="button" tabindex="0" class="account-toggle {% if not o.reminder_opt_out %}on{% endif %}" aria-label="Toggle intake reminders" data-order-id="{{ o.id }}" onclick="toggleReminder(this)" onkeydown="if(event.key==='Enter'||event.key===' ') { event.preventDefault(); toggleReminder(this); }"></div>
+          </div>
+          <div class="account-settings-row" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding: 1rem 0; border-bottom: none;">
+            <div>
+              <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Pause subscription</div>
+              <div class="account-settings-desc">{% if o.subscription_pause and o.subscription_pause.paused %}Paused — resumes {{ o.subscription_pause.resumes_at or 'automatically' }}{% else %}Pause billing for 1 month (no charge, no pack){% endif %}</div>
+            </div>
+            {% if o.subscription_pause and o.subscription_pause.paused %}
+            <span class="account-pause-badge" style="font-size: 0.85rem; font-weight: 500; color: #555; padding: 0.35rem 0.75rem; background: rgba(0,0,0,0.06); border-radius: 12px;">Paused</span>
+            {% else %}
+            <button type="button" class="dfd-btn dfd-btn-secondary account-pause-btn" data-order-id="{{ o.id }}" onclick="pauseSubscription(this)">Pause for 1 month</button>
+            {% endif %}
+          </div>
         </div>
-        <div id="marketing-toggle-wrap" role="button" tabindex="0" class="account-toggle {% if customer.get('marketing_opt_in', True) %}on{% endif %}" aria-label="Toggle marketing emails" onclick="toggleMarketing()" onkeydown="if(event.key==='Enter'||event.key===' ') { event.preventDefault(); toggleMarketing(); }"></div>
-      </div>
-    </div>
-  </section>
+        {% endfor %}
+        {% else %}
+        <p>You don't have an active subscription. Pause is only available for monthly Captions subscribers.</p>
+        <p><a href="/captions" style="color: #8b6914; font-weight: 500;">View 30 Days Captions</a></p>
+        {% endif %}
+      </section>
 
-  {% if referral_code %}
-  <section class="account-section account-section--dark">
-    <div class="account-section-inner">
-      <h2 class="account-section-heading">Refer a friend</h2>
-      <p class="account-card-meta" style="margin-bottom: 1rem;">Share your referral link — when friends sign up, they'll use your code.</p>
-      <div class="referral-block">
-        <label class="account-settings-label" for="referral-link">Your referral link</label>
-        <div class="referral-row">
-          <input type="text" id="referral-link" readonly value="{{ base_url }}/signup?ref={{ referral_code }}" class="referral-input">
-          <button type="button" class="dfd-btn dfd-btn-secondary referral-copy" onclick="copyReferralLink()">Copy link</button>
+      <section id="refer-a-friend" class="account-section-block">
+        <h2>Refer a friend</h2>
+        {% if referral_code %}
+        <p>Share your referral link — when friends sign up, they'll use your code.</p>
+        <div class="account-referral-block">
+          <label class="account-settings-label" for="referral-link">Your referral link</label>
+          <div class="referral-row" style="display: flex; gap: 0.75rem; align-items: center; margin-top: 0.5rem;">
+            <input type="text" id="referral-link" readonly value="{{ base_url }}/signup?ref={{ referral_code }}" class="referral-input" style="flex: 1; padding: 0.6rem 0.9rem; font-size: 0.9rem; border: 1px solid rgba(0,0,0,0.15); border-radius: 12px; background: #f8f8f6; color: #111;">
+            <button type="button" class="dfd-btn dfd-btn-secondary referral-copy" onclick="copyReferralLink()">Copy link</button>
+          </div>
+          <p class="account-settings-desc" style="margin-top: 0.5rem; color: #444;">Or share your code: <strong>{{ referral_code }}</strong></p>
         </div>
-        <p class="account-settings-desc" style="margin-top: 0.5rem;">Or share your code: <strong>{{ referral_code }}</strong></p>
-      </div>
-    </div>
-  </section>
-  {% endif %}
+        {% else %}
+        <p>Referral codes are available for active customers. Make a purchase to get your unique link.</p>
+        {% endif %}
+      </section>
+    </main>
+  </div>
 
   {% include '_footer.html' %}
 
   <script src="{{ url_for('static', filename='js/landing.js') }}?v={{ asset_version }}"></script>
   <script>
     (function() {
-      document.querySelector('form[action="/api/auth/logout"]').addEventListener('submit', function(e) {
-        e.preventDefault();
-        fetch('/api/auth/logout', { method: 'POST' })
-          .then(function() { window.location.href = '/'; });
-      });
+      if (window.location.search.indexOf('login_token=') !== -1) {
+        try { history.replaceState({}, '', window.location.pathname); } catch (e) {}
+      }
+      var logoutForm = document.querySelector('form[action="/api/auth/logout"]');
+      if (logoutForm) {
+        logoutForm.addEventListener('submit', function(e) {
+          e.preventDefault();
+          fetch('/api/auth/logout', { method: 'POST' })
+            .then(function() { window.location.href = '/'; });
+        });
+      }
 
       function toggleMarketing() {
         var wrap = document.getElementById('marketing-toggle-wrap');
+        if (!wrap) return;
         var optIn = wrap.classList.contains('on');
         var nextOptIn = !optIn;
         wrap.classList.toggle('on', nextOptIn);
@@ -259,6 +275,23 @@
           btn.textContent = 'Pause for 1 month';
         });
       }
+
+      // Highlight active nav on scroll
+      var sections = document.querySelectorAll('.account-section-block');
+      var navLinks = document.querySelectorAll('.account-sidebar-nav a');
+      function updateActiveLink() {
+        var activeId = null;
+        for (var i = sections.length - 1; i >= 0; i--) {
+          var rect = sections[i].getBoundingClientRect();
+          if (rect.top <= 120) { activeId = sections[i].id; break; }
+        }
+        if (!activeId && sections[0]) activeId = sections[0].id;
+        navLinks.forEach(function(link) {
+          link.classList.toggle('active', link.getAttribute('href') === '#' + activeId);
+        });
+      }
+      window.addEventListener('scroll', updateActiveLink);
+      updateActiveLink();
     })();
   </script>
 </body>

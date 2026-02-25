@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Logged in | Lumo 22</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v={{ asset_version }}">
+  <meta http-equiv="refresh" content="2;url={{ next_url }}">
+  <style>
+    .login-success { min-height: 50vh; display: flex; align-items: center; justify-content: center; padding: 2rem; text-align: center; }
+    .login-success h1 { font-family: var(--font-display); font-size: 1.5rem; margin-bottom: 1rem; color: var(--lum-text); }
+    .login-success p { color: var(--lum-text-muted); margin-bottom: 1.5rem; }
+    .login-success a { color: var(--lum-gold); text-decoration: none; font-weight: 500; }
+    .login-success a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body class="lumo-landing">
+  <nav class="lumo-nav lumo-nav-scrolled">
+    <a href="/" class="lumo-nav-logo">Lumo 22</a>
+    <div class="lumo-nav-links"><a href="/captions">Captions</a></div>
+    <a href="/account" class="lumo-nav-cta">Account</a>
+  </nav>
+  <section class="block section-dark login-success">
+    <div class="section-inner">
+      <h1>You're logged in</h1>
+      <p>Taking you to your account…</p>
+      <p><a href="{{ next_url }}" id="go-link">Click here if you're not redirected</a></p>
+    </div>
+  </section>
+  <script>
+    (function() {
+      var next = {{ next_url|tojson }};
+      document.getElementById('go-link').href = next;
+      window.location.href = next;
+    })();
+  </script>
+</body>
+</html>

@@ -4,10 +4,35 @@ Main Flask application for AI-powered lead capture and booking system.
 import os
 import time
 import json
+import secrets
 from flask import Flask, render_template, request, jsonify, redirect, url_for, send_from_directory, make_response
 from flask_cors import CORS
 from config import Config
 from functools import wraps
+
+# One-time login tokens: when session cookie does not persist (e.g. proxy), redirect to /account?login_token=X
+# so the account page can set session from the token and render (cookie is set in that response).
+_login_tokens = {}  # token -> {"customer_id": str, "email": str, "expires": float}
+_LOGIN_TOKEN_TTL = 120  # seconds
+
+
+def _create_login_token(customer_id: str, email: str) -> str:
+    token = secrets.token_urlsafe(32)
+    _login_tokens[token] = {
+        "customer_id": str(customer_id),
+        "email": email,
+        "expires": time.time() + _LOGIN_TOKEN_TTL,
+    }
+    return token
+
+
+def _consume_login_token(token: str):
+    if not token:
+        return None
+    data = _login_tokens.pop(token, None)
+    if not data or data.get("expires", 0) < time.time():
+        return None
+    return data
 from api.routes import api_bp, init_services
 from api.webhooks import webhook_bp
 from api.outreach_routes import outreach_bp, init_outreach_services
@@ -347,9 +372,17 @@ def website_chat_success_page():
     return redirect(url_for('captions_page'))
 
 def customer_login_required(f):
-    """Redirect to login if customer not in session."""
+    """Redirect to login if customer not in session. Accepts ?login_token= for one-time login when cookie does not persist."""
     @wraps(f)
     def decorated(*args, **kwargs):
+        customer = get_current_customer()
+        if not customer and request.args.get("login_token"):
+            data = _consume_login_token(request.args.get("login_token", "").strip())
+            if data:
+                session["customer_id"] = data["customer_id"]
+                session["customer_email"] = data["email"]
+                # Render the page in this response so session cookie is set here (no second request needed)
+                return f(*args, **kwargs)
         if not get_current_customer():
             return redirect(url_for('customer_login_page') + '?next=' + request.url)
         return f(*args, **kwargs)
@@ -362,10 +395,61 @@ def customer_signup_page():
     return render_template('customer_signup.html')
 
 
-@app.route('/login')
+@app.route('/login', methods=['GET', 'POST'])
 def customer_login_page():
-    """Login for Lumo 22 customers (DFD, Chat, Captions)."""
+    """Login for Lumo 22 customers (DFD, Chat, Captions). GET shows form; POST does login and redirects."""
+    if request.method == 'POST':
+        email = (request.form.get('email') or '').strip().lower()
+        password = (request.form.get('password') or '').strip()
+        next_url = request.form.get('next') or request.args.get('next') or '/account'
+        if not email or not password:
+            return render_template('customer_login.html', login_error='Please enter your email and password.', next_url=next_url)
+        try:
+            from services.customer_auth_service import CustomerAuthService
+            svc = CustomerAuthService()
+            customer = svc.get_by_email(email)
+            if not customer or not svc.verify_password(customer, password):
+                return render_template('customer_login.html', login_error='Invalid email or password.', next_url=next_url)
+            svc.update_last_login(customer['id'])
+            session['customer_id'] = str(customer['id'])
+            session['customer_email'] = customer['email']
+            # One-time token so account page can set session even if cookie from this response does not persist
+            login_token = _create_login_token(customer['id'], customer['email'])
+            account_url = url_for('account_page') + '?login_token=' + login_token
+            return render_template('login_success.html', next_url=account_url)
+        except Exception:
+            return render_template('customer_login.html', login_error='Something went wrong. Please try again.', next_url=next_url)
     return render_template('customer_login.html')
+
+
+@app.route('/send-login-link', methods=['POST'])
+def send_login_link():
+    """Send a one-time login link by email. Works even when password/cookie login fails."""
+    email = (request.form.get('email') or request.get_json(silent=True) or {}).get('email') or ''
+    email = email.strip().lower()
+    if not email or '@' not in email:
+        return jsonify({"ok": False, "error": "Valid email required"}), 400
+    try:
+        from services.customer_auth_service import CustomerAuthService
+        from services.notifications import NotificationService
+        svc = CustomerAuthService()
+        customer = svc.get_by_email(email)
+        if not customer:
+            return jsonify({"ok": True, "message": "If an account exists, we've sent a login link to that email."}), 200
+        base = (getattr(Config, 'BASE_URL', None) or request.url_root or '').strip().rstrip('/')
+        if not base.startswith('http'):
+            base = 'https://' + base if base else request.url_root
+        login_token = _create_login_token(customer['id'], customer['email'])
+        account_url = base.rstrip('/') + '/account?login_token=' + login_token
+        notif = NotificationService()
+        subject = "Your Lumo 22 login link"
+        body = "Click the link below to open your account (link works once, expires in 2 minutes):\n\n" + account_url + "\n\n— Lumo 22"
+        sent = notif.send_email(email, subject, body)
+        if not sent:
+            return jsonify({"ok": False, "error": "Could not send email. Try again later."}), 503
+        return jsonify({"ok": True, "message": "Check your email for the login link."}), 200
+    except Exception as e:
+        return jsonify({"ok": False, "error": "Something went wrong. Try again."}), 500
 
 
 @app.route('/forgot-password')

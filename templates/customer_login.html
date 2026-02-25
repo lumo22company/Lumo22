@@ -48,21 +48,35 @@
         <h1 class="block-title">Log in</h1>
         <p class="block-desc">Access your Captions in one place.</p>
 
-        <form id="login-form">
+        <form id="login-form" action="/login" method="post">
+          <input type="hidden" name="next" value="{{ next_url|default(request.args.get('next', '/account')) }}">
           <label for="email">Email</label>
-          <input type="email" id="email" name="email" required autocomplete="email" placeholder="you@example.com">
+          <input type="email" id="email" name="email" required autocomplete="email" placeholder="you@example.com" value="{{ request.form.get('email', '') }}">
 
           <label for="password">Password</label>
           <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="••••••••">
 
           <button type="submit" class="auth-btn" id="btn">Log in</button>
+          {% if login_error %}
+          <div class="auth-msg error" style="display: block;">{{ login_error }}</div>
+          {% else %}
           <div id="msg" class="auth-msg" style="display: none;"></div>
+          {% endif %}
         </form>
 
         <div class="auth-links">
           <p><a href="/forgot-password">Forgot password?</a></p>
           <p class="auth-muted">Don't have an account? <a href="/signup">Sign up</a></p>
           <p class="auth-muted"><a href="/">← Back to Lumo 22</a></p>
+        </div>
+
+        <div class="auth-email-link-wrap" style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.1);">
+          <p style="font-size: 0.85rem; color: var(--lum-text-muted); margin-bottom: 0.75rem;">Having trouble logging in? We'll send you a link to open your account.</p>
+          <form id="email-link-form" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <input type="email" id="email-link-email" placeholder="Your email" required style="flex: 1; min-width: 180px; padding: 0.6rem 0.9rem; background: var(--lum-surface-elevated); border: 1px solid var(--lum-border); border-radius: 8px; color: var(--lum-text); font-size: 0.95rem;">
+            <button type="submit" class="auth-btn" id="email-link-btn" style="padding: 0.6rem 1.25rem;">Email me a login link</button>
+          </form>
+          <div id="email-link-msg" class="auth-msg" style="display: none; margin-top: 0.75rem;"></div>
         </div>
       </div>
     </div>
@@ -72,48 +86,47 @@
 
   <script>
     (function() {
-      var form = document.getElementById('login-form');
       var btn = document.getElementById('btn');
-      var msg = document.getElementById('msg');
-      var next = new URLSearchParams(window.location.search).get('next') || '/account';
-
-      form.addEventListener('submit', function(e) {
-        e.preventDefault();
-        msg.style.display = 'none';
-        btn.disabled = true;
-        btn.textContent = 'Logging in…';
-
-        fetch('/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: document.getElementById('email').value.trim().toLowerCase(),
-            password: document.getElementById('password').value
-          })
-        })
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          if (data.ok) {
-            msg.className = 'auth-msg success';
-            msg.textContent = 'You\'re in. Taking you to your account…';
-            msg.style.display = 'block';
-            window.location.href = next;
-          } else {
-            msg.className = 'auth-msg error';
-            msg.textContent = data.error || 'That email or password doesn't look right.';
-            msg.style.display = 'block';
-            btn.disabled = false;
-            btn.textContent = 'Log in';
-          }
-        })
-        .catch(function() {
-          msg.className = 'auth-msg error';
-          msg.textContent = 'Something didn\'t send — try again.';
-          msg.style.display = 'block';
-          btn.disabled = false;
-          btn.textContent = 'Log in';
+      var form = document.getElementById('login-form');
+      if (form && btn) {
+        form.addEventListener('submit', function() {
+          btn.disabled = true;
+          btn.textContent = 'Logging in…';
         });
-      });
+      }
+      var emailLinkForm = document.getElementById('email-link-form');
+      var emailLinkMsg = document.getElementById('email-link-msg');
+      var emailLinkBtn = document.getElementById('email-link-btn');
+      if (emailLinkForm && emailLinkMsg) {
+        emailLinkForm.addEventListener('submit', function(e) {
+          e.preventDefault();
+          var email = document.getElementById('email-link-email').value.trim().toLowerCase();
+          if (!email) return;
+          emailLinkMsg.style.display = 'none';
+          emailLinkBtn.disabled = true;
+          emailLinkBtn.textContent = 'Sending…';
+          fetch('/send-login-link', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email })
+          })
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            emailLinkMsg.style.display = 'block';
+            emailLinkMsg.className = 'auth-msg ' + (data.ok ? 'success' : 'error');
+            emailLinkMsg.textContent = data.message || data.error || (data.ok ? 'Check your email.' : 'Something went wrong.');
+            emailLinkBtn.disabled = false;
+            emailLinkBtn.textContent = 'Email me a login link';
+          })
+          .catch(function() {
+            emailLinkMsg.style.display = 'block';
+            emailLinkMsg.className = 'auth-msg error';
+            emailLinkMsg.textContent = 'Something went wrong. Try again.';
+            emailLinkBtn.disabled = false;
+            emailLinkBtn.textContent = 'Email me a login link';
+          });
+        });
+      }
     })();
   </script>
 </body>
