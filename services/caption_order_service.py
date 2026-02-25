@@ -116,6 +116,21 @@ class CaptionOrderService:
     def set_delivered(self, order_id: str, captions_md: str) -> bool:
         return self.update(order_id, {"status": "delivered", "captions_md": captions_md})
 
+    def append_pack_history(self, order_id: str, month_str: str, day_categories: list) -> bool:
+        """Append one pack's day categories to pack_history (for subscription variety). day_categories: list of 30 strings."""
+        row = self.get_by_id(order_id)
+        if not row:
+            return False
+        history = list(row.get("pack_history") or [])
+        if not isinstance(history, list):
+            history = []
+        entry = {"month": month_str, "day_categories": (day_categories or [])[:30]}
+        history.append(entry)
+        # Keep last 12 months to avoid unbounded growth
+        if len(history) > 12:
+            history = history[-12:]
+        return self.update(order_id, {"pack_history": history})
+
     def set_failed(self, order_id: str) -> bool:
         return self.update(order_id, {"status": "failed"})
 

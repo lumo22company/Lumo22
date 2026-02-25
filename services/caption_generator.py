@@ -2,10 +2,27 @@
 Generate 30 Days of Social Media Captions using OpenAI.
 Uses the product framework: Authority, Educational, Brand Personality, Soft Promotion, Engagement.
 """
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from openai import OpenAI
 from config import Config
-from datetime import datetime
+from datetime import datetime, timedelta
+import re
+
+
+def _build_date_context(pack_start_date: str) -> Optional[str]:
+    """If pack_start_date is YYYY-MM-DD, return a 30-day calendar string for the prompt. Else return None."""
+    s = (pack_start_date or "").strip()
+    if not s:
+        return None
+    try:
+        start = datetime.strptime(s, "%Y-%m-%d")
+    except ValueError:
+        return None
+    lines = []
+    for i in range(30):
+        d = start + timedelta(days=i)
+        lines.append(f"Day {i + 1} = {d.strftime('%a %d %b %Y')}")
+    return "\n".join(lines)
 
 
 CAPTION_CATEGORIES = [
@@ -74,8 +91,28 @@ Single platform: Write 30 distinct captions (one per day). Multiple platforms: W
 Launch/event phasing (when LAUNCH_EVENT is provided): Days before launch = pre-launch (build anticipation, teasers, countdown). Launch day = announcement, go-live. Days after launch = post-launch (thank-you, feedback, early results — NOT hype or anticipation)."""
 
 
+def extract_day_categories_from_captions_md(captions_md: str) -> list:
+    """Extract the category for each day (1–30) from captions markdown. Returns a list of 30 strings (category names); missing days are empty strings."""
+    categories_by_day = {}
+    for line in captions_md.splitlines():
+        m = re.match(r"^##\s*Day\s+(\d+)\s*[—-]\s*(.+)$", line.strip())
+        if not m:
+            continue
+        try:
+            day_num = int(m.group(1))
+        except ValueError:
+            continue
+        if 1 <= day_num <= 30:
+            categories_by_day[day_num] = m.group(2).strip()
+    return [categories_by_day.get(i, "") for i in range(1, 31)]
 
-def _build_user_prompt(intake: Dict[str, Any], day_start: int = 1, day_end: int = 30) -> str:
+
+def _build_user_prompt(
+    intake: Dict[str, Any],
+    day_start: int = 1,
+    day_end: int = 30,
+    previous_pack_themes: Optional[list] = None,
+) -> str:
     """Build user prompt. If day_start/day_end are not 1–30, generate full doc; else generate only that range."""
     from datetime import datetime
     month_year = datetime.utcnow().strftime("%B %Y")
@@ -142,6 +179,42 @@ def _build_user_prompt(intake: Dict[str, Any], day_start: int = 1, day_end: int 
             "Phase content by the dates above: BEFORE = anticipation, teasers; ON/DURING = announce, promote; AFTER = thank-you, feedback. Support multiple events if listed.",
         ])
 
+    # Always pass date context: assume Day 1 = today (generation day) so captions are date-aware
+    date_context = _build_date_context(datetime.utcnow().strftime("%Y-%m-%d"))
+    if date_context:
+        parts.extend([
+            "",
+            "DATE_CONTEXT (the client's 30 days start on a specific date; use when it adds value):",
+            date_context,
+            "",
+            "When DATE_CONTEXT is provided, you may reference the actual day or date where it helps (e.g. weekday, weekend, end of month). Do not force date references into every caption; use only when relevant and natural.",
+        ])
+
+    # Subscription variety: avoid repeating the same day-by-day category pattern as previous packs
+    if previous_pack_themes and len(previous_pack_themes) > 0:
+        lines = []
+        for i, pack in enumerate(previous_pack_themes[:6], 1):  # last 6 packs max
+            day_cats = None
+            if isinstance(pack, (list, tuple)) and len(pack) >= 30:
+                day_cats = [str(c).strip() or "—" for c in pack[:30]]
+            elif isinstance(pack, dict) and pack.get("day_categories"):
+                raw = list(pack["day_categories"])[:30]
+                day_cats = [str(c).strip() or "—" for c in raw]
+                while len(day_cats) < 30:
+                    day_cats.append("—")
+            if day_cats:
+                lines.append(f"Previous pack {i}: " + ", ".join(f"D{j+1}:{day_cats[j]}" for j in range(30)))
+        if lines:
+            parts.extend([
+                "",
+                "SUBSCRIPTION VARIETY — this client has received previous packs. Previous day-by-day category patterns:",
+                *lines,
+                "",
+                "This month, vary the mix: use a different order and distribution of the five categories so content is not repetitive. Avoid using the same category on the same day number where possible. Keep the same approximate balance (roughly 6 per category) but shuffle which days get which category.",
+                "",
+                "Also vary the actual content: use different angles, topics, hooks, examples, and phrasing within each category. Do not repeat the same ideas, openers, or proof points they had in previous packs. Each caption should feel fresh and distinct from what they received in earlier months.",
+            ])
+
     parts.extend([
         "",
         "Output the complete markdown document only. No preamble or explanation."
@@ -190,17 +263,18 @@ class CaptionGenerator:
         self.client = OpenAI(api_key=Config.OPENAI_API_KEY)
         self.model = Config.OPENAI_MODEL
 
-    def generate(self, intake: Dict[str, Any]) -> str:
+    def generate(self, intake: Dict[str, Any], previous_pack_themes: Optional[list] = None) -> str:
         """
         Generate full 30-day caption document as markdown in 3 API calls (days 1–10, 11–20, 21–30).
         If include_stories and platform has Instagram & Facebook, appends 30 Story prompts.
+        previous_pack_themes: for subscriptions, list of previous packs' day categories (each a list of 30 or dict with day_categories) so this month can vary.
         Raises on API error.
         """
         system = _build_system_prompt(intake)
         header = _build_doc_header(intake)
         parts = [header]
         for day_start, day_end in self.CHUNKS:
-            user = _build_user_prompt(intake, day_start=day_start, day_end=day_end)
+            user = _build_user_prompt(intake, day_start=day_start, day_end=day_end, previous_pack_themes=previous_pack_themes)
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
@@ -219,19 +293,36 @@ class CaptionGenerator:
         # Stories add-on: when IG & FB selected and include_stories
         platform_raw = (intake.get("platform") or "").strip().lower()
         include_stories = bool(intake.get("include_stories"))
+        align_stories = bool(intake.get("align_stories_to_captions"))
         has_ig_fb = "instagram" in platform_raw or "facebook" in platform_raw
         if include_stories and has_ig_fb:
-            stories_md = self._generate_stories(intake)
+            if align_stories:
+                stories_md = self._generate_stories_aligned(intake, result, is_subscription_variety=bool(previous_pack_themes))
+            else:
+                stories_md = self._generate_stories(intake, is_subscription_variety=bool(previous_pack_themes))
             if stories_md:
                 result = result + "\n\n" + stories_md
         return result
 
-    def _generate_stories(self, intake: Dict[str, Any]) -> str:
+    def _generate_stories(self, intake: Dict[str, Any], is_subscription_variety: bool = False) -> str:
         """Generate 30 one-line Story prompts for Instagram/Facebook."""
         lang = (intake.get("caption_language") or "English (UK)").strip()
         lang_instruction = LANGUAGE_INSTRUCTIONS.get(lang, LANGUAGE_INSTRUCTIONS["English (UK)"])
         business = (intake.get("business_name") or "").strip() or "Client"
         month_year = datetime.utcnow().strftime("%B %Y")
+        date_context = _build_date_context(datetime.utcnow().strftime("%Y-%m-%d"))
+        date_block = ""
+        if date_context:
+            date_block = f"""
+
+DATE_CONTEXT (their 30 days start on a specific date; use when relevant, e.g. weekday/weekend):
+{date_context}
+
+You may reference the actual day/date where it helps (e.g. Monday tip, weekend post). Use only when natural.
+"""
+        variety_note = ""
+        if is_subscription_variety:
+            variety_note = "\n\nThis client receives packs monthly; vary story types and angles (polls, BTS, tips, testimonials, etc.) so this month feels fresh and not repetitive with previous packs.\n"
         prompt = f"""Generate 30 one-line Story prompts for Instagram/Facebook Stories. One prompt per day (Day 1–30).
 
 {lang_instruction}
@@ -241,6 +332,8 @@ INTAKE:
 - What they offer: {intake.get('offer_one_line', '')}
 - Audience: {intake.get('audience', '')}
 - Goal: {intake.get('goal', '')}
+{date_block}
+{variety_note}
 
 Each prompt should be a single short line (5–15 words) suggesting what to post in a Story that day. Mix: behind-the-scenes, tips, questions, polls, product highlights, testimonials, process reveals, day-in-the-life. Variety is key.
 
@@ -270,3 +363,90 @@ Output the complete list only. No preamble."""
         except Exception as e:
             print(f"[CaptionGenerator] Stories generation failed: {e}")
             return ""
+
+    def _generate_stories_aligned(self, intake: Dict[str, Any], captions_md: str, is_subscription_variety: bool = False) -> str:
+        """Generate 30 Story prompts with explicit day-by-day alignment to captions."""
+        # Extract \"## Day N — ...\" headings to summarise each day's caption.
+        day_summaries: Dict[int, str] = {}
+        for line in captions_md.splitlines():
+            m = re.match(r\"^##\\s*Day\\s+(\\d+)\\s*[—-]\\s*(.+)$\", line.strip())
+            if not m:
+                continue
+            try:
+                day_num = int(m.group(1))
+            except ValueError:
+                continue
+            if 1 <= day_num <= 30:
+                day_summaries[day_num] = m.group(2).strip()
+
+        summary_lines = []
+        for i in range(1, 31):
+            if i in day_summaries:
+                summary_lines.append(f\"Day {i}: {day_summaries[i]}\")
+
+        summaries_block = \"\\n\".join(summary_lines)
+
+        lang = (intake.get(\"caption_language\") or \"English (UK)\").strip()
+        lang_instruction = LANGUAGE_INSTRUCTIONS.get(lang, LANGUAGE_INSTRUCTIONS[\"English (UK)\"])
+        business = (intake.get(\"business_name\") or \"\").strip() or \"Client\"
+        month_year = datetime.utcnow().strftime(\"%B %Y\")
+        date_context = _build_date_context(datetime.utcnow().strftime(\"%Y-%m-%d\"))
+        date_block = \"\"
+        if date_context:
+            date_block = f\"\"\"
+
+DATE_CONTEXT (their 30 days start on a specific date; use when relevant):
+{date_context}
+
+You may reference the actual day/date where it helps. Use only when natural.
+\"\"\"
+        variety_note = ""
+        if is_subscription_variety:
+            variety_note = "\n\nThis client receives packs monthly; vary story types and angles (polls, BTS, tips, testimonials, etc.) so this month feels fresh and not repetitive with previous packs.\n"
+
+        prompt = f\"\"\"Generate 30 one-line Story prompts for Instagram/Facebook Stories. One prompt per day (Day 1–30).
+
+{lang_instruction}
+
+INTAKE:
+- Business: {business}
+- What they offer: {intake.get('offer_one_line', '')}
+- Audience: {intake.get('audience', '')}
+- Goal: {intake.get('goal', '')}
+{date_block}
+{variety_note}
+
+Here is the theme or focus for each day's main caption:
+{summaries_block}
+
+For each Day N, write a Story prompt that explicitly supports and reinforces that day's caption. Think of it as the visibility layer between posts: behind-the-scenes, polls, quick proof, or micro-examples that keep the message active.
+
+Each prompt should be a single short line (5–20 words). Mix: behind-the-scenes, tips, questions, polls, product highlights, testimonials, process reveals, day-in-the-life. Variety is key, but always tied to that day's caption theme.
+
+Output format — markdown only:
+---
+## 30 Story Ideas | {business} | {month_year}
+
+**Day 1:** [one-line prompt]
+**Day 2:** [one-line prompt]
+...
+**Day 30:** [one-line prompt]
+---
+
+Output the complete list only. No preamble.\"\"\"
+
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {\"role\": \"system\", \"content\": \"You write concise, actionable social media content prompts that align with an existing captions plan.\"},
+                    {\"role\": \"user\", \"content\": prompt},
+                ],
+                temperature=0.7,
+                max_tokens=1800,
+            )
+            content = (response.choices[0].message.content or \"\").strip()
+            return content if content else \"\"
+        except Exception as e:
+            print(f\"[CaptionGenerator] Aligned stories generation failed: {e}\")
+            return \"\"

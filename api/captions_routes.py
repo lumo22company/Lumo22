@@ -34,6 +34,50 @@ def _parse_stories(request) -> bool:
     return v in ("1", "true", "yes", "on")
 
 
+def _parse_currency(request) -> str:
+    """Return currency from ?currency= (gbp, usd, eur). Default gbp. Used for checkout and display."""
+    v = (request.args.get("currency") or "").strip().lower()
+    if v in ("usd", "eur"):
+        return v
+    return "gbp"
+
+
+# Amounts in smallest unit (pence/cents) for add-ons when using price_data (USD/EUR). GBP add-ons use existing Price IDs.
+_CURRENCY_ADDON_AMOUNTS = {
+    "gbp": {"extra_oneoff": 2900, "extra_sub": 1900, "stories_oneoff": 2900, "stories_sub": 1700},
+    "usd": {"extra_oneoff": 3500, "extra_sub": 2400, "stories_oneoff": 3500, "stories_sub": 2100},
+    "eur": {"extra_oneoff": 3200, "extra_sub": 2200, "stories_oneoff": 3200, "stories_sub": 1900},
+}
+
+
+def _get_base_price_id(currency: str) -> str:
+    """Return Stripe Price ID for captions one-off in the given currency. Raises if not configured."""
+    if currency == "gbp":
+        pid = Config.STRIPE_CAPTIONS_PRICE_ID
+    elif currency == "usd":
+        pid = getattr(Config, "STRIPE_CAPTIONS_PRICE_ID_USD", None) or ""
+    else:
+        pid = getattr(Config, "STRIPE_CAPTIONS_PRICE_ID_EUR", None) or ""
+    pid = (pid or "").strip()
+    if not pid:
+        return (Config.STRIPE_CAPTIONS_PRICE_ID or "").strip() or None  # fallback to GBP
+    return pid
+
+
+def _get_sub_price_id(currency: str) -> str:
+    """Return Stripe Price ID for captions subscription in the given currency."""
+    if currency == "gbp":
+        pid = getattr(Config, "STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID", None) or ""
+    elif currency == "usd":
+        pid = getattr(Config, "STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID_USD", None) or ""
+    else:
+        pid = getattr(Config, "STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID_EUR", None) or ""
+    pid = (pid or "").strip()
+    if not pid and currency != "gbp":
+        pid = (getattr(Config, "STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID", None) or "").strip()
+    return pid or None
+
+
 def _normalize_error(err) -> str:
     """Turn any error from generation/delivery into a short ASCII string for JSON."""
     if err is None:
@@ -53,12 +97,14 @@ def _normalize_error(err) -> str:
 def captions_checkout():
     """
     Create a Stripe Checkout Session and redirect to it.
-    Query: ?platforms=N (1–4), ?selected=..., ?stories=1 for Stories add-on.
-    Base price covers 1; extra platforms and Stories use add-on prices if configured.
+    Query: ?platforms=N (1–4), ?selected=..., ?stories=1, ?currency=gbp|usd|eur.
+    Base price covers 1; extra platforms and Stories use add-on prices (or price_data for USD/EUR).
     After payment, Stripe redirects to /captions-thank-you?session_id=xxx.
     """
     import stripe
-    if not Config.STRIPE_SECRET_KEY or not Config.STRIPE_CAPTIONS_PRICE_ID:
+    currency = _parse_currency(request)
+    base_price_id = _get_base_price_id(currency)
+    if not Config.STRIPE_SECRET_KEY or not base_price_id:
         if Config.CAPTIONS_PAYMENT_LINK:
             return redirect(Config.CAPTIONS_PAYMENT_LINK)
         return jsonify({"error": "Checkout not configured (STRIPE_SECRET_KEY, STRIPE_CAPTIONS_PRICE_ID)"}), 503
@@ -68,31 +114,50 @@ def captions_checkout():
     stories = _parse_stories(request)
     extra_price_id = (getattr(Config, "STRIPE_CAPTIONS_EXTRA_PLATFORM_PRICE_ID", None) or "").strip()
     stories_price_id = (getattr(Config, "STRIPE_CAPTIONS_STORIES_PRICE_ID", None) or "").strip()
-    if platforms > 1 and not extra_price_id:
+    amounts = _CURRENCY_ADDON_AMOUNTS.get(currency, _CURRENCY_ADDON_AMOUNTS["gbp"])
+    if platforms > 1 and not extra_price_id and currency == "gbp":
+        return redirect(f"{request.host_url.rstrip('/')}/captions?error=extra_platform_not_configured", code=302)
+    if platforms > 1 and currency != "gbp" and not amounts:
         return redirect(f"{request.host_url.rstrip('/')}/captions?error=extra_platform_not_configured", code=302)
     base = (Config.BASE_URL or "").strip().rstrip("/")
     if base and not base.startswith("http://") and not base.startswith("https://"):
         base = "https://" + base
     success_url = f"{base}/captions-thank-you?session_id={{CHECKOUT_SESSION_ID}}"
     cancel_url = f"{base}/captions"
-    line_items = [{"price": Config.STRIPE_CAPTIONS_PRICE_ID, "quantity": 1}]
-    if platforms > 1 and extra_price_id:
+    line_items = [{"price": base_price_id, "quantity": 1}]
+    if platforms > 1:
         addon_qty = platforms - 1
         label = f"+{addon_qty} platform" if addon_qty == 1 else f"+{addon_qty} platforms"
-        line_items.append({
-            "price_data": {
-                "currency": "gbp",
-                "unit_amount": 2900,
-                "product_data": {
-                    "name": label,
-                    "description": "Extra platform add-on for 30 Days Captions.",
+        if currency == "gbp" and extra_price_id:
+            line_items.append({"price": extra_price_id, "quantity": addon_qty})
+        else:
+            line_items.append({
+                "price_data": {
+                    "currency": currency,
+                    "unit_amount": amounts["extra_oneoff"],
+                    "product_data": {
+                        "name": label,
+                        "description": "Extra platform add-on for 30 Days Captions.",
+                    },
                 },
-            },
-            "quantity": addon_qty,
-        })
-    if stories and stories_price_id:
-        line_items.append({"price": stories_price_id, "quantity": 1})
-    metadata = {"product": "captions", "platforms": str(platforms), "include_stories": "1" if (stories and stories_price_id) else "0"}
+                "quantity": addon_qty,
+            })
+    if stories:
+        if currency == "gbp" and stories_price_id:
+            line_items.append({"price": stories_price_id, "quantity": 1})
+        else:
+            line_items.append({
+                "price_data": {
+                    "currency": currency,
+                    "unit_amount": amounts["stories_oneoff"],
+                    "product_data": {
+                        "name": "30 Days Story Ideas",
+                        "description": "Story prompts for Instagram & Facebook. Add-on for 30 Days Captions.",
+                    },
+                },
+                "quantity": 1,
+            })
+    metadata = {"product": "captions", "platforms": str(platforms), "include_stories": "1" if stories else "0"}
     if selected:
         metadata["selected_platforms"] = selected
     try:
@@ -111,14 +176,13 @@ def captions_checkout():
 @captions_bp.route("/captions-checkout-subscription", methods=["GET"])
 def captions_checkout_subscription():
     """
-    Create a Stripe Checkout Session for Captions subscription (£79/month base).
-    Query: ?platforms=N (1–4), ?selected=..., ?stories=1 for Stories add-on.
-    Extra platforms and Stories use add-on subscription prices if configured.
-    Same success flow as one-off: redirect to thank-you then intake. Webhook handles first payment.
+    Create a Stripe Checkout Session for Captions subscription.
+    Query: ?platforms=N (1–4), ?selected=..., ?stories=1, ?currency=gbp|usd|eur.
+    Extra platforms and Stories use add-on prices or price_data for USD/EUR.
     """
     import stripe
-    price_id = getattr(Config, "STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID", None) or ""
-    price_id = (price_id or "").strip()
+    currency = _parse_currency(request)
+    price_id = _get_sub_price_id(currency)
     if not Config.STRIPE_SECRET_KEY or not price_id:
         return jsonify({"error": "Subscription not configured (STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID)"}), 503
     stripe.api_key = Config.STRIPE_SECRET_KEY
@@ -127,7 +191,8 @@ def captions_checkout_subscription():
     stories = _parse_stories(request)
     extra_sub_id = (getattr(Config, "STRIPE_CAPTIONS_EXTRA_PLATFORM_SUBSCRIPTION_PRICE_ID", None) or "").strip()
     stories_sub_id = (getattr(Config, "STRIPE_CAPTIONS_STORIES_SUBSCRIPTION_PRICE_ID", None) or "").strip()
-    if platforms > 1 and not extra_sub_id:
+    amounts = _CURRENCY_ADDON_AMOUNTS.get(currency, _CURRENCY_ADDON_AMOUNTS["gbp"])
+    if platforms > 1 and currency == "gbp" and not extra_sub_id:
         return redirect(f"{request.host_url.rstrip('/')}/captions?error=extra_platform_not_configured", code=302)
     base = (Config.BASE_URL or "").strip().rstrip("/")
     if base and not base.startswith("http://") and not base.startswith("https://"):
@@ -135,24 +200,41 @@ def captions_checkout_subscription():
     success_url = f"{base}/captions-thank-you?session_id={{CHECKOUT_SESSION_ID}}"
     cancel_url = f"{base}/captions"
     line_items = [{"price": price_id, "quantity": 1}]
-    if platforms > 1 and extra_sub_id:
+    if platforms > 1:
         addon_qty = platforms - 1
         label = f"+{addon_qty} platform" if addon_qty == 1 else f"+{addon_qty} platforms"
-        line_items.append({
-            "price_data": {
-                "currency": "gbp",
-                "unit_amount": 1900,
-                "recurring": {"interval": "month"},
-                "product_data": {
-                    "name": label,
-                    "description": "Extra platform add-on for 30 Days Captions. Billed monthly.",
+        if currency == "gbp" and extra_sub_id:
+            line_items.append({"price": extra_sub_id, "quantity": addon_qty})
+        else:
+            line_items.append({
+                "price_data": {
+                    "currency": currency,
+                    "unit_amount": amounts["extra_sub"],
+                    "recurring": {"interval": "month"},
+                    "product_data": {
+                        "name": label,
+                        "description": "Extra platform add-on for 30 Days Captions. Billed monthly.",
+                    },
                 },
-            },
-            "quantity": addon_qty,
-        })
-    if stories and stories_sub_id:
-        line_items.append({"price": stories_sub_id, "quantity": 1})
-    metadata = {"product": "captions_subscription", "platforms": str(platforms), "include_stories": "1" if (stories and stories_sub_id) else "0"}
+                "quantity": addon_qty,
+            })
+    if stories:
+        if currency == "gbp" and stories_sub_id:
+            line_items.append({"price": stories_sub_id, "quantity": 1})
+        else:
+            line_items.append({
+                "price_data": {
+                    "currency": currency,
+                    "unit_amount": amounts["stories_sub"],
+                    "recurring": {"interval": "month"},
+                    "product_data": {
+                        "name": "30 Days Story Ideas",
+                        "description": "Story prompts add-on. Billed monthly.",
+                    },
+                },
+                "quantity": 1,
+            })
+    metadata = {"product": "captions_subscription", "platforms": str(platforms), "include_stories": "1" if stories else "0"}
     if selected:
         metadata["selected_platforms"] = selected
     try:
@@ -262,8 +344,9 @@ def captions_intake_link():
 def _run_generation_and_deliver(order_id: str):
     """Background: generate captions, save, email client. Runs outside request context."""
     import traceback
+    from datetime import datetime
     from services.caption_order_service import CaptionOrderService
-    from services.caption_generator import CaptionGenerator
+    from services.caption_generator import CaptionGenerator, extract_day_categories_from_captions_md
     from services.notifications import NotificationService
 
     print(f"[Captions] Starting generation for order {order_id}")
@@ -279,11 +362,20 @@ def _run_generation_and_deliver(order_id: str):
         order_service.set_failed(order_id)
         return (False, "No customer_email for order")
 
+    # For subscriptions, pass previous pack themes so this month varies (avoid repetition)
+    previous_pack_themes = None
+    if row.get("stripe_subscription_id"):
+        history = row.get("pack_history") or []
+        if isinstance(history, list) and len(history) > 0:
+            previous_pack_themes = [entry.get("day_categories") for entry in history if entry.get("day_categories")]
+            if previous_pack_themes:
+                print(f"[Captions] Subscription order {order_id}: varying from {len(previous_pack_themes)} previous pack(s)")
+
     order_service.set_generating(order_id)
     try:
         gen = CaptionGenerator()
         print(f"[Captions] Calling OpenAI for order {order_id}")
-        captions_md = gen.generate(intake)
+        captions_md = gen.generate(intake, previous_pack_themes=previous_pack_themes)
         from services.caption_pdf import build_caption_pdf, build_stories_pdf, get_logo_path
         logo_path = get_logo_path()
         try:
@@ -337,6 +429,12 @@ def _run_generation_and_deliver(order_id: str):
             order_service.set_failed(order_id)
             return (False, send_error or "Delivery email not sent")
         order_service.set_delivered(order_id, captions_md)
+        # For subscriptions, record this pack's day categories so next month can vary
+        if row.get("stripe_subscription_id"):
+            day_categories = extract_day_categories_from_captions_md(captions_md)
+            if day_categories and any(day_categories):
+                month_str = datetime.utcnow().strftime("%Y-%m")
+                order_service.append_pack_history(order_id, month_str, day_categories)
         print(f"[Captions] Delivery email sent for order {order_id} to {customer_email}")
         return (True, None)
     except Exception as e:
@@ -427,6 +525,12 @@ def captions_intake_submit():
     if hashtag_min > hashtag_max:
         hashtag_max = hashtag_min
 
+    align_flag = data.get("align_stories_to_captions") or data.get("align_stories")
+    if isinstance(align_flag, str):
+        align_flag = align_flag.strip().lower() in ("1", "true", "yes", "on")
+    else:
+        align_flag = bool(align_flag)
+
     intake = {
         "business_name": (data.get("business_name") or "").strip(),
         "business_type": (data.get("business_type") or "").strip(),
@@ -446,6 +550,7 @@ def captions_intake_submit():
         "caption_examples": (data.get("caption_examples") or "").strip(),
         "caption_language": (data.get("caption_language") or "English (UK)").strip(),
         "include_stories": bool(data.get("include_stories")) or bool(order.get("include_stories")),
+        "align_stories_to_captions": align_flag,
     }
 
     try:

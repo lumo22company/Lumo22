@@ -8,7 +8,7 @@
   <meta http-equiv="Expires" content="0">
   <title>30 Days Captions — Your details | Lumo 22</title>
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
-  <meta name="description" content="Complete the form so we can tailor your 30 days of social media captions.">
+  <meta name="description" content="Complete the form so we can tailor your 30 days of social media captions for feed posts, Reels, and more.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Encode+Sans+Condensed:wght@400;500;600;700&family=Inter+Tight:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -222,9 +222,14 @@
         <div id="stories-addon-wrap" class="intake-other-wrap" style="display: none; margin-top: 1rem; padding: 1rem; background: rgba(255,255,255,0.5); border-radius: 8px; border: 1px solid #ddd;">
           <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; margin-bottom: 0.25rem;">
             <input type="checkbox" id="include_stories" name="include_stories" {% if existing_intake.get('include_stories') or stories_paid %}checked{% endif %} {% if stories_paid %}disabled{% endif %} style="width: auto;">
-            <span>{% if stories_paid %}30 Stories included (already paid){% else %}Add 30 Stories prompts (+£19 one-off / +£12/mo){% endif %}</span>
+            <span>{% if stories_paid %}30 Stories included (already paid){% else %}Add 30 Stories prompts (+£29 one-off / +£17/mo){% endif %}</span>
           </label>
           <p class="field-helper" style="margin: 0.5rem 0 0;">One-line prompts for Instagram/Facebook Stories each day — your complete social content pack.</p>
+          <label class="intake-checkbox-label" style="margin-top: 0.75rem;">
+            <input type="checkbox" id="align_stories" name="align_stories" {% if existing_intake.get('align_stories_to_captions') %}checked{% endif %} style="width: auto;">
+            <span>Align each Story to that day's caption (tighter pairing)</span>
+          </label>
+          <p class="field-helper" style="margin: 0.25rem 0 0;">If checked, Stories are generated to explicitly support each day's caption theme.</p>
         </div>
       </div>
       <div class="form-section">
@@ -395,7 +400,14 @@
       reviewContent.appendChild(sect('Platform habits', gv('platform_habits')));
       var inc = document.getElementById('include_hashtags');
       var storiesCb = document.getElementById('include_stories');
-      if (storiesCb && storiesCb.offsetParent) reviewContent.appendChild(sect('Stories add-on', storiesCb.checked ? 'Yes — 30 story prompts' : 'No'));
+      if (storiesCb && storiesCb.offsetParent) {
+        var alignCb = document.getElementById('align_stories');
+        var label = storiesCb.checked ? 'Yes — 30 story prompts' : 'No';
+        if (storiesCb.checked && alignCb && alignCb.checked) {
+          label += ' (aligned to each caption)';
+        }
+        reviewContent.appendChild(sect('Stories add-on', label));
+      }
       reviewContent.appendChild(sect('Hashtags', inc && inc.checked ? 'Yes, ' + (gv('hashtag_min')||'3') + '–' + (gv('hashtag_max')||'10') + ' per caption' : 'No'));
       reviewContent.appendChild(sect('Goal for this month', gso('goal', 'goal_other') || '(not provided)'));
       var launchDesc = gv('launch_event_description');
@@ -450,7 +462,8 @@
         launch_event_description: gv('launch_event_description'),
         caption_examples: gv('caption_examples'),
         caption_language: gv('caption_language') || 'English (UK)',
-        include_stories: !!(document.getElementById('include_stories') && document.getElementById('include_stories').checked)
+        include_stories: !!(document.getElementById('include_stories') && document.getElementById('include_stories').checked),
+        align_stories_to_captions: !!(document.getElementById('align_stories') && document.getElementById('align_stories').checked)
       };
       var btn = document.getElementById('btn-confirm');
       if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
@@ -776,7 +789,9 @@
           hashtag_max: maxH,
           goal: getSelectOrOther('goal', 'goal_other'),
           launch_event_description: getVal('launch_event_description'),
-          caption_examples: getVal('caption_examples')
+          caption_examples: getVal('caption_examples'),
+          include_stories: !!(document.getElementById('include_stories') && document.getElementById('include_stories').checked),
+          align_stories_to_captions: !!(document.getElementById('align_stories') && document.getElementById('align_stories').checked)
         };
         btnConfirm.disabled = true;
         btnConfirm.textContent = 'Sending…';

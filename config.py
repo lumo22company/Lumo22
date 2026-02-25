@@ -87,14 +87,19 @@ class Config:
     # Remove any non-printable chars (e.g. newline from env) so URLs are valid
     _base = os.getenv('BASE_URL', 'http://localhost:5001').strip().rstrip('/')
     BASE_URL = re.sub(r'[\x00-\x1f\x7f]', '', _base) if _base else ''
-    # Stripe Price ID for 30 Days Captions one-off (price_xxx); required for Checkout Session
+    # Stripe Price ID for 30 Days Captions one-off (price_xxx); required for Checkout Session. GBP.
     STRIPE_CAPTIONS_PRICE_ID = os.getenv('STRIPE_CAPTIONS_PRICE_ID', '').strip() or None
+    # Optional: same product in USD and EUR (enables currency selector on /captions).
+    STRIPE_CAPTIONS_PRICE_ID_USD = os.getenv('STRIPE_CAPTIONS_PRICE_ID_USD', '').strip() or None
+    STRIPE_CAPTIONS_PRICE_ID_EUR = os.getenv('STRIPE_CAPTIONS_PRICE_ID_EUR', '').strip() or None
     # Stripe Price ID for 30 Days Captions subscription £79/month (price_xxx); optional, for subscription option on /captions
     STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID = os.getenv('STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID', '').strip() or None
+    STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID_USD = os.getenv('STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID_USD', '').strip() or None
+    STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID_EUR = os.getenv('STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID_EUR', '').strip() or None
     # Extra platform add-on: one-off £29, subscription £19/mo (price_xxx each). Optional; if set, checkout accepts ?platforms=N.
     STRIPE_CAPTIONS_EXTRA_PLATFORM_PRICE_ID = os.getenv('STRIPE_CAPTIONS_EXTRA_PLATFORM_PRICE_ID', '').strip() or None
     STRIPE_CAPTIONS_EXTRA_PLATFORM_SUBSCRIPTION_PRICE_ID = os.getenv('STRIPE_CAPTIONS_EXTRA_PLATFORM_SUBSCRIPTION_PRICE_ID', '').strip() or None
-    # Stories add-on: one-off £19, subscription £12/mo. Optional; when set, product page shows Stories option when IG & Facebook selected.
+    # Stories add-on: one-off £29, subscription £17/mo. Optional; when set, product page shows Stories option when IG & Facebook selected.
     STRIPE_CAPTIONS_STORIES_PRICE_ID = os.getenv('STRIPE_CAPTIONS_STORIES_PRICE_ID', '').strip() or None
     STRIPE_CAPTIONS_STORIES_SUBSCRIPTION_PRICE_ID = os.getenv('STRIPE_CAPTIONS_STORIES_SUBSCRIPTION_PRICE_ID', '').strip() or None
 

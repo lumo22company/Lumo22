@@ -134,21 +134,36 @@ def debug_deploy():
         "landing_css_first_line": first_line,
     })
 
+# Display prices per currency for captions page (oneoff, sub, extra_oneoff, extra_sub, stories_oneoff, stories_sub)
+CAPTIONS_DISPLAY_PRICES = {
+    "gbp": {"symbol": "£", "oneoff": 97, "sub": 79, "extra_oneoff": 29, "extra_sub": 19, "stories_oneoff": 29, "stories_sub": 17},
+    "usd": {"symbol": "$", "oneoff": 119, "sub": 99, "extra_oneoff": 35, "extra_sub": 24, "stories_oneoff": 35, "stories_sub": 21},
+    "eur": {"symbol": "€", "oneoff": 109, "sub": 89, "extra_oneoff": 32, "extra_sub": 22, "stories_oneoff": 32, "stories_sub": 19},
+}
+
+
 @app.route('/captions')
 def captions_page():
-    """30 Days of Social Media Captions product page. Subscription (£79/mo) and one-off (£97) options."""
+    """30 Days of Social Media Captions product page. Subscription and one-off options. Supports GBP, USD, EUR."""
     use_checkout_redirect = bool(Config.STRIPE_SECRET_KEY and Config.STRIPE_CAPTIONS_PRICE_ID)
     subscription_available = bool(
         Config.STRIPE_SECRET_KEY and getattr(Config, 'STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID', None)
     )
     extra_oneoff = bool((getattr(Config, 'STRIPE_CAPTIONS_EXTRA_PLATFORM_PRICE_ID', None) or '').strip())
     extra_sub = bool((getattr(Config, 'STRIPE_CAPTIONS_EXTRA_PLATFORM_SUBSCRIPTION_PRICE_ID', None) or '').strip())
-    # Only show multi-platform when one-off uses our checkout (not payment link) and has extra prices
     supports_multi_platform = use_checkout_redirect and (extra_oneoff or (subscription_available and extra_sub))
     stories_oneoff = bool((getattr(Config, 'STRIPE_CAPTIONS_STORIES_PRICE_ID', None) or '').strip())
     stories_sub = bool((getattr(Config, 'STRIPE_CAPTIONS_STORIES_SUBSCRIPTION_PRICE_ID', None) or '').strip())
     stories_addon_available = stories_oneoff and stories_sub
     checkout_error = request.args.get('error', '').strip()
+    # Multi-currency: show selector if USD and/or EUR prices are configured
+    has_usd = bool((getattr(Config, 'STRIPE_CAPTIONS_PRICE_ID_USD', None) or '').strip())
+    has_eur = bool((getattr(Config, 'STRIPE_CAPTIONS_PRICE_ID_EUR', None) or '').strip())
+    currencies_available = [{"code": "gbp", "label": "GBP", "symbol": "£"}]
+    if has_usd:
+        currencies_available.append({"code": "usd", "label": "USD", "symbol": "$"})
+    if has_eur:
+        currencies_available.append({"code": "eur", "label": "EUR", "symbol": "€"})
     return render_template(
         'captions.html',
         captions_payment_link=Config.CAPTIONS_PAYMENT_LINK,
@@ -157,6 +172,8 @@ def captions_page():
         supports_multi_platform=supports_multi_platform,
         stories_addon_available=stories_addon_available,
         checkout_error=checkout_error,
+        currencies_available=currencies_available,
+        captions_prices=CAPTIONS_DISPLAY_PRICES,
     )
 
 @app.route('/captions-intake')
@@ -227,21 +244,25 @@ def _parse_platforms_from_request():
 
 @app.route('/captions-checkout')
 def captions_checkout_page():
-    """Pre-checkout page: agree to T&Cs then continue to Stripe (one-off £97)."""
+    """Pre-checkout page: agree to T&Cs then continue to Stripe (one-off). Supports GBP, USD, EUR."""
     from urllib.parse import urlencode
     platforms = _parse_platforms_from_request()
     selected = (request.args.get("selected") or request.args.get("selected_platforms") or "").strip()
     stories = request.args.get("stories", "").strip().lower() in ("1", "true", "yes", "on")
+    currency = (request.args.get("currency") or "gbp").strip().lower()
+    if currency not in CAPTIONS_DISPLAY_PRICES:
+        currency = "gbp"
+    prices = CAPTIONS_DISPLAY_PRICES[currency]
     selected_count = len([p.strip() for p in selected.split(",") if p.strip()]) if selected else 0
     platforms_invalid = platforms > 1 and selected_count != platforms
-    params = {"platforms": platforms}
+    params = {"platforms": platforms, "currency": currency}
     if selected:
         params["selected"] = selected
     if stories:
         params["stories"] = "1"
     q = urlencode(params)
     api_url = f"/api/captions-checkout?{q}" if not platforms_invalid else None
-    total = 97 + (platforms - 1) * 29 + (19 if stories else 0)
+    total = prices["oneoff"] + (platforms - 1) * prices["extra_oneoff"] + (prices["stories_oneoff"] if stories else 0)
     return render_template(
         'captions_checkout.html',
         platforms=platforms,
@@ -249,27 +270,32 @@ def captions_checkout_page():
         stories=stories,
         api_url=api_url,
         total_oneoff=total,
+        currency_symbol=prices["symbol"],
         platforms_invalid=platforms_invalid,
     )
 
 
 @app.route('/captions-checkout-subscription')
 def captions_checkout_subscription_page():
-    """Pre-checkout page for Captions subscription (£79/mo): agree to T&Cs then continue to Stripe."""
+    """Pre-checkout page for Captions subscription: agree to T&Cs then continue to Stripe. Supports GBP, USD, EUR."""
     from urllib.parse import urlencode
     platforms = _parse_platforms_from_request()
     selected = (request.args.get("selected") or request.args.get("selected_platforms") or "").strip()
     stories = request.args.get("stories", "").strip().lower() in ("1", "true", "yes", "on")
+    currency = (request.args.get("currency") or "gbp").strip().lower()
+    if currency not in CAPTIONS_DISPLAY_PRICES:
+        currency = "gbp"
+    prices = CAPTIONS_DISPLAY_PRICES[currency]
     selected_count = len([p.strip() for p in selected.split(",") if p.strip()]) if selected else 0
     platforms_invalid = platforms > 1 and selected_count != platforms
-    params = {"platforms": platforms}
+    params = {"platforms": platforms, "currency": currency}
     if selected:
         params["selected"] = selected
     if stories:
         params["stories"] = "1"
     q = urlencode(params)
     api_url = f"/api/captions-checkout-subscription?{q}" if not platforms_invalid else None
-    total = 79 + (platforms - 1) * 19 + (12 if stories else 0)
+    total = prices["sub"] + (platforms - 1) * prices["extra_sub"] + (prices["stories_sub"] if stories else 0)
     return render_template(
         'captions_checkout_subscription.html',
         platforms=platforms,
@@ -277,6 +303,7 @@ def captions_checkout_subscription_page():
         stories=stories,
         api_url=api_url,
         total_sub=total,
+        currency_symbol=prices["symbol"],
         platforms_invalid=platforms_invalid,
     )
 

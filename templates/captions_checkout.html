@@ -35,7 +35,7 @@
   <section class="lumo-section checkout-section">
     <div class="checkout-card">
       <h1 style="text-transform: uppercase;">30 Days of Social Media Captions</h1>
-      <p class="price" id="checkout-price">£{{ total_oneoff|default(97) }} one-time</p>
+      <p class="price" id="checkout-price">{{ currency_symbol|default('£') }}{{ total_oneoff|default(97) }} one-time</p>
       {% if platforms_invalid %}
       <p class="checkout-platform-error" style="margin-bottom: 1rem; padding: 0.75rem 1rem; background: rgba(220,50,50,0.15); border: 1px solid rgba(220,50,50,0.4); border-radius: 8px; color: #ff9999; font-size: 0.9rem;">Please go back and select which {{ platforms }} platform(s) you want on the captions page.</p>
       {% else %}

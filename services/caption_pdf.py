@@ -204,7 +204,17 @@ def _make_story_table_vertical(cover: Dict, days: List, normal_style, heading_st
     lbl = ParagraphStyle("TblLbl", parent=tight_style, fontName="Helvetica-Bold")
     day_hdr_style = ParagraphStyle("DayHdrTable", parent=heading_style, backColor=None, borderPadding=0)
     for day_heading, caption_list in days:
-        day_para = Paragraph(f'<font color="#ffffff">{_escape(day_heading.upper())}</font>', day_hdr_style)
+        # Derive a short type label from the idea text so the header reflects the Story type.
+        type_label = "Story"
+        prompt = ""
+        if caption_list:
+            prompt = (caption_list[0].get("hook") or caption_list[0].get("body", "") or "").strip()
+        if prompt:
+            words = prompt.split()
+            if words:
+                type_label = " ".join(words[:4])
+        header_text = f"{day_heading} — {type_label}"
+        day_para = Paragraph(f'<font color="#ffffff">{_escape(header_text.upper())}</font>', day_hdr_style)
         # Day heading as separate 1-row table so KeepTogether prevents orphan at page bottom
         hdr_data = [[day_para, ""]]
         hdr_t = Table(hdr_data, colWidths=[25 * mm, 155 * mm])
@@ -231,7 +241,8 @@ def _make_story_table_vertical(cover: Dict, days: List, normal_style, heading_st
             ])
             if j < len(caption_list) - 1:
                 data.append([Spacer(1, 2), Spacer(1, 2)])
-        content_t = Table(data, colWidths=[25 * mm, 155 * mm])
+        # Wider label column so titles stay on a single line
+        content_t = Table(data, colWidths=[40 * mm, 140 * mm])
         content_t.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#ffffff")),
             ("BOX", (0, 0), (-1, -1), 1, colors.HexColor("#cccccc")),
@@ -256,9 +267,86 @@ def _parse_stories_section(md: str) -> List[Tuple[str, List[Dict[str, str]]]]:
         prompt = m.group(2).strip()
         if not prompt:
             continue
-        day_heading = f"Day {day_num} — Story"
+        day_heading = f"Day {day_num}"
         days.append((day_heading, [{"platform": "Story", "hook": prompt, "body": "", "hashtags": ""}]))
     return days
+
+
+def _story_idea_type_label(idea_text: str) -> str:
+    """Derive a short, readable Story type from the idea text for the day header (e.g. Poll, Behind the scenes)."""
+    if not idea_text:
+        return "Story"
+    t = idea_text.lower().strip()
+    # Order matters: more specific first
+    if re.search(r"\bpoll\b", t):
+        return "Poll"
+    if re.search(r"behind-the-scenes|behind the scenes|bts\b", t):
+        return "Behind the scenes"
+    if re.search(r"testimonial", t):
+        return "Testimonial"
+    if re.search(r"quick tip|micro-tip|micro tip", t):
+        return "Quick tip"
+    if re.search(r"client result|before.*after|before/after", t):
+        return "Client result"
+    if re.search(r"day-in-the-life|day in the life", t):
+        return "Day in the life"
+    if re.search(r"q&a|question sticker|ask me", t):
+        return "Q&A"
+    if re.search(r"product highlight", t):
+        return "Product highlight"
+    if re.search(r"process reveal", t):
+        return "Process reveal"
+    if re.search(r"this or that", t):
+        return "This or that"
+    if re.search(r"quote", t) and "sentence" in t:
+        return "Quote"
+    if re.search(r"check-in|check in", t):
+        return "Check-in"
+    if re.search(r"\bcta\b|call to action|reply to book", t):
+        return "CTA"
+    if re.search(r"myth-busting|myth busting", t):
+        return "Myth-busting"
+    if re.search(r"framework|recap.*visually", t):
+        return "Framework recap"
+    if re.search(r"feedback|what do you want more", t):
+        return "Feedback"
+    if re.search(r"visibility|visible between", t):
+        return "Visibility"
+    if re.search(r"how-to|how to.*micro-step", t):
+        return "How-to"
+    if re.search(r"soft promotion|lower the barrier", t):
+        return "Soft promotion"
+    if re.search(r"engagement|deepen the conversation", t):
+        return "Engagement"
+    if re.search(r"credibility|proof of work", t):
+        return "Credibility"
+    if re.search(r"objections|what's stopping you", t):
+        return "Objections"
+    if re.search(r"agree or disagree|opinion", t):
+        return "Opinion"
+    if re.search(r"nurture|worksheet|reflection", t):
+        return "Nurture"
+    if re.search(r"intake questions", t):
+        return "Intake"
+    if re.search(r"recap|what do you want more", t):
+        return "Recap"
+    if re.search(r"pricing|value|what you're really buying", t):
+        return "Pricing / value"
+    if re.search(r"community|shout-out|follow these people", t):
+        return "Community"
+    if re.search(r"teaser|bridge|planning next month", t):
+        return "Teaser"
+    if re.search(r"thank-you|thank you|share your favourite", t):
+        return "Thank you"
+    if re.search(r"authority", t):
+        return "Authority"
+    if re.search(r"educational", t):
+        return "Educational"
+    if re.search(r"rest\b|boundary|space to think", t):
+        return "Rest / boundary"
+    if re.search(r"tools\b|apps you", t):
+        return "Tools"
+    return "Story"
 
 
 def _parse_stories_cover_from_md(md: str, captions_cover: Dict) -> Dict:
@@ -293,7 +381,26 @@ def _make_stories_doc_flowables(cover: Dict, days: List, normal_style, heading_s
     lbl = ParagraphStyle("TblLbl", parent=tight_style, fontName="Helvetica-Bold")
     day_hdr_style = ParagraphStyle("DayHdrTable", parent=heading_style, backColor=None, borderPadding=0)
     for day_heading, caption_list in days:
-        day_para = Paragraph(f'<font color="#ffffff">{_escape(day_heading.upper())}</font>', day_hdr_style)
+        # Get full prompt text for this day
+        prompt = ""
+        if caption_list:
+            prompt = (caption_list[0].get("hook") or caption_list[0].get("body", "") or "").strip()
+
+        # Parse Idea (base_prompt) so we can derive a meaningful type for the header
+        base_prompt = prompt
+        if prompt:
+            sw_marker = "Suggested wording:"
+            hash_marker = "Story hashtags:"
+            sw_idx = prompt.find(sw_marker)
+            hash_idx = prompt.find(hash_marker)
+            if sw_idx != -1:
+                base_prompt = prompt[:sw_idx].strip()
+            elif hash_idx != -1:
+                base_prompt = prompt[:hash_idx].strip()
+
+        type_label = _story_idea_type_label(base_prompt)
+        header_text = f"{day_heading} — {type_label}"
+        day_para = Paragraph(f'<font color="#ffffff">{_escape(header_text.upper())}</font>', day_hdr_style)
         hdr_data = [[day_para, ""]]
         hdr_t = Table(hdr_data, colWidths=[25 * mm, 155 * mm])
         hdr_t.setStyle(TableStyle([
@@ -306,13 +413,55 @@ def _make_stories_doc_flowables(cover: Dict, days: List, normal_style, heading_s
             ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
         ]))
-        prompt = ""
-        if caption_list:
-            prompt = (caption_list[0].get("hook") or caption_list[0].get("body", "") or "").strip()
-        data = [
-            [Paragraph("<nobr>Idea:</nobr>", lbl), Paragraph(_escape_and_breaks(prompt), tight_style)],
-        ]
-        content_t = Table(data, colWidths=[25 * mm, 155 * mm])
+
+        # Split prompt into Idea / Suggested wording / Story hashtags sections
+        base_prompt = prompt
+        suggested = ""
+        hashtags = ""
+
+        if prompt:
+            sw_marker = "Suggested wording:"
+            hash_marker = "Story hashtags:"
+
+            sw_idx = prompt.find(sw_marker)
+            hash_idx = prompt.find(hash_marker)
+
+            if sw_idx != -1:
+                base_prompt = prompt[:sw_idx].strip()
+                rest = prompt[sw_idx + len(sw_marker):].strip()
+                if hash_idx != -1 and hash_idx > sw_idx:
+                    rel_hash_idx = rest.find(hash_marker)
+                    if rel_hash_idx != -1:
+                        suggested = rest[:rel_hash_idx].strip()
+                        hashtags = rest[rel_hash_idx + len(hash_marker):].strip()
+                    else:
+                        suggested = rest
+                else:
+                    suggested = rest
+            elif hash_idx != -1:
+                base_prompt = prompt[:hash_idx].strip()
+                hashtags = prompt[hash_idx + len(hash_marker):].strip()
+
+        data = []
+        if base_prompt:
+            data.append([Paragraph("<nobr>Idea:</nobr>", lbl), Paragraph(_escape_and_breaks(base_prompt), tight_style)])
+
+        if suggested:
+            data.append([
+                Paragraph("<nobr>Suggested wording:</nobr>", lbl),
+                Paragraph(_escape_and_breaks(suggested), tight_style),
+            ])
+        if hashtags:
+            data.append([
+                Paragraph("<nobr>Story hashtags:</nobr>", lbl),
+                Paragraph(_escape_and_breaks(hashtags), tight_style),
+            ])
+
+        if not data:
+            data.append([Paragraph("<nobr>Idea:</nobr>", lbl), Paragraph(_escape_and_breaks(prompt), tight_style)])
+
+        # Wider label column so 'Suggested wording' and 'Story hashtags' stay on one line
+        content_t = Table(data, colWidths=[45 * mm, 135 * mm])
         content_t.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#ffffff")),
             ("BOX", (0, 0), (-1, -1), 1, colors.HexColor("#cccccc")),
@@ -343,7 +492,7 @@ def _build_stories_header_flowables(cover: Dict, logo_path: Optional[str]) -> li
 
     logo_cell = Image(logo_path, width=40 * mm, height=40 * mm) if logo_path and os.path.isfile(logo_path) else Paragraph("", val_style)
     tbl_data = [
-        [logo_cell, Paragraph('<font color="#ffffff">30 DAYS OF STORY IDEAS</font>', banner_title_style), Paragraph("", val_style)],
+        [logo_cell, Paragraph('<font color="#ffffff">STORIES VISIBILITY PACK</font>', banner_title_style), Paragraph("", val_style)],
         [Paragraph("", val_style), Paragraph((cover.get("month_year") or "").strip().upper().replace(" ", "\u00A0"), month_style), Paragraph("", val_style)],
         [Paragraph("", val_style), Paragraph("Business:", lbl_style), Paragraph(_escape(cover.get("business", "") or ""), val_style)],
         [Paragraph("", val_style), Paragraph("Audience:", lbl_style), Paragraph(_escape(cover.get("audience", "") or ""), val_style)],
