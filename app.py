@@ -425,8 +425,8 @@ def customer_login_page():
 @app.route('/send-login-link', methods=['POST'])
 def send_login_link():
     """Send a one-time login link by email. Works even when password/cookie login fails."""
-    email = (request.form.get('email') or request.get_json(silent=True) or {}).get('email') or ''
-    email = email.strip().lower()
+    import logging
+    email = (request.form.get('email') or (request.get_json(silent=True) or {}).get('email') or '').strip().lower()
     if not email or '@' not in email:
         return jsonify({"ok": False, "error": "Valid email required"}), 400
     try:
@@ -436,18 +436,22 @@ def send_login_link():
         customer = svc.get_by_email(email)
         if not customer:
             return jsonify({"ok": True, "message": "If an account exists, we've sent a login link to that email."}), 200
+        customer_id = customer.get("id")
+        customer_email = customer.get("email") or email
+        if not customer_id:
+            logging.warning("[Login link] Customer row missing id for %s", email)
+            return jsonify({"ok": False, "error": "Account data invalid. Try again."}), 500
         # Always use a known-good base so the link is never blank in the email (env can be empty on Railway)
         fallback_base = "https://lumo-22-production.up.railway.app"
         raw = (getattr(Config, "BASE_URL", None) or "").strip() or fallback_base
         base = "".join(c for c in raw if ord(c) >= 32 and c not in "\n\r\t").rstrip("/") or fallback_base
         if not base.startswith("http"):
             base = "https://" + base.lstrip("/")
-        login_token = _create_login_token(customer["id"], customer["email"])
+        login_token = _create_login_token(str(customer_id), customer_email)
         account_url = (base.rstrip("/") + "/account?login_token=" + login_token)
         account_url = "".join(c for c in account_url if ord(c) >= 32 and c not in "\n\r\t")
         if not account_url.startswith("http"):
             account_url = fallback_base.rstrip("/") + "/account?login_token=" + login_token
-        import logging
         logging.info("[Login link] Sending to %s with URL=%s...", email, account_url[:80] if account_url else "(empty)")
         notif = NotificationService()
         sent = notif.send_login_link_email(email, account_url)
@@ -455,6 +459,7 @@ def send_login_link():
             return jsonify({"ok": False, "error": "Could not send email. Try again later."}), 503
         return jsonify({"ok": True, "message": "Check your email for the login link."}), 200
     except Exception as e:
+        logging.exception("[Login link] Error: %s", e)
         return jsonify({"ok": False, "error": "Something went wrong. Try again."}), 500
 
 
