@@ -210,14 +210,22 @@ This is an automated notification from your lead capture system.
                 html_content=html_content
             )
             response = self.sendgrid_client.send(message)
-            ok = response.status_code in [200, 201, 202]
+            status = getattr(response, "status_code", None)
+            ok = status in [200, 201, 202]
             if ok:
-                print(f"[SendGrid] Email sent OK (status={response.status_code}): to={to_email} subject={subject!r}")
+                print(f"[SendGrid] Email sent OK (status={status}): to={to_email} subject={subject!r}")
             else:
-                print(f"[SendGrid] Email rejected (status={response.status_code}): to={to_email} subject={subject!r} body={getattr(response, 'body', '')[:200]}")
+                body_preview = getattr(response, "body", "") or ""
+                if isinstance(body_preview, bytes):
+                    body_preview = body_preview.decode("utf-8", errors="replace")[:300]
+                else:
+                    body_preview = str(body_preview)[:300]
+                print(f"[SendGrid] Email rejected (status={status}): to={to_email} subject={subject!r} body={body_preview}")
             return ok
         except Exception as e:
+            import traceback
             print(f"[SendGrid] Error sending email to {to_email}: {e}")
+            traceback.print_exc()
             return False
 
     def send_email_with_attachment(

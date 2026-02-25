@@ -1,6 +1,7 @@
 """
 Auth routes for Lumo 22 customer accounts (DFD, Chat, Captions).
 """
+import logging
 from flask import Blueprint, request, jsonify, session, redirect, url_for
 from config import Config
 from services.customer_auth_service import CustomerAuthService
@@ -127,7 +128,7 @@ def update_preferences():
 def forgot_password():
     """Request password reset. Sends email with reset link if account exists."""
     try:
-        data = request.get_json() or {}
+        data = request.get_json(silent=True) or request.form or {}
         email = (data.get("email") or "").strip().lower()
         if not email or "@" not in email:
             return jsonify({"ok": False, "error": "Valid email required"}), 400
@@ -137,6 +138,7 @@ def forgot_password():
         if not ok:
             return jsonify({"ok": False, "error": token or "Could not create reset link"}), 500
         if token is None:
+            logging.info(f"[Forgot password] No customer found for {email!r} — no email sent (security: we don't reveal this to the user).")
             return jsonify({"ok": True, "message": "If an account exists with that email, you'll receive a reset link shortly."}), 200
 
         base = (Config.BASE_URL or request.url_root or "").strip().rstrip("/")
@@ -159,8 +161,15 @@ If you didn't request this, you can ignore this email. Your password will stay t
 
 — Lumo 22
 """
+        logging.info(f"[Forgot password] Sending reset email to {email!r} from {getattr(Config, 'FROM_EMAIL', '')!r}")
         notif = NotificationService()
-        notif.send_email(email, subject, body)
+        sent = notif.send_email(email, subject, body)
+        if not sent:
+            logging.warning(f"[Forgot password] SendGrid failed to send reset email to {email}")
+            return jsonify({
+                "ok": False,
+                "error": "We couldn't send the reset email right now. Please try again in a few minutes, or contact hello@lumo22.com for help."
+            }), 503
 
         return jsonify({"ok": True, "message": "If an account exists with that email, you'll receive a reset link shortly."}), 200
     except Exception as e:

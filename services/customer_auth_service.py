@@ -41,11 +41,15 @@ class CustomerAuthService:
         return secrets.token_urlsafe(6).upper().replace("-", "").replace("_", "")[:8]
 
     def get_by_email(self, email: str) -> Optional[Dict[str, Any]]:
-        """Get customer by email."""
+        """Get customer by email (case-insensitive)."""
         if not email or "@" not in email:
             return None
         e = email.strip().lower()
+        # Try exact match first (all signups store lowercased), then case-insensitive for legacy data
         result = self.client.table(self.table).select("*").eq("email", e).execute()
+        if result.data and len(result.data) > 0:
+            return result.data[0]
+        result = self.client.table(self.table).select("*").ilike("email", e).execute()
         if result.data and len(result.data) > 0:
             return result.data[0]
         return None

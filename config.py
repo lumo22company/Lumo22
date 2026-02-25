@@ -49,7 +49,8 @@ class Config:
     
     # SendGrid (sanitize key so Authorization header doesn't get Invalid header value from env newline)
     SENDGRID_API_KEY = _sanitize_header_value(os.getenv('SENDGRID_API_KEY', '') or '')
-    FROM_EMAIL = _sanitize_header_value(os.getenv('FROM_EMAIL', '') or '') or 'noreply@example.com'
+    # Use noreply@lumo22.com so SendGrid can verify; never use @example.com (undeliverable)
+    FROM_EMAIL = _sanitize_header_value(os.getenv('FROM_EMAIL', '') or '') or 'noreply@lumo22.com'
     FROM_NAME = _sanitize_header_value(os.getenv('FROM_NAME', '') or '') or 'Lumo 22'
     
     # Twilio

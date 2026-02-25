@@ -631,10 +631,12 @@ def captions_intake_submit():
 @captions_bp.route("/captions-download", methods=["GET"])
 def captions_download():
     """
-    Download captions document for a delivered order. Requires logged-in customer;
+    Download captions or stories PDF for a delivered order. Requires logged-in customer;
     order must belong to customer's email.
+    ?t=TOKEN → captions PDF. ?t=TOKEN&type=stories → stories PDF (if order had Stories add-on).
     """
     from api.auth_routes import get_current_customer
+
     customer = get_current_customer()
     if not customer:
         return redirect("/login?next=/account"), 302
@@ -644,6 +646,8 @@ def captions_download():
     token = (request.args.get("t") or request.args.get("token") or "").strip()
     if not token:
         return jsonify({"error": "Missing token (use ?t=TOKEN from your order)"}), 400
+    download_type = (request.args.get("type") or "captions").strip().lower()
+    inline = request.args.get("inline", "").strip().lower() in ("1", "true", "yes")
     try:
         from services.caption_order_service import CaptionOrderService
         order_service = CaptionOrderService()
@@ -662,11 +666,39 @@ def captions_download():
         return jsonify({"error": "Captions file not found"}), 404
     from datetime import datetime
     date_str = (order.get("created_at") or "")[:10] if order.get("created_at") else datetime.utcnow().strftime("%Y-%m-%d")
-    filename = f"30_Days_Captions_{date_str}.md"
+
+    if download_type == "stories":
+        if not order.get("include_stories"):
+            return jsonify({"error": "This order did not include the Stories add-on"}), 400
+        try:
+            from services.caption_pdf import build_stories_pdf, get_logo_path
+            logo_path = get_logo_path()
+            pdf_bytes = build_stories_pdf(captions_md, logo_path=logo_path)
+        except Exception as e:
+            return jsonify({"error": "Could not build Stories PDF: {}".format(str(e))}), 500
+        if not pdf_bytes:
+            return jsonify({"error": "Stories PDF not available for this pack"}), 404
+        filename = f"30_Days_Story_Ideas_{date_str}.pdf"
+        disp = "inline" if inline else "attachment"
+        return Response(
+            pdf_bytes,
+            mimetype="application/pdf",
+            headers={"Content-Disposition": "{}; filename={}".format(disp, filename)},
+        )
+
+    # Captions PDF (default)
+    try:
+        from services.caption_pdf import build_caption_pdf, get_logo_path
+        logo_path = get_logo_path()
+        pdf_bytes = build_caption_pdf(captions_md, logo_path=logo_path)
+    except Exception as e:
+        return jsonify({"error": "Could not build PDF: {}".format(str(e))}), 500
+    filename = f"30_Days_Captions_{date_str}.pdf"
+    disp = "inline" if inline else "attachment"
     return Response(
-        captions_md,
-        mimetype="text/markdown",
-        headers={"Content-Disposition": f"attachment; filename={filename}"},
+        pdf_bytes,
+        mimetype="application/pdf",
+        headers={"Content-Disposition": "{}; filename={}".format(disp, filename)},
     )
 
 
