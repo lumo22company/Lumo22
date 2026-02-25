@@ -127,6 +127,43 @@ def _password_reset_email_html(reset_url: str) -> str:
 </html>"""
 
 
+def _login_link_email_html(account_url: str) -> str:
+    """Build branded HTML for login link email with the link as an explicit <a> tag and plain text."""
+    import html
+    if not account_url or not account_url.startswith("http"):
+        account_url = ""
+    safe_url = html.escape(account_url, quote=True)
+    base = (Config.BASE_URL or "").strip().rstrip("/")
+    if not base or not base.startswith("http"):
+        base = "https://lumo22.com"
+    logo_url = f"{base}/static/images/logo.png"
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Lumo 22 – Login link</title></head>
+<body style="margin:0; padding:0; background:#f6f6f4; font-family: {BRAND_FONT}; font-size: 16px; line-height: 1.7; color: {BRAND_TEXT};">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f6f6f4;">
+    <tr><td style="padding: 32px 24px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 560px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden;">
+          <tr><td style="padding: 40px 32px 32px;">
+              <p style="margin:0 0 24px; font-size: 14px; letter-spacing: 0.2em; text-transform: uppercase; color: {BRAND_GOLD}; font-weight: 600;">Lumo 22</p>
+              <p style="margin:0 0 16px;">Click the link below to open your account (link works once, expires in 2 minutes):</p>
+              <p style="margin:0 0 24px;"><a href="{safe_url}" style="display:inline-block; padding:12px 24px; background:#000; color:#fff; text-decoration:none; border-radius:8px; font-weight:600;">Open my account</a></p>
+              <p style="margin:0 0 8px; font-size:14px; color:#666;">Or copy and paste this link into your browser:</p>
+              <p style="margin:0 0 24px; font-size:13px; word-break:break-all; color:#333;">{safe_url}</p>
+              <p style="margin:0;">— Lumo 22</p>
+            </td></tr>
+          <tr><td style="padding: 24px 32px 32px; border-top: 1px solid #e5e5e5; font-size: 13px; color: {BRAND_MUTED};">
+              <p style="margin:0 0 12px;"><img src="{logo_url}" alt="Lumo 22" width="120" height="auto" style="display:block; height:auto; max-width:120px;" /></p>
+              <p style="margin:0;">Lumo 22 · <a href="mailto:hello@lumo22.com" style="color:{BRAND_GOLD}; text-decoration:none;">hello@lumo22.com</a></p>
+              <p style="margin:8px 0 0;">Lighting the way to better business</p>
+            </td></tr>
+        </table>
+      </td></tr>
+  </table>
+</body>
+</html>"""
+
+
 def _sanitize_email_value(s: str) -> str:
     """Remove control chars so SendGrid doesn't raise 'Invalid non-printable ASCII'."""
     if not s or not isinstance(s, str):
@@ -249,6 +286,23 @@ If you didn't request this, you can ignore this email. Your password will stay t
 — Lumo 22
 """
         html_body = _password_reset_email_html(reset_url)
+        return self.send_email(to_email, subject, body, html_body=html_body)
+
+    def send_login_link_email(self, to_email: str, account_url: str) -> bool:
+        """Send login link email with plain and HTML body; link is explicit in HTML so it always appears."""
+        if not account_url or not account_url.startswith("http"):
+            print("[SendGrid] Login link NOT sent: invalid account_url (empty or not http)")
+            return False
+        subject = "Your Lumo 22 login link"
+        body = f"""Click the link below to open your account (link works once, expires in 2 minutes):
+
+{account_url}
+
+If the link doesn't work, copy and paste the link above into your browser.
+
+— Lumo 22
+"""
+        html_body = _login_link_email_html(account_url)
         return self.send_email(to_email, subject, body, html_body=html_body)
 
     def send_email(
