@@ -12,8 +12,14 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v={{ asset_version }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/product.css') }}?v={{ asset_version }}">
   <style>
-    .captions-platform-checkboxes { display: flex; flex-wrap: nowrap; gap: 0.5rem 1.25rem; margin-bottom: 0.25rem; }
-    @media (max-width: 640px) { .captions-platform-checkboxes { flex-wrap: wrap; } }
+    /* Match intake form checkbox format for visibility */
+    .captions-checkbox-group { display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem; margin-bottom: 0.25rem; }
+    .captions-checkbox-label { display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 400; font-size: 0.95rem; color: inherit; }
+    .captions-checkbox-label input { width: auto; min-width: 1.15rem; min-height: 1.15rem; margin: 0; cursor: pointer; accent-color: var(--lum-gold, #c9a227); }
+    .captions-stories-wrap { margin-top: 1rem; padding: 1rem; background: rgba(255,255,255,0.12); border-radius: 8px; border: 1px solid rgba(255,255,255,0.25); }
+    .captions-stories-wrap .captions-checkbox-label { margin-bottom: 0.25rem; }
+    .captions-stories-wrap .captions-checkbox-label + p { font-size: 0.85rem; color: var(--lum-text-muted); margin: 0.5rem 0 0; line-height: 1.4; }
+    @media (max-width: 640px) { .captions-checkbox-group { flex-wrap: wrap; } }
     .dfd-btn.btn-disabled { opacity: 0.6; }
     .dfd-btn.btn-disabled:hover { opacity: 0.75; }
   </style>
@@ -111,20 +117,17 @@
         </select>
         <div id="captions-which-wrap" style="margin-top: 1rem;">
           <p id="captions-which-label" style="font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem;">Which platform?</p>
-          <div class="captions-platform-checkboxes">
-            <label style="display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer; font-size: 0.9rem;"><input type="checkbox" name="which_platform" value="Instagram & Facebook" class="captions-which-cb"> Instagram &amp; Facebook</label>
-            <label style="display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer; font-size: 0.9rem;"><input type="checkbox" name="which_platform" value="LinkedIn" class="captions-which-cb"> LinkedIn</label>
-            <label style="display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer; font-size: 0.9rem;"><input type="checkbox" name="which_platform" value="TikTok" class="captions-which-cb"> TikTok</label>
-            <label style="display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer; font-size: 0.9rem;"><input type="checkbox" name="which_platform" value="Pinterest" class="captions-which-cb"> Pinterest</label>
+          <div class="captions-checkbox-group" role="group" aria-label="Platform selection">
+            <label class="captions-checkbox-label"><input type="checkbox" name="which_platform" value="Instagram & Facebook" class="captions-which-cb"> Instagram &amp; Facebook</label>
+            <label class="captions-checkbox-label"><input type="checkbox" name="which_platform" value="LinkedIn" class="captions-which-cb"> LinkedIn</label>
+            <label class="captions-checkbox-label"><input type="checkbox" name="which_platform" value="TikTok" class="captions-which-cb"> TikTok</label>
+            <label class="captions-checkbox-label"><input type="checkbox" name="which_platform" value="Pinterest" class="captions-which-cb"> Pinterest</label>
           </div>
           <p id="captions-which-hint" style="font-size: 0.8rem; color: var(--lum-text-muted); margin: 0.5rem 0 0;"></p>
           {% if stories_addon_available|default(false) %}
-          <div id="captions-stories-wrap" style="display: none; margin-top: 1rem; padding: 0.75rem 1rem; background: rgba(255,255,255,0.08); border-radius: 8px; border: 1px solid rgba(255,255,255,0.15);">
-            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.95rem;">
-              <input type="checkbox" id="captions-stories-cb" name="stories" style="width: auto;">
-              <span>Add 30 Days Story Ideas (+£19 one-off / +£12/mo)</span>
-            </label>
-            <p style="font-size: 0.8rem; color: var(--lum-text-muted); margin: 0.25rem 0 0 1.6rem;">One-line prompts for Instagram/Facebook Stories each day.</p>
+          <div id="captions-stories-wrap" class="captions-stories-wrap" style="display: none;">
+            <label class="captions-checkbox-label"><input type="checkbox" id="captions-stories-cb" name="stories"> Add 30 Days Story Ideas (+£29 one-off / +£17/mo)</label>
+            <p>One-line prompts for Instagram/Facebook Stories each day.</p>
           </div>
           {% endif %}
         </div>
@@ -250,8 +253,8 @@
     var whichHint = document.getElementById('captions-which-hint');
     var errEl = document.getElementById('captions-platform-error');
     if (!sel) return;
-    function oneoffTotal(n, stories) { return 97 + (n - 1) * 29 + (stories ? 19 : 0); }
-    function subTotal(n, stories) { return 79 + (n - 1) * 19 + (stories ? 12 : 0); }
+    function oneoffTotal(n, stories) { return 97 + (n - 1) * 29 + (stories ? 29 : 0); }
+    function subTotal(n, stories) { return 79 + (n - 1) * 19 + (stories ? 17 : 0); }
     function hasStoriesChecked() { var cb = document.getElementById('captions-stories-cb'); return cb && cb.checked; }
     function hasInstagramFacebook() {
       var cbs = document.querySelectorAll('.captions-which-cb:checked');
