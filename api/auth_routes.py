@@ -138,7 +138,10 @@ def forgot_password():
         if not ok:
             return jsonify({"ok": False, "error": token or "Could not create reset link"}), 500
         if token is None:
-            logging.info(f"[Forgot password] No customer found for {email!r} — no email sent (security: we don't reveal this to the user).")
+            logging.info(
+                f"[Forgot password] No customer found for {email!r} — no email sent. "
+                "If the email is in the DB, set SUPABASE_SERVICE_ROLE_KEY in Railway (not just anon key) so RLS does not block the backend."
+            )
             return jsonify({"ok": True, "message": "If an account exists with that email, you'll receive a reset link shortly."}), 200
 
         base = (Config.BASE_URL or request.url_root or "").strip().rstrip("/")

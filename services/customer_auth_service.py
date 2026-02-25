@@ -21,12 +21,16 @@ class CustomerAuthService:
     """Auth for Lumo 22 customers (DFD, Chat, Captions)."""
 
     def __init__(self):
-        if not Config.SUPABASE_URL or not Config.SUPABASE_KEY:
+        if not Config.SUPABASE_URL:
             raise ValueError("Supabase configuration missing")
         url = _sanitize_url(Config.SUPABASE_URL)
         if not url:
             raise ValueError("Supabase configuration missing")
-        self.client: Client = create_client(url, (Config.SUPABASE_KEY or "").strip())
+        # Prefer service_role key so backend can read/update customers when RLS is enabled (e.g. forgot password)
+        key = (Config.SUPABASE_SERVICE_ROLE_KEY or Config.SUPABASE_KEY or "").strip()
+        if not key:
+            raise ValueError("Supabase configuration missing (set SUPABASE_KEY or SUPABASE_SERVICE_ROLE_KEY)")
+        self.client: Client = create_client(url, key)
         self.table = "customers"
 
     def _generate_referral_code(self) -> str:
