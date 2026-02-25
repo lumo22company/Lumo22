@@ -152,29 +152,23 @@ def forgot_password():
             return jsonify({"ok": True, "message": "If an account exists with that email, you'll receive a reset link shortly."}), 200
 
         logging.info("[Forgot password] Customer found for %r, sending reset email", email)
-        base = (Config.BASE_URL or request.url_root or "").strip().rstrip("/")
-        if base and not base.startswith("http"):
+        # Base URL: prefer BASE_URL, then request origin, then fallback so the link is never empty
+        fallback_base = "https://lumo-22-production.up.railway.app"
+        raw_base = (Config.BASE_URL or request.url_root or fallback_base).strip().rstrip("/")
+        base = "".join(c for c in raw_base if ord(c) >= 32 and c not in "\n\r\t")
+        if not base:
+            base = fallback_base
+        if not base.startswith("http"):
             base = "https://" + base
-        reset_url = f"{base}/reset-password?token={token}" if base else None
-        if not reset_url:
-            return jsonify({"ok": False, "error": "BASE_URL not configured"}), 500
+        reset_url = base.rstrip("/") + "/reset-password?token=" + str(token)
+        reset_url = "".join(c for c in reset_url if ord(c) >= 32 and c not in "\n\r\t")
+        if not reset_url or not reset_url.startswith("http"):
+            logging.error("[Forgot password] reset_url invalid or empty, refusing to send")
+            return jsonify({"ok": False, "error": "Could not generate reset link. Please try again."}), 500
 
-        subject = "Reset your Lumo 22 password"
-        body = f"""Hi,
-
-You requested a password reset for your Lumo 22 account.
-
-Click the link below to set a new password (link expires in 1 hour):
-
-{reset_url}
-
-If you didn't request this, you can ignore this email. Your password will stay the same.
-
-— Lumo 22
-"""
-        logging.info(f"[Forgot password] Sending reset email to {email!r} from {getattr(Config, 'FROM_EMAIL', '')!r}")
+        logging.info("[Forgot password] Sending reset email to %r | reset_url=%s", email, reset_url[:80])
         notif = NotificationService()
-        sent = notif.send_email(email, subject, body)
+        sent = notif.send_password_reset_email(email, reset_url)
         if not sent:
             logging.warning("[Forgot password] SendGrid failed to send reset email to %r", email)
             return jsonify({
