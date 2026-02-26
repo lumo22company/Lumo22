@@ -97,7 +97,8 @@
         <div class="account-history-list">
           {% for o in delivered_orders %}
           <div class="account-history-item">
-            <span>Pack {{ o.created_at[:10] if o.created_at else '—' }}</span>
+            {% set biz = (o.get('intake') or {}).get('business_name', '') %}
+            <span>Pack {{ o.created_at[:10] if o.created_at else '—' }}{% if biz %} — {{ biz }}{% endif %}</span>
             <a href="/api/captions-download?t={{ o.token }}&inline=1" target="_blank" rel="noopener" class="account-btn-link account-btn-link--primary">View captions</a>
             <a href="/api/captions-download?t={{ o.token }}" class="account-btn-link account-btn-link--secondary">Download captions PDF</a>
             {% if o.include_stories %}
