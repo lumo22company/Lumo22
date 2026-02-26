@@ -143,7 +143,7 @@
           {% set edit_form_orders = [current_intake_order] %}
         {% endif %}
         {% if edit_form_orders %}
-        <p class="account-section-desc">Update your voice, topics, and preferences for future packs. Your next pack will use the form you save here. Select the form by business to edit.</p>
+        <p class="account-section-desc">Update your voice, topics, and preferences. Changes are reflected in your <strong>next</strong> captions and stories pack, not in packs already delivered. Select the form by business to edit.</p>
         <ul class="account-edit-form-list">
           {% for o in edit_form_orders %}
           {% set biz = (o.get('intake') or {}).get('business_name', '') %}
@@ -202,7 +202,7 @@
             </div>
             <div id="reminder-toggle-{{ o.id }}" role="button" tabindex="0" class="account-toggle {% if not o.reminder_opt_out %}on{% endif %}" aria-label="Toggle intake reminders" data-order-id="{{ o.id }}" onclick="toggleReminder(this)" onkeydown="if(event.key==='Enter'||event.key===' ') { event.preventDefault(); toggleReminder(this); }"></div>
           </div>
-          <div class="account-settings-row" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding: 1rem 0; border-bottom: none;">
+          <div class="account-settings-row" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid rgba(0,0,0,0.06);">
             <div>
               <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Pause subscription</div>
               <div class="account-settings-desc">{% if o.subscription_pause and o.subscription_pause.paused %}Paused — resumes {{ o.subscription_pause.resumes_at or 'automatically' }}{% else %}Pause billing for 1 month (no charge, no pack){% endif %}</div>
@@ -213,6 +213,20 @@
             <button type="button" class="dfd-btn dfd-btn-secondary account-pause-btn" data-order-id="{{ o.id }}" onclick="pauseSubscription(this)">Pause for 1 month</button>
             {% endif %}
           </div>
+          {% if not o.get('include_stories') %}
+          <div class="account-settings-row account-add-stories-row" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding: 1rem 0; border-bottom: none;">
+            <div>
+              <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Story Ideas</div>
+              <div class="account-settings-desc">Add 30 Days Story Ideas to this subscription. You'll be charged a prorated amount. Stories will be delivered with your <strong>next</strong> set of captions, not instantly.</div>
+            </div>
+            <button type="button" class="account-add-stories-btn dfd-btn dfd-btn-secondary" data-subscription-id="{{ sub_id }}" onclick="addStoriesToSubscription(this)">Add Story Ideas</button>
+          </div>
+          {% else %}
+          <div class="account-settings-row" style="padding: 1rem 0; border-bottom: none;">
+            <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Story Ideas</div>
+            <div class="account-settings-desc">Included in this subscription. You'll receive Stories with each pack.</div>
+          </div>
+          {% endif %}
         </div>
         {% endfor %}
         {% else %}
@@ -247,12 +261,15 @@
       <div class="account-delete-modal-box">
         <h2 id="account-delete-modal-title" class="account-delete-modal-title">Delete account?</h2>
         <p class="account-delete-modal-text">Are you sure you want to delete your account? All your information and past PDFs will be deleted.</p>
-        <p class="account-delete-modal-actions">
-          <a href="/account/pause" class="account-delete-modal-link">Cancel subscription instead</a>
-        </p>
+        <div class="account-delete-modal-type-wrap">
+          <label for="account-delete-type-input" class="account-delete-modal-type-label">Type DELETE to confirm</label>
+          <input type="text" id="account-delete-type-input" class="account-delete-modal-type-input" placeholder="DELETE" autocomplete="off" aria-describedby="account-delete-type-hint">
+          <span id="account-delete-type-hint" class="account-delete-modal-type-hint">The confirm button will enable when you type DELETE.</span>
+        </div>
         <div class="account-delete-modal-buttons">
-          <button type="button" class="account-delete-modal-keep">Keep account</button>
-          <button type="button" class="account-delete-modal-confirm">Confirm account deletion</button>
+          <a href="/account/pause" class="account-delete-modal-btn account-delete-modal-cancel-sub">Cancel subscription instead</a>
+          <button type="button" class="account-delete-modal-btn account-delete-modal-keep">Keep account</button>
+          <button type="button" class="account-delete-modal-btn account-delete-modal-confirm" disabled>Confirm account deletion</button>
         </div>
       </div>
     </div>
@@ -279,8 +296,12 @@
       var deleteModal = document.getElementById('account-delete-modal');
       var deleteTrigger = document.getElementById('account-delete-trigger');
       var deleteForm = document.getElementById('account-delete-form');
+      var deleteTypeInput = document.getElementById('account-delete-type-input');
       function openDeleteModal() {
         if (deleteModal) {
+          if (deleteTypeInput) { deleteTypeInput.value = ''; deleteTypeInput.focus(); }
+          var confirmBtn = deleteModal.querySelector('.account-delete-modal-confirm');
+          if (confirmBtn) confirmBtn.disabled = true;
           deleteModal.removeAttribute('hidden');
           deleteModal.classList.add('account-delete-modal--open');
         }
@@ -298,7 +319,12 @@
         var confirmBtn = deleteModal.querySelector('.account-delete-modal-confirm');
         if (backdrop) backdrop.addEventListener('click', closeDeleteModal);
         if (keepBtn) keepBtn.addEventListener('click', closeDeleteModal);
-        if (confirmBtn && deleteForm) confirmBtn.addEventListener('click', function() { deleteForm.submit(); });
+        if (confirmBtn && deleteForm) confirmBtn.addEventListener('click', function() { if (!this.disabled) deleteForm.submit(); });
+        if (deleteTypeInput && confirmBtn) {
+          deleteTypeInput.addEventListener('input', function() {
+            confirmBtn.disabled = deleteTypeInput.value.trim().toLowerCase() !== 'delete';
+          });
+        }
       }
 
       function toggleMarketing() {
@@ -408,6 +434,35 @@
         });
       }
       window.deletePackFromHistory = deletePackFromHistory;
+
+      function addStoriesToSubscription(btn) {
+        var subId = btn.getAttribute('data-subscription-id');
+        if (!subId) return;
+        btn.disabled = true;
+        btn.textContent = 'Adding…';
+        fetch('/api/billing/add-stories-to-subscription', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ subscription_id: subId }),
+          credentials: 'same-origin'
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.ok) {
+            alert(data.message || 'Story Ideas added. Stories will be included in your next pack.');
+            window.location.reload();
+          } else {
+            alert(data.error || 'Could not add Story Ideas');
+            btn.disabled = false;
+            btn.textContent = 'Add Story Ideas';
+          }
+        })
+        .catch(function() {
+          alert('Something went wrong — try again.');
+          btn.disabled = false;
+          btn.textContent = 'Add Story Ideas';
+        });
+      }
 
       function changeSubscriptionPaymentMethod(selectEl) {
         if (!selectEl) return;

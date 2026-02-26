@@ -665,7 +665,7 @@ def captions_intake_submit():
                 pass
         return jsonify({
             "success": True,
-            "message": "Your form has been updated. (Note: This won't change captions already delivered.)",
+            "message": "Your form has been updated. Your changes will be reflected in your next captions and stories pack, not in packs already delivered.",
             "customer_email": order.get("customer_email") or "",
             "is_subscription": bool(order.get("stripe_subscription_id")),
             "customer_has_account": customer_has_account,
