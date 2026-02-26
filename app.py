@@ -285,6 +285,9 @@ def captions_checkout_page():
         params["selected"] = selected
     if stories:
         params["stories"] = "1"
+    ref = (request.args.get("ref") or "").strip()
+    if ref:
+        params["ref"] = ref
     q = urlencode(params)
     api_url = f"/api/captions-checkout?{q}" if not platforms_invalid else None
     total = prices["oneoff"] + (platforms - 1) * prices["extra_oneoff"] + (prices["stories_oneoff"] if stories else 0)
@@ -322,6 +325,9 @@ def captions_checkout_subscription_page():
         params["selected"] = selected
     if stories:
         params["stories"] = "1"
+    ref = (request.args.get("ref") or "").strip()
+    if ref:
+        params["ref"] = ref
     q = urlencode(params)
     api_url = f"/api/captions-checkout-subscription?{q}" if not platforms_invalid else None
     total = prices["sub"] + (platforms - 1) * prices["extra_sub"] + (prices["stories_sub"] if stories else 0)

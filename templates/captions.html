@@ -364,6 +364,8 @@
       if (stories) q += '&stories=1';
       var cur = getCurrency();
       if (cur !== 'gbp') q += '&currency=' + cur;
+      var ref = (new URLSearchParams(window.location.search)).get('ref');
+      if (ref) q += '&ref=' + encodeURIComponent(ref);
       if (oneoffPrice) oneoffPrice.innerHTML = sym + oneoffTotal(n, stories) + ' <span>one-time</span>';
       var isValid = selected !== null;
       var targetHref = '/captions-checkout?' + q;

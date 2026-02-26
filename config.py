@@ -107,6 +107,8 @@ class Config:
     # Stories add-on: one-off £29, subscription £17/mo. Optional; when set, product page shows Stories option when IG & Facebook selected.
     STRIPE_CAPTIONS_STORIES_PRICE_ID = os.getenv('STRIPE_CAPTIONS_STORIES_PRICE_ID', '').strip() or None
     STRIPE_CAPTIONS_STORIES_SUBSCRIPTION_PRICE_ID = os.getenv('STRIPE_CAPTIONS_STORIES_SUBSCRIPTION_PRICE_ID', '').strip() or None
+    # Refer-a-friend: Stripe Coupon ID (e.g. 10% off once). When set, referred customers get this discount at captions checkout.
+    STRIPE_REFERRAL_COUPON_ID = os.getenv('STRIPE_REFERRAL_COUPON_ID', '').strip() or None
 
     # Digital Front Desk inbound (auto-reply). Domain for unique addresses, e.g. inbound.lumo22.com. MX must point to SendGrid.
     INBOUND_EMAIL_DOMAIN = (os.getenv('INBOUND_EMAIL_DOMAIN', '').strip() or 'inbound.lumo22.com').lower()

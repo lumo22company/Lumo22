@@ -10,6 +10,26 @@ from config import Config
 captions_bp = Blueprint("captions", __name__, url_prefix="/api")
 
 
+def _get_referral_coupon_id():
+    """
+    If the customer is referred (ref= in query and valid, or logged-in with referred_by_customer_id),
+    return the configured Stripe referral coupon ID; else None.
+    """
+    coupon_id = (getattr(Config, "STRIPE_REFERRAL_COUPON_ID", None) or "").strip()
+    if not coupon_id:
+        return None
+    ref = (request.args.get("ref") or "").strip()
+    if ref:
+        from services.customer_auth_service import CustomerAuthService
+        if CustomerAuthService().get_by_referral_code(ref):
+            return coupon_id
+    from api.auth_routes import get_current_customer
+    customer = get_current_customer()
+    if customer and customer.get("referred_by_customer_id"):
+        return coupon_id
+    return None
+
+
 def _parse_platforms(request) -> int:
     """Parse platforms query param; clamp to 1–4. Default 1."""
     try:
@@ -173,14 +193,18 @@ def captions_checkout():
     metadata = {"product": "captions", "platforms": str(platforms), "include_stories": "1" if stories else "0"}
     if selected:
         metadata["selected_platforms"] = selected
+    referral_coupon = _get_referral_coupon_id()
+    create_params = {
+        "mode": "payment",
+        "line_items": line_items,
+        "success_url": success_url,
+        "cancel_url": cancel_url,
+        "metadata": metadata,
+    }
+    if referral_coupon:
+        create_params["discounts"] = [{"coupon": referral_coupon}]
     try:
-        session = stripe.checkout.Session.create(
-            mode="payment",
-            line_items=line_items,
-            success_url=success_url,
-            cancel_url=cancel_url,
-            metadata=metadata,
-        )
+        session = stripe.checkout.Session.create(**create_params)
         return redirect(session.url, code=302)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -250,14 +274,18 @@ def captions_checkout_subscription():
     metadata = {"product": "captions_subscription", "platforms": str(platforms), "include_stories": "1" if stories else "0"}
     if selected:
         metadata["selected_platforms"] = selected
+    referral_coupon = _get_referral_coupon_id()
+    create_params = {
+        "mode": "subscription",
+        "line_items": line_items,
+        "success_url": success_url,
+        "cancel_url": cancel_url,
+        "metadata": metadata,
+    }
+    if referral_coupon:
+        create_params["discounts"] = [{"coupon": referral_coupon}]
     try:
-        session = stripe.checkout.Session.create(
-            mode="subscription",
-            line_items=line_items,
-            success_url=success_url,
-            cancel_url=cancel_url,
-            metadata=metadata,
-        )
+        session = stripe.checkout.Session.create(**create_params)
         return redirect(session.url, code=302)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
