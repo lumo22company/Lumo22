@@ -94,7 +94,7 @@
       {% if current_section == 'history' %}
       <section class="account-section-block">
         <h2>History</h2>
-        {% set delivered_orders = caption_orders|selectattr('status', 'equalto', 'delivered')|list %}
+        {% set delivered_orders = (caption_orders|selectattr('status', 'equalto', 'delivered')|list)|sort(attribute='created_at', reverse=True) %}
         {% if delivered_orders %}
         <p class="account-section-desc">View or download your previous packs. Each pack is available as a PDF; if you added Story Ideas, you get a separate Stories PDF.</p>
         <div class="account-history-list">
@@ -244,6 +244,7 @@
       logoutForms.forEach(function(form) {
         form.addEventListener('submit', function(e) {
           e.preventDefault();
+          if (!confirm('Are you sure you want to log out?')) return;
           fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' })
             .then(function() { window.location.href = '/'; })
             .catch(function() { window.location.href = '/'; });

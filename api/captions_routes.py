@@ -42,6 +42,19 @@ def _parse_currency(request) -> str:
     return "gbp"
 
 
+def _filename_safe(s: str, max_len: int = 50) -> str:
+    """Sanitize string for PDF filename: alphanumeric, spaces to underscores, remove other chars."""
+    if not s or not isinstance(s, str):
+        return ""
+    s = s.strip()
+    out = []
+    for c in s:
+        if c.isalnum() or c in " -_":
+            out.append(c if c != " " else "_")
+    result = "".join(out).strip("_").replace("__", "_")[:max_len]
+    return result if result else ""
+
+
 # Amounts in smallest unit (pence/cents) for add-ons when using price_data (USD/EUR). GBP add-ons use existing Price IDs.
 _CURRENCY_ADDON_AMOUNTS = {
     "gbp": {"extra_oneoff": 2900, "extra_sub": 1900, "stories_oneoff": 2900, "stories_sub": 1700},
@@ -671,6 +684,9 @@ def captions_download():
         return jsonify({"error": "Captions file not found"}), 404
     from datetime import datetime
     date_str = (order.get("created_at") or "")[:10] if order.get("created_at") else datetime.utcnow().strftime("%Y-%m-%d")
+    intake = order.get("intake") or {}
+    business_name = _filename_safe((intake.get("business_name") or "").strip())
+    name_label = business_name if business_name else "Pack"
 
     if download_type == "stories":
         if not order.get("include_stories"):
@@ -693,7 +709,7 @@ def captions_download():
                 return jsonify({"error": "Could not build Stories PDF: {}".format(str(e))}), 500
         if not pdf_bytes:
             return jsonify({"error": "Stories PDF not available for this pack"}), 404
-        filename = f"30_Days_Story_Ideas_{date_str}.pdf"
+        filename = f"{name_label}_Stories_{date_str}.pdf"
         disp = "inline" if inline else "attachment"
         return Response(
             pdf_bytes,
@@ -708,7 +724,7 @@ def captions_download():
         pdf_bytes = build_caption_pdf(captions_md, logo_path=logo_path)
     except Exception as e:
         return jsonify({"error": "Could not build PDF: {}".format(str(e))}), 500
-    filename = f"30_Days_Captions_{date_str}.pdf"
+    filename = f"{name_label}_Captions_{date_str}.pdf"
     disp = "inline" if inline else "attachment"
     return Response(
         pdf_bytes,
