@@ -148,6 +148,18 @@ class CaptionOrderService:
         """Mark order as hidden so it no longer appears in account history (status -> hidden)."""
         return self.update(order_id, {"status": "hidden"})
 
+    def delete_by_customer_email(self, email: str) -> bool:
+        """Permanently delete all caption orders for this customer email (for account deletion)."""
+        if not email or "@" not in email:
+            return False
+        try:
+            self.client.table(self.table).delete().eq(
+                "customer_email", email.strip().lower()
+            ).execute()
+            return True
+        except Exception:
+            return False
+
     def get_active_subscription_orders(self) -> list:
         """Get caption orders that have an active Stripe subscription (for reminder emails)."""
         result = self.client.table(self.table).select(

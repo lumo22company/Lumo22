@@ -89,6 +89,32 @@ def logout():
     return redirect("/", code=302)
 
 
+@auth_bp.route("/delete-account", methods=["POST"])
+def delete_account():
+    """Permanently delete the current customer account and their caption orders. Requires login."""
+    customer = get_current_customer()
+    if not customer:
+        return jsonify({"ok": False, "error": "Not logged in"}), 401
+    customer_id = customer.get("id")
+    email = (customer.get("email") or "").strip().lower()
+    if not customer_id:
+        return jsonify({"ok": False, "error": "Invalid account"}), 400
+    try:
+        if email:
+            from services.caption_order_service import CaptionOrderService
+            co_svc = CaptionOrderService()
+            co_svc.delete_by_customer_email(email)
+        svc = CustomerAuthService()
+        if svc.delete_by_id(str(customer_id)):
+            session.pop("customer_id", None)
+            session.pop("customer_email", None)
+            return redirect("/?account_deleted=1", code=302)
+        return jsonify({"ok": False, "error": "Could not delete account"}), 500
+    except Exception as e:
+        logging.exception("delete_account failed")
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
 @auth_bp.route("/me", methods=["GET"])
 def me():
     """Get current customer."""

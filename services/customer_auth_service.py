@@ -203,3 +203,13 @@ class CustomerAuthService:
             return (True, None)
         except Exception as e:
             return (False, str(e))
+
+    def delete_by_id(self, customer_id: str) -> bool:
+        """Permanently delete customer account by id. Returns True on success."""
+        if not customer_id:
+            return False
+        try:
+            self.client.table(self.table).delete().eq("id", customer_id).execute()
+            return True
+        except Exception:
+            return False

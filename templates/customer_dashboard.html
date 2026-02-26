@@ -87,6 +87,17 @@
             </div>
             <div id="marketing-toggle-wrap" role="button" tabindex="0" class="account-toggle {% if customer.get('marketing_opt_in', True) %}on{% endif %}" aria-label="Toggle marketing emails" onclick="toggleMarketing()" onkeydown="if(event.key==='Enter'||event.key===' ') { event.preventDefault(); toggleMarketing(); }"></div>
           </div>
+          <div class="account-info-row account-info-row--delete">
+            <div>
+              <span class="account-info-label">Delete account</span>
+              <div class="account-info-value">Permanently delete your account and associated data. This cannot be undone.</div>
+            </div>
+            <div class="account-info-actions">
+              <form id="account-delete-form" action="/api/auth/delete-account" method="POST" class="account-delete-form" style="margin: 0; display: inline;">
+                <button type="button" class="account-delete-account-btn" id="account-delete-trigger">Delete account</button>
+              </form>
+            </div>
+          </div>
         </div>
       </section>
       {% endif %}
@@ -230,6 +241,21 @@
       </section>
       {% endif %}
     </main>
+
+    <div id="account-delete-modal" class="account-delete-modal" role="dialog" aria-labelledby="account-delete-modal-title" aria-modal="true" hidden>
+      <div class="account-delete-modal-backdrop"></div>
+      <div class="account-delete-modal-box">
+        <h2 id="account-delete-modal-title" class="account-delete-modal-title">Delete account?</h2>
+        <p class="account-delete-modal-text">Are you sure you want to delete your account? All your information and past PDFs will be deleted.</p>
+        <p class="account-delete-modal-actions">
+          <a href="/account/pause" class="account-delete-modal-link">Cancel subscription instead</a>
+        </p>
+        <div class="account-delete-modal-buttons">
+          <button type="button" class="account-delete-modal-keep">Keep account</button>
+          <button type="button" class="account-delete-modal-confirm">Confirm account deletion</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   {% include '_footer.html' %}
@@ -250,6 +276,30 @@
             .catch(function() { window.location.href = '/'; });
         });
       });
+      var deleteModal = document.getElementById('account-delete-modal');
+      var deleteTrigger = document.getElementById('account-delete-trigger');
+      var deleteForm = document.getElementById('account-delete-form');
+      function openDeleteModal() {
+        if (deleteModal) {
+          deleteModal.removeAttribute('hidden');
+          deleteModal.classList.add('account-delete-modal--open');
+        }
+      }
+      function closeDeleteModal() {
+        if (deleteModal) {
+          deleteModal.setAttribute('hidden', '');
+          deleteModal.classList.remove('account-delete-modal--open');
+        }
+      }
+      if (deleteTrigger) deleteTrigger.addEventListener('click', openDeleteModal);
+      if (deleteModal) {
+        var backdrop = deleteModal.querySelector('.account-delete-modal-backdrop');
+        var keepBtn = deleteModal.querySelector('.account-delete-modal-keep');
+        var confirmBtn = deleteModal.querySelector('.account-delete-modal-confirm');
+        if (backdrop) backdrop.addEventListener('click', closeDeleteModal);
+        if (keepBtn) keepBtn.addEventListener('click', closeDeleteModal);
+        if (confirmBtn && deleteForm) confirmBtn.addEventListener('click', function() { deleteForm.submit(); });
+      }
 
       function toggleMarketing() {
         var wrap = document.getElementById('marketing-toggle-wrap');
