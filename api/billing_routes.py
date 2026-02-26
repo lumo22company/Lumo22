@@ -67,3 +67,58 @@ def billing_portal():
 
     base = (request.url_root or "").strip().rstrip("/")
     return redirect(f"{base}/account?billing=error", code=302)
+
+
+@billing_bp.route("/subscription-payment-method", methods=["POST"])
+def set_subscription_payment_method():
+    """
+    Set which payment method (card) to use for a specific subscription.
+    Body: { "subscription_id": "sub_xxx", "payment_method_id": "pm_xxx" }.
+    Requires login; subscription must belong to the customer.
+    """
+    customer = get_current_customer()
+    if not customer:
+        return jsonify({"ok": False, "error": "Not logged in"}), 401
+    email = (customer.get("email") or "").strip().lower()
+    if not email or "@" not in email:
+        return jsonify({"ok": False, "error": "Invalid customer"}), 400
+
+    try:
+        data = request.get_json() or {}
+        subscription_id = (data.get("subscription_id") or "").strip()
+        payment_method_id = (data.get("payment_method_id") or "").strip()
+        if not subscription_id or not payment_method_id:
+            return jsonify({"ok": False, "error": "subscription_id and payment_method_id required"}), 400
+    except Exception:
+        return jsonify({"ok": False, "error": "Invalid request"}), 400
+
+    try:
+        from services.caption_order_service import CaptionOrderService
+        from config import Config
+        co_svc = CaptionOrderService()
+        orders = co_svc.get_by_customer_email(email)
+    except Exception as e:
+        return jsonify({"ok": False, "error": "Could not load orders"}), 500
+
+    order_owns_sub = any(
+        (o.get("stripe_subscription_id") or "").strip() == subscription_id
+        for o in orders
+    )
+    if not order_owns_sub:
+        return jsonify({"ok": False, "error": "This subscription does not belong to your account"}), 403
+
+    if not getattr(Config, "STRIPE_SECRET_KEY", None):
+        return jsonify({"ok": False, "error": "Billing not configured"}), 503
+
+    try:
+        import stripe
+        stripe.api_key = Config.STRIPE_SECRET_KEY
+        stripe.Subscription.modify(
+            subscription_id,
+            default_payment_method=payment_method_id,
+        )
+        return jsonify({"ok": True, "message": "Payment method updated"}), 200
+    except stripe.error.StripeError as e:
+        return jsonify({"ok": False, "error": str(e) or "Stripe error"}), 400
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500

@@ -523,6 +523,9 @@ def _account_context():
     if caption_orders:
         sub_orders = [o for o in caption_orders if (o.get("stripe_subscription_id") or "").strip()]
         current_intake_order = sub_orders[0] if sub_orders else caption_orders[0]
+
+    subscription_billing = _get_subscription_billing(caption_orders)
+
     base = (Config.BASE_URL or request.url_root or "").strip().rstrip("/")
     if base and not base.startswith("http"):
         base = "https://" + base
@@ -531,9 +534,60 @@ def _account_context():
         "setups": setups,
         "caption_orders": caption_orders,
         "current_intake_order": current_intake_order,
+        "subscription_billing": subscription_billing,
         "base_url": base,
         "referral_code": referral_code or "",
     }
+
+
+def _get_subscription_billing(caption_orders):
+    """
+    Build payment_methods list and per-subscription default for account page.
+    Returns { "payment_methods": [{ id, brand, last4 }], "subscription_payment_methods": { sub_id: { id, brand, last4 } } }.
+    """
+    out = {"payment_methods": [], "subscription_payment_methods": {}}
+    if not caption_orders or not getattr(Config, "STRIPE_SECRET_KEY", None):
+        return out
+    stripe_customer_id = None
+    for o in caption_orders:
+        cid = (o.get("stripe_customer_id") or "").strip()
+        if cid:
+            stripe_customer_id = cid
+            break
+    if not stripe_customer_id:
+        return out
+    try:
+        import stripe
+        stripe.api_key = Config.STRIPE_SECRET_KEY
+        pm_list = stripe.PaymentMethod.list(customer=stripe_customer_id, type="card")
+        for pm in (pm_list.data or []):
+            card = (pm.get("card") or {})
+            out["payment_methods"].append({
+                "id": pm.get("id"),
+                "brand": (card.get("brand") or "card").capitalize(),
+                "last4": card.get("last4") or "****",
+            })
+        for o in caption_orders:
+            sub_id = (o.get("stripe_subscription_id") or "").strip()
+            if not sub_id:
+                continue
+            try:
+                sub = stripe.Subscription.retrieve(sub_id, expand=["default_payment_method"])
+                pm = sub.get("default_payment_method")
+                if pm and isinstance(pm, dict):
+                    card = pm.get("card") or {}
+                    out["subscription_payment_methods"][sub_id] = {
+                        "id": pm.get("id"),
+                        "brand": (card.get("brand") or "card").capitalize(),
+                        "last4": card.get("last4") or "****",
+                    }
+                else:
+                    out["subscription_payment_methods"][sub_id] = None
+            except Exception:
+                out["subscription_payment_methods"][sub_id] = None
+    except Exception:
+        pass
+    return out
 
 
 @app.route('/account')

@@ -1594,16 +1594,17 @@
 
 /* History: view / download */
 .account-history-list {
-  overflow-x: auto;
+  width: 100%;
   min-width: 0;
 }
 .account-history-item {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.75rem 1rem;
   padding: 1rem 1.25rem;
-  min-width: max-content;
+  width: 100%;
+  box-sizing: border-box;
   background: #fff;
   border: 1px solid rgba(0,0,0,0.08);
   border-radius: var(--dfd-radius);
@@ -1624,6 +1625,14 @@
   padding: 0.2rem 0.5rem;
   border-radius: 4px;
   flex-shrink: 0;
+}
+
+/* Mobile: pack title on own line, buttons wrap below */
+@media (max-width: 640px) {
+  .account-history-item > span:first-of-type {
+    width: 100%;
+    margin-bottom: 0.25rem;
+  }
 }
 .account-history-item .account-history-type--subscription {
   background: rgba(0,0,0,0.08);
@@ -2049,6 +2058,32 @@
   transform: translateY(-3px);
   background-color: var(--lum-gold);
   color: #000000;
+}
+
+.account-page-wrap .account-payment-method-select {
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid rgba(0,0,0,0.2);
+  border-radius: var(--dfd-radius);
+  background: #fff;
+  color: #000;
+  min-width: 160px;
+}
+.account-page-wrap .account-payment-method-select-wrap {
+  flex-shrink: 0;
+}
+.account-page-wrap .account-payment-method-no-cards {
+  font-size: 0.9rem;
+  color: #555;
+}
+.account-page-wrap .account-payment-method-no-cards a {
+  color: #8b6914;
+  font-weight: 500;
+  text-decoration: none;
+}
+.account-page-wrap .account-payment-method-no-cards a:hover {
+  text-decoration: underline;
 }
 
 .account-page-wrap .account-alert {
