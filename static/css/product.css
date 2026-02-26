@@ -1425,6 +1425,11 @@
 .account-page-wrap .lumo-nav {
   background: #000;
 }
+.account-page-wrap .lumo-nav-links a,
+.account-page-wrap .lumo-nav-cta,
+.account-page-wrap .account-nav-logout-btn {
+  font-family: 'Bebas Neue', sans-serif;
+}
 /* Nav "Log out" button: match .lumo-nav-cta look */
 .account-page-wrap .account-nav-logout-btn {
   appearance: none;
@@ -1435,7 +1440,6 @@
   min-width: 44px;
   background: #ffffff;
   color: #000000;
-  font-family: var(--font-body);
   font-weight: 600;
   font-size: 0.7rem;
   letter-spacing: 0.2em;
@@ -1470,7 +1474,7 @@
   background: #000;
 }
 .account-sidebar-title {
-  font-family: var(--font-display, 'Bebas Neue', sans-serif);
+  font-family: 'Bebas Neue', sans-serif;
   font-size: 1.5rem;
   letter-spacing: 0.02em;
   color: #fff;
@@ -1487,8 +1491,8 @@
 .account-sidebar-nav a {
   display: block;
   padding: 0.6rem 0.75rem;
-  font-family: var(--dfd-font-condensed);
-  font-weight: 600;
+  font-family: 'Bebas Neue', sans-serif;
+  font-weight: 400;
   font-size: 0.9rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -1518,6 +1522,7 @@
   background: rgba(255,255,255,0.12);
   color: #fff;
   border: 1px solid rgba(255,255,255,0.25);
+  font-family: 'Bebas Neue', sans-serif;
 }
 .account-sidebar-logout .dfd-btn:hover {
   background: var(--lum-gold);
@@ -1663,55 +1668,96 @@
   color: #444;
   font-size: 0.95rem;
   line-height: 1.5;
-  margin: 0 0 1.25rem;
+  margin: 0 0 1rem;
 }
-.account-delete-modal-actions {
-  margin: 0 0 1.25rem;
+.account-delete-modal-type-wrap {
+  margin-bottom: 1.25rem;
 }
-.account-delete-modal-link {
-  color: #8b6914;
+.account-delete-modal-type-label {
+  display: block;
+  font-size: 0.9rem;
   font-weight: 600;
-  text-decoration: none;
+  color: #333;
+  margin-bottom: 0.35rem;
 }
-.account-delete-modal-link:hover { text-decoration: underline; }
+.account-delete-modal-type-input {
+  display: block;
+  width: 100%;
+  max-width: 12rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.95rem;
+  border: 1px solid rgba(0,0,0,0.25);
+  border-radius: var(--dfd-radius);
+  margin-bottom: 0.35rem;
+}
+.account-delete-modal-type-input:focus {
+  outline: none;
+  border-color: #8b6914;
+  box-shadow: 0 0 0 2px rgba(139,105,20,0.2);
+}
+.account-delete-modal-type-hint {
+  display: block;
+  font-size: 0.8rem;
+  color: #666;
+}
 .account-delete-modal-buttons {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  justify-content: flex-end;
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+  justify-content: flex-start;
+  align-items: center;
 }
-.account-delete-modal-keep {
+@media (max-width: 520px) {
+  .account-delete-modal-buttons {
+    flex-wrap: wrap;
+  }
+}
+.account-delete-modal-btn {
   appearance: none;
   cursor: pointer;
   font: inherit;
-  padding: 0.5rem 1.25rem;
-  font-size: 0.9rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
   font-weight: 600;
+  border-radius: var(--dfd-radius);
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+  text-decoration: none;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.account-delete-modal-cancel-sub {
+  color: #8b6914;
+  background: transparent;
+  border-color: rgba(139,105,20,0.4);
+}
+.account-delete-modal-cancel-sub:hover {
+  background: rgba(139,105,20,0.08);
+  color: #6d5010;
+}
+.account-delete-modal-keep {
   color: #000;
   background: #fff;
-  border: 1px solid rgba(0,0,0,0.25);
-  border-radius: var(--dfd-radius);
-  transition: background 0.2s, border-color 0.2s;
+  border-color: rgba(0,0,0,0.25);
 }
 .account-delete-modal-keep:hover {
   background: #f5f5f5;
   border-color: rgba(0,0,0,0.35);
 }
 .account-delete-modal-confirm {
-  appearance: none;
-  cursor: pointer;
-  font: inherit;
-  padding: 0.5rem 1.25rem;
-  font-size: 0.9rem;
-  font-weight: 600;
   color: #fff;
   background: #b00;
-  border: 1px solid #900;
-  border-radius: var(--dfd-radius);
-  transition: background 0.2s, color 0.2s;
+  border-color: #900;
 }
 .account-delete-modal-confirm:hover {
   background: #900;
+  color: #fff;
+}
+.account-delete-modal-confirm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.account-delete-modal-confirm:disabled:hover {
+  background: #b00;
   color: #fff;
 }
 
