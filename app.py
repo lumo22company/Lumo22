@@ -426,7 +426,10 @@ def customer_login_page():
 def send_login_link():
     """Send a one-time login link by email. Works even when password/cookie login fails."""
     import logging
-    email = (request.form.get('email') or (request.get_json(silent=True) or {}).get('email') or '').strip().lower()
+    try:
+        email = (request.form.get('email') or (request.get_json(silent=True) or {}).get('email') or '').strip().lower()
+    except Exception:
+        email = ''
     if not email or '@' not in email:
         return jsonify({"ok": False, "error": "Valid email required"}), 400
     try:
@@ -597,7 +600,9 @@ def not_found(error):
 
 @app.errorhandler(500)
 def internal_error(error):
-    return jsonify({'error': 'Internal server error'}), 500
+    # Surface real error so we can fix; revert to generic message after debugging
+    err_msg = getattr(error, 'description', None) or str(error) if error else 'Internal server error'
+    return jsonify({'error': err_msg or 'Internal server error'}), 500
 
 if __name__ == '__main__':
     # Initialize services
