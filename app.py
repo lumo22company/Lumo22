@@ -479,14 +479,15 @@ def reset_password_page():
     return render_template('reset_password.html', token=token)
 
 
-@app.route('/account')
-@customer_login_required
-def account_page():
-    """Unified customer dashboard: DFD, Chat, Captions. Requires login."""
+_ACCOUNT_SECTIONS = frozenset({"information", "history", "edit-form", "pause", "refer"})
+
+
+def _account_context():
+    """Load customer and account data for dashboard. Returns dict for template."""
     customer = get_current_customer()
     if not customer:
-        return redirect(url_for('customer_login_page'))
-    email = customer.get('email', '')
+        return None
+    email = customer.get("email", "")
     setups = []
     caption_orders = []
     referral_code = None
@@ -500,7 +501,6 @@ def account_page():
         setups = fd_svc.get_by_customer_email(email)
         caption_orders = co_svc.get_by_customer_email(email)
         referral_code = auth_svc.ensure_referral_code(str(customer["id"]))
-        # Enrich caption orders with subscription pause status (for subscription orders)
         try:
             from api.captions_routes import _get_subscription_pause_info
             for o in caption_orders:
@@ -519,7 +519,6 @@ def account_page():
     except Exception as e:
         print(f"[account] Error loading data: {e}")
         referral_code = None
-    # Single order for "Edit form": subscription order if any (form used for future packs), else most recent
     current_intake_order = None
     if caption_orders:
         sub_orders = [o for o in caption_orders if (o.get("stripe_subscription_id") or "").strip()]
@@ -527,14 +526,30 @@ def account_page():
     base = (Config.BASE_URL or request.url_root or "").strip().rstrip("/")
     if base and not base.startswith("http"):
         base = "https://" + base
-    return render_template('customer_dashboard.html',
-        customer=customer,
-        setups=setups,
-        caption_orders=caption_orders,
-        current_intake_order=current_intake_order,
-        base_url=base,
-        referral_code=referral_code or "",
-    )
+    return {
+        "customer": customer,
+        "setups": setups,
+        "caption_orders": caption_orders,
+        "current_intake_order": current_intake_order,
+        "base_url": base,
+        "referral_code": referral_code or "",
+    }
+
+
+@app.route('/account')
+@app.route('/account/<section>')
+@customer_login_required
+def account_page(section=None):
+    """Account dashboard: one section per page. Section in {information, history, edit-form, pause, refer}."""
+    if not get_current_customer():
+        return redirect(url_for('customer_login_page'))
+    if section is None or section not in _ACCOUNT_SECTIONS:
+        section = "information"
+    ctx = _account_context()
+    if not ctx:
+        return redirect(url_for('customer_login_page'))
+    ctx["current_section"] = section
+    return render_template("customer_dashboard.html", **ctx)
 
 
 @app.route('/dashboard')

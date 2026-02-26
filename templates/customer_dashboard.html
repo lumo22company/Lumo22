@@ -27,11 +27,11 @@
     <aside class="account-sidebar">
       <h1 class="account-sidebar-title">Your account</h1>
       <ul class="account-sidebar-nav">
-        <li><a href="#account-information">Account Information</a></li>
-        <li><a href="#history">History</a></li>
-        <li><a href="#edit-form">Edit form</a></li>
-        <li><a href="#pause-subscription">Pause Subscription</a></li>
-        <li><a href="#refer-a-friend">Refer a friend</a></li>
+        <li><a href="/account/information" class="{% if current_section == 'information' %}active{% endif %}">Account Information</a></li>
+        <li><a href="/account/history" class="{% if current_section == 'history' %}active{% endif %}">History</a></li>
+        <li><a href="/account/edit-form" class="{% if current_section == 'edit-form' %}active{% endif %}">Edit form</a></li>
+        <li><a href="/account/pause" class="{% if current_section == 'pause' %}active{% endif %}">Pause Subscription</a></li>
+        <li><a href="/account/refer" class="{% if current_section == 'refer' %}active{% endif %}">Refer a friend</a></li>
       </ul>
       <div class="account-sidebar-logout">
         <form action="/api/auth/logout" method="POST" style="margin: 0;">
@@ -41,6 +41,7 @@
     </aside>
 
     <main class="account-main">
+      {% if current_section == 'information' %}
       {% if request.args.get('billing') == 'no_sub' %}
       <div class="account-info-panel" style="margin-bottom: 1rem; background: rgba(255,200,0,0.1); border-color: rgba(255,200,0,0.3);">
         <p style="margin: 0; color: #333;">No subscription found. If you're on the monthly plan, use the link in your order emails to manage billing.</p>
@@ -51,7 +52,7 @@
       </div>
       {% endif %}
 
-      <section id="account-information" class="account-section-block">
+      <section class="account-section-block">
         <h2>Account Information</h2>
         <p class="account-section-desc">Update your email, password, and billing securely below.</p>
         <div class="account-info-panel">
@@ -88,8 +89,10 @@
           </div>
         </div>
       </section>
+      {% endif %}
 
-      <section id="history" class="account-section-block">
+      {% if current_section == 'history' %}
+      <section class="account-section-block">
         <h2>History</h2>
         {% set delivered_orders = caption_orders|selectattr('status', 'equalto', 'delivered')|list %}
         {% if delivered_orders %}
@@ -113,8 +116,10 @@
         <p><a href="/captions" style="color: #8b6914; font-weight: 500;">Get 30 Days Captions</a></p>
         {% endif %}
       </section>
+      {% endif %}
 
-      <section id="edit-form" class="account-section-block">
+      {% if current_section == 'edit-form' %}
+      <section class="account-section-block">
         <h2>Edit form</h2>
         {% if current_intake_order %}
         <p class="account-section-desc">Update your voice, topics, and preferences for future packs. Your next pack will use the form you save here.</p>
@@ -132,8 +137,10 @@
         <p><a href="/captions" style="color: #8b6914; font-weight: 500;">Get 30 Days Captions</a></p>
         {% endif %}
       </section>
+      {% endif %}
 
-      <section id="pause-subscription" class="account-section-block">
+      {% if current_section == 'pause' %}
+      <section class="account-section-block">
         <h2>Pause Subscription</h2>
         {% set sub_orders = caption_orders|selectattr('stripe_subscription_id')|list if caption_orders else [] %}
         {% if sub_orders %}
@@ -165,8 +172,10 @@
         <p><a href="/captions" style="color: #8b6914; font-weight: 500;">View 30 Days Captions</a></p>
         {% endif %}
       </section>
+      {% endif %}
 
-      <section id="refer-a-friend" class="account-section-block">
+      {% if current_section == 'refer' %}
+      <section class="account-section-block">
         <h2>Refer a friend</h2>
         {% if referral_code %}
         <p class="account-section-desc">Share your referral link — when friends sign up, they'll use your code.</p>
@@ -182,6 +191,7 @@
         <p class="account-section-desc">Referral codes are available for active customers. Make a purchase to get your unique link.</p>
         {% endif %}
       </section>
+      {% endif %}
     </main>
   </div>
 
@@ -278,22 +288,6 @@
         });
       }
 
-      // Highlight active nav on scroll
-      var sections = document.querySelectorAll('.account-section-block');
-      var navLinks = document.querySelectorAll('.account-sidebar-nav a');
-      function updateActiveLink() {
-        var activeId = null;
-        for (var i = sections.length - 1; i >= 0; i--) {
-          var rect = sections[i].getBoundingClientRect();
-          if (rect.top <= 120) { activeId = sections[i].id; break; }
-        }
-        if (!activeId && sections[0]) activeId = sections[0].id;
-        navLinks.forEach(function(link) {
-          link.classList.toggle('active', link.getAttribute('href') === '#' + activeId);
-        });
-      }
-      window.addEventListener('scroll', updateActiveLink);
-      updateActiveLink();
     })();
   </script>
 </body>
