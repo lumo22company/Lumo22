@@ -1428,7 +1428,18 @@
 .account-page-wrap .lumo-nav {
   background: #000;
 }
-.account-page-wrap .lumo-nav-links a,
+/* Captions link: same font as landing page nav */
+.account-page-wrap .lumo-nav-links a {
+  font-family: var(--font-body, 'Century Gothic', CenturyGothic, 'Apple Gothic', sans-serif);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #ffffff;
+  font-size: 0.7rem;
+  text-decoration: none;
+}
+.account-page-wrap .lumo-nav-links a:hover {
+  color: var(--lum-gold);
+}
 .account-page-wrap .lumo-nav-cta,
 .account-page-wrap .account-nav-logout-btn {
   font-family: 'Bebas Neue', sans-serif;
