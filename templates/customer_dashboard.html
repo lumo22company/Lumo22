@@ -105,13 +105,15 @@
             {% set label = biz if biz else ('Subscription' if is_sub else 'One-off') %}
             <span>{{ label }} — Pack {{ o.created_at[:10] if o.created_at else '—' }}</span>
             <span class="account-history-type account-history-type--{{ 'subscription' if is_sub else 'oneoff' }}">{{ 'Subscription' if is_sub else 'One-off' }}</span>
-            <a href="/api/captions-download?t={{ o.token }}&inline=1" target="_blank" rel="noopener" class="account-btn-link account-btn-link--primary">View captions</a>
-            <a href="/api/captions-download?t={{ o.token }}" class="account-btn-link account-btn-link--secondary">Download captions PDF</a>
-            {% if o.include_stories %}
-            <a href="/api/captions-download?t={{ o.token }}&type=stories&inline=1" target="_blank" rel="noopener" class="account-btn-link account-btn-link--primary">View Stories</a>
-            <a href="/api/captions-download?t={{ o.token }}&type=stories" class="account-btn-link account-btn-link--secondary">Download Stories PDF</a>
-            {% endif %}
-            <button type="button" class="account-btn-link account-history-delete" data-token="{{ o.token }}" onclick="deletePackFromHistory(this)" aria-label="Delete pack from history">Delete</button>
+            <div class="account-history-actions">
+              <a href="/api/captions-download?t={{ o.token }}&inline=1" target="_blank" rel="noopener" class="account-btn-link account-btn-link--primary">View captions</a>
+              <a href="/api/captions-download?t={{ o.token }}" class="account-btn-link account-btn-link--secondary">Download captions PDF</a>
+              {% if o.include_stories %}
+              <a href="/api/captions-download?t={{ o.token }}&type=stories&inline=1" target="_blank" rel="noopener" class="account-btn-link account-btn-link--primary">View Stories</a>
+              <a href="/api/captions-download?t={{ o.token }}&type=stories" class="account-btn-link account-btn-link--secondary">Download Stories PDF</a>
+              {% endif %}
+              <button type="button" class="account-btn-link account-history-delete" data-token="{{ o.token }}" onclick="deletePackFromHistory(this)" aria-label="Delete pack from history">Delete</button>
+            </div>
           </div>
           {% endfor %}
         </div>

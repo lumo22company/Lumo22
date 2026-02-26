@@ -1626,12 +1626,23 @@
   border-radius: 4px;
   flex-shrink: 0;
 }
+.account-history-item .account-history-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin-left: auto;
+}
 
-/* Mobile: pack title on own line, buttons wrap below */
+/* Mobile: pack title on own line, buttons wrap below (left-aligned) */
 @media (max-width: 640px) {
   .account-history-item > span:first-of-type {
     width: 100%;
     margin-bottom: 0.25rem;
+  }
+  .account-history-item .account-history-actions {
+    margin-left: 0;
+    width: 100%;
   }
 }
 .account-history-item .account-history-type--subscription {
