@@ -1496,7 +1496,7 @@
   padding: 0.6rem 0.75rem;
   font-family: 'Bebas Neue', sans-serif;
   font-weight: 400;
-  font-size: 1.15rem;
+  font-size: 1.35rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: #ffffff;
@@ -1967,7 +1967,7 @@
     flex-wrap: wrap;
     gap: 0.25rem;
   }
-  .account-sidebar-nav a { padding: 0.4rem 0.6rem; font-size: 1rem; }
+  .account-sidebar-nav a { padding: 0.4rem 0.6rem; font-size: 1.15rem; }
   .account-sidebar-logout { margin-top: 0; padding-top: 0; border-top: none; margin-left: auto; }
   .account-main { padding: 1.5rem 1rem 3rem; }
 }
