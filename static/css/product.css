@@ -1540,6 +1540,9 @@
   margin-top: 0;
   margin-bottom: 1rem;
 }
+.account-main .account-section-block > p.account-section-desc {
+  color: #ffffff;
+}
 .account-main h2 {
   font-family: var(--font-display, 'Bebas Neue', sans-serif);
   font-size: 1.75rem;
@@ -1550,7 +1553,7 @@
 .account-main .account-section-block {
   margin-bottom: 2.5rem;
 }
-.account-main .account-section-block > p {
+.account-main .account-section-block > p:not(.account-section-desc) {
   color: #444;
   font-size: 0.95rem;
   line-height: 1.5;
