@@ -434,17 +434,17 @@ def send_login_link():
         from services.notifications import NotificationService
         svc = CustomerAuthService()
         customer = svc.get_by_email(email)
-        if not customer:
+        if not customer or not isinstance(customer, dict):
             return jsonify({"ok": True, "message": "If an account exists, we've sent a login link to that email."}), 200
         customer_id = customer.get("id")
-        customer_email = customer.get("email") or email
-        if not customer_id:
+        customer_email = (customer.get("email") or email) if isinstance(customer.get("email"), str) else email
+        if customer_id is None or customer_id == "":
             logging.warning("[Login link] Customer row missing id for %s", email)
             return jsonify({"ok": False, "error": "Account data invalid. Try again."}), 500
         # Always use a known-good base so the link is never blank in the email (env can be empty on Railway)
         fallback_base = "https://lumo-22-production.up.railway.app"
         raw = (getattr(Config, "BASE_URL", None) or "").strip() or fallback_base
-        base = "".join(c for c in raw if ord(c) >= 32 and c not in "\n\r\t").rstrip("/") or fallback_base
+        base = "".join(c for c in (raw if isinstance(raw, str) else "") if ord(c) >= 32 and c not in "\n\r\t").rstrip("/") or fallback_base
         if not base.startswith("http"):
             base = "https://" + base.lstrip("/")
         login_token = _create_login_token(str(customer_id), customer_email)
@@ -460,7 +460,10 @@ def send_login_link():
         return jsonify({"ok": True, "message": "Check your email for the login link."}), 200
     except Exception as e:
         logging.exception("[Login link] Error: %s", e)
-        return jsonify({"ok": False, "error": "Something went wrong. Try again."}), 500
+        err_msg = "Something went wrong. Try again."
+        if Config.FLASK_DEBUG or (getattr(Config, "FLASK_ENV", "") == "development"):
+            err_msg = str(e)
+        return jsonify({"ok": False, "error": err_msg}), 500
 
 
 @app.route('/forgot-password')

@@ -130,11 +130,12 @@ def _password_reset_email_html(reset_url: str) -> str:
 def _login_link_email_html(account_url: str) -> str:
     """Build branded HTML for login link email with the link as an explicit <a> tag and plain text."""
     import html
+    account_url = (account_url if isinstance(account_url, str) else "") or ""
     if not account_url or not account_url.startswith("http"):
         account_url = ""
     safe_url = html.escape(account_url, quote=True)
-    base = (Config.BASE_URL or "").strip().rstrip("/")
-    if not base or not base.startswith("http"):
+    base = (getattr(Config, "BASE_URL", None) or "").strip().rstrip("/")
+    if not base or not isinstance(base, str) or not base.startswith("http"):
         base = "https://lumo22.com"
     logo_url = f"{base}/static/images/logo.png"
     return f"""<!DOCTYPE html>
@@ -290,6 +291,7 @@ If you didn't request this, you can ignore this email. Your password will stay t
 
     def send_login_link_email(self, to_email: str, account_url: str) -> bool:
         """Send login link email with plain and HTML body; link is explicit in HTML so it always appears."""
+        account_url = (account_url if isinstance(account_url, str) else "") or ""
         if not account_url or not account_url.startswith("http"):
             print("[SendGrid] Login link NOT sent: invalid account_url (empty or not http)")
             return False
