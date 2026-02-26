@@ -82,6 +82,8 @@
     .intake-checkbox-label:has(input:disabled) { cursor: not-allowed; color: #888; pointer-events: none; }
     .intake-add-platform-link { color: var(--lum-gold, #c9a227); font-weight: 600; text-decoration: none; }
     .intake-add-platform-link:hover { text-decoration: underline; }
+    .intake-page .btn-go-account { display: inline-block; margin-top: 0.5rem; padding: 0.6rem 1.25rem; background: #1a1a1a; color: var(--lum-gold, #c9a227); font-weight: 600; text-decoration: none; border-radius: 8px; border: none; font-size: 0.95rem; }
+    .intake-page .btn-go-account:hover { background: #333; color: var(--lum-gold, #c9a227); }
     .intake-add-platform-note { color: var(--lum-text-muted, #666); }
   </style>
 </head>
@@ -127,7 +129,7 @@
           </form>
         </div>
         <p id="ca-done" style="display:none; margin:0; color: var(--lum-gold);">Account created! <a href="/account" style="color:inherit;">Go to your account</a></p>
-        <p id="ca-already-logged-in" style="display:none; margin:0; font-weight: 500;">You're logged in. <a href="/account" style="color: var(--lum-gold);">Go to your account</a></p>
+        <p id="ca-already-logged-in" style="display:none; margin:0; font-weight: 500;">You're logged in. <a href="/account" class="btn-go-account">Go to your account</a></p>
         <p id="ca-already-has-account" style="display:none; margin:0; font-weight: 500;">You already have an account. <a href="/login" style="color: var(--lum-gold);">Log in</a></p>
       </div>
     </div>
