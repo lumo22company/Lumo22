@@ -525,6 +525,17 @@ def captions_intake_submit():
     if not business_name:
         return jsonify({"error": "Business name is required. Please enter your business name."}), 400
 
+    try:
+        order_service = CaptionOrderService()
+    except ValueError:
+        return jsonify({"error": "Service unavailable"}), 503
+    order = order_service.get_by_token(token)
+    if not order:
+        return jsonify({"error": "Invalid or expired link. Use the link from your order email."}), 404
+
+    order_has_stories = bool(order.get("include_stories"))
+    order_platforms_count = max(1, int(order.get("platforms_count", 1)))
+
     include_hashtags = data.get("include_hashtags")
     if isinstance(include_hashtags, bool):
         pass
@@ -567,30 +578,40 @@ def captions_intake_submit():
         "launch_event_description": (data.get("launch_event_description") or "").strip(),
         "caption_examples": (data.get("caption_examples") or "").strip(),
         "caption_language": (data.get("caption_language") or "English (UK)").strip(),
-        "include_stories": bool(data.get("include_stories")) or bool(order.get("include_stories")),
+        "include_stories": order_has_stories and (bool(data.get("include_stories")) or bool((order.get("intake") or {}).get("include_stories"))),
         "align_stories_to_captions": align_flag,
     }
 
-    try:
-        order_service = CaptionOrderService()
-    except ValueError as e:
-        return jsonify({"error": "Service unavailable"}), 503
-
-    order = order_service.get_by_token(token)
-    if not order:
-        return jsonify({"error": "Invalid or expired link. Use the link from your order email."}), 404
+    form_wants_stories = bool(data.get("include_stories"))
+    if form_wants_stories and not order_has_stories:
+        base = (Config.BASE_URL or request.url_root or "").strip().rstrip("/")
+        if base and not base.startswith("http"):
+            base = "https://" + base
+        upgrade_url = f"{base}/captions?stories=1" if base else "/captions?stories=1"
+        return jsonify({
+            "error": "To include Story Ideas you need to add the add-on. Please confirm and accept the new price. Note: Story Ideas added later are delivered with your next caption pack, not instantly.",
+            "upgrade_required": True,
+            "upgrade_type": "stories",
+            "upgrade_url": upgrade_url,
+        }), 400
 
     order_id = order["id"]
     status = order.get("status") or ""
-    platforms_count = max(1, int(order.get("platforms_count", 1)))
 
     if status == "awaiting_intake":
         platform_val = (intake.get("platform") or "").strip()
         if platform_val and "," in platform_val:
             platform_parts = [p.strip() for p in platform_val.split(",") if p.strip()]
-            if len(platform_parts) > platforms_count:
+            if len(platform_parts) > order_platforms_count:
+                base = (Config.BASE_URL or request.url_root or "").strip().rstrip("/")
+                if base and not base.startswith("http"):
+                    base = "https://" + base
+                upgrade_url = f"{base}/captions?platforms={len(platform_parts)}" if base else f"/captions?platforms={len(platform_parts)}"
                 return jsonify({
-                    "error": f"You selected {len(platform_parts)} platforms but your order includes {platforms_count}. Please select no more than {platforms_count}."
+                    "error": f"You selected {len(platform_parts)} platforms but your order includes {order_platforms_count}. To get more platforms, please confirm and accept the new price. Extra platforms are delivered with your next caption pack, not instantly.",
+                    "upgrade_required": True,
+                    "upgrade_type": "platforms",
+                    "upgrade_url": upgrade_url,
                 }), 400
         if not order_service.save_intake(order_id, intake):
             return jsonify({"error": "Failed to save. Please try again."}), 500
@@ -620,9 +641,16 @@ def captions_intake_submit():
         platform_val = (intake.get("platform") or "").strip()
         if platform_val and "," in platform_val:
             platform_parts = [p.strip() for p in platform_val.split(",") if p.strip()]
-            if len(platform_parts) > platforms_count:
+            if len(platform_parts) > order_platforms_count:
+                base = (Config.BASE_URL or request.url_root or "").strip().rstrip("/")
+                if base and not base.startswith("http"):
+                    base = "https://" + base
+                upgrade_url = f"{base}/captions?platforms={len(platform_parts)}" if base else f"/captions?platforms={len(platform_parts)}"
                 return jsonify({
-                    "error": f"You selected {len(platform_parts)} platforms but your order includes {platforms_count}. Please select no more than {platforms_count}."
+                    "error": f"You selected {len(platform_parts)} platforms but your order includes {order_platforms_count}. To get more platforms, please confirm and accept the new price. Extra platforms are delivered with your next caption pack, not instantly.",
+                    "upgrade_required": True,
+                    "upgrade_type": "platforms",
+                    "upgrade_url": upgrade_url,
                 }), 400
         if not order_service.update_intake_only(order_id, intake):
             return jsonify({"error": "Failed to update. Please try again."}), 500

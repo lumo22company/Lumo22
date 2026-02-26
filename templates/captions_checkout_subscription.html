@@ -42,7 +42,7 @@
       {% else %}
       <p id="checkout-platform-note" class="checkout-order-summary">{% if selected %}Platforms: {{ selected }}{% if stories %} + 30 Days Story Ideas{% endif %}{% elif platforms|default(1) > 1 %}{{ platforms }} platforms included.{% if stories %} + 30 Days Story Ideas{% endif %}{% elif stories %}30 Days Story Ideas{% endif %}</p>
       {% if add_stories_url %}<p style="font-size: 0.9rem; color: var(--lum-text-muted); margin: 0.5rem 0 0;">Using Instagram &amp; Facebook? <a href="{{ add_stories_url }}" style="color: var(--lum-gold); font-weight: 600;">Add Story Ideas to this order</a>. If you add them later from your account, they're delivered with your <strong>next</strong> pack, not instantly.</p>{% endif %}
-      {% if add_platforms_url %}<p style="font-size: 0.9rem; color: var(--lum-text-muted); margin: 0.35rem 0 0;">Need more platforms? <a href="{{ add_platforms_url }}" style="color: var(--lum-gold); font-weight: 600;">Change your selection</a>.</p>{% endif %}
+      {% if add_platforms_url %}<p style="font-size: 0.9rem; color: var(--lum-text-muted); margin: 0.35rem 0 0;">Need more platforms? <a href="{{ add_platforms_url }}" style="color: var(--lum-gold); font-weight: 600;">Change your selection</a>. If you add more platforms later from your account, they're delivered with your <strong>next</strong> pack, not instantly.</p>{% endif %}
       {% endif %}
       <p class="price-note">New 30-day caption pack each month. Renews monthly until you cancel. Cancel anytime from your Stripe customer portal. You’ll complete a short form after payment; your captions are ready within 15 minutes.</p>
 
