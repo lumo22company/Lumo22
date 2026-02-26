@@ -80,6 +80,9 @@
     .intake-checkbox-label input { width: auto; margin: 0; }
     .intake-checkbox-label input:disabled { cursor: not-allowed; opacity: 0.5; }
     .intake-checkbox-label:has(input:disabled) { cursor: not-allowed; color: #888; pointer-events: none; }
+    .intake-add-platform-link { color: var(--lum-gold, #c9a227); font-weight: 600; text-decoration: none; }
+    .intake-add-platform-link:hover { text-decoration: underline; }
+    .intake-add-platform-note { color: var(--lum-text-muted, #666); }
   </style>
 </head>
 <body class="lumo-landing" data-current-customer-email="{{ (current_customer.email or '')|lower if current_customer else '' }}">
@@ -127,6 +130,7 @@
       </div>
     </div>
     <div id="intake-error" style="display: none; margin: 2rem 0; padding: 1.5rem; background: rgba(200,80,80,0.15); border-radius: 8px; color: var(--lum-text);"></div>
+    <div id="intake-upgrade-cta" style="display: none; margin: 0 0 2rem; padding: 1rem 0;"></div>
 
     <form id="captions-intake-form" action="#" method="post" data-platforms-count="{{ platforms_count }}">
       <input type="hidden" name="token" id="intake_token" value="{{ intake_token }}">
@@ -222,6 +226,12 @@
           <option value="TikTok" {% if prefilled_platform == 'TikTok' %}selected{% endif %}>TikTok</option>
           <option value="Pinterest" {% if prefilled_platform == 'Pinterest' %}selected{% endif %}>Pinterest</option>
         </select>
+        {% endif %}
+        {% if existing_intake and platforms_count < 4 %}
+        <p class="intake-add-platform-wrap" style="margin: 0.75rem 0 0; font-size: 0.95rem;">
+          <a href="/captions?platforms={{ platforms_count + 1 }}" class="intake-add-platform-link">Add another platform</a>
+          <span class="intake-add-platform-note"> — confirm and accept the new price on the product page.</span>
+        </p>
         {% endif %}
         <label for="platform_habits">Any platform-specific habits?</label>
         <input type="text" id="platform_habits" name="platform_habits" placeholder="e.g. shorter on Instagram, longer on LinkedIn (optional)" value="{{ existing_intake.get('platform_habits', '') }}">
@@ -483,6 +493,8 @@
           if (result.status === 200 && result.json.success) {
             var rs = document.getElementById('review-step');
             if (rs) rs.classList.remove('show');
+            var ctaEl = document.getElementById('intake-upgrade-cta');
+            if (ctaEl) { ctaEl.style.display = 'none'; ctaEl.innerHTML = ''; }
             var successEl = document.getElementById('intake-success');
             if (successEl) successEl.style.display = 'block';
             var msgEl = document.getElementById('intake-success-msg');
@@ -528,13 +540,22 @@
             }
           } else {
             var errEl = document.getElementById('intake-error');
+            var ctaEl = document.getElementById('intake-upgrade-cta');
             if (errEl) { errEl.textContent = result.json.error || 'Something didn\'t send — try again or email us at hello@lumo22.com.'; errEl.style.display = 'block'; }
+            if (ctaEl) {
+              if (result.json.upgrade_required && result.json.upgrade_url) {
+                ctaEl.innerHTML = '<a href="' + result.json.upgrade_url + '" class="btn-submit">Confirm and accept new price</a>';
+                ctaEl.style.display = 'block';
+              } else { ctaEl.style.display = 'none'; ctaEl.innerHTML = ''; }
+            }
             if (btn) { btn.disabled = false; btn.textContent = 'Send details'; }
           }
         })
         .catch(function() {
           var errEl = document.getElementById('intake-error');
           if (errEl) { errEl.textContent = 'Something didn\'t send — try again or email hello@lumo22.com.'; errEl.style.display = 'block'; }
+          var ctaEl = document.getElementById('intake-upgrade-cta');
+          if (ctaEl) { ctaEl.style.display = 'none'; ctaEl.innerHTML = ''; }
           if (btn) { btn.disabled = false; btn.textContent = 'Send details'; }
         });
     });
@@ -814,6 +835,8 @@
         .then(function(result) {
           if (result.status === 200 && result.json.success) {
             reviewStep.classList.remove('show');
+            var ctaEl = document.getElementById('intake-upgrade-cta');
+            if (ctaEl) { ctaEl.style.display = 'none'; ctaEl.innerHTML = ''; }
             var successEl = document.getElementById('intake-success');
             successEl.style.display = 'block';
             var msgEl = document.getElementById('intake-success-msg');
@@ -821,15 +844,24 @@
             var custEmail = (result.json.customer_email || '').trim();
             document.getElementById('ca-email').value = custEmail;
           } else {
-            document.getElementById('intake-error').textContent = result.json.error || 'Something didn't send — try again or email us at hello@lumo22.com.';
-            document.getElementById('intake-error').style.display = 'block';
+            var errEl = document.getElementById('intake-error');
+            var ctaEl = document.getElementById('intake-upgrade-cta');
+            if (errEl) { errEl.textContent = result.json.error || 'Something didn\'t send — try again or email us at hello@lumo22.com.'; errEl.style.display = 'block'; }
+            if (ctaEl) {
+              if (result.json.upgrade_required && result.json.upgrade_url) {
+                ctaEl.innerHTML = '<a href="' + result.json.upgrade_url + '" class="btn-submit">Confirm and accept new price</a>';
+                ctaEl.style.display = 'block';
+              } else { ctaEl.style.display = 'none'; ctaEl.innerHTML = ''; }
+            }
             btnConfirm.disabled = false;
             btnConfirm.textContent = 'Send details';
           }
         })
         .catch(function() {
-          document.getElementById('intake-error').textContent = 'Something didn't send — try again or email hello@lumo22.com.';
+          document.getElementById('intake-error').textContent = 'Something didn\'t send — try again or email hello@lumo22.com.';
           document.getElementById('intake-error').style.display = 'block';
+          var ctaEl = document.getElementById('intake-upgrade-cta');
+          if (ctaEl) { ctaEl.style.display = 'none'; ctaEl.innerHTML = ''; }
           btnConfirm.disabled = false;
           btnConfirm.textContent = 'Send details';
         });
