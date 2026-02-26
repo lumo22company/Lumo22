@@ -2029,6 +2029,28 @@
   transform: none;
 }
 
+.account-page-wrap .account-billing-portal-link {
+  display: inline-block;
+  padding: 10px 20px;
+  min-height: 44px;
+  background: #ffffff;
+  color: #000000;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border: none;
+  border-radius: var(--radius-btn);
+  transition: transform 0.3s ease-in-out, background-color 0.3s ease-in-out, color 0.3s ease-in-out;
+}
+.account-page-wrap .account-billing-portal-link:hover {
+  transform: translateY(-3px);
+  background-color: var(--lum-gold);
+  color: #000000;
+}
+
 .account-page-wrap .account-alert {
   padding: 1rem 1.25rem;
   border-radius: var(--dfd-radius);

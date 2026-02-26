@@ -153,10 +153,11 @@
 
       {% if current_section == 'pause' %}
       <section class="account-section-block">
-        <h2>Pause Subscription</h2>
+        <h2>Manage subscription</h2>
         {% set sub_orders = caption_orders|selectattr('stripe_subscription_id')|list if caption_orders else [] %}
         {% if sub_orders %}
-        <p class="account-section-desc">Pause billing for one month (no charge, no pack). You can also manage intake reminders and billing in the blocks below.</p>
+        <p class="account-section-desc">Cancel your subscription, update your billing info, or view invoices in Stripe’s secure portal. Below you can pause billing for one month and manage intake reminders.</p>
+        <p style="margin-bottom: 1.25rem;"><a href="/api/billing/portal" class="account-billing-portal-link">Manage billing</a></p>
         {% for o in sub_orders %}
         {% set pause_biz = (o.get('intake') or {}).get('business_name', '') %}
         {% set pause_label = pause_biz if pause_biz else (o.created_at[:10] if o.created_at else 'Subscription') %}
