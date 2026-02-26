@@ -1119,7 +1119,7 @@
 .dfd-addon-label input {
   width: 1rem;
   height: 1rem;
-  accent-color: var(--lum-gold);
+  accent-color: #fff200;
   flex-shrink: 0;
 }
 .dfd-addon-label:hover { color: var(--lum-text); }

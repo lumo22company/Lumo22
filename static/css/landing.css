@@ -110,6 +110,10 @@ body.lumo-landing {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Checkboxes: brand yellow when checked (not orange) */
+.lumo-landing input[type="checkbox"],
+input[type="checkbox"] { accent-color: #fff200; }
+
 /* ——— Nav — editorial: minimal border, transparent then solid ——— */
 .lumo-nav {
   position: fixed;
