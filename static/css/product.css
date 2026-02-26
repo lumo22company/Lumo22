@@ -1532,16 +1532,13 @@
   max-width: 720px;
 }
 .account-section-desc {
-  color: var(--lum-gold);
-  margin-top: 0;
-  margin-bottom: 1rem;
-}
-#account-information .account-section-desc {
   color: #ffffff;
   background: #000;
   padding: 0.5rem 0.75rem;
   border-radius: var(--dfd-radius);
   display: inline-block;
+  margin-top: 0;
+  margin-bottom: 1rem;
 }
 .account-main h2 {
   font-family: var(--font-display, 'Bebas Neue', sans-serif);
