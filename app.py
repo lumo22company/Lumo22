@@ -460,9 +460,8 @@ def send_login_link():
         return jsonify({"ok": True, "message": "Check your email for the login link."}), 200
     except Exception as e:
         logging.exception("[Login link] Error: %s", e)
-        err_msg = "Something went wrong. Try again."
-        if Config.FLASK_DEBUG or (getattr(Config, "FLASK_ENV", "") == "development"):
-            err_msg = str(e)
+        # Include real error in response so we can fix; remove after debugging
+        err_msg = str(e) or "Something went wrong. Try again."
         return jsonify({"ok": False, "error": err_msg}), 500
 
 
