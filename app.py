@@ -5,7 +5,7 @@ import os
 import time
 import json
 import secrets
-from flask import Flask, render_template, request, jsonify, redirect, url_for, send_from_directory, make_response
+from flask import Flask, render_template, request, jsonify, redirect, url_for, send_from_directory, make_response, session
 from flask_cors import CORS
 from config import Config
 from functools import wraps
