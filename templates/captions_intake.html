@@ -54,7 +54,7 @@
     .intake-page .review-section { margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid #ddd; }
     .intake-page .review-section:last-of-type { border-bottom: none; }
     .intake-page #review-content { min-height: 70vh; }
-    .intake-page .review-section h3 { font-size: 0.85rem; color: #555; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
+    .intake-page .review-section h3 { font-size: 1.15rem; font-family: 'Bebas Neue', sans-serif; font-weight: 400; color: #1a1a1a; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
     .intake-page .review-section p { margin: 0; font-size: 0.95rem; line-height: 1.5; color: #1a1a1a; white-space: pre-wrap; }
     .intake-page .review-section .empty { color: #666; font-style: italic; }
     .intake-page .review-actions { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1.5rem; }
@@ -76,11 +76,12 @@
     .platform-btn:hover:not(:disabled) { border-color: #888; }
     .platform-btn.selected { background: var(--lum-gold, #c9a227); border-color: var(--lum-gold, #c9a227); color: #000; }
     .platform-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .intake-checkbox-label { display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 400; font-size: 0.95rem; }
-    .intake-checkbox-label input { width: auto; margin: 0; }
+    .intake-checkbox-label { display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 400; font-size: 0.95rem; line-height: 1.4; }
+    .intake-checkbox-label input { width: auto; min-width: 1.1rem; min-height: 1.1rem; margin: 0; flex-shrink: 0; vertical-align: middle; align-self: center; }
     .intake-checkbox-label input:disabled { cursor: not-allowed; opacity: 0.5; }
     .intake-checkbox-label:has(input:disabled) { cursor: not-allowed; color: #888; pointer-events: none; }
     .intake-page input[type="checkbox"] { accent-color: #fff200; }
+    .intake-page label input[type="checkbox"] { flex-shrink: 0; vertical-align: middle; align-self: center; margin: 0; }
     .intake-add-platform-link { color: var(--lum-gold, #c9a227); font-weight: 600; text-decoration: none; }
     .intake-add-platform-link:hover { text-decoration: underline; }
     .intake-page .btn-go-account { display: inline-block; margin-top: 0.5rem; padding: 0.6rem 1.25rem; background: #1a1a1a; color: var(--lum-gold, #c9a227); font-weight: 600; text-decoration: none; border-radius: 8px; border: none; font-size: 0.95rem; }

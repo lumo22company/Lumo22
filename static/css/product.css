@@ -1121,6 +1121,9 @@
   height: 1rem;
   accent-color: #fff200;
   flex-shrink: 0;
+  vertical-align: middle;
+  align-self: center;
+  margin: 0;
 }
 .dfd-addon-label:hover { color: var(--lum-text); }
 .dfd-price-note {
