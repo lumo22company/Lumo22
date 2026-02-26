@@ -1593,14 +1593,17 @@
 .account-info-actions a:hover { text-decoration: underline; }
 
 /* History: view / download */
+.account-history-list {
+  overflow-x: auto;
+  min-width: 0;
+}
 .account-history-item {
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
   gap: 0.75rem 1rem;
   padding: 1rem 1.25rem;
-  overflow-x: auto;
-  min-width: 0;
+  min-width: max-content;
   background: #fff;
   border: 1px solid rgba(0,0,0,0.08);
   border-radius: var(--dfd-radius);
