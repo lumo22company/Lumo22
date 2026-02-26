@@ -833,6 +833,45 @@ def captions_reminder_preference():
         return jsonify({"ok": False, "error": str(e)}), 500
 
 
+@captions_bp.route("/captions/hide-pack", methods=["POST"])
+def captions_hide_pack():
+    """
+    Remove a pack from account history (hidden from list). Requires login.
+    Body: { "token": "..." }  (order intake token)
+    """
+    from api.auth_routes import get_current_customer
+
+    customer = get_current_customer()
+    if not customer:
+        return jsonify({"ok": False, "error": "Not logged in"}), 401
+    email = (customer.get("email") or "").strip().lower()
+    if not email or "@" not in email:
+        return jsonify({"ok": False, "error": "Invalid customer"}), 400
+    try:
+        data = request.get_json() or {}
+        token = (data.get("token") or "").strip()
+        if not token:
+            return jsonify({"ok": False, "error": "token required"}), 400
+        from services.caption_order_service import CaptionOrderService
+        order_service = CaptionOrderService()
+        order = order_service.get_by_token(token)
+        if not order:
+            return jsonify({"ok": False, "error": "Pack not found"}), 404
+        order_email = (order.get("customer_email") or "").strip().lower()
+        if order_email != email:
+            return jsonify({"ok": False, "error": "This pack does not belong to your account"}), 403
+        order_id = order.get("id")
+        if not order_id:
+            return jsonify({"ok": False, "error": "Invalid order"}), 400
+        if order.get("status") != "delivered":
+            return jsonify({"ok": False, "error": "Only delivered packs can be removed from history"}), 400
+        if order_service.hide_from_history(order_id):
+            return jsonify({"ok": True, "message": "Pack removed from history"}), 200
+        return jsonify({"ok": False, "error": "Could not remove pack"}), 500
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
 @captions_bp.route("/captions-send-reminders", methods=["GET"])
 def captions_send_reminders():
     """

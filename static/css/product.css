@@ -1630,6 +1630,22 @@
 .account-history-item .account-btn-link--secondary:hover {
   background: rgba(0,0,0,0.1);
 }
+.account-history-item .account-history-delete {
+  background: transparent;
+  border: 1px solid rgba(0,0,0,0.2);
+  color: #666;
+  cursor: pointer;
+  font: inherit;
+}
+.account-history-item .account-history-delete:hover {
+  color: #b00;
+  border-color: rgba(180,0,0,0.4);
+  background: rgba(180,0,0,0.06);
+}
+.account-history-item .account-history-delete:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 
 /* Edit form list */
 .account-edit-form-list { margin: 0; padding: 0; list-style: none; }

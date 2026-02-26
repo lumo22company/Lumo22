@@ -134,6 +134,10 @@ class CaptionOrderService:
     def set_failed(self, order_id: str) -> bool:
         return self.update(order_id, {"status": "failed"})
 
+    def hide_from_history(self, order_id: str) -> bool:
+        """Mark order as hidden so it no longer appears in account history (status -> hidden)."""
+        return self.update(order_id, {"status": "hidden"})
+
     def get_active_subscription_orders(self) -> list:
         """Get caption orders that have an active Stripe subscription (for reminder emails)."""
         result = self.client.table(self.table).select(
