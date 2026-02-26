@@ -40,7 +40,7 @@
       </div>
     </aside>
 
-    <main class="account-main">
+    <main class="account-main{% if current_section == 'history' %} account-main--wide{% endif %}">
       {% if current_section == 'information' %}
       {% if request.args.get('billing') == 'no_sub' %}
       <div class="account-info-panel" style="margin-bottom: 1rem; background: rgba(255,200,0,0.1); border-color: rgba(255,200,0,0.3);">

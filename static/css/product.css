@@ -1531,6 +1531,10 @@
   padding: 2rem 1.5rem 4rem;
   max-width: 720px;
 }
+/* History needs more width so View/Download/Delete stay on one line */
+.account-main.account-main--wide {
+  max-width: 1000px;
+}
 .account-section-desc {
   color: #ffffff;
   background: #000;
