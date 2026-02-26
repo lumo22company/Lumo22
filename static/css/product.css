@@ -1673,7 +1673,7 @@
   flex-shrink: 0;
 }
 .account-page-wrap .account-main .account-toggle.on {
-  background: #8b6914;
+  background: var(--lum-gold);
 }
 .account-page-wrap .account-main .account-toggle::after {
   background: #fff;
