@@ -551,6 +551,7 @@ def _account_context():
         "subscription_billing": subscription_billing,
         "base_url": base,
         "referral_code": referral_code or "",
+        "referral_discount_credits": int(customer.get("referral_discount_credits") or 0),
     }
 
 

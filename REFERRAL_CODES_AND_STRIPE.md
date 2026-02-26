@@ -44,6 +44,11 @@ You can create one Stripe Coupon (e.g. “10% off once”) and use it whenever a
 2. Set `STRIPE_REFERRAL_COUPON_ID=coupon_xxx` in your environment (e.g. Railway).
 3. The app applies this coupon when creating the Checkout Session if the customer has a valid referral (ref in URL or logged-in with `referred_by_customer_id`). Use duration “once” so it only applies to the first payment.
 
+**Referrer reward (10% off next billing period per referral)** ✅ **Implemented**
+- When a **referred friend** (customer with `referred_by_customer_id` set) completes a captions payment, the **referrer** gets +1 “referral discount credit”.
+- When the **referrer**’s own captions subscription invoice is created, we apply 10% off to that invoice and use one credit. So: 1 referral → 10% off their next 1 billing period; 2 referrals → 10% off their next 2 billing periods (no stacking: 10% twice, not 20% once).
+- **Setup:** Run `database_referral_referrer_rewards.sql` in Supabase (adds `customers.referral_discount_credits` and table `referral_discount_redemptions`). In Stripe Dashboard → Developers → Webhooks → your endpoint, add the event **invoice.created** so we can apply the discount to the referrer’s invoice before it’s paid.
+
 **Option C – Per-referrer promotion codes**
 - Create a Stripe Promotion code per referrer (e.g. code = their referral_code) all backed by the same coupon. Then either:
   - Use Option A and have friends type the referrer’s code, or

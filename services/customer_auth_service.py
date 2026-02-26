@@ -58,6 +58,15 @@ class CustomerAuthService:
             return result.data[0]
         return None
 
+    def get_by_id(self, customer_id: str) -> Optional[Dict[str, Any]]:
+        """Get customer by id."""
+        if not customer_id:
+            return None
+        result = self.client.table(self.table).select("*").eq("id", str(customer_id)).execute()
+        if result.data and len(result.data) > 0:
+            return result.data[0]
+        return None
+
     def get_by_referral_code(self, code: str) -> Optional[Dict[str, Any]]:
         """Get customer by referral code (case-insensitive)."""
         if not code or len(code) < 4:
@@ -132,6 +141,38 @@ class CustomerAuthService:
         try:
             self.client.table(self.table).update({
                 "marketing_opt_in": opt_in,
+                "updated_at": datetime.utcnow().isoformat(),
+            }).eq("id", customer_id).execute()
+            return True
+        except Exception:
+            return False
+
+    def increment_referral_discount_credits(self, customer_id: str) -> bool:
+        """Add one referral reward credit for the referrer (when a referred friend pays). Returns True on success."""
+        try:
+            cust = self.get_by_id(customer_id)
+            if not cust:
+                return False
+            current = int(cust.get("referral_discount_credits") or 0)
+            self.client.table(self.table).update({
+                "referral_discount_credits": current + 1,
+                "updated_at": datetime.utcnow().isoformat(),
+            }).eq("id", customer_id).execute()
+            return True
+        except Exception:
+            return False
+
+    def decrement_referral_discount_credits(self, customer_id: str) -> bool:
+        """Use one referral credit (when we apply 10% off to referrer's invoice). Returns True on success."""
+        try:
+            cust = self.get_by_id(customer_id)
+            if not cust:
+                return False
+            current = int(cust.get("referral_discount_credits") or 0)
+            if current <= 0:
+                return False
+            self.client.table(self.table).update({
+                "referral_discount_credits": current - 1,
                 "updated_at": datetime.utcnow().isoformat(),
             }).eq("id", customer_id).execute()
             return True

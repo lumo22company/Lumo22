@@ -243,6 +243,18 @@ Lumo 22
     else:
         print(f"[Stripe webhook] intake-link email sent to {customer_email}")
 
+    # Referrer reward: if the purchaser was referred (has account with referred_by_customer_id), give referrer one credit.
+    try:
+        from services.customer_auth_service import CustomerAuthService
+        auth_svc = CustomerAuthService()
+        buyer = auth_svc.get_by_email(customer_email)
+        if buyer and buyer.get("referred_by_customer_id"):
+            referrer_id = str(buyer["referred_by_customer_id"])
+            if auth_svc.increment_referral_discount_credits(referrer_id):
+                print(f"[Stripe webhook] Referrer reward: +1 credit for customer {referrer_id[:8]}... (referred friend paid)")
+    except Exception as e:
+        print(f"[Stripe webhook] Referrer credit increment failed (non-fatal): {e}")
+
 
 def _get_session_amount_total(session):
     """Get amount_total from session; for subscriptions it may be in line_items or require a fetch."""
@@ -566,6 +578,55 @@ def stripe_webhook():
             thread = threading.Thread(target=_run_generation_and_deliver, args=(order_id,))
             thread.daemon = True
             thread.start()
+            return jsonify({"received": True}), 200
+
+        if event_type == "invoice.created":
+            # Apply referrer 10% discount to referrer's next billing period(s). One credit per referred friend; one credit consumed per invoice.
+            invoice = event.get("data", {}).get("object") if isinstance(event, dict) else None
+            if not invoice or not isinstance(invoice, dict):
+                return jsonify({"received": True}), 200
+            sub_id = (invoice.get("subscription") or "").strip()
+            if not sub_id:
+                return jsonify({"received": True}), 200
+            invoice_id = (invoice.get("id") or "").strip()
+            if not invoice_id:
+                return jsonify({"received": True}), 200
+            from services.caption_order_service import CaptionOrderService
+            from services.customer_auth_service import CustomerAuthService
+            from services.referral_reward_service import ReferralRewardService
+            order_service = CaptionOrderService()
+            order = order_service.get_by_stripe_subscription_id(sub_id)
+            if not order:
+                return jsonify({"received": True}), 200
+            customer_email = (order.get("customer_email") or "").strip()
+            if not customer_email:
+                return jsonify({"received": True}), 200
+            auth_svc = CustomerAuthService()
+            customer = auth_svc.get_by_email(customer_email)
+            if not customer:
+                return jsonify({"received": True}), 200
+            credits = int(customer.get("referral_discount_credits") or 0)
+            if credits <= 0:
+                return jsonify({"received": True}), 200
+            reward_svc = ReferralRewardService()
+            if reward_svc.has_redeemed_for_invoice(invoice_id):
+                return jsonify({"received": True}), 200
+            coupon_id = (getattr(Config, "STRIPE_REFERRAL_COUPON_ID", None) or "").strip()
+            if not coupon_id:
+                return jsonify({"received": True}), 200
+            try:
+                import stripe
+                stripe.api_key = Config.STRIPE_SECRET_KEY
+                stripe.Invoice.modify(
+                    invoice_id,
+                    discounts=[{"coupon": coupon_id}],
+                )
+            except Exception as e:
+                print(f"[Stripe webhook] invoice.created: failed to apply referrer discount to {invoice_id[:20]}...: {e}")
+                return jsonify({"received": True}), 200
+            auth_svc.decrement_referral_discount_credits(str(customer["id"]))
+            reward_svc.record_redemption(str(customer["id"]), invoice_id)
+            print(f"[Stripe webhook] invoice.created: applied referrer 10% to invoice {invoice_id[:20]}... for {customer_email}")
             return jsonify({"received": True}), 200
 
         if event_type == "customer.subscription.deleted":

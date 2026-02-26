@@ -248,6 +248,9 @@
             <button type="button" class="dfd-btn dfd-btn-secondary referral-copy" onclick="copyReferralLink()">Copy link</button>
           </div>
           <p class="account-settings-desc" style="margin-top: 0.5rem; color: #444;">Or share your code: <strong>{{ referral_code }}</strong></p>
+        {% if referral_discount_credits|default(0) > 0 %}
+        <p class="account-settings-desc" style="margin-top: 0.75rem; color: var(--lum-gold); font-weight: 600;">You have {{ referral_discount_credits }} referral credit{{ 's' if referral_discount_credits != 1 else '' }} — 10% off your next {{ referral_discount_credits }} billing period{{ 's' if referral_discount_credits != 1 else '' }}.</p>
+        {% endif %}
         </div>
         {% else %}
         <p class="account-section-desc">Referral codes are available for active customers. Make a purchase to get your unique link.</p>
