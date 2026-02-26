@@ -154,7 +154,10 @@
         {% if sub_orders %}
         <p class="account-section-desc">Pause billing for one month (no charge, no pack). You can also manage intake reminders and billing in the blocks below.</p>
         {% for o in sub_orders %}
+        {% set pause_biz = (o.get('intake') or {}).get('business_name', '') %}
+        {% set pause_label = pause_biz if pause_biz else (o.created_at[:10] if o.created_at else 'Subscription') %}
         <div class="account-pause-block" style="margin-bottom: 1rem;">
+          <div class="account-pause-panel-title" style="font-size: 0.9rem; font-weight: 600; color: #000; margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(0,0,0,0.08);">{{ pause_label }}</div>
           <div class="account-settings-row" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid rgba(0,0,0,0.06);">
             <div>
               <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Intake reminders</div>

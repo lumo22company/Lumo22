@@ -132,7 +132,7 @@
       <input type="hidden" name="token" id="intake_token" value="{{ intake_token }}">
       <div class="form-section">
         <h2>Business</h2>
-        <label for="business_name">What is your business name?</label>
+        <label for="business_name">What is your business name? <span style="color:#999;">(required)</span></label>
         <input type="text" id="business_name" name="business_name" required placeholder="e.g. Lumo 22, Acme Coaching" value="{{ existing_intake.get('business_name', '') }}">
         <label for="business_type">What type of business do you run?</label>
         <select id="business_type" name="business_type">

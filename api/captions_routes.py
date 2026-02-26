@@ -507,6 +507,10 @@ def captions_intake_submit():
     if not token:
         return jsonify({"error": "Missing token. Use the link from your order email."}), 400
 
+    business_name = (data.get("business_name") or "").strip()
+    if not business_name:
+        return jsonify({"error": "Business name is required. Please enter your business name."}), 400
+
     include_hashtags = data.get("include_hashtags")
     if isinstance(include_hashtags, bool):
         pass
