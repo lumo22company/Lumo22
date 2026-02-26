@@ -600,8 +600,12 @@ def not_found(error):
 
 @app.errorhandler(500)
 def internal_error(error):
-    # Surface real error so we can fix; revert to generic message after debugging
-    err_msg = getattr(error, 'description', None) or str(error) if error else 'Internal server error'
+    # Unwrap Werkzeug's InternalServerError to get the real exception message
+    orig = getattr(error, 'original_exception', None)
+    if orig is not None:
+        err_msg = "{}: {}".format(type(orig).__name__, str(orig))
+    else:
+        err_msg = getattr(error, 'description', None) or (str(error) if error else 'Internal server error')
     return jsonify({'error': err_msg or 'Internal server error'}), 500
 
 if __name__ == '__main__':
