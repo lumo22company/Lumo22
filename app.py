@@ -463,9 +463,7 @@ def send_login_link():
         return jsonify({"ok": True, "message": "Check your email for the login link."}), 200
     except Exception as e:
         logging.exception("[Login link] Error: %s", e)
-        # Include real error in response so we can fix; remove after debugging
-        err_msg = str(e) or "Something went wrong. Try again."
-        return jsonify({"ok": False, "error": err_msg}), 500
+        return jsonify({"ok": False, "error": "Something went wrong. Try again."}), 500
 
 
 @app.route('/forgot-password')
@@ -600,13 +598,7 @@ def not_found(error):
 
 @app.errorhandler(500)
 def internal_error(error):
-    # Unwrap Werkzeug's InternalServerError to get the real exception message
-    orig = getattr(error, 'original_exception', None)
-    if orig is not None:
-        err_msg = "{}: {}".format(type(orig).__name__, str(orig))
-    else:
-        err_msg = getattr(error, 'description', None) or (str(error) if error else 'Internal server error')
-    return jsonify({'error': err_msg or 'Internal server error'}), 500
+    return jsonify({'error': 'Internal server error'}), 500
 
 if __name__ == '__main__':
     # Initialize services
