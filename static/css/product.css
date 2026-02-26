@@ -1595,18 +1595,44 @@
 /* History: view / download */
 .account-history-item {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 0.75rem 1rem;
   padding: 1rem 1.25rem;
+  overflow-x: auto;
+  min-width: 0;
   background: #fff;
   border: 1px solid rgba(0,0,0,0.08);
   border-radius: var(--dfd-radius);
   margin-bottom: 0.75rem;
   box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
-.account-history-item span { font-weight: 500; color: #000; }
+.account-history-item span {
+  font-weight: 500;
+  color: #000;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.account-history-item .account-history-type {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.account-history-item .account-history-type--subscription {
+  background: rgba(0,0,0,0.08);
+  color: #333;
+}
+.account-history-item .account-history-type--oneoff {
+  background: rgba(0,0,0,0.06);
+  color: #666;
+  border: 1px solid rgba(0,0,0,0.12);
+}
 .account-history-item .account-btn-link {
+  flex-shrink: 0;
   padding: 0.4rem 0.75rem;
   font-size: 0.9rem;
   text-decoration: none;
