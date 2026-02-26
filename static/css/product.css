@@ -1444,7 +1444,7 @@
   background: #ffffff;
   color: #000000;
   font-weight: 600;
-  font-size: 0.7rem;
+  font-size: 0.9rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   border: none;
@@ -1526,6 +1526,7 @@
   color: #fff;
   border: 1px solid rgba(255,255,255,0.25);
   font-family: 'Bebas Neue', sans-serif;
+  font-size: 1rem;
 }
 .account-sidebar-logout .dfd-btn:hover {
   background: var(--lum-gold);
