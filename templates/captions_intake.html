@@ -505,12 +505,14 @@
             if (successEl) successEl.style.display = 'block';
             var msgEl = document.getElementById('intake-success-msg');
             if (msgEl) {
-              if (result.json.is_subscription) {
-                msgEl.textContent = "Your captions are on the way. Create an account to manage your subscription, re-download captions, and cancel anytime.";
-              } else if (result.json.message) {
+              if (result.json.message) {
                 msgEl.textContent = result.json.message;
+              } else if (result.json.is_subscription) {
+                msgEl.textContent = "Your captions are on the way. Create an account to manage your subscription, re-download captions, and cancel anytime.";
               }
             }
+            var formEl = document.getElementById('captions-intake-form');
+            if (formEl) formEl.style.display = 'none';
             var createAccountBox = document.getElementById('create-account-box');
             var caRequiredNote = document.getElementById('ca-required-note');
             var caCreateState = document.getElementById('ca-create-state');
@@ -847,6 +849,8 @@
             successEl.style.display = 'block';
             var msgEl = document.getElementById('intake-success-msg');
             if (msgEl && result.json.message) msgEl.textContent = result.json.message;
+            var formEl = document.getElementById('captions-intake-form');
+            if (formEl) formEl.style.display = 'none';
             var custEmail = (result.json.customer_email || '').trim();
             document.getElementById('ca-email').value = custEmail;
           } else {
