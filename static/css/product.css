@@ -1673,6 +1673,8 @@
 }
 .account-referral-block .account-settings-label { color: #000; }
 .account-referral-block .account-settings-desc { color: #444; }
+.account-referral-block .referral-copy { color: #000; }
+.account-referral-block .referral-copy:hover { color: #000; }
 
 /* Toggle on light account page */
 .account-page-wrap .account-main .account-toggle {
@@ -1931,6 +1933,10 @@
 }
 .account-page-wrap .referral-copy {
   flex-shrink: 0;
+  color: #000;
+}
+.account-page-wrap .referral-copy:hover {
+  color: #000;
 }
 
 .account-page-wrap .account-pause-badge {
