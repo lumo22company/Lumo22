@@ -1467,15 +1467,16 @@
   top: 0;
   max-height: 100vh;
   overflow-y: auto;
+  background: #000;
 }
 .account-sidebar-title {
   font-family: var(--font-display, 'Bebas Neue', sans-serif);
   font-size: 1.5rem;
   letter-spacing: 0.02em;
-  color: #000;
+  color: #fff;
   margin: 0 0 1.5rem;
   padding-bottom: 0.75rem;
-  border-bottom: 2px solid rgba(0,0,0,0.1);
+  border-bottom: 2px solid rgba(255,255,255,0.15);
 }
 .account-sidebar-nav {
   list-style: none;
@@ -1488,36 +1489,40 @@
   padding: 0.6rem 0.75rem;
   font-family: var(--dfd-font-condensed);
   font-weight: 600;
-  font-size: 0.95rem;
-  color: #333;
+  font-size: 0.9rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #ffffff;
   text-decoration: none;
   border-radius: var(--dfd-radius);
   margin-bottom: 0.25rem;
   transition: background 0.15s, color 0.15s;
 }
 .account-sidebar-nav a:hover {
-  background: rgba(0,0,0,0.06);
-  color: #000;
+  background: rgba(255,255,255,0.08);
+  color: #ffffff;
 }
 .account-sidebar-nav a.active {
-  background: rgba(0,0,0,0.08);
-  color: #000;
+  color: var(--lum-gold);
+  background: rgba(255,242,0,0.12);
 }
 .account-sidebar-logout {
   margin-top: 2rem;
   padding-top: 1rem;
-  border-top: 1px solid rgba(0,0,0,0.1);
+  border-top: 1px solid rgba(255,255,255,0.15);
 }
 .account-sidebar-logout form { margin: 0; }
 .account-sidebar-logout .dfd-btn {
   width: 100%;
   justify-content: center;
-  background: rgba(0,0,0,0.08);
-  color: #000;
-  border: 1px solid rgba(0,0,0,0.15);
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.25);
 }
 .account-sidebar-logout .dfd-btn:hover {
-  background: rgba(0,0,0,0.12);
+  background: var(--lum-gold);
+  color: #000;
+  border-color: var(--lum-gold);
 }
 
 .account-main {
@@ -1525,6 +1530,11 @@
   min-width: 0;
   padding: 2rem 1.5rem 4rem;
   max-width: 720px;
+}
+.account-section-desc {
+  color: var(--lum-gold);
+  margin-top: 0;
+  margin-bottom: 1rem;
 }
 .account-main h2 {
   font-family: var(--font-display, 'Bebas Neue', sans-serif);
@@ -1707,7 +1717,7 @@
     flex-wrap: wrap;
     gap: 0.25rem;
   }
-  .account-sidebar-nav a { padding: 0.4rem 0.6rem; font-size: 0.9rem; }
+  .account-sidebar-nav a { padding: 0.4rem 0.6rem; font-size: 0.85rem; }
   .account-sidebar-logout { margin-top: 0; padding-top: 0; border-top: none; margin-left: auto; }
   .account-main { padding: 1.5rem 1rem 3rem; }
 }

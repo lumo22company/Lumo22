@@ -53,7 +53,7 @@
 
       <section id="account-information" class="account-section-block">
         <h2>Account Information</h2>
-        <p>Update your email, password, and billing securely below.</p>
+        <p class="account-section-desc">Update your email, password, and billing securely below.</p>
         <div class="account-info-panel">
           <div class="account-info-row">
             <div>
@@ -93,7 +93,7 @@
         <h2>History</h2>
         {% set delivered_orders = caption_orders|selectattr('status', 'equalto', 'delivered')|list %}
         {% if delivered_orders %}
-        <p>View or download your previous packs. Each pack is available as a PDF; if you added Story Ideas, you get a separate Stories PDF.</p>
+        <p class="account-section-desc">View or download your previous packs. Each pack is available as a PDF; if you added Story Ideas, you get a separate Stories PDF.</p>
         <div class="account-history-list">
           {% for o in delivered_orders %}
           <div class="account-history-item">
@@ -108,7 +108,7 @@
           {% endfor %}
         </div>
         {% else %}
-        <p>No delivered packs yet. When your first pack is ready, it will appear here with view and download options.</p>
+        <p class="account-section-desc">No delivered packs yet. When your first pack is ready, it will appear here with view and download options.</p>
         <p><a href="/captions" style="color: #8b6914; font-weight: 500;">Get 30 Days Captions</a></p>
         {% endif %}
       </section>
@@ -116,7 +116,7 @@
       <section id="edit-form" class="account-section-block">
         <h2>Edit form</h2>
         {% if current_intake_order %}
-        <p>Update your voice, topics, and preferences for future packs. Your next pack will use the form you save here.</p>
+        <p class="account-section-desc">Update your voice, topics, and preferences for future packs. Your next pack will use the form you save here.</p>
         <ul class="account-edit-form-list">
           <li>
             {% if current_intake_order.status == 'awaiting_intake' %}
@@ -127,7 +127,7 @@
           </li>
         </ul>
         {% else %}
-        <p>No caption orders yet. After you purchase, you can edit your intake form here.</p>
+        <p class="account-section-desc">No caption orders yet. After you purchase, you can edit your intake form here.</p>
         <p><a href="/captions" style="color: #8b6914; font-weight: 500;">Get 30 Days Captions</a></p>
         {% endif %}
       </section>
@@ -136,7 +136,7 @@
         <h2>Pause Subscription</h2>
         {% set sub_orders = caption_orders|selectattr('stripe_subscription_id')|list if caption_orders else [] %}
         {% if sub_orders %}
-        <p>Pause billing for one month (no charge, no pack). You can also manage intake reminders and billing in the blocks below.</p>
+        <p class="account-section-desc">Pause billing for one month (no charge, no pack). You can also manage intake reminders and billing in the blocks below.</p>
         {% for o in sub_orders %}
         <div class="account-pause-block" style="margin-bottom: 1rem;">
           <div class="account-settings-row" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid rgba(0,0,0,0.06);">
@@ -160,7 +160,7 @@
         </div>
         {% endfor %}
         {% else %}
-        <p>You don't have an active subscription. Pause is only available for monthly Captions subscribers.</p>
+        <p class="account-section-desc">You don't have an active subscription. Pause is only available for monthly Captions subscribers.</p>
         <p><a href="/captions" style="color: #8b6914; font-weight: 500;">View 30 Days Captions</a></p>
         {% endif %}
       </section>
@@ -168,7 +168,7 @@
       <section id="refer-a-friend" class="account-section-block">
         <h2>Refer a friend</h2>
         {% if referral_code %}
-        <p>Share your referral link — when friends sign up, they'll use your code.</p>
+        <p class="account-section-desc">Share your referral link — when friends sign up, they'll use your code.</p>
         <div class="account-referral-block">
           <label class="account-settings-label" for="referral-link">Your referral link</label>
           <div class="referral-row" style="display: flex; gap: 0.75rem; align-items: center; margin-top: 0.5rem;">
@@ -178,7 +178,7 @@
           <p class="account-settings-desc" style="margin-top: 0.5rem; color: #444;">Or share your code: <strong>{{ referral_code }}</strong></p>
         </div>
         {% else %}
-        <p>Referral codes are available for active customers. Make a purchase to get your unique link.</p>
+        <p class="account-section-desc">Referral codes are available for active customers. Make a purchase to get your unique link.</p>
         {% endif %}
       </section>
     </main>
