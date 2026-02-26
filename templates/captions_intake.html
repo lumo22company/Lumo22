@@ -45,6 +45,8 @@
     .intake-page .back { margin-top: 2rem; }
     .intake-page .back a { color: #555; text-decoration: none; font-size: 0.95rem; }
     .intake-page .back a:hover { color: #000; }
+    .intake-page .intake-back-account { font-weight: 600; color: #000; }
+    .intake-page .intake-back-account:hover { color: var(--lum-gold); }
     .intake-page a[href] { color: #1a1a1a; }
     .intake-page a[href]:hover { color: #000; text-decoration: underline; }
     .intake-page .review-step { display: none; margin-bottom: 2rem; }
@@ -97,7 +99,11 @@
     {% if not intake_token %}
     <p class="sub" style="margin-top: 1rem;">Use the link from your order email to complete the form. If you just purchased, check your inbox for a message from us with a personalised link.</p>
     <p class="sub" style="margin-top: 0.5rem;">Haven't bought yet? <a href="/captions" style="color: var(--lum-gold);">Get 30 Days Captions</a></p>
-    <p class="back"><a href="/captions">← Back to 30 Days Captions</a></p>
+    <p class="back" style="margin-bottom: 1rem;">
+      <a href="/account/edit-form" class="intake-back-account">← Back to your account</a>
+      <span style="color: #999; margin: 0 0.5rem;">|</span>
+      <a href="/captions">30 Days Captions</a>
+    </p>
     {% else %}
     <div id="intake-success" style="display: none; margin: 2rem 0;">
       <div style="padding: 1.5rem; background: var(--lum-surface-elevated); border-radius: 8px; margin-bottom: 1rem;">
@@ -289,7 +295,11 @@
       </div>
     </div>
 
-    <p class="back"><a href="/captions">← Back to 30 Days Captions</a></p>
+    <p class="back" style="margin-bottom: 1rem;">
+      <a href="/account/edit-form" class="intake-back-account">← Back to your account</a>
+      <span style="color: #999; margin: 0 0.5rem;">|</span>
+      <a href="/captions">30 Days Captions</a>
+    </p>
     {% endif %}
   </main>
 

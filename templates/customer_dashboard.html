@@ -121,16 +121,24 @@
       {% if current_section == 'edit-form' %}
       <section class="account-section-block">
         <h2>Edit form</h2>
-        {% if current_intake_order %}
-        <p class="account-section-desc">Update your voice, topics, and preferences for future packs. Your next pack will use the form you save here.</p>
+        {% set edit_form_orders = caption_orders|selectattr('stripe_subscription_id')|list if caption_orders else [] %}
+        {% if not edit_form_orders and current_intake_order %}
+          {% set edit_form_orders = [current_intake_order] %}
+        {% endif %}
+        {% if edit_form_orders %}
+        <p class="account-section-desc">Update your voice, topics, and preferences for future packs. Your next pack will use the form you save here. Select the form by business to edit.</p>
         <ul class="account-edit-form-list">
+          {% for o in edit_form_orders %}
+          {% set biz = (o.get('intake') or {}).get('business_name', '') %}
+          {% set label = biz if biz else (o.created_at[:10] if o.created_at else 'Subscription') %}
           <li>
-            {% if current_intake_order.status == 'awaiting_intake' %}
-            <a href="/captions-intake?t={{ current_intake_order.token }}">Complete the form</a>
+            {% if o.status == 'awaiting_intake' %}
+            <a href="/captions-intake?t={{ o.token }}">Complete the form — {{ label }}</a>
             {% else %}
-            <a href="/captions-intake?t={{ current_intake_order.token }}">Edit form</a>
+            <a href="/captions-intake?t={{ o.token }}">Edit form — {{ label }}</a>
             {% endif %}
           </li>
+          {% endfor %}
         </ul>
         {% else %}
         <p class="account-section-desc">No caption orders yet. After you purchase, you can edit your intake form here.</p>
