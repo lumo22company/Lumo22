@@ -1425,6 +1425,33 @@
 .account-page-wrap .lumo-nav {
   background: #000;
 }
+/* Nav "Log out" button: match .lumo-nav-cta look */
+.account-page-wrap .account-nav-logout-btn {
+  appearance: none;
+  cursor: pointer;
+  font: inherit;
+  padding: 10px 20px;
+  min-height: 44px;
+  min-width: 44px;
+  background: #ffffff;
+  color: #000000;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  border: none;
+  border-radius: var(--radius-btn);
+  transition: transform 0.3s ease-in-out, background-color 0.3s ease-in-out, color 0.3s ease-in-out;
+}
+.account-page-wrap .account-nav-logout-btn:hover {
+  transform: translateY(-3px);
+  background-color: var(--lum-gold);
+  color: #000000;
+}
+.account-page-wrap .account-nav-logout-btn:active {
+  transform: translateY(-1px);
+}
 
 /* Two-column layout: sidebar left, main content right */
 .account-layout {

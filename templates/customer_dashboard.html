@@ -18,7 +18,9 @@
     <div class="lumo-nav-links">
       <a href="/captions">Captions</a>
     </div>
-    <a href="/account" class="lumo-nav-cta">Account</a>
+    <form action="/api/auth/logout" method="POST" style="margin: 0; display: inline;">
+      <button type="submit" class="lumo-nav-cta account-nav-logout-btn">Log out</button>
+    </form>
   </nav>
 
   <div class="account-layout">
@@ -113,18 +115,16 @@
 
       <section id="edit-form" class="account-section-block">
         <h2>Edit form</h2>
-        {% if caption_orders %}
-        <p>Update your voice, topics, and preferences for future packs. Your next pack will use the latest form you submit.</p>
+        {% if current_intake_order %}
+        <p>Update your voice, topics, and preferences for future packs. Your next pack will use the form you save here.</p>
         <ul class="account-edit-form-list">
-          {% for o in caption_orders %}
           <li>
-            {% if o.status == 'awaiting_intake' %}
-            <a href="/captions-intake?t={{ o.token }}">Complete the form — Order {{ o.created_at[:10] if o.created_at else '' }}</a>
+            {% if current_intake_order.status == 'awaiting_intake' %}
+            <a href="/captions-intake?t={{ current_intake_order.token }}">Complete the form</a>
             {% else %}
-            <a href="/captions-intake?t={{ o.token }}">Edit form — Order {{ o.created_at[:10] if o.created_at else '' }}</a>
+            <a href="/captions-intake?t={{ current_intake_order.token }}">Edit form</a>
             {% endif %}
           </li>
-          {% endfor %}
         </ul>
         {% else %}
         <p>No caption orders yet. After you purchase, you can edit your intake form here.</p>
@@ -192,14 +192,15 @@
       if (window.location.search.indexOf('login_token=') !== -1) {
         try { history.replaceState({}, '', window.location.pathname); } catch (e) {}
       }
-      var logoutForm = document.querySelector('form[action="/api/auth/logout"]');
-      if (logoutForm) {
-        logoutForm.addEventListener('submit', function(e) {
+      var logoutForms = document.querySelectorAll('form[action="/api/auth/logout"]');
+      logoutForms.forEach(function(form) {
+        form.addEventListener('submit', function(e) {
           e.preventDefault();
-          fetch('/api/auth/logout', { method: 'POST' })
-            .then(function() { window.location.href = '/'; });
+          fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' })
+            .then(function() { window.location.href = '/'; })
+            .catch(function() { window.location.href = '/'; });
         });
-      }
+      });
 
       function toggleMarketing() {
         var wrap = document.getElementById('marketing-toggle-wrap');

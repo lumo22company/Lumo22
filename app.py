@@ -519,6 +519,11 @@ def account_page():
     except Exception as e:
         print(f"[account] Error loading data: {e}")
         referral_code = None
+    # Single order for "Edit form": subscription order if any (form used for future packs), else most recent
+    current_intake_order = None
+    if caption_orders:
+        sub_orders = [o for o in caption_orders if (o.get("stripe_subscription_id") or "").strip()]
+        current_intake_order = sub_orders[0] if sub_orders else caption_orders[0]
     base = (Config.BASE_URL or request.url_root or "").strip().rstrip("/")
     if base and not base.startswith("http"):
         base = "https://" + base
@@ -526,6 +531,7 @@ def account_page():
         customer=customer,
         setups=setups,
         caption_orders=caption_orders,
+        current_intake_order=current_intake_order,
         base_url=base,
         referral_code=referral_code or "",
     )

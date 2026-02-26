@@ -83,10 +83,10 @@ def login():
 
 @auth_bp.route("/logout", methods=["POST"])
 def logout():
-    """Logout."""
+    """Clear session and redirect to home so logout works with or without JS."""
     session.pop("customer_id", None)
     session.pop("customer_email", None)
-    return jsonify({"ok": True}), 200
+    return redirect("/", code=302)
 
 
 @auth_bp.route("/me", methods=["GET"])
