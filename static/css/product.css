@@ -1406,7 +1406,7 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
-   Account page — same design system as Captions / DFD
+   Account page — light background, left sidebar, matching site fonts
    ═══════════════════════════════════════════════════════════════════════════════ */
 .account-page-wrap {
   --dfd-font-condensed: 'Encode Sans Condensed', 'Bebas Neue', sans-serif;
@@ -1415,59 +1415,274 @@
   --dfd-space: 2rem;
   --dfd-space-lg: 4rem;
   --dfd-space-xl: 6rem;
+  /* Light page background, match site (landing/product) */
+  background: var(--bg-light, #e5e5e5);
+  color: var(--text-on-light, #000);
+  font-family: var(--font-body, 'Century Gothic', CenturyGothic, 'Apple Gothic', sans-serif);
+  min-height: 100vh;
+}
+
+.account-page-wrap .lumo-nav {
+  background: #000;
+}
+
+/* Two-column layout: sidebar left, main content right */
+.account-layout {
+  display: flex;
+  flex-wrap: wrap;
+  min-height: calc(100vh - 60px);
+}
+.account-sidebar {
+  width: 260px;
+  flex-shrink: 0;
+  padding: 2rem 0 2rem 1.5rem;
+  position: sticky;
+  top: 0;
+  max-height: 100vh;
+  overflow-y: auto;
+}
+.account-sidebar-title {
+  font-family: var(--font-display, 'Bebas Neue', sans-serif);
+  font-size: 1.5rem;
+  letter-spacing: 0.02em;
+  color: #000;
+  margin: 0 0 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid rgba(0,0,0,0.1);
+}
+.account-sidebar-nav {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.account-sidebar-nav li { margin: 0; }
+.account-sidebar-nav a {
+  display: block;
+  padding: 0.6rem 0.75rem;
+  font-family: var(--dfd-font-condensed);
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #333;
+  text-decoration: none;
+  border-radius: var(--dfd-radius);
+  margin-bottom: 0.25rem;
+  transition: background 0.15s, color 0.15s;
+}
+.account-sidebar-nav a:hover {
+  background: rgba(0,0,0,0.06);
+  color: #000;
+}
+.account-sidebar-nav a.active {
+  background: rgba(0,0,0,0.08);
+  color: #000;
+}
+.account-sidebar-logout {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(0,0,0,0.1);
+}
+.account-sidebar-logout form { margin: 0; }
+.account-sidebar-logout .dfd-btn {
+  width: 100%;
+  justify-content: center;
+  background: rgba(0,0,0,0.08);
+  color: #000;
+  border: 1px solid rgba(0,0,0,0.15);
+}
+.account-sidebar-logout .dfd-btn:hover {
+  background: rgba(0,0,0,0.12);
+}
+
+.account-main {
+  flex: 1;
+  min-width: 0;
+  padding: 2rem 1.5rem 4rem;
+  max-width: 720px;
+}
+.account-main h2 {
+  font-family: var(--font-display, 'Bebas Neue', sans-serif);
+  font-size: 1.75rem;
+  letter-spacing: 0.02em;
+  color: #000;
+  margin: 0 0 1rem;
+}
+.account-main .account-section-block {
+  margin-bottom: 2.5rem;
+}
+.account-main .account-section-block > p {
+  color: #444;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0 0 1rem;
+}
+
+/* Account info panel (email, password, billing) */
+.account-info-panel {
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: var(--dfd-radius);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+}
+.account-info-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+.account-info-row:last-child { border-bottom: none; }
+.account-info-label { font-weight: 600; color: #000; font-size: 0.95rem; }
+.account-info-value { color: #444; font-size: 0.95rem; }
+.account-info-actions a {
+  color: #8b6914;
+  font-weight: 500;
+  text-decoration: none;
+}
+.account-info-actions a:hover { text-decoration: underline; }
+
+/* History: view / download */
+.account-history-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  padding: 1rem 1.25rem;
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: var(--dfd-radius);
+  margin-bottom: 0.75rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+.account-history-item span { font-weight: 500; color: #000; }
+.account-history-item .account-btn-link {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.9rem;
+  text-decoration: none;
+  border-radius: var(--dfd-radius-btn);
+  font-weight: 500;
+  transition: background 0.15s, color 0.15s;
+}
+.account-history-item .account-btn-link--primary {
+  background: #000;
+  color: #fff;
+}
+.account-history-item .account-btn-link--primary:hover {
+  background: #333;
+  color: #fff;
+}
+.account-history-item .account-btn-link--secondary {
+  background: rgba(0,0,0,0.06);
+  color: #000;
+  border: 1px solid rgba(0,0,0,0.1);
+}
+.account-history-item .account-btn-link--secondary:hover {
+  background: rgba(0,0,0,0.1);
+}
+
+/* Edit form list */
+.account-edit-form-list { margin: 0; padding: 0; list-style: none; }
+.account-edit-form-list li {
+  margin-bottom: 0.75rem;
+  padding: 1rem 1.25rem;
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: var(--dfd-radius);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+.account-edit-form-list a {
+  color: #8b6914;
+  font-weight: 500;
+  text-decoration: none;
+}
+.account-edit-form-list a:hover { text-decoration: underline; }
+
+/* Pause subscription block */
+.account-pause-block {
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: var(--dfd-radius);
+  padding: 1.5rem;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+}
+.account-pause-block .account-settings-desc { color: #444; margin-top: 0.25rem; }
+
+/* Refer a friend on light background */
+.account-referral-block {
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: var(--dfd-radius);
+  padding: 1.5rem;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+}
+.account-referral-block .referral-input {
+  border-color: rgba(0,0,0,0.15);
+  background: #f8f8f6;
+  color: #111;
+}
+.account-referral-block .account-settings-label { color: #000; }
+.account-referral-block .account-settings-desc { color: #444; }
+
+/* Toggle on light account page */
+.account-page-wrap .account-main .account-toggle {
+  background: rgba(0,0,0,0.15);
+  flex-shrink: 0;
+}
+.account-page-wrap .account-main .account-toggle.on {
+  background: #8b6914;
+}
+.account-page-wrap .account-main .account-toggle::after {
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
 }
 
 .account-page-wrap .account-hero {
-  padding: 4rem var(--space-xl) 3rem;
-  background: #0a0a0a;
+  display: none;
 }
-
-.account-page-wrap .account-hero-inner {
-  max-width: var(--max-width);
-  margin: 0 auto;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 1.5rem;
-}
-
-.account-page-wrap .account-hero h1 {
-  font-family: var(--dfd-font-condensed);
-  font-weight: 700;
-  font-size: clamp(1.75rem, 4vw, 2.25rem);
-  letter-spacing: -0.02em;
-  color: var(--lum-text);
-  margin: 0 0 0.25rem;
-}
-
-.account-page-wrap .account-hero .account-email {
-  font-size: 1rem;
-  color: var(--lum-text-muted);
-  margin: 0;
-}
-
-.account-page-wrap .account-hero .account-quick-links {
-  margin: 0.75rem 0 0;
-  font-size: 0.9rem;
-}
-
-.account-page-wrap .account-hero .account-quick-links a {
-  color: var(--lum-gold);
-  text-decoration: none;
-}
-
-.account-page-wrap .account-hero .account-quick-links a:hover {
-  text-decoration: underline;
-}
-
-.account-page-wrap .account-hero .account-quick-links span {
-  color: var(--lum-text-muted);
-  margin: 0 0.5rem;
-}
-
 .account-page-wrap .account-logout {
   flex-shrink: 0;
+}
+
+/* Footer on account page: light to match */
+.account-page-wrap .footer {
+  background: var(--bg-light, #e5e5e5);
+  color: #333;
+}
+.account-page-wrap .footer .footer-brand,
+.account-page-wrap .footer .footer-tagline,
+.account-page-wrap .footer .footer-questions,
+.account-page-wrap .footer .footer-questions a,
+.account-page-wrap .footer .footer-links a,
+.account-page-wrap .footer .footer-bottom { color: #444; }
+.account-page-wrap .footer .footer-links a:hover,
+.account-page-wrap .footer .footer-questions a:hover { color: #000; }
+
+/* Responsive: stack sidebar on small screens */
+@media (max-width: 768px) {
+  .account-layout { flex-direction: column; }
+  .account-sidebar {
+    width: 100%;
+    position: static;
+    max-height: none;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem;
+  }
+  .account-sidebar-title { margin: 0; padding: 0; border: none; }
+  .account-sidebar-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+  .account-sidebar-nav a { padding: 0.4rem 0.6rem; font-size: 0.9rem; }
+  .account-sidebar-logout { margin-top: 0; padding-top: 0; border-top: none; margin-left: auto; }
+  .account-main { padding: 1.5rem 1rem 3rem; }
 }
 
 .account-page-wrap .account-section {
