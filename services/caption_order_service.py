@@ -2,6 +2,7 @@
 Caption order service: create and update 30 Days Captions orders in Supabase.
 Used by Stripe webhook (create) and intake API (update + trigger generation).
 """
+import base64
 import re
 from typing import Dict, Any, Optional
 from supabase import create_client, Client
@@ -113,8 +114,17 @@ class CaptionOrderService:
     def set_generating(self, order_id: str) -> bool:
         return self.update(order_id, {"status": "generating"})
 
-    def set_delivered(self, order_id: str, captions_md: str) -> bool:
-        return self.update(order_id, {"status": "delivered", "captions_md": captions_md})
+    def set_delivered(
+        self, order_id: str, captions_md: str, stories_pdf_bytes: Optional[bytes] = None
+    ) -> bool:
+        """Mark order delivered; optionally store Stories PDF as base64 for account history."""
+        updates = {"status": "delivered", "captions_md": captions_md}
+        if stories_pdf_bytes is not None:
+            try:
+                updates["stories_pdf_base64"] = base64.b64encode(stories_pdf_bytes).decode("ascii")
+            except Exception:
+                pass
+        return self.update(order_id, updates)
 
     def append_pack_history(self, order_id: str, month_str: str, day_categories: list) -> bool:
         """Append one pack's day categories to pack_history (for subscription variety). day_categories: list of 30 strings."""

@@ -428,7 +428,8 @@ def _run_generation_and_deliver(order_id: str):
             print(f"[Captions] Delivery email FAILED for order {order_id} to {customer_email}: {send_error}")
             order_service.set_failed(order_id)
             return (False, send_error or "Delivery email not sent")
-        order_service.set_delivered(order_id, captions_md)
+        stories_pdf_bytes = extra_attachments[0]["content"] if extra_attachments else None
+        order_service.set_delivered(order_id, captions_md, stories_pdf_bytes=stories_pdf_bytes)
         # For subscriptions, record this pack's day categories so next month can vary
         if row.get("stripe_subscription_id"):
             day_categories = extract_day_categories_from_captions_md(captions_md)
@@ -674,12 +675,22 @@ def captions_download():
     if download_type == "stories":
         if not order.get("include_stories"):
             return jsonify({"error": "This order did not include the Stories add-on"}), 400
-        try:
-            from services.caption_pdf import build_stories_pdf, get_logo_path
-            logo_path = get_logo_path()
-            pdf_bytes = build_stories_pdf(captions_md, logo_path=logo_path)
-        except Exception as e:
-            return jsonify({"error": "Could not build Stories PDF: {}".format(str(e))}), 500
+        import base64
+        stored_b64 = (order.get("stories_pdf_base64") or "").strip()
+        if stored_b64:
+            try:
+                pdf_bytes = base64.b64decode(stored_b64)
+            except Exception:
+                pdf_bytes = None
+        else:
+            pdf_bytes = None
+        if not pdf_bytes:
+            try:
+                from services.caption_pdf import build_stories_pdf, get_logo_path
+                logo_path = get_logo_path()
+                pdf_bytes = build_stories_pdf(captions_md, logo_path=logo_path)
+            except Exception as e:
+                return jsonify({"error": "Could not build Stories PDF: {}".format(str(e))}), 500
         if not pdf_bytes:
             return jsonify({"error": "Stories PDF not available for this pack"}), 404
         filename = f"30_Days_Story_Ideas_{date_str}.pdf"
