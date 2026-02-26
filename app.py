@@ -270,7 +270,7 @@ def _parse_platforms_from_request():
 @app.route('/captions-checkout')
 def captions_checkout_page():
     """Pre-checkout page: agree to T&Cs then continue to Stripe (one-off). Supports GBP, USD, EUR."""
-    from urllib.parse import urlencode
+    from urllib.parse import urlencode, quote
     platforms = _parse_platforms_from_request()
     selected = (request.args.get("selected") or request.args.get("selected_platforms") or "").strip()
     stories = request.args.get("stories", "").strip().lower() in ("1", "true", "yes", "on")
@@ -288,6 +288,8 @@ def captions_checkout_page():
     q = urlencode(params)
     api_url = f"/api/captions-checkout?{q}" if not platforms_invalid else None
     total = prices["oneoff"] + (platforms - 1) * prices["extra_oneoff"] + (prices["stories_oneoff"] if stories else 0)
+    add_stories_url = "/captions?stories=1&platforms=" + str(platforms) + ("&selected=" + quote(selected) if selected else "") if not stories else None
+    add_platforms_url = "/captions#pricing" if platforms < 4 else None
     return render_template(
         'captions_checkout.html',
         platforms=platforms,
@@ -297,13 +299,15 @@ def captions_checkout_page():
         total_oneoff=total,
         currency_symbol=prices["symbol"],
         platforms_invalid=platforms_invalid,
+        add_stories_url=add_stories_url,
+        add_platforms_url=add_platforms_url,
     )
 
 
 @app.route('/captions-checkout-subscription')
 def captions_checkout_subscription_page():
     """Pre-checkout page for Captions subscription: agree to T&Cs then continue to Stripe. Supports GBP, USD, EUR."""
-    from urllib.parse import urlencode
+    from urllib.parse import urlencode, quote
     platforms = _parse_platforms_from_request()
     selected = (request.args.get("selected") or request.args.get("selected_platforms") or "").strip()
     stories = request.args.get("stories", "").strip().lower() in ("1", "true", "yes", "on")
@@ -321,6 +325,8 @@ def captions_checkout_subscription_page():
     q = urlencode(params)
     api_url = f"/api/captions-checkout-subscription?{q}" if not platforms_invalid else None
     total = prices["sub"] + (platforms - 1) * prices["extra_sub"] + (prices["stories_sub"] if stories else 0)
+    add_stories_url = "/captions?stories=1&platforms=" + str(platforms) + ("&selected=" + quote(selected) if selected else "") if not stories else None
+    add_platforms_url = "/captions#pricing" if platforms < 4 else None
     return render_template(
         'captions_checkout_subscription.html',
         platforms=platforms,
@@ -330,6 +336,8 @@ def captions_checkout_subscription_page():
         total_sub=total,
         currency_symbol=prices["symbol"],
         platforms_invalid=platforms_invalid,
+        add_stories_url=add_stories_url,
+        add_platforms_url=add_platforms_url,
     )
 
 @app.route('/terms')

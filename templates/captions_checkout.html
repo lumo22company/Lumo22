@@ -40,6 +40,8 @@
       <p class="checkout-platform-error" style="margin-bottom: 1rem; padding: 0.75rem 1rem; background: rgba(220,50,50,0.15); border: 1px solid rgba(220,50,50,0.4); border-radius: 8px; color: #ff9999; font-size: 0.9rem;">Please go back and select which {{ platforms }} platform(s) you want on the captions page.</p>
       {% else %}
       <p id="checkout-platform-note" class="checkout-order-summary">{% if selected %}Platforms: {{ selected }}{% if stories %} + 30 Days Story Ideas{% endif %}{% elif platforms|default(1) > 1 %}{{ platforms }} platforms included.{% if stories %} + 30 Days Story Ideas{% endif %}{% elif stories %}30 Days Story Ideas{% endif %}</p>
+      {% if add_stories_url %}<p style="font-size: 0.9rem; color: var(--lum-text-muted); margin: 0.5rem 0 0;">Using Instagram &amp; Facebook? <a href="{{ add_stories_url }}" style="color: var(--lum-gold); font-weight: 600;">Add Story Ideas to this order</a>. If you add them later from your account, they're delivered with your <strong>next</strong> pack, not instantly.</p>{% endif %}
+      {% if add_platforms_url %}<p style="font-size: 0.9rem; color: var(--lum-text-muted); margin: 0.35rem 0 0;">Need more platforms? <a href="{{ add_platforms_url }}" style="color: var(--lum-gold); font-weight: 600;">Change your selection</a>.</p>{% endif %}
       {% endif %}
       <p style="color: var(--lum-text-muted); margin-bottom: 0;">You’ll complete a short form after payment so we can tailor your captions. Ready within 15 minutes of submitting the form.</p>
 
