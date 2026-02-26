@@ -1676,7 +1676,7 @@
   flex-shrink: 0;
 }
 .account-page-wrap .account-main .account-toggle.on {
-  background: var(--lum-gold);
+  background: #000;
 }
 .account-page-wrap .account-main .account-toggle::after {
   background: #fff;
@@ -1884,7 +1884,7 @@
   flex-shrink: 0;
 }
 
-.account-page-wrap .account-toggle.on { background: var(--lum-gold); }
+.account-page-wrap .account-toggle.on { background: #000; }
 
 .account-page-wrap .account-toggle::after {
   content: '';
