@@ -1314,7 +1314,7 @@
 }
 .product-page-captions .lumo-pricing-card .lumo-offer-includes li {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 0.5rem;
   padding: 0.2em 0;
   padding-left: 0;
@@ -1325,7 +1325,7 @@
   flex-shrink: 0;
   width: 6px;
   height: 6px;
-  margin-top: 0.4em;
+  margin-top: 0;
   background: var(--lum-gold);
   border-radius: 50%;
 }
