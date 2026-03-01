@@ -1205,6 +1205,16 @@
   padding: var(--dfd-space-xl) var(--space-xl);
 }
 
+/* Platforms dropdown: yellow hover/focus (override browser orange default) */
+.product-page-captions #captions-platforms:hover,
+.product-page-captions #captions-platforms:focus,
+.product-page-captions #captions-platforms:focus-visible,
+.product-page-captions #captions-platforms:active {
+  border-color: #fff200 !important;
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(255, 242, 0, 0.4) !important;
+}
+
 .product-page-captions .product-section-title {
   font-size: clamp(1.85rem, 3.5vw, 2.5rem);
 }
