@@ -244,16 +244,16 @@
             {% endif %}
           </div>
           {% if not o.get('include_stories') %}
-          <div class="account-settings-row account-add-stories-row" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding: 1rem 0; border-bottom: none;">
-            <div>
+          <div class="account-settings-row account-add-stories-row">
+            <div class="account-add-stories-text">
               <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Story Ideas</div>
               <div class="account-settings-desc">Add 30 Days Story Ideas to this subscription. You'll be charged a prorated amount. Stories will be delivered with your <strong>next</strong> set of captions, not instantly.</div>
             </div>
             <button type="button" class="account-add-stories-btn dfd-btn dfd-btn-secondary" data-subscription-id="{{ sub_id }}" onclick="showAddStoriesModal(this)">Add Story Ideas</button>
           </div>
           {% else %}
-          <div class="account-settings-row account-remove-stories-row" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding: 1rem 0; border-bottom: none;">
-            <div>
+          <div class="account-settings-row account-remove-stories-row">
+            <div class="account-remove-stories-text">
               <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Story Ideas</div>
               <div class="account-settings-desc">Included in this subscription. You'll receive Stories with each pack. You can also remove Story Ideas from the Edit form.</div>
             </div>

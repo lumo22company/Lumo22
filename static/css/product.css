@@ -2329,6 +2329,20 @@
   cursor: not-allowed;
   transform: none;
 }
+.account-add-stories-row,
+.account-remove-stories-row {
+  align-items: flex-start;
+  border-bottom: none;
+}
+.account-add-stories-row .account-add-stories-text,
+.account-remove-stories-row .account-remove-stories-text {
+  flex: 1;
+  min-width: 0;
+}
+.account-add-stories-row .account-add-stories-btn,
+.account-remove-stories-row .account-remove-stories-btn {
+  align-self: flex-start;
+}
 
 .account-page-wrap .account-billing-portal-link {
   display: inline-flex;
