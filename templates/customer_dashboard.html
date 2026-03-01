@@ -145,7 +145,7 @@
           {% set edit_form_orders = [current_intake_order] %}
         {% endif %}
         {% if edit_form_orders %}
-        <p class="account-section-desc">Update your voice, topics, and preferences. Changes are reflected in your <strong>next</strong> captions and stories pack, not in packs already delivered. Edits are free; adding Story Ideas or extra platforms may require an additional charge. Select the form by business to edit. <strong>Want more platforms?</strong> Open the form below and use the "Add another platform" link (+£29 one-off / +£17/mo). Extra platforms are delivered with your next pack.</p>
+        <p class="account-section-desc">Update your voice, topics, and preferences. Changes are reflected in your <strong>next</strong> captions and stories pack, not in packs already delivered. Edits are free; adding Story Ideas or extra platforms may require an additional charge. Select the form by business to edit. <strong>Add or change platforms:</strong> To add more platforms, open the form and use the "Add another platform" link (+£29 one-off / +£17/mo). To change which platforms you use (e.g. swap TikTok for Pinterest) or reduce the number, edit the platform section in the form and submit—no extra charge. All changes apply to your next pack.</p>
         <ul class="account-edit-form-list">
           {% for o in edit_form_orders %}
           {% set biz = (o.get('intake') or {}).get('business_name', '') %}
@@ -171,7 +171,7 @@
         <h2>Manage subscription</h2>
         {% set sub_orders = caption_orders|selectattr('stripe_subscription_id')|list if caption_orders else [] %}
         {% if sub_orders %}
-        <p class="account-section-desc">Cancel your subscription, update your billing info, or view invoices in Stripe’s secure portal. You can use a different card for each subscription below. Add or update cards via Manage billing, then choose which card to use for each. Below you can also pause billing for one month and manage intake reminders. <strong>Need more platforms?</strong> Go to Edit form and open the form for this subscription—you'll see "Add another platform" if you have fewer than 4 (+£29 one-off / +£17/mo).</p>
+        <p class="account-section-desc">Cancel your subscription, update your billing info, or view invoices in Stripe’s secure portal. You can use a different card for each subscription below. Add or update cards via Manage billing, then choose which card to use for each. Below you can also pause billing for one month and manage intake reminders. <strong>Add or change platforms:</strong> Go to Edit form and open the form for this subscription. To add more platforms (if you have fewer than 4), use "Add another platform" (+£29 one-off / +£17/mo). To change which platforms or reduce the number, edit the platform section in the form and submit—free.</p>
         <p style="margin-bottom: 1.25rem;"><a href="/api/billing/portal" class="account-billing-portal-link">Manage billing</a></p>
         {% for o in sub_orders %}
         {% set pause_biz = (o.get('intake') or {}).get('business_name', '') %}
