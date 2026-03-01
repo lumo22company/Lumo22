@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirm email change | Lumo 22</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v={{ asset_version }}">
+  <style>
+    .auth-page { padding: 6rem 1.5rem 4rem; max-width: 420px; margin: 0 auto; }
+    .auth-page h1 { font-family: var(--font-display); font-size: 1.75rem; margin-bottom: 0.5rem; }
+    .auth-page .sub { color: var(--lum-text-muted); margin-bottom: 2rem; }
+    .auth-page .msg { margin-top: 1rem; padding: 1rem; border-radius: 8px; font-size: 0.95rem; }
+    .auth-page .msg.error { background: rgba(200,80,80,0.15); color: var(--lum-text); }
+    .auth-page .link { margin-top: 1.5rem; text-align: center; }
+    .auth-page .link a { color: var(--lum-gold); text-decoration: none; }
+    .auth-page .link a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body class="lumo-landing">
+  <nav class="lumo-nav lumo-nav-scrolled">
+    <a href="/" class="lumo-nav-logo">Lumo 22</a>
+    <div class="lumo-nav-links">
+      <a href="/captions">Captions</a>
+    </div>
+    <a href="/login" class="lumo-nav-cta lumo-nav-login">Log in</a>
+  </nav>
+
+  <main class="auth-page">
+    <h1>Confirm email change</h1>
+    <p class="sub">We're verifying your request...</p>
+    {% if error %}
+    <div class="msg error">{{ error }}</div>
+    <p class="link"><a href="/account/information">← Back to Account Information</a></p>
+    <p class="link"><a href="/login">Log in</a></p>
+    {% endif %}
+  </main>
+
+  {% include '_footer.html' %}
+</body>
+</html>

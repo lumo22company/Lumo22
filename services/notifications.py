@@ -12,35 +12,47 @@ import base64
 from twilio.rest import Client as TwilioClient
 from config import Config
 
-# Brand (from BRAND_STYLE_GUIDE.md)
+# Brand (from BRAND_STYLE_GUIDE.md) — matches caption_pdf.py aesthetic
 BRAND_BLACK = "#000000"
 BRAND_GOLD = "#fff200"
 BRAND_TEXT = "#000000"
 BRAND_MUTED = "#9a9a96"
+BRAND_TEXT_ON_DARK = "#F5F5F2"
 BRAND_FONT = "Century Gothic, CenturyGothic, Apple Gothic, sans-serif"
 
 
-def _branded_html_email(body_plain: str) -> str:
-    """Wrap plain body in Lumo 22 branded HTML (black, gold accent, footer)."""
-    import html
-    body_plain = (body_plain or "").strip()
-    # Escape HTML and linkify URLs
-    lines = body_plain.split("\n")
-    escaped_lines = []
-    for line in lines:
-        line = html.escape(line)
-        # Simple linkify: http(s)://... patterns
-        line = re.sub(
-            r"(https?://[^\s<]+)",
-            r'<a href="\1" style="color:' + BRAND_GOLD + "; text-decoration: none; border-bottom: 1px solid " + BRAND_GOLD + ';">\1</a>',
-            line,
-        )
-        escaped_lines.append(line)
-    body_html = "<br>\n".join(escaped_lines)
+def _get_logo_url() -> str:
     base = (Config.BASE_URL or "").strip().rstrip("/")
     if not base or not base.startswith("http"):
         base = "https://lumo22.com"
-    logo_url = f"{base}/static/images/logo.png"
+    return f"{base}/static/images/logo.png"
+
+
+def _email_header_html() -> str:
+    """PDF-style dark header band — black bg, gold wordmark."""
+    return f"""<tr>
+      <td style="padding: 24px 32px; background: {BRAND_BLACK}; text-align: left;">
+        <p style="margin:0; font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase; color: {BRAND_GOLD}; font-weight: 600; font-family: {BRAND_FONT};">Lumo 22</p>
+      </td>
+    </tr>"""
+
+
+def _email_footer_html() -> str:
+    """PDF-style dark footer — cohesive with header."""
+    logo_url = _get_logo_url()
+    return f"""<tr>
+      <td style="padding: 24px 32px; background: {BRAND_BLACK}; font-size: 12px; color: {BRAND_MUTED}; font-family: {BRAND_FONT};">
+        <p style="margin:0 0 12px;"><img src="{logo_url}" alt="Lumo 22" width="100" height="auto" style="display:block; height:auto; max-width:100px; opacity: 0.9;" /></p>
+        <p style="margin:0;"><a href="mailto:hello@lumo22.com" style="color:{BRAND_GOLD}; text-decoration:none;">hello@lumo22.com</a></p>
+        <p style="margin:10px 0 0; color: rgba(245,245,242,0.7); font-size: 11px;">Lighting the way to better business</p>
+      </td>
+    </tr>"""
+
+
+def _email_wrapper(content: str) -> str:
+    """Wrap content in PDF-cohesive email shell (header + content + footer)."""
+    header = _email_header_html()
+    footer = _email_footer_html()
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -48,26 +60,18 @@ def _branded_html_email(body_plain: str) -> str:
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Lumo 22</title>
 </head>
-<body style="margin:0; padding:0; background:#f6f6f4; font-family: {BRAND_FONT}; font-size: 16px; line-height: 1.7; color: {BRAND_TEXT};">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f6f6f4;">
+<body style="margin:0; padding:0; background:#e5e5e5; font-family: {BRAND_FONT}; font-size: 16px; line-height: 1.7; color: {BRAND_TEXT};">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#e5e5e5;">
     <tr>
       <td style="padding: 32px 24px;">
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 560px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 560px; margin: 0 auto; background: #ffffff; border-radius: 0; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+          {header}
           <tr>
-            <td style="padding: 40px 32px 32px;">
-              <p style="margin:0 0 24px; font-size: 14px; letter-spacing: 0.2em; text-transform: uppercase; color: {BRAND_GOLD}; font-weight: 600;">Lumo 22</p>
-              <div style="color: {BRAND_TEXT};">
-                {body_html}
-              </div>
+            <td style="padding: 40px 32px 36px; color: {BRAND_TEXT};">
+              {content}
             </td>
           </tr>
-          <tr>
-            <td style="padding: 24px 32px 32px; border-top: 1px solid #e5e5e5; font-size: 13px; color: {BRAND_MUTED};">
-              <p style="margin:0 0 12px;"><img src="{logo_url}" alt="Lumo 22" width="120" height="auto" style="display:block; height:auto; max-width:120px;" /></p>
-              <p style="margin:0;">Lumo 22 · <a href="mailto:hello@lumo22.com" style="color:{BRAND_GOLD}; text-decoration:none;">hello@lumo22.com</a></p>
-              <p style="margin:8px 0 0;">Lighting the way to better business</p>
-            </td>
-          </tr>
+          {footer}
         </table>
       </td>
     </tr>
@@ -76,93 +80,71 @@ def _branded_html_email(body_plain: str) -> str:
 </html>"""
 
 
+def _branded_html_email(body_plain: str) -> str:
+    """Wrap plain body in Lumo 22 branded HTML (PDF aesthetic: black header/footer, gold accent)."""
+    import html
+    body_plain = (body_plain or "").strip()
+    lines = body_plain.split("\n")
+    escaped_lines = []
+    for line in lines:
+        line = html.escape(line)
+        line = re.sub(
+            r"(https?://[^\s<]+)",
+            r'<a href="\1" style="color:' + BRAND_GOLD + "; text-decoration: none; border-bottom: 1px solid " + BRAND_GOLD + ';">\1</a>',
+            line,
+        )
+        escaped_lines.append(line)
+    body_html = "<br>\n".join(escaped_lines)
+    content = f'<div style="font-family: ' + BRAND_FONT + ';">{body_html}</div>'
+    return _email_wrapper(content)
+
+
 def _password_reset_email_html(reset_url: str) -> str:
-    """Build branded HTML for password reset email with the link as an explicit <a> tag and as plain text."""
+    """Build branded HTML for password reset — PDF aesthetic (dark header/footer, black CTA)."""
     import html
     if not reset_url or not reset_url.startswith("http"):
         reset_url = ""
     safe_url = html.escape(reset_url, quote=True)
-    base = (Config.BASE_URL or "").strip().rstrip("/")
-    if not base or not base.startswith("http"):
-        base = "https://lumo22.com"
-    logo_url = f"{base}/static/images/logo.png"
-    # Show link as both clickable and as plain text so it's visible even if client strips links
-    return f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Lumo 22 – Reset password</title>
-</head>
-<body style="margin:0; padding:0; background:#f6f6f4; font-family: {BRAND_FONT}; font-size: 16px; line-height: 1.7; color: {BRAND_TEXT};">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f6f6f4;">
-    <tr>
-      <td style="padding: 32px 24px;">
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 560px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden;">
-          <tr>
-            <td style="padding: 40px 32px 32px;">
-              <p style="margin:0 0 24px; font-size: 14px; letter-spacing: 0.2em; text-transform: uppercase; color: {BRAND_GOLD}; font-weight: 600;">Lumo 22</p>
-              <p style="margin:0 0 16px;">Hi,</p>
-              <p style="margin:0 0 16px;">You requested a password reset for your Lumo 22 account.</p>
-              <p style="margin:0 0 12px;">Click the link below to set a new password (link expires in 1 hour):</p>
-              <p style="margin:0 0 24px;"><a href="{safe_url}" style="display:inline-block; padding:12px 24px; background:#000; color:#fff; text-decoration:none; border-radius:8px; font-weight:600;">Reset my password</a></p>
-              <p style="margin:0 0 8px; font-size:14px; color:#666;">Or copy and paste this link into your browser:</p>
-              <p style="margin:0 0 24px; font-size:13px; word-break:break-all; color:#333;">{safe_url}</p>
-              <p style="margin:0 0 16px;">If you didn't request this, you can ignore this email. Your password will stay the same.</p>
-              <p style="margin:0;">— Lumo 22</p>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding: 24px 32px 32px; border-top: 1px solid #e5e5e5; font-size: 13px; color: {BRAND_MUTED};">
-              <p style="margin:0 0 12px;"><img src="{logo_url}" alt="Lumo 22" width="120" height="auto" style="display:block; height:auto; max-width:120px;" /></p>
-              <p style="margin:0;">Lumo 22 · <a href="mailto:hello@lumo22.com" style="color:{BRAND_GOLD}; text-decoration:none;">hello@lumo22.com</a></p>
-              <p style="margin:8px 0 0;">Lighting the way to better business</p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>"""
+    content = f"""<p style="margin:0 0 16px;">Hi,</p>
+<p style="margin:0 0 16px;">You requested a password reset for your Lumo 22 account.</p>
+<p style="margin:0 0 12px;">Click the link below to set a new password (link expires in 1 hour):</p>
+<p style="margin:0 0 24px;"><a href="{safe_url}" style="display:inline-block; padding:14px 28px; background:{BRAND_BLACK}; color:{BRAND_TEXT_ON_DARK}; text-decoration:none; border-radius:10px; font-weight:600; letter-spacing: 0.1em; text-transform: uppercase;">Reset my password</a></p>
+<p style="margin:0 0 8px; font-size:14px; color:{BRAND_MUTED};">Or copy and paste this link into your browser:</p>
+<p style="margin:0 0 24px; font-size:13px; word-break:break-all; color:#333;">{safe_url}</p>
+<p style="margin:0 0 16px;">If you didn't request this, you can ignore this email. Your password will stay the same.</p>
+<p style="margin:0;">— Lumo 22</p>"""
+    return _email_wrapper(content)
 
 
 def _login_link_email_html(account_url: str) -> str:
-    """Build branded HTML for login link email with the link as an explicit <a> tag and plain text."""
+    """Build branded HTML for login link — PDF aesthetic (dark header/footer, black CTA)."""
     import html
     account_url = (account_url if isinstance(account_url, str) else "") or ""
     if not account_url or not account_url.startswith("http"):
         account_url = ""
     safe_url = html.escape(account_url, quote=True)
-    base = (getattr(Config, "BASE_URL", None) or "").strip().rstrip("/")
-    if not base or not isinstance(base, str) or not base.startswith("http"):
-        base = "https://lumo22.com"
-    logo_url = f"{base}/static/images/logo.png"
-    return f"""<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Lumo 22 – Login link</title></head>
-<body style="margin:0; padding:0; background:#f6f6f4; font-family: {BRAND_FONT}; font-size: 16px; line-height: 1.7; color: {BRAND_TEXT};">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f6f6f4;">
-    <tr><td style="padding: 32px 24px;">
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 560px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden;">
-          <tr><td style="padding: 40px 32px 32px;">
-              <p style="margin:0 0 24px; font-size: 14px; letter-spacing: 0.2em; text-transform: uppercase; color: {BRAND_GOLD}; font-weight: 600;">Lumo 22</p>
-              <p style="margin:0 0 16px;">Click the link below to open your account (link works once, expires in 2 minutes):</p>
-              <p style="margin:0 0 24px;"><a href="{safe_url}" style="display:inline-block; padding:12px 24px; background:#000; color:#fff; text-decoration:none; border-radius:8px; font-weight:600;">Open my account</a></p>
-              <p style="margin:0 0 8px; font-size:14px; color:#666;">Or copy and paste this link into your browser:</p>
-              <p style="margin:0 0 24px; font-size:13px; word-break:break-all; color:#333;">{safe_url}</p>
-              <p style="margin:0;">— Lumo 22</p>
-            </td></tr>
-          <tr><td style="padding: 24px 32px 32px; border-top: 1px solid #e5e5e5; font-size: 13px; color: {BRAND_MUTED};">
-              <p style="margin:0 0 12px;"><img src="{logo_url}" alt="Lumo 22" width="120" height="auto" style="display:block; height:auto; max-width:120px;" /></p>
-              <p style="margin:0;">Lumo 22 · <a href="mailto:hello@lumo22.com" style="color:{BRAND_GOLD}; text-decoration:none;">hello@lumo22.com</a></p>
-              <p style="margin:8px 0 0;">Lighting the way to better business</p>
-            </td></tr>
-        </table>
-      </td></tr>
-  </table>
-</body>
-</html>"""
+    content = f"""<p style="margin:0 0 16px;">Click the link below to open your account (link works once, expires in 2 minutes):</p>
+<p style="margin:0 0 24px;"><a href="{safe_url}" style="display:inline-block; padding:14px 28px; background:{BRAND_BLACK}; color:{BRAND_TEXT_ON_DARK}; text-decoration:none; border-radius:10px; font-weight:600; letter-spacing: 0.1em; text-transform: uppercase;">Open my account</a></p>
+<p style="margin:0 0 8px; font-size:14px; color:{BRAND_MUTED};">Or copy and paste this link into your browser:</p>
+<p style="margin:0 0 24px; font-size:13px; word-break:break-all; color:#333;">{safe_url}</p>
+<p style="margin:0;">— Lumo 22</p>"""
+    return _email_wrapper(content)
+
+
+def _email_change_verification_html(confirm_url: str) -> str:
+    """Build branded HTML for email change verification — PDF aesthetic (dark header/footer, black CTA)."""
+    import html
+    if not confirm_url or not confirm_url.startswith("http"):
+        confirm_url = ""
+    safe_url = html.escape(confirm_url, quote=True)
+    content = f"""<p style="margin:0 0 16px;">You requested to change the email address for your Lumo 22 account to this address.</p>
+<p style="margin:0 0 12px;">Click the link below to confirm the change (link expires in 1 hour):</p>
+<p style="margin:0 0 24px;"><a href="{safe_url}" style="display:inline-block; padding:14px 28px; background:{BRAND_BLACK}; color:{BRAND_TEXT_ON_DARK}; text-decoration:none; border-radius:10px; font-weight:600; letter-spacing: 0.1em; text-transform: uppercase;">Confirm email change</a></p>
+<p style="margin:0 0 8px; font-size:14px; color:{BRAND_MUTED};">Or copy and paste this link into your browser:</p>
+<p style="margin:0 0 24px; font-size:13px; word-break:break-all; color:#333;">{safe_url}</p>
+<p style="margin:0 0 16px;">If you didn't request this, you can ignore this email. Your email address will stay the same.</p>
+<p style="margin:0;">— Lumo 22</p>"""
+    return _email_wrapper(content)
 
 
 def _sanitize_email_value(s: str) -> str:
@@ -305,6 +287,27 @@ If the link doesn't work, copy and paste the link above into your browser.
 — Lumo 22
 """
         html_body = _login_link_email_html(account_url)
+        return self.send_email(to_email, subject, body, html_body=html_body)
+
+    def send_email_change_verification_email(self, to_email: str, confirm_url: str) -> bool:
+        """Send email change verification to the NEW email address; link confirms the change."""
+        if not confirm_url or not confirm_url.startswith("http"):
+            print("[SendGrid] Email change verification NOT sent: invalid confirm_url")
+            return False
+        subject = "Confirm your new email address"
+        body = f"""Hi,
+
+You requested to change the email address for your Lumo 22 account to this address.
+
+Click the link below to confirm the change (link expires in 1 hour):
+
+{confirm_url}
+
+If you didn't request this, you can ignore this email. Your email address will stay the same.
+
+— Lumo 22
+"""
+        html_body = _email_change_verification_html(confirm_url)
         return self.send_email(to_email, subject, body, html_body=html_body)
 
     def send_email(

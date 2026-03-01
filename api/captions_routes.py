@@ -274,6 +274,9 @@ def captions_checkout_subscription():
     metadata = {"product": "captions_subscription", "platforms": str(platforms), "include_stories": "1" if stories else "0"}
     if selected:
         metadata["selected_platforms"] = selected
+    copy_from = (request.args.get("copy_from") or "").strip()
+    if copy_from:
+        metadata["copy_from"] = copy_from
     referral_coupon = _get_referral_coupon_id()
     create_params = {
         "mode": "subscription",
@@ -623,6 +626,33 @@ def captions_intake_submit():
             "upgrade_url": upgrade_url,
         }), 400
 
+    # Downgrade: reducing platforms or removing Stories requires accepting new (lower) price.
+    # Only applies to subscriptions (one-off orders can't change price).
+    subscription_id = (order.get("stripe_subscription_id") or "").strip()
+    form_platforms_count = 1
+    platform_val = (intake.get("platform") or "").strip()
+    if platform_val and "," in platform_val:
+        platform_parts = [p.strip() for p in platform_val.split(",") if p.strip()]
+        form_platforms_count = max(1, len(platform_parts))
+    else:
+        form_platforms_count = 1 if platform_val else 1
+    downgrade_platforms = form_platforms_count < order_platforms_count
+    downgrade_stories = order_has_stories and not form_wants_stories
+    if subscription_id and (downgrade_platforms or downgrade_stories):
+        new_platforms = form_platforms_count
+        new_stories = form_wants_stories
+        prices = {"gbp": {"symbol": "£", "sub": 79, "extra_sub": 19, "stories_sub": 17}}
+        p = prices.get("gbp", prices["gbp"])
+        new_total = p["sub"] + (new_platforms - 1) * p["extra_sub"] + (p["stories_sub"] if new_stories else 0)
+        return jsonify({
+            "error": "You're reducing your plan. Please accept the new price before we save your changes. Your next invoice will reflect the lower amount.",
+            "downgrade_required": True,
+            "new_platforms": new_platforms,
+            "new_stories": new_stories,
+            "new_price": new_total,
+            "new_price_symbol": p["symbol"],
+        }), 400
+
     order_id = order["id"]
     status = order.get("status") or ""
 
@@ -871,6 +901,57 @@ def captions_pause_subscription():
             "ok": True,
             "resumes_at": resumes_date,
         }), 200
+    except stripe.StripeError as e:
+        return jsonify({"ok": False, "error": str(e)[:200]}), 400
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@captions_bp.route("/captions/resume-subscription", methods=["POST"])
+def captions_resume_subscription():
+    """
+    Resume a paused caption subscription. Requires login.
+    Body: { "order_id": "..." }
+    """
+    from api.auth_routes import get_current_customer
+    import stripe
+
+    customer = get_current_customer()
+    if not customer:
+        return jsonify({"ok": False, "error": "Not logged in"}), 401
+    email = (customer.get("email") or "").strip().lower()
+    if not email or "@" not in email:
+        return jsonify({"ok": False, "error": "Invalid customer"}), 400
+    if not Config.STRIPE_SECRET_KEY:
+        return jsonify({"ok": False, "error": "Billing not configured"}), 503
+
+    try:
+        data = request.get_json() or {}
+        order_id = (data.get("order_id") or "").strip()
+        if not order_id:
+            return jsonify({"ok": False, "error": "order_id required"}), 400
+
+        from services.caption_order_service import CaptionOrderService
+        order_service = CaptionOrderService()
+        order = order_service.get_by_id(order_id)
+        if not order:
+            return jsonify({"ok": False, "error": "Order not found"}), 404
+        order_email = (order.get("customer_email") or "").strip().lower()
+        if order_email != email:
+            return jsonify({"ok": False, "error": "This order does not belong to your account"}), 403
+
+        sub_id = (order.get("stripe_subscription_id") or "").strip()
+        if not sub_id:
+            return jsonify({"ok": False, "error": "This order is not a subscription"}), 400
+
+        stripe.api_key = Config.STRIPE_SECRET_KEY
+        sub = stripe.Subscription.retrieve(sub_id)
+        pc = sub.get("pause_collection")
+        if not pc or not isinstance(pc, dict) or not pc.get("resumes_at"):
+            return jsonify({"ok": False, "error": "Subscription is not paused"}), 400
+
+        stripe.Subscription.resume(sub_id, billing_cycle_anchor="now")
+        return jsonify({"ok": True, "message": "Subscription resumed."}), 200
     except stripe.StripeError as e:
         return jsonify({"ok": False, "error": str(e)[:200]}), 400
     except Exception as e:

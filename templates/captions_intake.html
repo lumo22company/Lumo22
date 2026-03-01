@@ -105,6 +105,11 @@
     {% if existing_intake %}
     <p class="intake-edit-notice" style="margin: 0 0 1.25rem; padding: 0.75rem 1rem; background: rgba(0,0,0,0.06); border-radius: 8px; border: 2px solid var(--lum-gold, #c9a227); font-size: 0.9rem; color: #1a1a1a;">Any updates you make here will be reflected in your <strong>next</strong> captions and stories pack, not in packs already delivered. Edits are free; adding Story Ideas or extra platforms may require an additional charge.</p>
     {% endif %}
+    {% if subscribe_url %}
+    <p class="intake-subscribe-cta" style="margin: 0 0 1.25rem; padding: 0.75rem 1rem; background: rgba(0,0,0,0.04); border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); font-size: 0.9rem; color: #1a1a1a;">
+      Want a new pack every month? <a href="{{ subscribe_url }}" class="intake-add-platform-link">Subscribe using this form</a> — your answers will be pre-filled.
+    </p>
+    {% endif %}
     {% if not intake_token %}
     <p class="sub" style="margin-top: 1rem;">Use the link from your order email to complete the form. If you just purchased, check your inbox for a message from us with a personalised link.</p>
     <p class="sub" style="margin-top: 0.5rem;">Haven't bought yet? <a href="/captions" style="color: var(--lum-gold);">Get 30 Days Captions</a></p>
@@ -209,6 +214,12 @@
           <option value="French" {% if existing_intake.get('caption_language') == 'French' %}selected{% endif %}>French</option>
           <option value="German" {% if existing_intake.get('caption_language') == 'German' %}selected{% endif %}>German</option>
           <option value="Portuguese" {% if existing_intake.get('caption_language') == 'Portuguese' %}selected{% endif %}>Portuguese</option>
+          <option value="Italian" {% if existing_intake.get('caption_language') == 'Italian' %}selected{% endif %}>Italian</option>
+          <option value="Dutch" {% if existing_intake.get('caption_language') == 'Dutch' %}selected{% endif %}>Dutch</option>
+          <option value="Polish" {% if existing_intake.get('caption_language') == 'Polish' %}selected{% endif %}>Polish</option>
+          <option value="Arabic" {% if existing_intake.get('caption_language') == 'Arabic' %}selected{% endif %}>Arabic</option>
+          <option value="Turkish" {% if existing_intake.get('caption_language') == 'Turkish' %}selected{% endif %}>Turkish</option>
+          <option value="Swedish" {% if existing_intake.get('caption_language') == 'Swedish' %}selected{% endif %}>Swedish</option>
         </select>
         <p class="field-helper">Spelling, idioms, and tone will match this variety (e.g. American vs British English).</p>
       </div>
@@ -235,28 +246,28 @@
         {% endif %}
         {% if existing_intake and platforms_count < 4 %}
         <p class="intake-add-platform-wrap" style="margin: 0.75rem 0 0; font-size: 0.95rem;">
-          <a href="/captions?platforms={{ platforms_count + 1 }}" class="intake-add-platform-link">Add another platform (+£29 one-off / +£17/mo)</a>
+          <a href="/captions?platforms={{ platforms_count + 1 }}" class="intake-add-platform-link">Add another platform (+£29 one-off / +£19/mo)</a>
           <span class="intake-add-platform-note"> — go to checkout to confirm and pay. Extra platforms are delivered with your <strong>next</strong> PDF pack, not instantly.</span>
         </p>
         {% endif %}
         {% if existing_intake %}
-        <p class="intake-change-platform-note" style="margin: 0.5rem 0 0; font-size: 0.9rem; color: var(--lum-text-muted);">To change which platforms you use or reduce the number, update the platform selection above and submit. No extra charge. Changes apply to your next pack.</p>
+        <p class="intake-change-platform-note" style="margin: 0.5rem 0 0; font-size: 0.9rem; color: var(--lum-text-muted);">To change which platforms or reduce the number (or remove Story Ideas), update above and submit. You'll be asked to accept the new price. Changes apply to your next pack.</p>
         {% endif %}
         <label for="platform_habits">Any platform-specific habits?</label>
         <input type="text" id="platform_habits" name="platform_habits" placeholder="e.g. shorter on Instagram, longer on LinkedIn (optional)" value="{{ existing_intake.get('platform_habits', '') }}">
         <div id="stories-addon-wrap" class="intake-other-wrap" style="display: none; margin-top: 1rem; padding: 1rem; background: rgba(255,255,255,0.5); border-radius: 8px; border: 1px solid #ddd;">
-          <p class="field-helper" style="margin: 0 0 0.5rem; font-weight: 600;">Using Instagram &amp; Facebook? Add Story Ideas to match your feed.</p>
+          <p class="field-helper" style="margin: 0 0 0.5rem; font-weight: 600;">Using Instagram &amp; Facebook? Add Story Ideas—optionally align each day's Story to your feed caption (same theme, same day) or leave unaligned so they're different.</p>
           <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; margin-bottom: 0.25rem;">
             <input type="checkbox" id="include_stories" name="include_stories" {% if existing_intake.get('include_stories') or stories_paid %}checked{% endif %} {% if stories_paid %}disabled{% endif %} style="width: auto;">
             <span>{% if stories_paid %}30 Stories included (already paid){% else %}Add 30 Stories prompts (+£29 one-off / +£17/mo){% endif %}</span>
           </label>
-          <p class="field-helper" style="margin: 0.5rem 0 0;">One-line prompts for Instagram/Facebook Stories each day — your complete social content pack.</p>
-          <p class="field-helper intake-stories-disclaimer" style="margin: 0.5rem 0 0; font-size: 0.85rem; color: var(--lum-text-muted);">If you add Story Ideas later from your account, they will be delivered with your <strong>next</strong> set of captions, not instantly.</p>
+          <p class="field-helper" style="margin: 0.5rem 0 0;">One-line prompts for Instagram/Facebook Stories each day. Check the box below to align each Story to that day's caption—or leave unchecked so Stories and captions are different on the same day.</p>
+          <p class="field-helper intake-stories-disclaimer" style="margin: 0.5rem 0 0; font-size: 0.85rem; color: var(--lum-text-muted);">If you add Story Ideas later (e.g. from Manage subscription in your account), they’ll be delivered with your <strong>next</strong> pack, not instantly.</p>
           <label class="intake-checkbox-label" style="margin-top: 0.75rem;">
             <input type="checkbox" id="align_stories" name="align_stories" {% if existing_intake.get('align_stories_to_captions') %}checked{% endif %} style="width: auto;">
             <span>Align each Story to that day's caption (tighter pairing)</span>
           </label>
-          <p class="field-helper" style="margin: 0.25rem 0 0;">If checked, Stories are generated to explicitly support each day's caption theme.</p>
+          <p class="field-helper" style="margin: 0.25rem 0 0;">Check to align each Story to that day's caption (same theme). Leave unchecked so Stories and captions are different on the same day.</p>
         </div>
       </div>
       <div class="form-section">
@@ -558,7 +569,73 @@
             var ctaEl = document.getElementById('intake-upgrade-cta');
             if (errEl) { errEl.textContent = result.json.error || 'Something didn\'t send — try again or email us at hello@lumo22.com.'; errEl.style.display = 'block'; }
             if (ctaEl) {
-              if (result.json.upgrade_required && result.json.upgrade_url) {
+              if (result.json.downgrade_required) {
+                var sym = result.json.new_price_symbol || '£';
+                var price = result.json.new_price;
+                ctaEl.innerHTML = '<button type="button" class="btn-submit" id="btn-accept-downgrade-2">Accept new price — ' + sym + price + '/month</button>';
+                ctaEl.style.display = 'block';
+                var dbtn = document.getElementById('btn-accept-downgrade-2');
+                if (dbtn) {
+                  dbtn.onclick = function() {
+                    dbtn.disabled = true;
+                    dbtn.textContent = 'Updating…';
+                    fetch('/api/billing/reduce-subscription', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        token: payload.token,
+                        new_platforms: result.json.new_platforms,
+                        new_stories: result.json.new_stories
+                      })
+                    })
+                    .then(function(r){ return r.json(); })
+                    .then(function(res) {
+                      if (res.ok) {
+                        ctaEl.style.display = 'none';
+                        ctaEl.innerHTML = '';
+                        if (errEl) errEl.style.display = 'none';
+                        if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+                        fetch('/api/captions-intake', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+                          .then(function(r){ return r.json().then(function(j){ return { status: r.status, json: j }; }); })
+                          .then(function(r2) {
+                            if (r2.status === 200 && r2.json.success) {
+                              var rs = document.getElementById('review-step');
+                              if (rs) rs.classList.remove('show');
+                              var successEl = document.getElementById('intake-success');
+                              if (successEl) successEl.style.display = 'block';
+                              var formEl = document.getElementById('captions-intake-form');
+                              if (formEl) formEl.style.display = 'none';
+                              var msgEl = document.getElementById('intake-success-msg');
+                              if (msgEl) msgEl.textContent = r2.json.message || 'Your form has been updated.';
+                            } else {
+                              if (errEl) { errEl.textContent = r2.json.error || 'Could not save.'; errEl.style.display = 'block'; }
+                              dbtn.disabled = false;
+                              dbtn.textContent = 'Accept new price — ' + sym + price + '/month';
+                            }
+                            if (btn) { btn.disabled = false; btn.textContent = 'Send details'; }
+                          })
+                          .catch(function() {
+                            if (errEl) { errEl.textContent = 'Could not save — try again.'; errEl.style.display = 'block'; }
+                            dbtn.disabled = false;
+                            dbtn.textContent = 'Accept new price — ' + sym + price + '/month';
+                            if (btn) { btn.disabled = false; btn.textContent = 'Send details'; }
+                          });
+                      } else {
+                        if (errEl) { errEl.textContent = res.error || 'Could not update plan.'; errEl.style.display = 'block'; }
+                        dbtn.disabled = false;
+                        dbtn.textContent = 'Accept new price — ' + sym + price + '/month';
+                        if (btn) { btn.disabled = false; btn.textContent = 'Send details'; }
+                      }
+                    })
+                    .catch(function() {
+                      if (errEl) { errEl.textContent = 'Could not update plan — try again.'; errEl.style.display = 'block'; }
+                      dbtn.disabled = false;
+                      dbtn.textContent = 'Accept new price — ' + sym + price + '/month';
+                      if (btn) { btn.disabled = false; btn.textContent = 'Send details'; }
+                    });
+                  };
+                }
+              } else if (result.json.upgrade_required && result.json.upgrade_url) {
                 ctaEl.innerHTML = '<a href="' + result.json.upgrade_url + '" class="btn-submit">Confirm and accept new price</a>';
                 ctaEl.style.display = 'block';
               } else { ctaEl.style.display = 'none'; ctaEl.innerHTML = ''; }
@@ -865,7 +942,46 @@
             var ctaEl = document.getElementById('intake-upgrade-cta');
             if (errEl) { errEl.textContent = result.json.error || 'Something didn\'t send — try again or email us at hello@lumo22.com.'; errEl.style.display = 'block'; }
             if (ctaEl) {
-              if (result.json.upgrade_required && result.json.upgrade_url) {
+              if (result.json.downgrade_required) {
+                var sym = result.json.new_price_symbol || '£';
+                var price = result.json.new_price;
+                ctaEl.innerHTML = '<button type="button" class="btn-submit" id="btn-accept-downgrade">Accept new price — ' + sym + price + '/month</button>';
+                ctaEl.style.display = 'block';
+                var btn = document.getElementById('btn-accept-downgrade');
+                if (btn) {
+                  btn.onclick = function() {
+                    btn.disabled = true;
+                    btn.textContent = 'Updating…';
+                    fetch('/api/billing/reduce-subscription', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        token: payload.token,
+                        new_platforms: result.json.new_platforms,
+                        new_stories: result.json.new_stories
+                      })
+                    })
+                    .then(function(r) { return r.json(); })
+                    .then(function(res) {
+                      if (res.ok) {
+                        ctaEl.style.display = 'none';
+                        ctaEl.innerHTML = '';
+                        if (errEl) errEl.style.display = 'none';
+                        submitForm();
+                      } else {
+                        if (errEl) { errEl.textContent = res.error || 'Could not update plan.'; errEl.style.display = 'block'; }
+                        btn.disabled = false;
+                        btn.textContent = 'Accept new price — ' + sym + price + '/month';
+                      }
+                    })
+                    .catch(function() {
+                      if (errEl) { errEl.textContent = 'Could not update plan — try again.'; errEl.style.display = 'block'; }
+                      btn.disabled = false;
+                      btn.textContent = 'Accept new price — ' + sym + price + '/month';
+                    });
+                  };
+                }
+              } else if (result.json.upgrade_required && result.json.upgrade_url) {
                 ctaEl.innerHTML = '<a href="' + result.json.upgrade_url + '" class="btn-submit">Confirm and accept new price</a>';
                 ctaEl.style.display = 'block';
               } else { ctaEl.style.display = 'none'; ctaEl.innerHTML = ''; }

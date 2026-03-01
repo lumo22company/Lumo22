@@ -160,6 +160,19 @@ class CaptionOrderService:
         except Exception:
             return False
 
+    def update_customer_email(self, old_email: str, new_email: str) -> bool:
+        """Update customer_email on all caption orders for this customer (for email change)."""
+        if not old_email or "@" not in old_email or not new_email or "@" not in new_email:
+            return False
+        try:
+            self.client.table(self.table).update({
+                "customer_email": new_email.strip().lower(),
+                "updated_at": datetime.utcnow().isoformat(),
+            }).eq("customer_email", old_email.strip().lower()).execute()
+            return True
+        except Exception:
+            return False
+
     def get_active_subscription_orders(self) -> list:
         """Get caption orders that have an active Stripe subscription (for reminder emails)."""
         result = self.client.table(self.table).select(

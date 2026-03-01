@@ -192,7 +192,11 @@ def _handle_captions_payment(session):
     # Use hardcoded URL only — no BASE_URL so env vars can't cause "Invalid non-printable ASCII"
     INTAKE_BASE = "https://lumo-22-production.up.railway.app"
     safe_token = str(token).strip()
+    copy_from = (meta.get("copy_from") or "").strip() if isinstance(meta, dict) else getattr(meta, "copy_from", None) or ""
+    copy_from = str(copy_from).strip() if copy_from else ""
     intake_url = f"{INTAKE_BASE}/captions-intake?t={safe_token}"
+    if copy_from:
+        intake_url += f"&copy_from={copy_from}"
 
     subject = "Your 30 Days of Social Media Captions - next step"
     body = f"""Hi,
@@ -218,7 +222,7 @@ Lumo 22
     except Exception as send_err:
         # Always retry with hardcoded URL so env/hidden chars or SendGrid validation can't cause 500
         print(f"[Stripe webhook] Send failed ({send_err}), retrying with hardcoded URL")
-        fallback_url = f"https://lumo-22-production.up.railway.app/captions-intake?t={safe_token}"
+        fallback_url = intake_url
         fallback_body = f"""Hi,
 
 Thanks for your order. Your 30 Days of Social Media Captions will be tailored to your business and voice.

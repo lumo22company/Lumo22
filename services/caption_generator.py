@@ -50,6 +50,12 @@ LANGUAGE_INSTRUCTIONS = {
     "French": "Write ALL captions and content in French. Use clear, professional French appropriate for social media. Match the regional variety to the audience if specified (e.g. France vs Canadian French).",
     "German": "Write ALL captions and content in German. Use clear, professional German appropriate for social media. Use formal 'Sie' unless the brand voice suggests informal 'du'.",
     "Portuguese": "Write ALL captions and content in Portuguese. Prefer Brazilian Portuguese unless the audience suggests European Portuguese. Use clear, professional language appropriate for social media.",
+    "Italian": "Write ALL captions and content in Italian. Use clear, professional Italian appropriate for social media. Match the regional variety to the audience if specified (e.g. Italy vs Swiss Italian).",
+    "Dutch": "Write ALL captions and content in Dutch. Use clear, professional Dutch appropriate for social media. Match the regional variety to the audience if specified (e.g. Netherlands vs Belgian Dutch).",
+    "Polish": "Write ALL captions and content in Polish. Use clear, professional Polish appropriate for social media. Use standard Polish spelling and conventions.",
+    "Arabic": "Write ALL captions and content in Arabic. Use clear, professional Modern Standard Arabic (MSA) appropriate for social media, unless the audience suggests a dialect (e.g. Gulf, Levantine). Write right-to-left; the output will be displayed correctly.",
+    "Turkish": "Write ALL captions and content in Turkish. Use clear, professional Turkish appropriate for social media. Use modern Turkish spelling (Latin script).",
+    "Swedish": "Write ALL captions and content in Swedish. Use clear, professional Swedish appropriate for social media. Use standard Swedish spelling and conventions.",
 }
 
 
@@ -366,10 +372,10 @@ Output the complete list only. No preamble."""
 
     def _generate_stories_aligned(self, intake: Dict[str, Any], captions_md: str, is_subscription_variety: bool = False) -> str:
         """Generate 30 Story prompts with explicit day-by-day alignment to captions."""
-        # Extract \"## Day N — ...\" headings to summarise each day's caption.
+        # Extract "## Day N — ..." headings to summarise each day's caption.
         day_summaries: Dict[int, str] = {}
         for line in captions_md.splitlines():
-            m = re.match(r\"^##\\s*Day\\s+(\\d+)\\s*[—-]\\s*(.+)$\", line.strip())
+            m = re.match(r"^##\s*Day\s+(\d+)\s*[—\-]\s*(.+)$", line.strip())
             if not m:
                 continue
             try:
@@ -382,29 +388,29 @@ Output the complete list only. No preamble."""
         summary_lines = []
         for i in range(1, 31):
             if i in day_summaries:
-                summary_lines.append(f\"Day {i}: {day_summaries[i]}\")
+                summary_lines.append(f"Day {i}: {day_summaries[i]}")
 
-        summaries_block = \"\\n\".join(summary_lines)
+        summaries_block = "\n".join(summary_lines)
 
-        lang = (intake.get(\"caption_language\") or \"English (UK)\").strip()
-        lang_instruction = LANGUAGE_INSTRUCTIONS.get(lang, LANGUAGE_INSTRUCTIONS[\"English (UK)\"])
-        business = (intake.get(\"business_name\") or \"\").strip() or \"Client\"
-        month_year = datetime.utcnow().strftime(\"%B %Y\")
-        date_context = _build_date_context(datetime.utcnow().strftime(\"%Y-%m-%d\"))
-        date_block = \"\"
+        lang = (intake.get("caption_language") or "English (UK)").strip()
+        lang_instruction = LANGUAGE_INSTRUCTIONS.get(lang, LANGUAGE_INSTRUCTIONS["English (UK)"])
+        business = (intake.get("business_name") or "").strip() or "Client"
+        month_year = datetime.utcnow().strftime("%B %Y")
+        date_context = _build_date_context(datetime.utcnow().strftime("%Y-%m-%d"))
+        date_block = ""
         if date_context:
-            date_block = f\"\"\"
+            date_block = f"""
 
 DATE_CONTEXT (their 30 days start on a specific date; use when relevant):
 {date_context}
 
 You may reference the actual day/date where it helps. Use only when natural.
-\"\"\"
+"""
         variety_note = ""
         if is_subscription_variety:
             variety_note = "\n\nThis client receives packs monthly; vary story types and angles (polls, BTS, tips, testimonials, etc.) so this month feels fresh and not repetitive with previous packs.\n"
 
-        prompt = f\"\"\"Generate 30 one-line Story prompts for Instagram/Facebook Stories. One prompt per day (Day 1–30).
+        prompt = f"""Generate 30 one-line Story prompts for Instagram/Facebook Stories. One prompt per day (Day 1–30).
 
 {lang_instruction}
 
@@ -433,20 +439,20 @@ Output format — markdown only:
 **Day 30:** [one-line prompt]
 ---
 
-Output the complete list only. No preamble.\"\"\"
+Output the complete list only. No preamble."""
 
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {\"role\": \"system\", \"content\": \"You write concise, actionable social media content prompts that align with an existing captions plan.\"},
-                    {\"role\": \"user\", \"content\": prompt},
+                    {"role": "system", "content": "You write concise, actionable social media content prompts that align with an existing captions plan."},
+                    {"role": "user", "content": prompt},
                 ],
                 temperature=0.7,
                 max_tokens=1800,
             )
-            content = (response.choices[0].message.content or \"\").strip()
-            return content if content else \"\"
+            content = (response.choices[0].message.content or "").strip()
+            return content if content else ""
         except Exception as e:
-            print(f\"[CaptionGenerator] Aligned stories generation failed: {e}\")
-            return \"\"
+            print(f"[CaptionGenerator] Aligned stories generation failed: {e}")
+            return ""

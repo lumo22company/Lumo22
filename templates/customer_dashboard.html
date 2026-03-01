@@ -18,10 +18,6 @@
     <div class="lumo-nav-links">
       <a href="/captions">Captions</a>
     </div>
-    <span class="account-nav-logged-in" style="margin-right: 1rem; font-size: 0.85rem; color: var(--lum-text-muted);">Logged in as {{ customer.email if customer and customer.email else '' }}</span>
-    <form action="/api/auth/logout" method="POST" style="margin: 0; display: inline;">
-      <button type="submit" class="lumo-nav-cta account-nav-logout-btn">Log out</button>
-    </form>
   </nav>
 
   <div class="account-layout">
@@ -53,6 +49,11 @@
         <p style="margin: 0; color: #333;">Could not open billing portal. Please try again or email hello@lumo22.com.</p>
       </div>
       {% endif %}
+      {% if request.args.get('email_changed') == '1' %}
+      <div class="account-info-panel" style="margin-bottom: 1rem; background: rgba(76,175,80,0.15); border-color: rgba(76,175,80,0.3);">
+        <p style="margin: 0; color: #333;">Your email address has been updated.</p>
+      </div>
+      {% endif %}
 
       <section class="account-section-block">
         <h2>Account Information</h2>
@@ -61,8 +62,20 @@
           <div class="account-info-row">
             <div>
               <span class="account-info-label">Email</span>
-              <div class="account-info-value">{{ customer.email }}</div>
+              <div class="account-info-value" id="account-email-display">{{ customer.email }}</div>
             </div>
+            <div class="account-info-actions">
+              <button type="button" class="account-change-email-btn dfd-btn dfd-btn-secondary" id="account-change-email-trigger" onclick="toggleEmailChangeForm()">Change email</button>
+            </div>
+          </div>
+          <div id="account-change-email-form" class="account-change-email-form" style="display: none; margin-top: 0.5rem; padding: 1rem; background: rgba(0,0,0,0.04); border-radius: 8px; border: 1px solid rgba(0,0,0,0.08);">
+            <p style="margin: 0 0 0.75rem; font-size: 0.9rem; color: #333;">Enter your new email. We'll send a verification link there. You must click the link to confirm the change.</p>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+              <input type="email" id="account-new-email-input" placeholder="new@email.com" style="flex: 1; min-width: 200px; padding: 0.5rem 0.75rem; border-radius: 6px; border: 1px solid #ccc; font-size: 1rem;">
+              <button type="button" class="dfd-btn dfd-btn-secondary" id="account-send-email-change-btn" onclick="sendEmailChangeRequest()">Send verification link</button>
+              <button type="button" class="dfd-btn dfd-btn-secondary" style="background: transparent; border: 1px solid #999;" onclick="toggleEmailChangeForm()">Cancel</button>
+            </div>
+            <p id="account-email-change-msg" style="margin: 0.75rem 0 0; font-size: 0.9rem; display: none;"></p>
           </div>
           <div class="account-info-row">
             <div>
@@ -70,7 +83,7 @@
               <div class="account-info-value">••••••••</div>
             </div>
             <div class="account-info-actions">
-              <a href="/forgot-password">Change password</a>
+              <a href="/forgot-password" class="account-billing-portal-link">Change password</a>
             </div>
           </div>
           <div class="account-info-row">
@@ -79,7 +92,7 @@
               <div class="account-info-value">Payment method and invoices</div>
             </div>
             <div class="account-info-actions">
-              <a href="/api/billing/portal">Manage billing</a>
+              <a href="/api/billing/portal" class="account-billing-portal-link">Manage billing</a>
             </div>
           </div>
           <div class="account-info-row">
@@ -145,16 +158,25 @@
           {% set edit_form_orders = [current_intake_order] %}
         {% endif %}
         {% if edit_form_orders %}
-        <p class="account-section-desc">Update your voice, topics, and preferences. Changes are reflected in your <strong>next</strong> captions and stories pack, not in packs already delivered. Edits are free; adding Story Ideas or extra platforms may require an additional charge. Select the form by business to edit. <strong>Add or change platforms:</strong> To add more platforms, open the form and use the "Add another platform" link (+£29 one-off / +£17/mo). To change which platforms you use (e.g. swap TikTok for Pinterest) or reduce the number, edit the platform section in the form and submit—no extra charge. All changes apply to your next pack.</p>
+        <ul class="account-section-desc" style="margin: 0 0 1.25rem; padding-left: 1.25rem; line-height: 1.7; color: #ffffff;">
+          <li>Update your voice, topics, and preferences.</li>
+          <li>Have a launch, sale, or event coming up? Add it in the Key date section and we’ll tailor your next pack to match.</li>
+          <li>Changes are reflected in your <strong>next</strong> captions and stories pack, not in packs already delivered.</li>
+          <li>Edits are free; adding Story Ideas or extra platforms may require an additional charge.</li>
+          <li><strong>Platforms:</strong> Edit form is the only place to add, change, or reduce platforms—not Manage subscription.</li>
+          <li>Subscribers: to add more platforms, open the form and use "Add another platform" (+£19/mo).</li>
+          <li>To change which platforms or reduce the number (or remove Story Ideas), edit the form and submit—you'll be asked to accept the new price.</li>
+          <li>All changes apply to your next pack.</li>
+        </ul>
         <ul class="account-edit-form-list">
           {% for o in edit_form_orders %}
           {% set biz = (o.get('intake') or {}).get('business_name', '') %}
           {% set label = biz if biz else (o.created_at[:10] if o.created_at else 'Subscription') %}
           <li>
             {% if o.status == 'awaiting_intake' %}
-            <a href="/captions-intake?t={{ o.token }}">Complete the form — {{ label }}</a>
+            <a href="/captions-intake?t={{ o.token }}" class="account-billing-portal-link">Complete the form — {{ label }}</a>
             {% else %}
-            <a href="/captions-intake?t={{ o.token }}">Edit form — {{ label }}</a>
+            <a href="/captions-intake?t={{ o.token }}" class="account-billing-portal-link">Edit form — {{ label }}</a>
             {% endif %}
           </li>
           {% endfor %}
@@ -171,7 +193,12 @@
         <h2>Manage subscription</h2>
         {% set sub_orders = caption_orders|selectattr('stripe_subscription_id')|list if caption_orders else [] %}
         {% if sub_orders %}
-        <p class="account-section-desc">Cancel your subscription, update your billing info, or view invoices in Stripe’s secure portal. You can use a different card for each subscription below. Add or update cards via Manage billing, then choose which card to use for each. Below you can also pause billing for one month and manage intake reminders. <strong>Add or change platforms:</strong> Go to Edit form and open the form for this subscription. To add more platforms (if you have fewer than 4), use "Add another platform" (+£29 one-off / +£17/mo). To change which platforms or reduce the number, edit the platform section in the form and submit—free.</p>
+        <ul class="account-section-desc" style="margin: 0 0 1.25rem; padding-left: 1.25rem; line-height: 1.7; color: #ffffff;">
+          <li>Cancel your subscription, update your billing info, or view invoices in Stripe’s secure portal.</li>
+          <li>Use a different card for each subscription—add or update cards via Manage billing, then choose which card to use for each.</li>
+          <li>Pause billing for one month and manage intake reminders below.</li>
+          <li><strong>Platforms (add, change, or reduce)</strong> and <strong>Story Ideas (add or remove)</strong> — use the buttons below, or Edit form to change platforms and remove Story Ideas.</li>
+        </ul>
         <p style="margin-bottom: 1.25rem;"><a href="/api/billing/portal" class="account-billing-portal-link">Manage billing</a></p>
         {% for o in sub_orders %}
         {% set pause_biz = (o.get('intake') or {}).get('business_name', '') %}
@@ -210,7 +237,8 @@
               <div class="account-settings-desc">{% if o.subscription_pause and o.subscription_pause.paused %}Paused — resumes {{ o.subscription_pause.resumes_at or 'automatically' }}{% else %}Pause billing for 1 month (no charge, no pack){% endif %}</div>
             </div>
             {% if o.subscription_pause and o.subscription_pause.paused %}
-            <span class="account-pause-badge" style="font-size: 0.85rem; font-weight: 500; color: #555; padding: 0.35rem 0.75rem; background: rgba(0,0,0,0.06); border-radius: 12px;">Paused</span>
+            <span class="account-pause-badge" style="font-size: 0.85rem; font-weight: 500; color: #555; padding: 0.35rem 0.75rem; background: rgba(0,0,0,0.06); border-radius: 12px; margin-right: 0.5rem;">Paused</span>
+            <button type="button" class="dfd-btn dfd-btn-secondary account-resume-btn" data-order-id="{{ o.id }}" onclick="resumeSubscription(this)">Resume subscription</button>
             {% else %}
             <button type="button" class="dfd-btn dfd-btn-secondary account-pause-btn" data-order-id="{{ o.id }}" onclick="pauseSubscription(this)">Pause for 1 month</button>
             {% endif %}
@@ -221,12 +249,17 @@
               <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Story Ideas</div>
               <div class="account-settings-desc">Add 30 Days Story Ideas to this subscription. You'll be charged a prorated amount. Stories will be delivered with your <strong>next</strong> set of captions, not instantly.</div>
             </div>
-            <button type="button" class="account-add-stories-btn dfd-btn dfd-btn-secondary" data-subscription-id="{{ sub_id }}" onclick="addStoriesToSubscription(this)">Add Story Ideas</button>
+            <button type="button" class="account-add-stories-btn dfd-btn dfd-btn-secondary" data-subscription-id="{{ sub_id }}" onclick="showAddStoriesModal(this)">Add Story Ideas</button>
           </div>
           {% else %}
-          <div class="account-settings-row" style="padding: 1rem 0; border-bottom: none;">
-            <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Story Ideas</div>
-            <div class="account-settings-desc">Included in this subscription. You'll receive Stories with each pack.</div>
+          <div class="account-settings-row account-remove-stories-row" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding: 1rem 0; border-bottom: none;">
+            <div>
+              <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Story Ideas</div>
+              <div class="account-settings-desc">Included in this subscription. You'll receive Stories with each pack. You can also remove Story Ideas from the Edit form.</div>
+            </div>
+            {% set _platforms = o.platforms_count|default(1)|int %}
+{% set _new_price = 79 + (_platforms - 1) * 19 %}
+<button type="button" class="account-remove-stories-btn dfd-btn dfd-btn-secondary" data-order-token="{{ o.token }}" data-platforms-count="{{ _platforms }}" data-new-price="{{ _new_price }}" data-new-price-symbol="£" onclick="showRemoveStoriesModal(this)">Remove Story Ideas</button>
           </div>
           {% endif %}
         </div>
@@ -242,7 +275,7 @@
       <section class="account-section-block">
         <h2>Refer a friend</h2>
         {% if referral_code %}
-        <p class="account-section-desc">Share your referral link — when friends sign up, they'll use your code.</p>
+        <p class="account-section-desc">Share your referral link — your friend gets 10% off their first purchase. You get 10% off your next billing period for each friend who buys. Discounts don't stack: two referrals = 10% off your next two periods.</p>
         <div class="account-referral-block">
           <label class="account-settings-label" for="referral-link">Your referral link</label>
           <div class="referral-row" style="display: flex; gap: 0.75rem; align-items: center; margin-top: 0.5rem;">
@@ -261,6 +294,33 @@
       {% endif %}
     </main>
 
+    <div id="add-stories-modal" class="account-delete-modal add-stories-modal" role="dialog" aria-labelledby="add-stories-modal-title" aria-modal="true" hidden>
+      <div class="account-delete-modal-backdrop" onclick="closeAddStoriesModal()"></div>
+      <div class="account-delete-modal-box">
+        <h2 id="add-stories-modal-title" class="account-delete-modal-title">Add Story Ideas?</h2>
+        <p class="account-delete-modal-text">You'll be charged a prorated amount for Story Ideas (£17/mo) for the remainder of your billing period. The charge will be applied to your saved payment method. Stories will be included in your <strong>next</strong> pack, not instantly.</p>
+        <div class="account-delete-modal-buttons">
+          <button type="button" class="account-delete-modal-btn account-delete-modal-keep" onclick="closeAddStoriesModal()">Cancel</button>
+          <button type="button" id="add-stories-modal-confirm" class="account-delete-modal-btn account-add-stories-confirm" onclick="confirmAddStories()">Confirm and add</button>
+        </div>
+      </div>
+    </div>
+    <div id="remove-stories-modal" class="account-delete-modal remove-stories-modal" role="dialog" aria-labelledby="remove-stories-modal-title" aria-modal="true" hidden>
+      <div class="account-delete-modal-backdrop" onclick="closeRemoveStoriesModal()"></div>
+      <div class="account-delete-modal-box remove-stories-modal-box" style="max-width: 520px;">
+        <h2 id="remove-stories-modal-title" class="account-delete-modal-title">Remove Story Ideas?</h2>
+        <p id="remove-stories-price-text" class="account-delete-modal-text">Your new price will be <strong id="remove-stories-new-price-display"></strong>/month. You'll save £17/month. You must read and accept the Terms &amp; Conditions below to confirm.</p>
+        <p class="account-delete-modal-text" style="font-size: 0.85rem; margin-bottom: 0.75rem;">Please scroll to the bottom to continue.</p>
+        <div id="remove-stories-terms-body" class="remove-stories-terms-body" style="max-height: 200px; overflow-y: auto; padding: 0.75rem 1rem; background: rgba(0,0,0,0.04); border-radius: 8px; margin-bottom: 1rem; font-size: 0.85rem; line-height: 1.5; color: #333;">
+          {% include '_terms_content.html' %}
+        </div>
+        <p id="remove-stories-scroll-hint" class="account-delete-modal-text" style="font-size: 0.85rem; color: #666; margin: -0.5rem 0 0.75rem;">Scroll to the bottom of the terms to enable the button.</p>
+        <div class="account-delete-modal-buttons">
+          <button type="button" class="account-delete-modal-btn account-delete-modal-keep" onclick="closeRemoveStoriesModal()">Cancel</button>
+          <button type="button" id="remove-stories-modal-confirm" class="account-delete-modal-btn account-remove-stories-confirm" disabled>I have read and agree — accept new price</button>
+        </div>
+      </div>
+    </div>
     <div id="account-delete-modal" class="account-delete-modal" role="dialog" aria-labelledby="account-delete-modal-title" aria-modal="true" hidden>
       <div class="account-delete-modal-backdrop"></div>
       <div class="account-delete-modal-box">
@@ -401,6 +461,7 @@
         btn.disabled = true;
         btn.textContent = 'Pausing…';
         fetch('/api/captions/pause-subscription', {
+          credentials: 'same-origin',
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ order_id: orderId })
@@ -421,6 +482,36 @@
           btn.textContent = 'Pause for 1 month';
         });
       }
+      window.pauseSubscription = pauseSubscription;
+
+      function resumeSubscription(btn) {
+        var orderId = btn.getAttribute('data-order-id');
+        if (!orderId) return;
+        btn.disabled = true;
+        btn.textContent = 'Resuming…';
+        fetch('/api/captions/resume-subscription', {
+          credentials: 'same-origin',
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ order_id: orderId })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.ok) {
+            window.location.reload();
+          } else {
+            alert(data.error || 'Could not resume subscription');
+            btn.disabled = false;
+            btn.textContent = 'Resume subscription';
+          }
+        })
+        .catch(function() {
+          alert('Something went wrong — try again.');
+          btn.disabled = false;
+          btn.textContent = 'Resume subscription';
+        });
+      }
+      window.resumeSubscription = resumeSubscription;
 
       function deletePackFromHistory(btn) {
         if (!btn) return;
@@ -455,6 +546,29 @@
       }
       window.deletePackFromHistory = deletePackFromHistory;
 
+      var addStoriesPendingBtn = null;
+      function showAddStoriesModal(btn) {
+        addStoriesPendingBtn = btn;
+        var modal = document.getElementById('add-stories-modal');
+        if (modal) {
+          modal.removeAttribute('hidden');
+          modal.classList.add('account-delete-modal--open');
+        }
+      }
+      function closeAddStoriesModal() {
+        addStoriesPendingBtn = null;
+        var modal = document.getElementById('add-stories-modal');
+        if (modal) {
+          modal.setAttribute('hidden', '');
+          modal.classList.remove('account-delete-modal--open');
+        }
+      }
+      function confirmAddStories() {
+        var btn = addStoriesPendingBtn;
+        if (!btn) { closeAddStoriesModal(); return; }
+        closeAddStoriesModal();
+        addStoriesToSubscription(btn);
+      }
       function addStoriesToSubscription(btn) {
         var subId = btn.getAttribute('data-subscription-id');
         if (!subId) return;
@@ -483,6 +597,144 @@
           btn.textContent = 'Add Story Ideas';
         });
       }
+
+      var removeStoriesPendingBtn = null;
+      function showRemoveStoriesModal(btn) {
+        removeStoriesPendingBtn = btn;
+        var modal = document.getElementById('remove-stories-modal');
+        var priceDisplay = document.getElementById('remove-stories-new-price-display');
+        var termsBody = document.getElementById('remove-stories-terms-body');
+        var confirmBtn = document.getElementById('remove-stories-modal-confirm');
+        var scrollHint = document.getElementById('remove-stories-scroll-hint');
+        if (!modal || !priceDisplay || !termsBody || !confirmBtn) return;
+        var sym = btn.getAttribute('data-new-price-symbol') || '£';
+        var price = btn.getAttribute('data-new-price') || '79';
+        priceDisplay.textContent = sym + price;
+        confirmBtn.disabled = true;
+        confirmBtn.dataset.orderToken = btn.getAttribute('data-order-token');
+        confirmBtn.dataset.platformsCount = btn.getAttribute('data-platforms-count') || '1';
+        if (scrollHint) scrollHint.style.display = 'block';
+        termsBody.scrollTop = 0;
+        modal.removeAttribute('hidden');
+        modal.classList.add('account-delete-modal--open');
+      }
+      function closeRemoveStoriesModal() {
+        removeStoriesPendingBtn = null;
+        var modal = document.getElementById('remove-stories-modal');
+        if (modal) {
+          modal.setAttribute('hidden', '');
+          modal.classList.remove('account-delete-modal--open');
+        }
+      }
+      function checkRemoveStoriesScroll() {
+        var termsBody = document.getElementById('remove-stories-terms-body');
+        var confirmBtn = document.getElementById('remove-stories-modal-confirm');
+        var scrollHint = document.getElementById('remove-stories-scroll-hint');
+        if (!termsBody || !confirmBtn) return;
+        var el = termsBody;
+        var atBottom = el.scrollHeight - el.scrollTop <= el.clientHeight + 20;
+        confirmBtn.disabled = !atBottom;
+        if (scrollHint) scrollHint.style.display = atBottom ? 'none' : 'block';
+      }
+      function confirmRemoveStories() {
+        var confirmBtn = document.getElementById('remove-stories-modal-confirm');
+        if (!confirmBtn || confirmBtn.disabled) return;
+        var token = confirmBtn.dataset.orderToken;
+        var platformsCount = parseInt(confirmBtn.dataset.platformsCount || '1', 10) || 1;
+        if (!token) { alert('Missing order token'); return; }
+        closeRemoveStoriesModal();
+        var btn = removeStoriesPendingBtn;
+        if (btn) { btn.disabled = true; btn.textContent = 'Updating…'; }
+        fetch('/api/billing/reduce-subscription', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: token, new_platforms: platformsCount, new_stories: false }),
+          credentials: 'same-origin'
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.ok) {
+            alert(data.message || 'Story Ideas removed. Your new price will apply from your next invoice.');
+            window.location.reload();
+          } else {
+            alert(data.error || 'Could not remove Story Ideas');
+            if (btn) { btn.disabled = false; btn.textContent = 'Remove Story Ideas'; }
+          }
+        })
+        .catch(function() {
+          alert('Something went wrong — try again.');
+          if (btn) { btn.disabled = false; btn.textContent = 'Remove Story Ideas'; }
+        });
+      }
+      (function initRemoveStoriesModal() {
+        var termsBody = document.getElementById('remove-stories-terms-body');
+        var confirmBtn = document.getElementById('remove-stories-modal-confirm');
+        if (termsBody) termsBody.addEventListener('scroll', checkRemoveStoriesScroll);
+        if (confirmBtn) confirmBtn.addEventListener('click', confirmRemoveStories);
+      })();
+      window.showRemoveStoriesModal = showRemoveStoriesModal;
+      window.closeRemoveStoriesModal = closeRemoveStoriesModal;
+
+      function toggleEmailChangeForm() {
+        var form = document.getElementById('account-change-email-form');
+        var btn = document.getElementById('account-change-email-trigger');
+        var input = document.getElementById('account-new-email-input');
+        var msg = document.getElementById('account-email-change-msg');
+        if (!form || !btn) return;
+        if (form.style.display === 'none') {
+          form.style.display = 'block';
+          if (input) { input.value = ''; input.focus(); }
+          if (msg) { msg.style.display = 'none'; msg.textContent = ''; }
+        } else {
+          form.style.display = 'none';
+        }
+      }
+      function sendEmailChangeRequest() {
+        var input = document.getElementById('account-new-email-input');
+        var btn = document.getElementById('account-send-email-change-btn');
+        var msg = document.getElementById('account-email-change-msg');
+        if (!input || !btn || !msg) return;
+        var newEmail = (input.value || '').trim().toLowerCase();
+        if (!newEmail || newEmail.indexOf('@') === -1) {
+          msg.textContent = 'Please enter a valid email address.';
+          msg.style.display = 'block';
+          msg.style.color = '#c00';
+          return;
+        }
+        btn.disabled = true;
+        btn.textContent = 'Sending…';
+        msg.style.display = 'none';
+        fetch('/api/auth/request-email-change', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ new_email: newEmail }),
+          credentials: 'same-origin'
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.ok) {
+            msg.textContent = data.message || 'Verification link sent. Check your new email inbox.';
+            msg.style.color = '#0a0';
+            msg.style.display = 'block';
+            input.value = '';
+            document.getElementById('account-change-email-form').style.display = 'none';
+          } else {
+            msg.textContent = data.error || 'Could not send verification email.';
+            msg.style.color = '#c00';
+            msg.style.display = 'block';
+          }
+          btn.disabled = false;
+          btn.textContent = 'Send verification link';
+        })
+        .catch(function() {
+          msg.textContent = 'Something went wrong. Please try again.';
+          msg.style.color = '#c00';
+          msg.style.display = 'block';
+          btn.disabled = false;
+          btn.textContent = 'Send verification link';
+        });
+      }
+      window.toggleEmailChangeForm = toggleEmailChangeForm;
 
       function changeSubscriptionPaymentMethod(selectEl) {
         if (!selectEl) return;

@@ -254,3 +254,77 @@ class CustomerAuthService:
             return True
         except Exception:
             return False
+
+    def request_email_change(self, customer_id: str, new_email: str) -> Tuple[bool, Optional[str]]:
+        """
+        Create email change verification token. Returns (success, token_or_error).
+        Token is valid for 1 hour. new_email must not already exist.
+        """
+        if not customer_id or not new_email or "@" not in new_email:
+            return (False, "Valid new email required")
+        new_email = new_email.strip().lower()
+        if self.get_by_email(new_email):
+            return (False, "An account with this email already exists")
+        token = secrets.token_urlsafe(32)
+        expires = datetime.utcnow() + timedelta(hours=1)
+        try:
+            self.client.table(self.table).update({
+                "email_change_token": token,
+                "email_change_new_email": new_email,
+                "email_change_expires": expires.isoformat(),
+                "updated_at": datetime.utcnow().isoformat(),
+            }).eq("id", customer_id).execute()
+            return (True, token)
+        except Exception as e:
+            return (False, str(e))
+
+    def get_by_email_change_token(self, token: str) -> Optional[Dict[str, Any]]:
+        """Get customer by valid email change token. Returns None if expired or invalid."""
+        if not token or len(token) < 20:
+            return None
+        result = self.client.table(self.table).select("*").eq(
+            "email_change_token", token
+        ).execute()
+        if not result.data or len(result.data) == 0:
+            return None
+        c = result.data[0]
+        expires = c.get("email_change_expires")
+        if expires:
+            try:
+                exp_str = expires.replace("Z", "")[:19] if isinstance(expires, str) else str(expires)[:19]
+                exp_dt = datetime.fromisoformat(exp_str.replace("Z", ""))
+                if datetime.utcnow() > exp_dt:
+                    return None
+            except (TypeError, ValueError):
+                return None
+        return c
+
+    def confirm_email_change(self, token: str) -> Tuple[bool, Optional[str], Optional[str], Optional[str]]:
+        """
+        Confirm email change using token. Returns (success, new_email, old_email, error_message).
+        Clears token and updates email on success. Caller should update caption_orders and Stripe.
+        """
+        customer = self.get_by_email_change_token(token)
+        if not customer:
+            return (False, None, None, "Invalid or expired link. Please request a new one from your account.")
+
+        new_email = (customer.get("email_change_new_email") or "").strip().lower()
+        if not new_email or "@" not in new_email:
+            return (False, None, None, "Invalid email change request.")
+        if self.get_by_email(new_email):
+            return (False, None, None, "An account with this email already exists. Please use a different email.")
+
+        old_email = (customer.get("email") or "").strip().lower()
+        customer_id = str(customer["id"])
+
+        try:
+            self.client.table(self.table).update({
+                "email": new_email,
+                "email_change_token": None,
+                "email_change_new_email": None,
+                "email_change_expires": None,
+                "updated_at": datetime.utcnow().isoformat(),
+            }).eq("id", customer_id).execute()
+            return (True, new_email, old_email, None)
+        except Exception as e:
+            return (False, None, None, str(e))

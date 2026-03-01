@@ -1514,9 +1514,10 @@
   text-transform: uppercase;
   color: #ffffff;
   text-decoration: none;
+  border: 2px solid transparent;
   border-radius: var(--dfd-radius);
   margin-bottom: 0.25rem;
-  transition: background 0.15s, color 0.15s;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 .account-sidebar-nav a:hover {
   background: rgba(255,255,255,0.08);
@@ -1525,6 +1526,8 @@
 .account-sidebar-nav a.active {
   color: var(--lum-gold);
   background: rgba(255,242,0,0.12);
+  border: 2px solid var(--lum-gold);
+  outline: none;
 }
 .account-sidebar-logout {
   margin-top: 2rem;
@@ -1565,6 +1568,15 @@
   display: inline-block;
   margin-top: 0;
   margin-bottom: 1rem;
+}
+/* Bulleted list variant — ensure bullets show */
+.account-main .account-section-block > ul.account-section-desc {
+  display: block;
+  list-style-type: disc;
+  padding-left: 1.5rem;
+}
+.account-main .account-section-block > ul.account-section-desc li {
+  margin-bottom: 0.5rem;
 }
 .account-main .account-section-block > p.account-section-desc {
   color: #ffffff;
@@ -1777,6 +1789,16 @@
   background: #b00;
   color: #fff;
 }
+.add-stories-modal .account-add-stories-confirm {
+  color: #000;
+  background: var(--lum-gold, #fff200);
+  border-color: var(--lum-gold, #fff200);
+}
+.add-stories-modal .account-add-stories-confirm:hover {
+  background: #e6d900;
+  color: #000;
+  border-color: #e6d900;
+}
 
 /* History: view / download */
 .account-history-list {
@@ -1892,12 +1914,29 @@
   border-radius: var(--dfd-radius);
   box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
-.account-edit-form-list a {
-  color: #8b6914;
-  font-weight: 500;
+.account-edit-form-list .account-billing-portal-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 20px;
+  min-height: 44px;
+  background: #ffffff;
+  color: #000000;
+  font-weight: 600;
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border: 1px solid rgba(0,0,0,0.15);
+  border-radius: 10px;
+  transition: transform 0.3s ease-in-out, background-color 0.3s ease-in-out, color 0.3s ease-in-out;
+}
+.account-edit-form-list .account-billing-portal-link:hover {
+  transform: translateY(-3px);
+  background-color: var(--lum-gold);
+  color: #000000;
   text-decoration: none;
 }
-.account-edit-form-list a:hover { text-decoration: underline; }
 
 /* Pause subscription block */
 .account-pause-block {
@@ -2234,9 +2273,67 @@
   cursor: not-allowed;
   transform: none;
 }
+.account-page-wrap .account-resume-btn {
+  flex-shrink: 0;
+  appearance: none;
+  cursor: pointer;
+  font: inherit;
+  padding: 10px 20px;
+  min-height: 44px;
+  background: #ffffff;
+  color: #000000;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  border: none;
+  border-radius: var(--radius-btn);
+  transition: transform 0.3s ease-in-out, background-color 0.3s ease-in-out, color 0.3s ease-in-out;
+}
+.account-page-wrap .account-resume-btn:hover {
+  transform: translateY(-3px);
+  background-color: var(--lum-gold);
+  color: #000000;
+}
+.account-page-wrap .account-resume-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+.account-page-wrap .account-add-stories-btn {
+  flex-shrink: 0;
+  appearance: none;
+  cursor: pointer;
+  font: inherit;
+  padding: 10px 20px;
+  min-height: 44px;
+  background: #ffffff;
+  color: #000000;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  border: none;
+  border-radius: var(--radius-btn);
+  transition: transform 0.3s ease-in-out, background-color 0.3s ease-in-out, color 0.3s ease-in-out;
+}
+.account-page-wrap .account-add-stories-btn:hover {
+  transform: translateY(-3px);
+  background-color: var(--lum-gold);
+  color: #000000;
+}
+.account-page-wrap .account-add-stories-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
 
 .account-page-wrap .account-billing-portal-link {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 10px 20px;
   min-height: 44px;
   background: #ffffff;
@@ -2255,6 +2352,11 @@
   transform: translateY(-3px);
   background-color: var(--lum-gold);
   color: #000000;
+  text-decoration: none;
+}
+.account-page-wrap .account-info-actions .account-billing-portal-link,
+.account-page-wrap .account-info-actions .account-billing-portal-link:hover {
+  text-decoration: none;
 }
 
 .account-page-wrap .account-payment-method-select {
@@ -2354,5 +2456,35 @@
   min-height: 44px;
   display: inline-flex;
   align-items: center;
+}
+/* Log in button: rectangle with rounded corners, yellow border (override nav CTA on product pages) */
+.product-page-dfd .lumo-nav a.lumo-nav-login,
+.product-page-captions .lumo-nav a.lumo-nav-login,
+.product-page-dfd .lumo-nav .lumo-nav-login,
+.product-page-captions .lumo-nav .lumo-nav-login,
+.lumo-nav a.lumo-nav-login,
+.lumo-nav .lumo-nav-login {
+  border: 2px solid #fff200 !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  color: #fff !important;
+  border-radius: 8px !important;
+}
+.product-page-dfd .lumo-nav a.lumo-nav-login:hover,
+.product-page-captions .lumo-nav a.lumo-nav-login:hover,
+.lumo-nav a.lumo-nav-login:hover,
+.lumo-nav .lumo-nav-login:hover,
+.lumo-nav-cta.lumo-nav-login:hover {
+  background: #fff200 !important;
+  background-color: #fff200 !important;
+  color: #000 !important;
+  border-color: #fff200 !important;
+}
+.lumo-nav-cta.lumo-nav-login {
+  border: 2px solid #fff200 !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  color: #fff !important;
+  border-radius: 8px !important;
 }
 /* FAQ summary: tap target via original padding (already ~44px+), avoid overriding to prevent arrow overlap */

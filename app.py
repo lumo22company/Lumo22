@@ -206,13 +206,16 @@ def captions_page():
 
 @app.route('/captions-intake')
 def captions_intake_page():
-    """Intake form for 30 Days Captions (sent to client after payment). Token in ?t= links form to order."""
+    """Intake form for 30 Days Captions (sent to client after payment). Token in ?t= links form to order.
+    Supports copy_from=TOKEN to pre-fill from another order (e.g. one-off → subscription)."""
     from datetime import datetime
     token = request.args.get('t', '').strip()
+    copy_from = request.args.get('copy_from', '').strip()
     existing_intake = {}
     platforms_count = 1
     selected_platforms = ""
     stories_paid = False
+    is_oneoff = False
     if token:
         try:
             from services.caption_order_service import CaptionOrderService
@@ -224,6 +227,15 @@ def captions_intake_page():
                 platforms_count = max(1, int(order.get("platforms_count", 1)))
                 selected_platforms = (order.get("selected_platforms") or "").strip() or ""
                 stories_paid = bool(order.get("include_stories"))
+                is_oneoff = not bool((order.get("stripe_subscription_id") or "").strip())
+                # copy_from: if current order has no intake and copy_from is set, load intake from that order (same customer)
+                if not existing_intake and copy_from:
+                    src_order = svc.get_by_token(copy_from)
+                    if src_order:
+                        src_email = (src_order.get("customer_email") or "").strip().lower()
+                        cur_email = (order.get("customer_email") or "").strip().lower()
+                        if src_email and cur_email and src_email == cur_email:
+                            existing_intake = src_order.get("intake") or {}
         except Exception:
             pass
     # Prefill platform from order (chosen at checkout) when they haven't saved intake yet
@@ -245,7 +257,16 @@ def captions_intake_page():
                 normalized.append(p)
         prefilled_platform = ", ".join(normalized)
     now = datetime.utcnow()
-    r = make_response(render_template('captions_intake.html', intake_token=token, existing_intake=existing_intake, platforms_count=platforms_count, prefilled_platform=prefilled_platform, stories_paid=stories_paid, now=now))
+    subscribe_url = None
+    if token and is_oneoff:
+        from urllib.parse import urlencode
+        sub_params = {"copy_from": token, "platforms": platforms_count}
+        if selected_platforms:
+            sub_params["selected"] = selected_platforms
+        if stories_paid:
+            sub_params["stories"] = "1"
+        subscribe_url = "/captions-checkout-subscription?" + urlencode(sub_params)
+    r = make_response(render_template('captions_intake.html', intake_token=token, existing_intake=existing_intake, platforms_count=platforms_count, prefilled_platform=prefilled_platform, stories_paid=stories_paid, is_oneoff=is_oneoff, selected_platforms=selected_platforms, subscribe_url=subscribe_url, now=now))
     r.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     r.headers['Pragma'] = 'no-cache'
     return r
@@ -312,7 +333,8 @@ def captions_checkout_page():
 
 @app.route('/captions-checkout-subscription')
 def captions_checkout_subscription_page():
-    """Pre-checkout page for Captions subscription: agree to T&Cs then continue to Stripe. Supports GBP, USD, EUR."""
+    """Pre-checkout page for Captions subscription: agree to T&Cs then continue to Stripe. Supports GBP, USD, EUR.
+    Accepts copy_from=TOKEN to pass through to Stripe metadata for one-off → subscription flow."""
     from urllib.parse import urlencode, quote
     platforms = _parse_platforms_from_request()
     selected = (request.args.get("selected") or request.args.get("selected_platforms") or "").strip()
@@ -331,6 +353,9 @@ def captions_checkout_subscription_page():
     ref = (request.args.get("ref") or "").strip()
     if ref:
         params["ref"] = ref
+    copy_from = (request.args.get("copy_from") or "").strip()
+    if copy_from:
+        params["copy_from"] = copy_from
     q = urlencode(params)
     api_url = f"/api/captions-checkout-subscription?{q}" if not platforms_invalid else None
     total = prices["sub"] + (platforms - 1) * prices["extra_sub"] + (prices["stories_sub"] if stories else 0)
@@ -496,6 +521,53 @@ def reset_password_page():
     """Reset password: token from email, set new password."""
     token = request.args.get('token', '').strip()
     return render_template('reset_password.html', token=token)
+
+
+@app.route('/change-email-confirm')
+def change_email_confirm_page():
+    """Confirm email change: token from email, update email and redirect to account."""
+    token = request.args.get('token', '').strip()
+    if not token:
+        return render_template('change_email_confirm.html', success=False, error="No verification link found. Please request a new one from your account.")
+    try:
+        from services.customer_auth_service import CustomerAuthService
+        from services.caption_order_service import CaptionOrderService
+        svc = CustomerAuthService()
+        ok, new_email, old_email, err = svc.confirm_email_change(token)
+        if not ok:
+            return render_template('change_email_confirm.html', success=False, error=err or "Invalid or expired link.")
+        # Update caption_orders for this customer
+        co_svc = CaptionOrderService()
+        co_svc.update_customer_email(old_email, new_email)
+        # Update Stripe customer email if we have stripe_customer_id
+        try:
+            orders = co_svc.get_by_customer_email(new_email)
+            stripe_customer_ids = set()
+            for o in orders or []:
+                cid = (o.get("stripe_customer_id") or "").strip()
+                if cid:
+                    stripe_customer_ids.add(cid)
+            if stripe_customer_ids and Config.STRIPE_SECRET_KEY:
+                import stripe
+                stripe.api_key = Config.STRIPE_SECRET_KEY
+                for cid in stripe_customer_ids:
+                    try:
+                        stripe.Customer.modify(cid, email=new_email)
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+        # Log them in with new email
+        customer = svc.get_by_email(new_email)
+        if customer:
+            session.permanent = True
+            session['customer_id'] = str(customer['id'])
+            session['customer_email'] = customer['email']
+        return redirect(url_for('account_page') + '?email_changed=1', code=302)
+    except Exception as e:
+        import logging
+        logging.exception("change_email_confirm failed: %s", e)
+        return render_template('change_email_confirm.html', success=False, error="Something went wrong. Please try again or contact hello@lumo22.com.")
 
 
 _ACCOUNT_SECTIONS = frozenset({"information", "history", "edit-form", "pause", "refer"})

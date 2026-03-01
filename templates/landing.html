@@ -22,7 +22,7 @@
     <div class="lumo-nav-links">
       <a href="/captions">Captions</a>
     </div>
-    {% if current_customer %}<a href="/account" class="lumo-nav-cta">Account</a>{% else %}<span style="display: inline-flex; align-items: center; gap: 0.75rem;"><a href="/login" style="color: var(--lum-text-muted); text-decoration: none; font-size: 0.9rem;">Log in</a><a href="/signup" class="lumo-nav-cta">Sign up</a></span>{% endif %}
+    {% if current_customer %}<a href="/account" class="lumo-nav-cta">Account</a>{% else %}<span style="display: inline-flex; align-items: center; gap: 0.75rem;"><a href="/login" class="lumo-nav-login">Log in</a><a href="/signup" class="lumo-nav-cta">Sign up</a></span>{% endif %}
   </nav>
 
   {% if inactivity_logout %}
@@ -52,7 +52,7 @@
     <div class="section-inner">
       <h2 class="intro-headline">Your complete social content, written in your voice</h2>
       <div class="intro-body">
-        <p>30 days of captions and Story prompts — written to sound like you, not like a robot or generic AI. We capture your tone and your audience so every caption feels human and on-brand. Ready in 15 minutes.</p>
+        <p>30 days of captions and Story prompts — written to sound like you, not like a robot or generic AI. We capture your tone and your audience so every caption feels human and on-brand. Have a launch, sale, or event? Tell us and we’ll tailor your captions around it. Designed for consistency: the format uses proven psychological strategies (30-day chunking, implementation intentions, aligned feed + Stories) so you're more likely to actually post. Ready in 15 minutes.</p>
         <p>Built for small businesses and independents who want consistent marketing without the admin—and without the flat, AI-sounding copy other tools push out.</p>
       </div>
     </div>
@@ -77,7 +77,7 @@
           </div>
           <div class="who-card">
             <h3 class="who-card-title">Professionals who want to show up without the daily effort</h3>
-            <p class="who-card-desc">One short form, 30 posts. Your marketing actually happens.</p>
+            <p class="who-card-desc">One short form, 30 posts. Psychology-backed format—designed for consistency. Your marketing actually happens.</p>
           </div>
         </div>
       </div>

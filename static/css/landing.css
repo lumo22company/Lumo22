@@ -190,6 +190,48 @@ input[type="checkbox"] { accent-color: #fff200; }
   transform: translateY(-1px);
 }
 
+/* Log in button: rectangle with rounded corners, yellow border */
+.lumo-nav a.lumo-nav-login,
+.lumo-nav .lumo-nav-login,
+a.lumo-nav-login {
+  border: 2px solid #fff200 !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  color: #fff !important;
+  padding: 0.5rem 1.25rem !important;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  box-sizing: border-box;
+}
+.lumo-nav a.lumo-nav-login:hover,
+.lumo-nav .lumo-nav-login:hover,
+a.lumo-nav-login:hover {
+  background: #fff200 !important;
+  background-color: #fff200 !important;
+  color: #000 !important;
+  border-color: #fff200 !important;
+}
+/* Override lumo-nav-cta when Log in has both classes (checkout, forgot password, etc.) */
+.lumo-nav-cta.lumo-nav-login {
+  border: 2px solid #fff200 !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  color: #fff !important;
+  border-radius: 8px;
+}
+.lumo-nav-cta.lumo-nav-login:hover {
+  background: #fff200 !important;
+  background-color: #fff200 !important;
+  color: #000 !important;
+  border-color: #fff200 !important;
+}
+
 /* ——— SECTION 1: Hero — x.ai aesthetic: minimal, black, off-white wordmark, volumetric mist. ——— */
 .hero {
   position: relative;

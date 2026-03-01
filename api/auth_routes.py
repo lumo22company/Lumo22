@@ -152,6 +152,54 @@ def update_preferences():
         return jsonify({"ok": False, "error": str(e)}), 500
 
 
+@auth_bp.route("/request-email-change", methods=["POST"])
+def request_email_change():
+    """Request email change. Sends verification link to the NEW email. Requires login."""
+    customer = get_current_customer()
+    if not customer:
+        return jsonify({"ok": False, "error": "Not logged in"}), 401
+    try:
+        data = request.get_json() or {}
+        new_email = (data.get("new_email") or "").strip().lower()
+        if not new_email or "@" not in new_email:
+            return jsonify({"ok": False, "error": "Valid new email required"}), 400
+        if new_email == (customer.get("email") or "").strip().lower():
+            return jsonify({"ok": False, "error": "That's already your email address"}), 400
+
+        svc = CustomerAuthService()
+        ok, token = svc.request_email_change(str(customer["id"]), new_email)
+        if not ok:
+            return jsonify({"ok": False, "error": token or "Could not create verification link"}), 500
+
+        fallback_base = "https://lumo-22-production.up.railway.app"
+        raw_base = (Config.BASE_URL or request.url_root or fallback_base).strip().rstrip("/")
+        base = "".join(c for c in raw_base if ord(c) >= 32 and c not in "\n\r\t")
+        if not base:
+            base = fallback_base
+        if not base.startswith("http"):
+            base = "https://" + base
+        confirm_url = base.rstrip("/") + "/change-email-confirm?token=" + str(token)
+        confirm_url = "".join(c for c in confirm_url if ord(c) >= 32 and c not in "\n\r\t")
+        if not confirm_url or not confirm_url.startswith("http"):
+            return jsonify({"ok": False, "error": "Could not generate verification link"}), 500
+
+        notif = NotificationService()
+        sent = notif.send_email_change_verification_email(new_email, confirm_url)
+        if not sent:
+            return jsonify({
+                "ok": False,
+                "error": "We couldn't send the verification email. Please try again, or contact hello@lumo22.com."
+            }), 503
+
+        return jsonify({
+            "ok": True,
+            "message": f"We've sent a verification link to {new_email}. Click the link in that email to confirm the change."
+        }), 200
+    except Exception as e:
+        logging.exception("request_email_change failed: %s", e)
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
 @auth_bp.route("/forgot-password", methods=["POST"])
 def forgot_password():
     """Request password reset. Sends email with reset link if account exists."""

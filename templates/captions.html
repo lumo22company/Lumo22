@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>30 Days of Social Media Captions | Lumo 22</title>
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
-  <meta name="description" content="30 days of captions written in your voice—not robotic or generic AI. Feed posts, Reels, and Story prompts. Your tone, your message, ready in 15 minutes.">
+  <meta name="description" content="30 days of captions written in your voice. Designed for consistency—psychology-backed format (30-day chunking, implementation intentions). Feed posts, Reels, and Story prompts. Ready in 15 minutes.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Encode+Sans+Condensed:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -32,7 +32,7 @@
     <div class="lumo-nav-links">
       <a href="/captions">Captions</a>
     </div>
-    {% if current_customer %}<a href="/account" class="lumo-nav-cta">Account</a>{% else %}<span style="display: inline-flex; align-items: center; gap: 0.75rem;"><a href="/login" style="color: var(--lum-text-muted); text-decoration: none; font-size: 0.9rem;">Log in</a><a href="/signup" class="lumo-nav-cta">Sign up</a></span>{% endif %}
+    {% if current_customer %}<a href="/account" class="lumo-nav-cta">Account</a>{% else %}<span style="display: inline-flex; align-items: center; gap: 0.75rem;"><a href="/login" class="lumo-nav-login">Log in</a><a href="/signup" class="lumo-nav-cta">Sign up</a></span>{% endif %}
   </nav>
 
   <!-- 1. HERO — full-width black, left-aligned -->
@@ -40,8 +40,8 @@
     <div class="dfd-hero-inner">
       <h1 class="dfd-hero-title">30 Days of Social Media Captions</h1>
       <p class="dfd-hero-hook">Your complete social content pack — feed posts, Reels, and Stories.</p>
-      <p class="dfd-hero-outcome">Written in your voice. Not robotic. Not generic AI.</p>
-      <p class="dfd-hero-subtitle">We capture your tone, audience, and goals so every caption sounds like you—not like every other tool. That’s the difference. Use each caption for feed posts or Reels (Instagram, Facebook, TikTok, and more). Add Stories for Instagram & Facebook. One short form, 30 posts—ready in 15 minutes. Cancel anytime.</p>
+      <p class="dfd-hero-outcome">Written in your voice. Designed for consistency. Not robotic. Not generic AI.</p>
+      <p class="dfd-hero-subtitle">We capture your tone, audience, and goals so every caption sounds like you—not like every other tool. The format uses proven psychological strategies (30-day chunking, implementation intentions, balanced content mix) so you're more likely to actually post. Add Story Ideas so each day's feed caption and Story align. One short form, 30 posts—ready in 15 minutes. Cancel anytime.</p>
       <p class="dfd-hero-cta"><a href="#pricing" class="dfd-btn dfd-btn-hero-cta">View options</a></p>
     </div>
   </section>
@@ -58,7 +58,7 @@
           </span>
           <span class="dfd-step-num" aria-hidden="true">1</span>
           <h3 class="dfd-step-title">Share your business and tone</h3>
-          <p class="dfd-step-desc">Answer a short form so we capture your voice, audience, and goal for the month.</p>
+          <p class="dfd-step-desc">Answer a short form so we capture your voice, audience, and goal for the month. Have a launch, sale, or event coming up? Tell us in the Key date section and we’ll tailor your captions around it.</p>
         </div>
         <div class="dfd-step">
           <span class="dfd-step-icon" aria-hidden="true">
@@ -90,15 +90,30 @@
     </div>
   </section>
 
-  <!-- 2c. EXAMPLE & DELIVERY FORMAT -->
+  <!-- 2c. PSYCHOLOGY-BACKED FORMAT — feature -->
+  <section class="dfd-section dfd-section--light" style="padding: 3rem 0;">
+    <div class="dfd-section-inner">
+      <h2 class="dfd-heading">Designed for consistency</h2>
+      <p class="dfd-lead">Our packs use proven psychological strategies so you're more likely to actually post—not just plan.</p>
+      <ul style="max-width: 560px; margin: 0 auto; padding-left: 1.25rem; font-size: 1rem; line-height: 1.8; color: var(--text-on-light, #1a1a1a);">
+        <li><strong>30-day chunking</strong> — Research shows smaller, time-bound goals feel achievable. One month at a time reduces overwhelm and increases completion.</li>
+        <li><strong>Implementation intentions</strong> — Each day has a category and ready text. No "what do I post?" decision. You know exactly what to do, when.</li>
+        <li><strong>Balanced content mix</strong> — Authority, Educational, Brand Personality, Soft Promotion. The variety experts recommend, pre-planned for you.</li>
+        <li><strong>Feed + Stories aligned</strong> — Optionally align Story Ideas to each day's caption (same theme, same day). You can turn this off in the form so Stories and captions are different on the same day.</li>
+      </ul>
+      <p style="max-width: 560px; margin: 1.25rem auto 0; font-size: 0.95rem; color: var(--lum-text-muted, #555);">Copy, paste, post. The format removes friction so your marketing actually happens.</p>
+    </div>
+  </section>
+
+  <!-- 2d. EXAMPLE & DELIVERY FORMAT -->
   <section class="dfd-section dfd-section--light" id="example-and-format" aria-label="Example and format">
     <div class="dfd-section-inner">
       <h2 class="dfd-heading">What you get</h2>
-      <p class="dfd-lead">Your pack is delivered as a PDF (or two PDFs with the Stories add-on). Copy, paste, and post. Using Instagram &amp; Facebook? Add Story Ideas at checkout so your pack includes 30 days of story prompts.</p>
+      <p class="dfd-lead">Your pack is delivered as a PDF (or two PDFs with the Stories add-on). Each day has a category, ready-to-use text, and hashtags—designed for consistency. Have a launch or event? Tell us in the form and we’ll phase captions around it (before = anticipation, on the day = announcement, after = thank-you). Copy, paste, and post. Using Instagram &amp; Facebook? Add Story Ideas. Optionally align each Story to that day's caption—or turn alignment off so they're different.</p>
       <div class="captions-format-list" style="max-width: 560px; margin: 0 auto 2rem; text-align: left;">
         <ul style="list-style: none; padding: 0; margin: 0; font-size: 1rem; line-height: 1.7; color: var(--text-on-light, #1a1a1a);">
           <li style="padding-left: 1.5rem; position: relative;"><span style="position: absolute; left: 0;">→</span> <strong>Captions PDF</strong> — 30 days, one caption per day (or one per platform per day if you chose multiple). Each day has a category (e.g. Authority, Educational, Brand Personality), platform label, full caption text, and optional hashtags.</li>
-          <li style="padding-left: 1.5rem; position: relative; margin-top: 0.5rem;"><span style="position: absolute; left: 0;">→</span> <strong>Stories PDF</strong> (if you add Story Ideas) — 30 days of story prompts with suggested wording and hashtags, so you can pair Stories with your feed posts.</li>
+          <li style="padding-left: 1.5rem; position: relative; margin-top: 0.5rem;"><span style="position: absolute; left: 0;">→</span> <strong>Stories PDF</strong> (if you add Story Ideas) — 30 days of story prompts. You can optionally align each Story to that day's caption (same theme, same day) or turn alignment off so Stories and captions are different.</li>
         </ul>
       </div>
       <p class="dfd-heading" style="font-size: 1.1rem; margin-top: 2rem; margin-bottom: 0.75rem;">Example caption (the kind of thing you’ll see in your pack)</p>
@@ -142,7 +157,7 @@
     <div class="product-section-inner">
       <p class="product-section-label">Pricing</p>
       <h2 class="product-section-title">Choose your plan</h2>
-      <p class="product-section-desc">One-off pack or monthly subscription. Same form and delivery. Cancel anytime on subscription.</p>
+      <p class="product-section-desc">One-off pack or monthly subscription. Same form and delivery. Cancel anytime on subscription. <a href="#refer-a-friend" style="color: var(--lum-gold); text-decoration: none;">Refer a friend</a> — they get 10% off their first purchase, you get 10% off your next month.</p>
       {% if currencies_available|default([])|length > 1 %}
       <div class="captions-currency-wrap" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 1rem;">
         <span style="font-size: 0.9rem; color: var(--lum-text-muted);">Show prices in</span>
@@ -175,10 +190,10 @@
           <p id="captions-which-hint" style="font-size: 0.8rem; color: var(--lum-text-muted); margin: 0.5rem 0 0;"></p>
           {% if stories_addon_available|default(false) %}
           <div id="captions-stories-wrap" class="captions-stories-wrap" style="display: none;">
-            <p id="captions-stories-headline" style="font-size: 0.95rem; font-weight: 600; margin: 0 0 0.5rem; color: inherit;">Using Instagram &amp; Facebook? Add Story Ideas to match your feed.</p>
+            <p id="captions-stories-headline" style="font-size: 0.95rem; font-weight: 600; margin: 0 0 0.5rem; color: inherit;">Using Instagram &amp; Facebook? Add Story Ideas—optionally align each Story to that day's caption (same theme, same day) or turn alignment off in the form.</p>
             <label class="captions-checkbox-label"><input type="checkbox" id="captions-stories-cb" name="stories"> Add 30 Days Story Ideas (<span id="captions-stories-price-label">+£29 one-off / +£17/mo</span>)</label>
             <p>One-line prompts for Instagram/Facebook Stories each day.</p>
-            <p class="captions-stories-disclaimer" style="font-size: 0.8rem; color: var(--lum-text-muted); margin: 0.5rem 0 0; line-height: 1.4;">If you add Story Ideas later (e.g. from your account), they will be delivered with your <strong>next</strong> set of captions, not instantly.</p>
+            <p class="captions-stories-disclaimer" style="font-size: 0.8rem; color: var(--lum-text-muted); margin: 0.5rem 0 0; line-height: 1.4;">If you add Story Ideas later (e.g. from Manage subscription in your account), they’ll be delivered with your <strong>next</strong> pack, not instantly.</p>
           </div>
           {% endif %}
         </div>
@@ -260,7 +275,7 @@
         </details>
         <details class="dfd-faq-item">
           <summary class="dfd-faq-question">If I add Story Ideas later, when do I get them?</summary>
-          <p class="dfd-faq-answer">Story Ideas added after your initial purchase (e.g. from Manage subscription in your account) are delivered with your <strong>next</strong> caption pack, not instantly. If you want Stories with your first pack, add the add-on at checkout.</p>
+          <p class="dfd-faq-answer">You get them with your <strong>next</strong> caption pack—not right away. You can add Story Ideas later from your account (e.g. Manage subscription / Manage billing). Want Stories in your first pack? Add the add-on when you complete your order.</p>
         </details>
         <details class="dfd-faq-item">
           <summary class="dfd-faq-question">Can I edit my form after submitting? Are edits free?</summary>
@@ -268,9 +283,9 @@
         </details>
         <details class="dfd-faq-item">
           <summary class="dfd-faq-question">How do I add or change platforms in my order or subscription?</summary>
-          <p class="dfd-faq-answer">Go to your account → Edit form and open the form for your order. <strong>To add more platforms</strong> (if you have fewer than 4): use the "Add another platform" link (+£29 one-off / +£17/mo), go to checkout, and pay. Extra platforms are delivered with your <strong>next</strong> pack, not instantly. <strong>To change or reduce platforms</strong> (e.g. swap TikTok for Pinterest or reduce from 3 to 2): edit the platform selection in the form and submit. No extra charge. Changes apply to your next pack.</p>
+          <p class="dfd-faq-answer"><strong>Platforms are changed in Edit form only</strong>—not in Manage subscription. Go to your account → Edit form and open the form for your order. <strong>To add more platforms</strong> (if you have fewer than 4): use the "Add another platform" link (+£29 one-off / +£19/mo), go to checkout, and pay. Extra platforms are delivered with your <strong>next</strong> pack, not instantly. <strong>To change or reduce platforms</strong> (e.g. swap TikTok for Pinterest or reduce from 3 to 2): edit the form and submit—you'll be asked to accept the new price. Changes apply to your next pack.</p>
         </details>
-        <details class="dfd-faq-item">
+        <details class="dfd-faq-item" id="refer-a-friend">
           <summary class="dfd-faq-question">How does refer-a-friend work?</summary>
           <p class="dfd-faq-answer">Share your referral link from your account (Refer a friend). When a friend signs up and buys captions using your link, they get 10% off their first purchase. You get 10% off your next captions subscription billing period for each friend who completes a purchase. Discounts don't stack: two referrals = 10% off your next two billing periods (one 10% off per period), not 20% off one period.</p>
         </details>
@@ -282,9 +297,8 @@
     </div>
   </section>
 
-  <!-- Sticky CTA — appears on scroll past hero -->
+  <!-- Sticky CTA — single CTA: Get my 30 days -->
   <div class="sticky-cta" id="sticky-cta-captions" aria-label="Quick action">
-    <a href="#pricing" class="sticky-cta-btn">View options</a>
     {% if use_checkout_redirect %}
     <a href="/captions-checkout?platforms=1" id="captions-sticky-oneoff-cta" class="sticky-cta-btn sticky-cta-btn-accent">Get my 30 days</a>
     {% else %}
