@@ -1319,13 +1319,15 @@
   padding: 0.2em 0;
   padding-left: 0;
   min-height: auto;
+  line-height: 1.5;
 }
 .product-page-captions .lumo-pricing-card .lumo-offer-includes li::before {
   content: '';
   flex-shrink: 0;
   width: 6px;
   height: 6px;
-  margin-top: 0.35em;
+  /* Center 6px bullet in first line: (line-height - 0.375em) / 2 ≈ 0.56em */
+  margin-top: 0.56em;
   background: var(--lum-gold);
   border-radius: 50%;
 }
