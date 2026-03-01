@@ -4,6 +4,7 @@ Loads environment variables and provides configuration access.
 """
 import os
 import re
+from datetime import timedelta
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -35,6 +36,7 @@ class Config:
     SESSION_COOKIE_SECURE = False
     SESSION_COOKIE_SAMESITE = 'Lax'
     SESSION_COOKIE_HTTPONLY = True
+    PERMANENT_SESSION_LIFETIME = timedelta(hours=1)  # Inactivity logout: session expires after 1 hour of no requests
     
     # OpenAI (sanitize key so no newline breaks the client)
     OPENAI_API_KEY = _sanitize_header_value(os.getenv('OPENAI_API_KEY', '') or '')

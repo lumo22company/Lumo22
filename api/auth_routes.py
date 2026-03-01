@@ -43,6 +43,7 @@ def signup():
         svc = CustomerAuthService()
         customer = svc.create(email=email, password=password, referral_code=referral_code)
 
+        session.permanent = True
         session["customer_id"] = str(customer["id"])
         session["customer_email"] = customer["email"]
 
@@ -73,6 +74,7 @@ def login():
 
         svc.update_last_login(customer["id"])
 
+        session.permanent = True
         session["customer_id"] = str(customer["id"])
         session["customer_email"] = customer["email"]
 
@@ -265,6 +267,7 @@ def create_account():
 
         customer = svc.create(email=email, password=password)
 
+        session.permanent = True
         session["customer_id"] = str(customer["id"])
         session["customer_email"] = customer["email"]
 

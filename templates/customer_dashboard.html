@@ -288,6 +288,21 @@
       if (window.location.search.indexOf('login_token=') !== -1) {
         try { history.replaceState({}, '', window.location.pathname); } catch (e) {}
       }
+      // Inactivity logout: after 1 hour of no activity, log out and redirect
+      var INACTIVITY_MS = 60 * 60 * 1000;
+      var inactivityTimer = null;
+      function resetInactivityTimer() {
+        if (inactivityTimer) clearTimeout(inactivityTimer);
+        inactivityTimer = setTimeout(function() {
+          fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' })
+            .then(function() { window.location.href = '/?inactivity=1'; })
+            .catch(function() { window.location.href = '/?inactivity=1'; });
+        }, INACTIVITY_MS);
+      }
+      ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(function(ev) {
+        document.addEventListener(ev, resetInactivityTimer);
+      });
+      resetInactivityTimer();
       var logoutForms = document.querySelectorAll('form[action="/api/auth/logout"]');
       logoutForms.forEach(function(form) {
         form.addEventListener('submit', function(e) {

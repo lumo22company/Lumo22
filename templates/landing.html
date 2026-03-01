@@ -25,6 +25,11 @@
     {% if current_customer %}<a href="/account" class="lumo-nav-cta">Account</a>{% else %}<span style="display: inline-flex; align-items: center; gap: 0.75rem;"><a href="/login" style="color: var(--lum-text-muted); text-decoration: none; font-size: 0.9rem;">Log in</a><a href="/signup" class="lumo-nav-cta">Sign up</a></span>{% endif %}
   </nav>
 
+  {% if inactivity_logout %}
+  <p class="inactivity-notice" id="inactivity-notice" style="position: fixed; top: 70px; left: 50%; transform: translateX(-50%); padding: 0.75rem 1.25rem; background: var(--lum-gold); color: #000; font-size: 0.9rem; font-weight: 600; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.2); z-index: 100; margin: 0;">You were logged out due to inactivity.</p>
+  <script>setTimeout(function(){ var e=document.getElementById('inactivity-notice'); if(e)e.remove(); try{history.replaceState({},'','/');}catch(r){} }, 5000);</script>
+  {% endif %}
+
   <!-- SECTION 1 — Full-screen hero. Solid dark background (no mist) so logo matches. -->
   <section class="hero section-dark hero-use-fallback" id="hero" aria-label="Hero">
     <div class="hero-fallback" aria-hidden="true"></div>

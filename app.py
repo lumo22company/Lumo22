@@ -135,7 +135,10 @@ def index():
     except Exception:
         pass
     # #endregion
-    return render_template('landing.html')
+    return render_template(
+        'landing.html',
+        inactivity_logout=request.args.get('inactivity') == '1',
+    )
 
 @app.route('/debug-deploy')
 def debug_deploy():
@@ -393,6 +396,7 @@ def customer_login_required(f):
         if not customer and request.args.get("login_token"):
             data = _consume_login_token(request.args.get("login_token", "").strip())
             if data:
+                session.permanent = True
                 session["customer_id"] = data["customer_id"]
                 session["customer_email"] = data["email"]
                 # Render the page in this response so session cookie is set here (no second request needed)
@@ -425,6 +429,7 @@ def customer_login_page():
             if not customer or not svc.verify_password(customer, password):
                 return render_template('customer_login.html', login_error='Invalid email or password.', next_url=next_url)
             svc.update_last_login(customer['id'])
+            session.permanent = True
             session['customer_id'] = str(customer['id'])
             session['customer_email'] = customer['email']
             # One-time token so account page can set session even if cookie from this response does not persist
