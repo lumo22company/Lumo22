@@ -192,7 +192,7 @@ def captions_page():
         currencies_available.append({"code": "usd", "label": "USD", "symbol": "$"})
     if has_eur:
         currencies_available.append({"code": "eur", "label": "EUR", "symbol": "€"})
-    return render_template(
+    r = make_response(render_template(
         'captions.html',
         captions_payment_link=Config.CAPTIONS_PAYMENT_LINK,
         use_checkout_redirect=use_checkout_redirect,
@@ -202,7 +202,10 @@ def captions_page():
         checkout_error=checkout_error,
         currencies_available=currencies_available,
         captions_prices=CAPTIONS_DISPLAY_PRICES,
-    )
+    ))
+    r.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    r.headers['Pragma'] = 'no-cache'
+    return r
 
 @app.route('/captions-intake')
 def captions_intake_page():
