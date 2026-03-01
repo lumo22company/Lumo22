@@ -21,7 +21,25 @@
     .captions-stories-wrap .captions-checkbox-label + p { font-size: 0.85rem; color: var(--lum-text-muted); margin: 0.5rem 0 0; line-height: 1.4; }
     .captions-currency-btn { border: 1px solid rgba(255,255,255,0.3); }
     .captions-currency-btn[aria-pressed="true"] { background: rgba(255,255,255,0.15); border: 2px solid #fff200; outline: none; }
-    #captions-platforms:hover, #captions-platforms:focus { border-color: #fff200 !important; outline: none; box-shadow: 0 0 0 2px rgba(255,242,0,0.3); }
+    #captions-platforms {
+      -webkit-appearance: none;
+      appearance: none;
+      padding: 0.6rem 3rem 0.6rem 0.75rem;
+      background-color: rgba(255,255,255,0.1);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23aaa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 1rem center;
+      background-size: 1.25em;
+    }
+    #captions-platforms:hover,
+    #captions-platforms:focus,
+    #captions-platforms:focus-visible,
+    #captions-platforms:active {
+      border-color: #fff200 !important;
+      outline: none !important;
+      -webkit-tap-highlight-color: transparent;
+      box-shadow: 0 0 0 2px rgba(255,242,0,0.4) !important;
+    }
     @media (max-width: 640px) { .captions-checkbox-group { flex-wrap: wrap; } }
     .dfd-btn.btn-disabled { opacity: 0.6; }
     .dfd-btn.btn-disabled:hover { opacity: 0.75; }
@@ -172,7 +190,7 @@
       {% endif %}
       <div class="captions-platform-selector" style="max-width: 600px; margin: 0 auto 1.5rem; padding: 1rem 1.25rem; background: rgba(255,255,255,0.06); border-radius: 10px; border: 1px solid rgba(255,255,255,0.12);">
         <label for="captions-platforms" style="display: block; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem;">How many platforms?</label>
-        <select id="captions-platforms" name="platforms" style="width: 100%; padding: 0.6rem 2.25rem 0.6rem 0.75rem; border-radius: 6px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: inherit; font-size: 1rem;">
+        <select id="captions-platforms" name="platforms" style="width: 100%; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); color: inherit; font-size: 1rem;">
           <option value="1">1 platform</option>
           {% if supports_multi_platform|default(false) %}
           <option value="2">2 platforms — add £29 one-off / £19/mo</option>
