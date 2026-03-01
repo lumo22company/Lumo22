@@ -511,6 +511,8 @@
                 msgEl.textContent = result.json.message;
               } else if (result.json.is_subscription) {
                 msgEl.textContent = "Your captions are on the way. Create an account to manage your subscription, re-download captions, and cancel anytime.";
+              } else {
+                msgEl.textContent = "Your form has been updated. Your changes will be reflected in your next captions and stories pack, not in packs already delivered.";
               }
             }
             var formEl = document.getElementById('captions-intake-form');
@@ -850,7 +852,7 @@
             var successEl = document.getElementById('intake-success');
             successEl.style.display = 'block';
             var msgEl = document.getElementById('intake-success-msg');
-            if (msgEl && result.json.message) msgEl.textContent = result.json.message;
+            if (msgEl) msgEl.textContent = result.json.message || "Your form has been updated. Your changes will be reflected in your next captions and stories pack, not in packs already delivered.";
             var formEl = document.getElementById('captions-intake-form');
             if (formEl) formEl.style.display = 'none';
             var custEmail = (result.json.customer_email || '').trim();

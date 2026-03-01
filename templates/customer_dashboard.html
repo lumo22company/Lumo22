@@ -18,6 +18,7 @@
     <div class="lumo-nav-links">
       <a href="/captions">Captions</a>
     </div>
+    <span class="account-nav-logged-in" style="margin-right: 1rem; font-size: 0.85rem; color: var(--lum-text-muted);">Logged in as {{ customer.email if customer and customer.email else '' }}</span>
     <form action="/api/auth/logout" method="POST" style="margin: 0; display: inline;">
       <button type="submit" class="lumo-nav-cta account-nav-logout-btn">Log out</button>
     </form>
@@ -34,6 +35,7 @@
         <li><a href="/account/refer" class="{% if current_section == 'refer' %}active{% endif %}">Refer a friend</a></li>
       </ul>
       <div class="account-sidebar-logout">
+        <p class="account-sidebar-logged-in" style="margin: 0 0 0.5rem; font-size: 0.85rem; color: rgba(255,255,255,0.7);">Logged in as {{ customer.email if customer and customer.email else '' }}</p>
         <form action="/api/auth/logout" method="POST" style="margin: 0;">
           <button type="submit" class="dfd-btn dfd-btn-secondary">Log out</button>
         </form>
