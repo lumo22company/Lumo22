@@ -53,6 +53,10 @@
     .captions-example-block .example-value { flex: 1; }
     .captions-example-block .example-caption { margin: 0; font-size: 0.95rem; line-height: 1.6; }
     .captions-example-block .example-hashtags { font-size: 0.85rem; color: #555; }
+    /* Example blocks: side-by-side on desktop, stacked on mobile */
+    .captions-examples-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: start; margin-top: 2rem; }
+    @media (max-width: 900px) { .captions-examples-grid { grid-template-columns: 1fr; } }
+    .captions-examples-grid .captions-example-block { margin: 0; max-width: none; }
   </style>
 </head>
 <body class="lumo-landing product-page-captions">
@@ -145,7 +149,9 @@
           <li style="padding-left: 1.5rem; position: relative; margin-top: 0.5rem;"><span style="position: absolute; left: 0;">→</span> <strong>Stories PDF</strong> (if you add Story Ideas) — 30 days of story prompts. Align each to that day's caption or keep them separate.</li>
         </ul>
       </div>
-      <p class="dfd-heading" style="font-size: 1.1rem; margin-top: 2rem; margin-bottom: 0.75rem;">Example caption (the kind of thing you’ll see in your pack)</p>
+      <div class="captions-examples-grid">
+        <div>
+      <p class="dfd-heading" style="font-size: 1.1rem; margin-top: 0; margin-bottom: 0.75rem;">Example caption (the kind of thing you’ll see in your pack)</p>
       <div class="captions-example-block">
         <div class="example-day-header">Day 5 — Soft Promotion</div>
         <div class="example-content">
@@ -163,8 +169,10 @@
           </div>
         </div>
       </div>
-      <p style="max-width: 480px; margin: 1rem auto 0; font-size: 0.9rem; color: var(--lum-text-muted, #666);">Your actual captions are written from your form—your business, audience, and tone—so they sound like you, not this sample.</p>
-      <p class="dfd-heading" style="font-size: 1.1rem; margin-top: 2.5rem; margin-bottom: 0.75rem;">Example story (from the Stories add-on PDF)</p>
+      <p style="margin: 1rem 0 0; font-size: 0.9rem; color: var(--lum-text-muted, #666);">Your actual captions are written from your form—your business, audience, and tone—so they sound like you, not this sample.</p>
+        </div>
+        <div>
+      <p class="dfd-heading" style="font-size: 1.1rem; margin-top: 0; margin-bottom: 0.75rem;">Example story (from the Stories add-on PDF)</p>
       <div class="captions-example-block">
         <div class="example-day-header">Day 5 — Soft Promotion</div>
         <div class="example-content">
@@ -182,7 +190,9 @@
           </div>
         </div>
       </div>
-      <p style="max-width: 480px; margin: 1rem auto 0; font-size: 0.9rem; color: var(--lum-text-muted, #666);">Each day in the Stories pack has an idea, ready-to-use wording, and hashtags—so you can post to Stories without the guesswork.</p>
+      <p style="margin: 1rem 0 0; font-size: 0.9rem; color: var(--lum-text-muted, #666);">Each day in the Stories pack has an idea, ready-to-use wording, and hashtags—so you can post to Stories without the guesswork.</p>
+        </div>
+      </div>
     </div>
   </section>
 
