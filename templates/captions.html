@@ -47,9 +47,14 @@
     .captions-example-block { max-width: 520px; margin: 0 auto; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.08); }
     .captions-example-block .example-day-header { background: #000; color: #fff; padding: 0.6rem 1rem; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
     .captions-example-block .example-content { background: #fff; padding: 0.75rem 1.25rem; font-size: 0.9rem; line-height: 1.6; color: #1a1a1a; border-top: none; }
-    .captions-example-block .example-row { display: flex; gap: 0; margin-bottom: 0.75rem; align-items: baseline; }
+    .captions-example-block .example-row { display: flex; gap: 0.75rem; margin-bottom: 0.75rem; align-items: baseline; }
     .captions-example-block .example-row:last-child { margin-bottom: 0; }
-    .captions-example-block .example-label { flex-shrink: 0; width: 7rem; font-weight: 600; font-size: 0.8rem; color: #000; }
+    .captions-example-block .example-label { flex-shrink: 0; width: 8.5rem; font-weight: 600; font-size: 0.8rem; color: #000; }
+    /* Captions block only — tighter spacing between label and content */
+    .example-block-captions .example-row { gap: 0; }
+    .example-block-captions .example-label { width: 7rem; }
+    /* Stories block — labels on one line (e.g. "Suggested wording:") */
+    .example-block-stories .example-label { white-space: nowrap; width: 9.5rem; min-width: 9.5rem; }
     .captions-example-block .example-value { flex: 1; }
     .captions-example-block .example-caption { margin: 0; font-size: inherit; line-height: 1.6; }
     .captions-example-block .example-hashtags { font-size: 0.85rem; color: #555; }
@@ -152,7 +157,7 @@
       <div class="captions-examples-grid">
         <div>
       <p class="dfd-heading" style="font-size: 1.1rem; margin-top: 0; margin-bottom: 0.75rem;">Example caption (the kind of thing you’ll see in your pack)</p>
-      <div class="captions-example-block">
+      <div class="captions-example-block example-block-captions">
         <div class="example-day-header">Day 5 — Soft Promotion</div>
         <div class="example-content">
           <div class="example-row">
@@ -173,7 +178,7 @@
         </div>
         <div>
       <p class="dfd-heading" style="font-size: 1.1rem; margin-top: 0; margin-bottom: 0.75rem;">Example story (from the Stories add-on PDF)</p>
-      <div class="captions-example-block">
+      <div class="captions-example-block example-block-stories">
         <div class="example-day-header">Day 5 — Soft Promotion</div>
         <div class="example-content">
           <div class="example-row">
