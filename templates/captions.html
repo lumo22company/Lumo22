@@ -43,6 +43,16 @@
     @media (max-width: 640px) { .captions-checkbox-group { flex-wrap: wrap; } }
     .dfd-btn.btn-disabled { opacity: 0.6; }
     .dfd-btn.btn-disabled:hover { opacity: 0.75; }
+    /* Example blocks — match PDF layout: black header, white content, gold labels */
+    .captions-example-block { max-width: 520px; margin: 0 auto; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.08); }
+    .captions-example-block .example-day-header { background: #000; color: #fff; padding: 0.6rem 1rem; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+    .captions-example-block .example-content { background: #fff; padding: 1rem 1.25rem; font-size: 0.9rem; line-height: 1.6; color: #1a1a1a; border-top: none; }
+    .captions-example-block .example-row { display: flex; gap: 0.75rem; margin-bottom: 0.75rem; }
+    .captions-example-block .example-row:last-child { margin-bottom: 0; }
+    .captions-example-block .example-label { flex-shrink: 0; min-width: 6.5rem; font-weight: 600; font-size: 0.8rem; color: var(--lum-gold, #fff200); }
+    .captions-example-block .example-value { flex: 1; }
+    .captions-example-block .example-caption { margin: 0; font-size: 0.95rem; line-height: 1.6; }
+    .captions-example-block .example-hashtags { font-size: 0.85rem; color: #555; }
   </style>
 </head>
 <body class="lumo-landing product-page-captions">
@@ -136,19 +146,41 @@
         </ul>
       </div>
       <p class="dfd-heading" style="font-size: 1.1rem; margin-top: 2rem; margin-bottom: 0.75rem;">Example caption (the kind of thing you’ll see in your pack)</p>
-      <div class="captions-example-block" style="max-width: 520px; margin: 0 auto; padding: 1.25rem 1.5rem; background: rgba(0,0,0,0.06); border-radius: 10px; border: 1px solid rgba(0,0,0,0.1); text-align: left; font-size: 0.95rem; line-height: 1.6; color: var(--text-on-light, #1a1a1a);">
-        <p style="margin: 0 0 0.5rem; font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--lum-text-subtle, #555);">Day 5 — Soft Promotion</p>
-        <p style="margin: 0 0 0.25rem; font-size: 0.85rem; color: var(--lum-text-subtle, #555);"><strong>Platform:</strong> Instagram &amp; Facebook</p>
-        <p style="margin: 0 0 0.75rem;">You don’t need another course or a bigger inbox. You need one clear next step. If that’s a call to talk through your strategy, we’ve got a slot this week. Reply or DM and we’ll send the link.</p>
-        <p style="margin: 0; font-size: 0.85rem; color: var(--lum-text-subtle, #555);"><strong>Hashtags:</strong> #strategy #smallbusiness #founder #nextstep #consulting</p>
+      <div class="captions-example-block">
+        <div class="example-day-header">Day 5 — Soft Promotion</div>
+        <div class="example-content">
+          <div class="example-row">
+            <span class="example-label">Platform:</span>
+            <span class="example-value">Instagram &amp; Facebook</span>
+          </div>
+          <div class="example-row">
+            <span class="example-label">Caption:</span>
+            <span class="example-value example-caption">You don't need another course or a bigger inbox. You need one clear next step. If that's a call to talk through your strategy, we've got a slot this week. Reply or DM and we'll send the link.</span>
+          </div>
+          <div class="example-row">
+            <span class="example-label">Hashtags:</span>
+            <span class="example-value example-hashtags">#strategy #smallbusiness #founder #nextstep #consulting</span>
+          </div>
+        </div>
       </div>
       <p style="max-width: 480px; margin: 1rem auto 0; font-size: 0.9rem; color: var(--lum-text-muted, #666);">Your actual captions are written from your form—your business, audience, and tone—so they sound like you, not this sample.</p>
       <p class="dfd-heading" style="font-size: 1.1rem; margin-top: 2.5rem; margin-bottom: 0.75rem;">Example story (from the Stories add-on PDF)</p>
-      <div class="captions-example-block" style="max-width: 520px; margin: 0 auto; padding: 1.25rem 1.5rem; background: rgba(0,0,0,0.06); border-radius: 10px; border: 1px solid rgba(0,0,0,0.1); text-align: left; font-size: 0.95rem; line-height: 1.6; color: var(--text-on-light, #1a1a1a);">
-        <p style="margin: 0 0 0.5rem; font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--lum-text-subtle, #555);">Day 5 — Soft promotion</p>
-        <p style="margin: 0 0 0.25rem; font-size: 0.85rem; color: var(--lum-text-subtle, #555);"><strong>Idea:</strong> Tease your offer with a “reply for the link” or “link in bio” CTA.</p>
-        <p style="margin: 0 0 0.25rem; font-size: 0.85rem; color: var(--lum-text-subtle, #555);"><strong>Suggested wording:</strong> If you want the details for this week’s strategy call, reply with YES and I’ll send the link.</p>
-        <p style="margin: 0; font-size: 0.85rem; color: var(--lum-text-subtle, #555);"><strong>Story hashtags:</strong> #strategy #nextstep #consulting #smallbusiness</p>
+      <div class="captions-example-block">
+        <div class="example-day-header">Day 5 — Soft Promotion</div>
+        <div class="example-content">
+          <div class="example-row">
+            <span class="example-label">Idea:</span>
+            <span class="example-value">Tease your offer with a "reply for the link" or "link in bio" CTA.</span>
+          </div>
+          <div class="example-row">
+            <span class="example-label">Suggested wording:</span>
+            <span class="example-value">If you want the details for this week's strategy call, reply with YES and I'll send the link.</span>
+          </div>
+          <div class="example-row">
+            <span class="example-label">Story hashtags:</span>
+            <span class="example-value example-hashtags">#strategy #nextstep #consulting #smallbusiness</span>
+          </div>
+        </div>
       </div>
       <p style="max-width: 480px; margin: 1rem auto 0; font-size: 0.9rem; color: var(--lum-text-muted, #666);">Each day in the Stories pack has an idea, ready-to-use wording, and hashtags—so you can post to Stories without the guesswork.</p>
     </div>
