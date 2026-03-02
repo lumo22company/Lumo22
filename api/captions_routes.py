@@ -382,7 +382,8 @@ def captions_intake_link():
     if not token:
         return jsonify({"status": "pending"}), 200
     intake_url = f"{base}/captions-intake?t={token}"
-    return jsonify({"status": "ok", "intake_url": intake_url}), 200
+    customer_email = (order.get("customer_email") or "").strip()
+    return jsonify({"status": "ok", "intake_url": intake_url, "customer_email": customer_email or None}), 200
 
 
 def _run_generation_and_deliver(order_id: str):

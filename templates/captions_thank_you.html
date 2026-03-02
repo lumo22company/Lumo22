@@ -19,6 +19,7 @@
     .thankyou-card .thankyou-back { margin-top: 2rem; }
     .thankyou-card .thankyou-back a { color: var(--lum-text-muted); text-decoration: none; font-size: 0.95rem; }
     .thankyou-card .thankyou-back a:hover { color: var(--lum-text); }
+    .thankyou-later-btn:hover { border-color: rgba(255,255,255,0.4); color: var(--lum-text); }
     .thankyou-spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid var(--lum-text-muted); border-top-color: transparent; border-radius: 50%; animation: thankyou-spin 0.8s linear infinite; vertical-align: middle; margin-right: 0.5rem; }
     @keyframes thankyou-spin { to { transform: rotate(360deg); } }
   </style>
@@ -41,11 +42,13 @@
     <div class="thankyou-card" id="thankyou-box">
       <h1>30 Days of Social Media Captions</h1>
       <p id="thankyou-message">We've received your payment. One moment — we're preparing your next step…</p>
-      <p id="thankyou-form-link" style="display: none;">
-        <a href="#" id="intake-link" class="lumo-btn-primary thankyou-cta">Complete your details</a>
-        <span id="thankyou-redirect-msg" style="display: block; margin-top: 0.75rem; font-size: 0.9rem; color: var(--lum-text-muted);"></span>
-      </p>
-      <p id="thankyou-email-fallback" style="display: none;">We've also sent the link by email — use it anytime to open the form.</p>
+      <div id="thankyou-form-link" style="display: none;">
+        <p id="thankyou-email-msg" style="margin-bottom: 1.25rem;"></p>
+        <div class="thankyou-cta-row" style="display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1.5rem;">
+          <a href="#" id="intake-link" class="lumo-btn-primary thankyou-cta">Fill in now</a>
+          <a href="{% if current_customer %}/account{% else %}/{% endif %}" id="later-link" class="thankyou-later-btn" style="display: inline-flex; align-items: center; padding: 0.75rem 1.5rem; background: transparent; color: var(--lum-text-muted); text-decoration: none; font-size: 1rem; border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; transition: border-color 0.2s, color 0.2s;">I'll do it later</a>
+        </div>
+      </div>
       <p id="thankyou-no-session" style="display: none;">Check your email for a link to the short form. After you submit, we'll create your 30 captions and deliver by email.</p>
       <p class="thankyou-back"><a href="/captions">← Back to Captions</a> · <a href="/">Lumo 22 home</a></p>
     </div>
@@ -60,7 +63,7 @@
       var messageEl = document.getElementById('thankyou-message');
       var formLinkEl = document.getElementById('thankyou-form-link');
       var intakeLinkEl = document.getElementById('intake-link');
-      var emailFallbackEl = document.getElementById('thankyou-email-fallback');
+      var emailMsgEl = document.getElementById('thankyou-email-msg');
       var noSessionEl = document.getElementById('thankyou-no-session');
 
       if (!sessionId) {
@@ -70,25 +73,20 @@
         return;
       }
 
-      var REDIRECT_DELAY_MS = 5000; // Stay on thank-you page 5 seconds before auto-redirect
-      var redirectMsgEl = document.getElementById('thankyou-redirect-msg');
-
-      function showIntake(url) {
-        messageEl.textContent = "Your form is ready. Click below to share your business and voice — we'll then create your 30 captions.";
-        messageEl.style.display = 'block';
+      function showIntake(url, customerEmail) {
+        messageEl.style.display = 'none';
+        var emailText = customerEmail
+          ? 'We\'ve emailed you the form link at <strong>' + escapeHtml(customerEmail) + '</strong>. Complete it to get your captions—usually ready within 15 minutes.'
+          : 'We\'ve emailed you the form link. Complete it to get your captions—usually ready within 15 minutes.';
+        emailMsgEl.innerHTML = emailText;
         intakeLinkEl.href = url;
         formLinkEl.style.display = 'block';
-        emailFallbackEl.style.display = 'block';
-        var secondsLeft = Math.ceil(REDIRECT_DELAY_MS / 1000);
-        var countdown = setInterval(function() {
-          redirectMsgEl.textContent = secondsLeft > 0 ? "We'll take you there in " + secondsLeft + " second" + (secondsLeft === 1 ? "" : "s") + "…" : "";
-          secondsLeft--;
-          if (secondsLeft < 0) clearInterval(countdown);
-        }, 1000);
-        setTimeout(function() {
-          clearInterval(countdown);
-          window.location.href = url;
-        }, REDIRECT_DELAY_MS);
+      }
+
+      function escapeHtml(s) {
+        var div = document.createElement('div');
+        div.textContent = s;
+        return div.innerHTML;
       }
 
       function check() {
@@ -96,7 +94,7 @@
           .then(function(r) { return r.json(); })
           .then(function(data) {
             if (data.status === 'ok' && data.intake_url) {
-              showIntake(data.intake_url);
+              showIntake(data.intake_url, data.customer_email || null);
             }
           })
           .catch(function() {});
@@ -109,7 +107,7 @@
           .then(function(data) {
             if (data.status === 'ok' && data.intake_url) {
               clearInterval(interval);
-              showIntake(data.intake_url);
+              showIntake(data.intake_url, data.customer_email || null);
             }
           })
           .catch(function() {});
