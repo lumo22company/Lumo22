@@ -85,7 +85,7 @@
   </section>
 
   <!-- 2. HOW IT WORKS — light section (alternate with hero dark) -->
-  <section class="dfd-section dfd-section--light dfd-how-section" id="how-it-works">
+  <section class="dfd-section dfd-section--light dfd-how-section" id="how-it-works" data-reveal>
     <div class="dfd-section-inner">
       <h2 class="dfd-heading">How it works</h2>
       <p class="dfd-lead">Three steps to a month of content.</p>
@@ -120,7 +120,7 @@
   </section>
 
   <!-- 2b. YOUR VOICE — differentiator -->
-  <section class="dfd-section dfd-section--dark" style="background: var(--lum-surface, #0a0a0a); padding: 5rem 0 3rem;">
+  <section class="dfd-section dfd-section--dark" style="background: var(--lum-surface, #0a0a0a); padding: 5rem 0 3rem;" data-reveal>
     <div class="dfd-section-inner">
       <h2 class="dfd-heading" style="color: var(--lum-text);">Written in your voice — that’s the difference</h2>
       <p class="dfd-lead" style="max-width: 640px; margin: 0; color: var(--lum-text-muted); text-align: left;">Other tools churn out the same flat, AI-sounding copy. We don’t. Your form tells us how you speak, what you avoid, and who you’re talking to. We use that to write captions that sound like you wrote them: human, on-brand, and ready to post.</p>
@@ -129,7 +129,7 @@
   </section>
 
   <!-- 2c. PSYCHOLOGY-BACKED FORMAT — feature (dark) -->
-  <section class="dfd-section dfd-section--dark" style="background: var(--lum-surface, #0a0a0a); padding: 3rem 0;">
+  <section class="dfd-section dfd-section--dark" style="background: var(--lum-surface, #0a0a0a); padding: 3rem 0;" data-reveal>
     <div class="dfd-section-inner">
       <h2 class="dfd-heading" style="color: var(--lum-text);">Designed for consistency</h2>
       <p class="dfd-lead" style="color: var(--lum-text-muted);">Our packs use proven psychological strategies so you're more likely to actually post—not just plan.</p>
@@ -144,7 +144,7 @@
   </section>
 
   <!-- 2d. EXAMPLE & DELIVERY FORMAT -->
-  <section class="dfd-section dfd-section--light" id="example-and-format" aria-label="Example and format">
+  <section class="dfd-section dfd-section--light" id="example-and-format" aria-label="Example and format" data-reveal>
     <div class="dfd-section-inner">
       <h2 class="dfd-heading">What you get</h2>
       <p class="dfd-lead">Your pack is delivered as a PDF (or two PDFs with the Stories add-on). Each day has a category, ready-to-use text, and hashtags. Add Story Ideas for Instagram &amp; Facebook—align each to that day's caption or keep them separate. Copy, paste, and post.</p>
@@ -202,7 +202,7 @@
   </section>
 
   <!-- 3. TESTIMONIALS — social proof -->
-  <section class="dfd-section dfd-section--light dfd-testimonials-section" id="testimonials" style="padding-top: 2rem;">
+  <section class="dfd-section dfd-section--light dfd-testimonials-section" id="testimonials" style="padding-top: 2rem;" data-reveal>
     <div class="dfd-section-inner">
       <h2 class="dfd-heading">What people say</h2>
       <div class="dfd-testimonials dfd-testimonials--two">
@@ -373,6 +373,10 @@
 
   {% include '_footer.html' %}
 
+  <script src="https://unpkg.com/lenis@1.1.13/dist/lenis.min.js"></script>
+  <script src="{{ url_for('static', filename='js/lenis-smooth-scroll.js') }}?v={{ asset_version }}"></script>
+  <script src="{{ url_for('static', filename='js/section-parallax.js') }}?v={{ asset_version }}"></script>
+  <script src="{{ url_for('static', filename='js/scroll-reveal.js') }}?v={{ asset_version }}"></script>
   <script src="{{ url_for('static', filename='js/landing.js') }}?v={{ asset_version }}"></script>
   <script>
   (function() {

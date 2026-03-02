@@ -8,8 +8,9 @@
 
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
-  var blocks = document.querySelectorAll('.block[data-reveal] .block-inner');
-  if (!blocks.length) return;
+  var blocks = document.querySelectorAll('.block[data-reveal] .block-inner, .dfd-section[data-reveal] .dfd-section-inner, .intro[data-reveal] .section-inner');
+  var heroInners = document.querySelectorAll('.dfd-hero .dfd-hero-inner, .hero.section-dark .section-inner');
+  if (!blocks.length && !heroInners.length) return;
 
   var MAX_LAG = 24;
   var getScrollY = function () {
@@ -23,6 +24,18 @@
   function update() {
     var scrollY = getScrollY();
     var winH = window.innerHeight;
+
+    heroInners.forEach(function (el) {
+      var hero = el.closest('.dfd-hero, .hero');
+      if (!hero) return;
+      var rect = hero.getBoundingClientRect();
+      if (rect.bottom > 0 && rect.top < winH) {
+        var ty = scrollY * 0.12;
+        el.style.transform = 'translateY(' + ty + 'px)';
+      } else {
+        el.style.transform = '';
+      }
+    });
 
     blocks.forEach(function (el) {
       var section = el.closest('section');
