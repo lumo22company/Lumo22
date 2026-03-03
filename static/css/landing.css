@@ -634,6 +634,18 @@ a.lumo-nav-login:hover {
   margin-bottom: 0;
 }
 
+.intro-bullets li {
+  font-family: var(--font-body);
+  font-size: 1.08rem;
+  line-height: 1.65;
+  color: #404040;
+  margin-bottom: var(--space-sm);
+  padding-left: 0;
+}
+.intro-bullets li:last-child {
+  margin-bottom: 0;
+}
+
 /* ——— Blocks — rounded floating panels, strict alternation ——— */
 .block {
   padding: 24px 24px;
