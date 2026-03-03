@@ -147,6 +147,7 @@ input[type="checkbox"] { accent-color: #fff200; }
 .lumo-nav-logo:hover { color: var(--lum-gold); }
 
 .lumo-nav-links { display: flex; gap: var(--space-xl); }
+.lumo-nav-links:empty { display: none; }
 .lumo-nav-links a {
   font-family: var(--font-body);
   letter-spacing: 0.2em;
@@ -642,15 +643,13 @@ a.lumo-nav-login:hover {
   padding: 64px 48px;
 }
 
-.block[data-reveal],
-.intro[data-reveal] {
+.block[data-reveal] {
   opacity: 0;
   transform: translateY(20px);
   transition: opacity 0.6s var(--ease-out), transform 0.6s var(--ease-out);
 }
 
-.block[data-reveal].revealed,
-.intro[data-reveal].revealed {
+.block[data-reveal].revealed {
   opacity: 1;
   transform: translateY(0);
 }
