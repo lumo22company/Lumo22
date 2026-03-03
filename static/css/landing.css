@@ -638,7 +638,7 @@ a.lumo-nav-login:hover {
   font-family: var(--font-body);
   font-size: 1.08rem;
   line-height: 1.65;
-  color: #404040;
+  color: #000;
   margin-bottom: var(--space-sm);
   padding-left: 0;
 }
