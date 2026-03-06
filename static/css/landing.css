@@ -1163,7 +1163,7 @@ a.lumo-nav-login:hover::before {
 .footer-logo-link { display: block; margin-bottom: 0.5rem; }
 .footer-logo { display: block; height: 32px; width: auto; }
 .footer-brand {
-  font-family: var(--font-display);
+  font-family: 'Satoshi', 'Century Gothic', CenturyGothic, sans-serif;
   font-size: 1.0625rem;
   font-weight: 500;
   color: var(--text-on-dark);
@@ -1338,11 +1338,6 @@ a.lumo-nav-login:hover::before {
 }
 .thankyou-cta-swipe:hover::before {
   transform: scaleX(1);
-}
-button.thankyou-cta-swipe {
-  cursor: pointer;
-  font: inherit;
-  border: 2px solid var(--lum-gold, #fff200);
 }
 
 /* Log in page: submit button — yellow font + yellow outline, swipe on hover (yellow fill, dark text) */
