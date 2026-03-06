@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Your Account | Lumo 22</title>
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
-  <meta name="description" content="Manage your Lumo 22 account: Captions and settings.">
+  <meta name="description" content="Manage your Lumo 22 account: Captions, subscription, and billing.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Encode+Sans+Condensed:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -14,8 +14,10 @@
 </head>
 <body class="lumo-landing account-page-wrap">
   <nav class="lumo-nav" id="lumo-nav">
-    <a href="/" class="lumo-nav-logo">Lumo 22</a>
-    <div class="lumo-nav-links"></div>
+    <div class="lumo-nav-left">
+      <a href="/" class="lumo-nav-logo">Lumo 22</a>
+      <a href="/captions" class="lumo-nav-link">Captions</a>
+    </div>
   </nav>
 
   <div class="account-layout">
@@ -63,7 +65,7 @@
               <div class="account-info-value" id="account-email-display">{{ customer.email }}</div>
             </div>
             <div class="account-info-actions">
-              <button type="button" class="account-change-email-btn dfd-btn dfd-btn-secondary" id="account-change-email-trigger" onclick="toggleEmailChangeForm()">Change email</button>
+              <button type="button" class="account-change-email-btn account-billing-portal-link account-btn-swipe-light" id="account-change-email-trigger" onclick="toggleEmailChangeForm()">Change email</button>
             </div>
           </div>
           <div id="account-change-email-form" class="account-change-email-form" style="display: none; margin-top: 0.5rem; padding: 1rem; background: rgba(0,0,0,0.04); border-radius: 8px; border: 1px solid rgba(0,0,0,0.08);">
@@ -81,7 +83,7 @@
               <div class="account-info-value">••••••••</div>
             </div>
             <div class="account-info-actions">
-              <a href="/forgot-password" class="account-billing-portal-link">Change password</a>
+              <a href="/forgot-password" class="account-billing-portal-link account-btn-swipe-light">Change password</a>
             </div>
           </div>
           <div class="account-info-row">
@@ -90,13 +92,14 @@
               <div class="account-info-value">Payment method and invoices</div>
             </div>
             <div class="account-info-actions">
-              <a href="/api/billing/portal" class="account-billing-portal-link">Manage billing</a>
+              <a href="/api/billing/portal" class="account-billing-portal-link account-btn-swipe-light">Manage billing</a>
             </div>
           </div>
           <div class="account-info-row">
             <div>
               <span class="account-info-label">Marketing emails</span>
               <div class="account-info-value">Tips, updates, and offers from Lumo 22</div>
+              <p id="marketing-toggle-error" class="account-toggle-error" style="display: none; margin: 0.5rem 0 0; font-size: 0.85rem; color: #c00;"></p>
             </div>
             <div id="marketing-toggle-wrap" role="button" tabindex="0" class="account-toggle {% if customer.get('marketing_opt_in', True) %}on{% endif %}" aria-label="Toggle marketing emails" onclick="toggleMarketing()" onkeydown="if(event.key==='Enter'||event.key===' ') { event.preventDefault(); toggleMarketing(); }"></div>
           </div>
@@ -120,17 +123,19 @@
         <h2>History</h2>
         {% set delivered_orders = (caption_orders|selectattr('status', 'equalto', 'delivered')|list)|sort(attribute='created_at', reverse=True) %}
         {% if delivered_orders %}
-        <p class="account-section-desc">View or download your previous packs. Each pack is available as a PDF; if you added Story Ideas, you get a separate Stories PDF.</p>
+        <p class="account-section-desc">View or download your previous packs. Each pack is available as a PDF; if you added Story Ideas, you get a separate Stories PDF. Only delivered packs appear here — for current orders use Edit form or Manage subscription.</p>
         <div class="account-history-list">
           {% for o in delivered_orders %}
           <div class="account-history-item" data-history-token="{{ o.token }}">
-            {% set biz = (o.get('intake') or {}).get('business_name', '')|trim %}
-            {% set is_sub = (o.get('stripe_subscription_id') or '')|trim %}
-            {% set label = biz if biz else ('Subscription' if is_sub else 'One-off') %}
-            <span>{{ label }} — Pack {{ o.created_at[:10] if o.created_at else '—' }}</span>
-            <span class="account-history-type account-history-type--{{ 'subscription' if is_sub else 'oneoff' }}">{{ 'Subscription' if is_sub else 'One-off' }}</span>
+            <div class="account-history-item-title-row">
+              {% set biz = (o.get('intake') or {}).get('business_name', '')|trim %}
+              {% set is_sub = (o.get('stripe_subscription_id') or '')|trim %}
+              {% set label = biz if biz else ('Subscription' if is_sub else 'One-off') %}
+              <span>{{ label }} — Pack {{ o.created_at[:10] if o.created_at else '—' }}</span>
+              <span class="account-history-type account-history-type--{{ 'subscription' if is_sub else 'oneoff' }}">{{ 'Subscription' if is_sub else 'One-off' }}</span>
+            </div>
             <div class="account-history-actions">
-              <a href="/api/captions-download?t={{ o.token }}&inline=1" target="_blank" rel="noopener" class="account-btn-link account-btn-link--primary">View captions</a>
+              <a href="/api/captions-download?t={{ o.token }}&inline=1" target="_blank" rel="noopener" class="account-btn-link account-btn-link--primary">View Captions</a>
               <a href="/api/captions-download?t={{ o.token }}" class="account-btn-link account-btn-link--secondary">Download captions PDF</a>
               {% if o.include_stories %}
               <a href="/api/captions-download?t={{ o.token }}&type=stories&inline=1" target="_blank" rel="noopener" class="account-btn-link account-btn-link--primary">View Stories</a>
@@ -143,6 +148,7 @@
         </div>
         {% else %}
         <p class="account-section-desc">No delivered packs yet. When your first pack is ready, it will appear here with view and download options.</p>
+        <p class="account-section-desc" style="font-size: 0.9rem; color: rgba(255,255,255,0.75); margin-top: 0.5rem;">Orders are linked to the email you used at checkout. If a recent order is missing, check you're logged in with that same email.</p>
         <p><a href="/captions" style="color: #8b6914; font-weight: 500;">Get 30 Days Captions</a></p>
         {% endif %}
       </section>
@@ -172,15 +178,16 @@
           {% set label = biz if biz else (o.created_at[:10] if o.created_at else 'Subscription') %}
           <li>
             {% if o.status == 'awaiting_intake' %}
-            <a href="/captions-intake?t={{ o.token }}" class="account-billing-portal-link">Complete the form — {{ label }}</a>
+            <a href="/captions-intake?t={{ o.token }}" class="account-billing-portal-link account-btn-swipe-light">Complete the form — {{ label }}</a>
             {% else %}
-            <a href="/captions-intake?t={{ o.token }}" class="account-billing-portal-link">Edit form — {{ label }}</a>
+            <a href="/captions-intake?t={{ o.token }}" class="account-billing-portal-link account-btn-swipe-light">Edit form — {{ label }}</a>
             {% endif %}
           </li>
           {% endfor %}
         </ul>
         {% else %}
         <p class="account-section-desc">No caption orders yet. After you purchase, you can edit your intake form here.</p>
+        <p class="account-section-desc" style="font-size: 0.9rem; color: rgba(255,255,255,0.75); margin-top: 0.5rem;">Orders are linked to the email you used at checkout. If a recent order is missing, check you're logged in with that same email.</p>
         <p><a href="/captions" style="color: #8b6914; font-weight: 500;">Get 30 Days Captions</a></p>
         {% endif %}
       </section>
@@ -264,7 +271,12 @@
         {% endfor %}
         {% else %}
         <p class="account-section-desc">You don't have an active subscription. Pause is only available for monthly Captions subscribers.</p>
-        <p><a href="/captions" style="color: #8b6914; font-weight: 500;">View 30 Days Captions</a></p>
+        {% if subscribe_options %}
+        <p class="account-section-desc" style="margin-bottom: 0.75rem;">Want a new pack every month? Upgrade to a subscription and the choices from a previous one-off pack will be prefilled on the checkout page. Your first subscription pack arrives 30 days after that one-off pack.{% if subscribe_options|length > 1 %} You have more than one one-off pack — choose which one to base the subscription on below.{% endif %}</p>
+        {% for opt in subscribe_options %}
+        <p style="margin-bottom: 0.5rem;"><a href="{{ opt.url }}" class="dfd-btn dfd-btn-secondary account-upgrade-subscription-btn">Upgrade to subscription{% if opt.business_name %} — {{ opt.business_name }}{% else %} — use this pack’s choices{% endif %}</a></p>
+        {% endfor %}
+        {% endif %}
         {% endif %}
       </section>
       {% endif %}
@@ -278,7 +290,7 @@
           <label class="account-settings-label" for="referral-link">Your referral link</label>
           <div class="referral-row" style="display: flex; gap: 0.75rem; align-items: center; margin-top: 0.5rem;">
             <input type="text" id="referral-link" readonly value="{{ base_url }}/signup?ref={{ referral_code }}" class="referral-input" style="flex: 1; padding: 0.6rem 0.9rem; font-size: 0.9rem; border: 1px solid rgba(0,0,0,0.15); border-radius: 12px; background: #f8f8f6; color: #111;">
-            <button type="button" class="dfd-btn dfd-btn-secondary referral-copy" onclick="copyReferralLink()">Copy link</button>
+            <button type="button" class="dfd-btn dfd-btn-secondary referral-copy account-btn-swipe-light" onclick="copyReferralLink()">Copy link</button>
           </div>
           <p class="account-settings-desc" style="margin-top: 0.5rem; color: #444;">Or share your code: <strong>{{ referral_code }}</strong></p>
         {% if referral_discount_credits|default(0) > 0 %}
@@ -407,20 +419,41 @@
 
       function toggleMarketing() {
         var wrap = document.getElementById('marketing-toggle-wrap');
+        var errEl = document.getElementById('marketing-toggle-error');
         if (!wrap) return;
+        if (errEl) errEl.style.display = 'none';
         var optIn = wrap.classList.contains('on');
         var nextOptIn = !optIn;
         wrap.classList.toggle('on', nextOptIn);
+        wrap.setAttribute('aria-pressed', nextOptIn ? 'true' : 'false');
         fetch('/api/auth/preferences', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
           body: JSON.stringify({ marketing_opt_in: nextOptIn })
         })
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          if (!data.ok) { wrap.classList.toggle('on', optIn); }
+        .then(function(r) {
+          if (!r.ok) {
+            var msg = r.status === 401 ? 'Please log in again.' : 'Couldn\'t update. Try again.';
+            if (errEl) { errEl.textContent = msg; errEl.style.display = 'block'; }
+            wrap.classList.toggle('on', optIn);
+            wrap.setAttribute('aria-pressed', optIn ? 'true' : 'false');
+            return;
+          }
+          return r.json();
         })
-        .catch(function() { wrap.classList.toggle('on', optIn); });
+        .then(function(data) {
+          if (data && !data.ok) {
+            if (errEl) { errEl.textContent = data.error || 'Couldn\'t update. Try again.'; errEl.style.display = 'block'; }
+            wrap.classList.toggle('on', optIn);
+            wrap.setAttribute('aria-pressed', optIn ? 'true' : 'false');
+          }
+        })
+        .catch(function() {
+          if (errEl) { errEl.textContent = 'Couldn\'t update. Try again.'; errEl.style.display = 'block'; }
+          wrap.classList.toggle('on', optIn);
+          wrap.setAttribute('aria-pressed', optIn ? 'true' : 'false');
+        });
       }
 
       function toggleReminder(el) {
@@ -567,6 +600,9 @@
         closeAddStoriesModal();
         addStoriesToSubscription(btn);
       }
+      window.showAddStoriesModal = showAddStoriesModal;
+      window.closeAddStoriesModal = closeAddStoriesModal;
+      window.confirmAddStories = confirmAddStories;
       function addStoriesToSubscription(btn) {
         var subId = btn.getAttribute('data-subscription-id');
         if (!subId) return;
