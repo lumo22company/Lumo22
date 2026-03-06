@@ -296,18 +296,82 @@
   color: var(--lum-text-muted);
 }
 
+/* Captions page — slide in from left (same as landing intro) ——— */
+.captions-reveal[data-reveal] .dfd-heading,
+.captions-reveal .dfd-heading[data-reveal],
+.captions-reveal .dfd-hero-title[data-reveal],
+.captions-reveal .product-section-title[data-reveal],
+.captions-reveal .product-section-desc[data-reveal],
+.captions-reveal .dfd-lead[data-reveal],
+.captions-reveal p[data-reveal],
+.captions-reveal li[data-reveal],
+.captions-reveal blockquote[data-reveal],
+.captions-reveal div[data-reveal] {
+  opacity: 0;
+  transform: translateX(-48px);
+  transition: opacity 1.2s var(--ease-out), transform 1.2s var(--ease-out);
+}
+.captions-reveal[data-reveal].revealed .dfd-heading,
+.captions-reveal .dfd-heading[data-reveal].revealed,
+.captions-reveal .dfd-hero-title[data-reveal].revealed,
+.captions-reveal .product-section-title[data-reveal].revealed,
+.captions-reveal .product-section-desc[data-reveal].revealed,
+.captions-reveal .dfd-lead[data-reveal].revealed,
+.captions-reveal p[data-reveal].revealed,
+.captions-reveal li[data-reveal].revealed,
+.captions-reveal blockquote[data-reveal].revealed,
+.captions-reveal div[data-reveal].revealed {
+  opacity: 1;
+  transform: translateX(0);
+}
+.captions-reveal li[data-reveal]:nth-child(1) { transition-delay: 0.1s; }
+.captions-reveal li[data-reveal]:nth-child(2) { transition-delay: 0.2s; }
+.captions-reveal li[data-reveal]:nth-child(3) { transition-delay: 0.3s; }
+.captions-reveal li[data-reveal]:nth-child(4) { transition-delay: 0.4s; }
+/* How it works steps stagger ——— */
+.dfd-steps .dfd-step[data-reveal]:nth-child(1) { transition-delay: 0.1s; }
+.dfd-steps .dfd-step[data-reveal]:nth-child(2) { transition-delay: 0.2s; }
+.dfd-steps .dfd-step[data-reveal]:nth-child(3) { transition-delay: 0.3s; }
+.dfd-how-section .dfd-how-cta[data-reveal] { transition-delay: 0.4s; }
+/* Example grid columns stagger ——— */
+.captions-examples-grid > div[data-reveal]:nth-child(1) { transition-delay: 0.1s; }
+.captions-examples-grid > div[data-reveal]:nth-child(2) { transition-delay: 0.2s; }
+/* Testimonials stagger ——— */
+.dfd-testimonials .dfd-testimonial[data-reveal]:nth-child(1) { transition-delay: 0.1s; }
+.dfd-testimonials .dfd-testimonial[data-reveal]:nth-child(2) { transition-delay: 0.2s; }
+/* Hero section stagger ——— */
+.captions-reveal.dfd-hero .dfd-hero-title[data-reveal] { transition-delay: 0.05s; }
+.captions-reveal.dfd-hero .dfd-hero-hook[data-reveal] { transition-delay: 0.1s; }
+.captions-reveal.dfd-hero .dfd-hero-outcome[data-reveal] { transition-delay: 0.15s; }
+.captions-reveal.dfd-hero .dfd-hero-subtitle[data-reveal] { transition-delay: 0.2s; }
+.captions-reveal.dfd-hero .dfd-hero-cta[data-reveal] { transition-delay: 0.25s; }
+
+/* Tighter spacing in psychology block (lead + list + copy-paste-post) ——— */
+.captions-psychology-tight .dfd-lead { margin-bottom: 0.5rem; }
+.captions-psychology-tight ul { margin-top: 0; }
+.captions-psychology-tight ul li { margin-bottom: 0.35rem; }
+.captions-psychology-tight ul li:last-child { margin-bottom: 0; }
+
 /* Optional scroll reveal (use data-reveal + scroll-reveal.js) ——— */
-.product-section[data-reveal],
-.dfd-section[data-reveal] {
+.product-section[data-reveal] {
   opacity: 0;
   transform: translateY(24px);
   transition: opacity 0.6s var(--ease-out), transform 0.6s var(--ease-out);
 }
 
-.product-section[data-reveal].revealed,
-.dfd-section[data-reveal].revealed {
+.product-section[data-reveal].revealed {
   opacity: 1;
   transform: translateY(0);
+}
+
+/* Captions pricing: use child slide-in only, not section fade ——— */
+.captions-reveal.product-section[data-reveal] {
+  opacity: 1;
+  transform: none;
+}
+.captions-reveal.product-section[data-reveal].revealed {
+  opacity: 1;
+  transform: none;
 }
 
 /* Product compare table (digital front desk) ——— */
@@ -1283,6 +1347,37 @@
   box-sizing: border-box;
 }
 
+/* Captions product page: same left-to-right yellow swipe on hover (View options, Get my 30 days, Subscribe, sticky CTA) */
+.product-page-captions .captions-btn-swipe {
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+}
+.product-page-captions .captions-btn-swipe::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--lum-gold, #fff200);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.35s ease-out;
+  z-index: -1;
+}
+.product-page-captions .captions-btn-swipe:hover {
+  background: transparent !important;
+  color: #000 !important;
+  border-color: var(--lum-gold, #fff200) !important;
+  transform: none !important;
+  box-shadow: none !important;
+  opacity: 1;
+}
+.product-page-captions .captions-btn-swipe:hover::before {
+  transform: scaleX(1);
+}
+
 .product-page-captions .lumo-pricing-card h3 {
   font-family: var(--dfd-font-condensed);
   font-weight: 700;
@@ -1485,19 +1580,21 @@
   transform: translateY(-1px);
 }
 
-/* Two-column layout: sidebar left, main content right */
+/* Two-column layout: sidebar left, main content right. padding-top clears fixed nav. */
 .account-layout {
   display: flex;
   flex-wrap: wrap;
+  gap: 3.5rem;
   min-height: calc(100vh - 60px);
+  padding-top: 80px; /* Clear fixed lumo-nav (~64–80px) */
 }
 .account-sidebar {
   width: 260px;
   flex-shrink: 0;
   padding: 2rem 0 2rem 1.5rem;
   position: sticky;
-  top: 0;
-  max-height: 100vh;
+  top: 80px; /* Align with content below fixed nav */
+  max-height: calc(100vh - 80px);
   overflow-y: auto;
   background: #000;
 }
@@ -1548,6 +1645,8 @@
 }
 .account-sidebar-logout form { margin: 0; }
 .account-sidebar-logout .dfd-btn {
+  position: relative;
+  overflow: hidden;
   width: 100%;
   justify-content: center;
   background: rgba(255,255,255,0.12);
@@ -1556,10 +1655,27 @@
   font-family: 'Bebas Neue', sans-serif;
   font-size: 1rem;
 }
+.account-sidebar-logout .dfd-btn::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--lum-gold, #fff200);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.35s ease-out;
+  z-index: -1;
+}
 .account-sidebar-logout .dfd-btn:hover {
-  background: var(--lum-gold);
   color: #000;
-  border-color: var(--lum-gold);
+  border-color: var(--lum-gold, #fff200);
+  background: transparent;
+  transition: color 0.25s ease-out, border-color 0.25s ease-out;
+}
+.account-sidebar-logout .dfd-btn:hover::before {
+  transform: scaleX(1);
 }
 
 .account-main {
@@ -1692,9 +1808,12 @@
 }
 .account-delete-modal-box {
   position: relative;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.14);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
   border-radius: var(--dfd-radius);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
   padding: 1.75rem;
   max-width: 420px;
   width: 100%;
@@ -1819,9 +1938,9 @@
 }
 .account-history-item {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.75rem 1rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
   padding: 1rem 1.25rem;
   width: 100%;
   box-sizing: border-box;
@@ -1831,7 +1950,13 @@
   margin-bottom: 0.75rem;
   box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
-.account-history-item span {
+.account-history-item-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+.account-history-item-title-row span {
   font-weight: 500;
   color: #000;
   white-space: nowrap;
@@ -1850,20 +1975,11 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-start;
   gap: 0.5rem 0.75rem;
-  margin-left: auto;
-}
-
-/* Mobile: pack title on own line, buttons wrap below (left-aligned) */
-@media (max-width: 640px) {
-  .account-history-item > span:first-of-type {
-    width: 100%;
-    margin-bottom: 0.25rem;
-  }
-  .account-history-item .account-history-actions {
-    margin-left: 0;
-    width: 100%;
-  }
+  width: 100%;
+  margin-left: 0;
+  margin-top: 0.25rem;
 }
 .account-history-item .account-history-type--subscription {
   background: rgba(0,0,0,0.08);
@@ -1916,15 +2032,25 @@
   cursor: not-allowed;
 }
 
-/* Edit form list */
+/* Edit form list — dark background cards */
 .account-edit-form-list { margin: 0; padding: 0; list-style: none; }
 .account-edit-form-list li {
   margin-bottom: 0.75rem;
   padding: 1rem 1.25rem;
-  background: #fff;
-  border: 1px solid rgba(0,0,0,0.08);
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: var(--dfd-radius);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+/* Button on dark: light text and outline, same swipe on hover */
+.account-edit-form-list .account-billing-portal-link.account-btn-swipe-light {
+  background: transparent !important;
+  color: #fff !important;
+  border: 2px solid rgba(255, 255, 255, 0.35) !important;
+}
+.account-edit-form-list .account-billing-portal-link.account-btn-swipe-light:hover {
+  color: #000 !important;
+  border-color: var(--lum-gold, #fff200) !important;
 }
 .account-edit-form-list .account-billing-portal-link {
   display: inline-flex;
@@ -1932,21 +2058,16 @@
   justify-content: center;
   padding: 10px 20px;
   min-height: 44px;
-  background: #ffffff;
-  color: #000000;
   font-weight: 600;
   font-size: 0.7rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   text-decoration: none;
-  border: 1px solid rgba(0,0,0,0.15);
-  border-radius: 10px;
-  transition: transform 0.3s ease-in-out, background-color 0.3s ease-in-out, color 0.3s ease-in-out;
+  border-radius: var(--radius-btn);
+  transition: color 0.25s ease-out, border-color 0.25s ease-out;
 }
 .account-edit-form-list .account-billing-portal-link:hover {
-  transform: translateY(-3px);
-  background-color: var(--lum-gold);
-  color: #000000;
+  transform: none;
   text-decoration: none;
 }
 
@@ -1973,7 +2094,8 @@
   background: #f8f8f6;
   color: #111;
 }
-.account-referral-block .account-settings-label { color: #000; }
+.account-referral-block .account-settings-label,
+.account-page-wrap .account-referral-block .account-settings-label { color: #1a1a1a !important; }
 .account-referral-block .account-settings-desc { color: #444; }
 .account-referral-block .referral-copy { color: #000; }
 .account-referral-block .referral-copy:hover { color: #000; }
@@ -2003,6 +2125,8 @@
   background: var(--bg-light, #e5e5e5);
   color: #333;
 }
+.account-page-wrap .footer .footer-logo-link { display: block; margin-bottom: 0.5rem; }
+.account-page-wrap .footer .footer-logo { display: block; height: 32px; width: auto; }
 .account-page-wrap .footer .footer-brand,
 .account-page-wrap .footer .footer-tagline,
 .account-page-wrap .footer .footer-questions,
@@ -2355,6 +2479,38 @@
 .account-remove-stories-row .account-remove-stories-btn {
   align-self: flex-start;
 }
+.account-page-wrap .account-remove-stories-btn {
+  flex-shrink: 0;
+  appearance: none;
+  cursor: pointer;
+  font: inherit;
+  padding: 10px 20px;
+  min-height: 44px;
+  min-width: 44px;
+  background: #ffffff;
+  color: #000000;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  border: none;
+  border-radius: var(--radius-btn);
+  transition: transform 0.3s ease-in-out, background-color 0.3s ease-in-out, color 0.3s ease-in-out;
+}
+.account-page-wrap .account-remove-stories-btn:hover {
+  transform: translateY(-3px);
+  background-color: var(--lum-gold);
+  color: #000000;
+}
+.account-page-wrap .account-remove-stories-btn:active {
+  transform: translateY(-1px);
+}
+.account-page-wrap .account-remove-stories-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
 
 .account-page-wrap .account-billing-portal-link {
   display: inline-flex;
@@ -2380,18 +2536,69 @@
   color: #000000;
   text-decoration: none;
 }
+
+/* Light-background swipe button: same left-to-right yellow fill as Log out (Change email, Change password, Manage billing, Copy link). Font matches Manage subscription section buttons. */
+.account-btn-swipe-light {
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+  background: transparent !important;
+  color: #1a1a1a !important;
+  border: 2px solid rgba(0, 0, 0, 0.25) !important;
+  text-decoration: none;
+  transition: color 0.25s ease-out, border-color 0.25s ease-out;
+  font-family: var(--font-body) !important;
+  font-weight: 600 !important;
+  font-size: 0.7rem !important;
+  letter-spacing: 0.2em !important;
+  text-transform: uppercase !important;
+}
+.account-btn-swipe-light::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--lum-gold, #fff200);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.35s ease-out;
+  z-index: -1;
+}
+.account-btn-swipe-light:hover {
+  color: #000 !important;
+  border-color: var(--lum-gold, #fff200) !important;
+  background: transparent !important;
+  transform: none !important;
+  text-decoration: none;
+}
+.account-btn-swipe-light:hover::before {
+  transform: scaleX(1);
+}
 .account-page-wrap .account-info-actions .account-billing-portal-link,
 .account-page-wrap .account-info-actions .account-billing-portal-link:hover {
   text-decoration: none;
+}
+.account-page-wrap button.account-billing-portal-link {
+  cursor: pointer;
+  font: inherit;
 }
 
 .account-page-wrap .account-payment-method-select {
   font: inherit;
   font-size: 0.9rem;
-  padding: 0.4rem 0.75rem;
+  padding: 0.4rem 2.25rem 0.4rem 0.75rem;
   border: 1px solid rgba(0,0,0,0.2);
   border-radius: var(--dfd-radius);
-  background: #fff;
+  background-color: #fff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 10px;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
   color: #000;
   min-width: 160px;
 }
@@ -2476,6 +2683,35 @@
   align-items: center;
   justify-content: center;
 }
+
+/* Upgrade subscription button: swipe left-to-right yellow fill on hover, dark text */
+.account-upgrade-subscription-btn {
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+.account-upgrade-subscription-btn::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--lum-gold, #fff200);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.35s ease-out;
+  z-index: -1;
+}
+.account-upgrade-subscription-btn:hover {
+  color: #000;
+  border-color: var(--lum-gold, #fff200);
+  transition: color 0.25s ease-out, border-color 0.25s ease-out;
+}
+.account-upgrade-subscription-btn:hover::before {
+  transform: scaleX(1);
+}
 .product-page-dfd .lumo-nav-links a,
 .product-page-captions .lumo-nav-links a,
 .account-page-wrap .lumo-nav-links a {
@@ -2496,13 +2732,14 @@
   color: #fff !important;
   border-radius: 8px !important;
 }
+/* Swipe hover: transparent so ::before yellow fill (from landing.css) shows */
 .product-page-dfd .lumo-nav a.lumo-nav-login:hover,
 .product-page-captions .lumo-nav a.lumo-nav-login:hover,
 .lumo-nav a.lumo-nav-login:hover,
 .lumo-nav .lumo-nav-login:hover,
 .lumo-nav-cta.lumo-nav-login:hover {
-  background: #fff200 !important;
-  background-color: #fff200 !important;
+  background: transparent !important;
+  background-color: transparent !important;
   color: #000 !important;
   border-color: #fff200 !important;
 }
