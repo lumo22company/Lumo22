@@ -857,7 +857,7 @@ a.product-card-link:hover {
 }
 
 .footer .footer-logo-link { display: block; margin-bottom: 0.5rem; }
-.footer .footer-logo { display: block; height: 32px; width: auto; }
+.footer .footer-logo { display: block; height: 42px; width: auto; }
 .footer .footer-brand {
     font-family: 'Satoshi', 'Century Gothic', CenturyGothic, sans-serif;
     font-size: 1.0625rem;

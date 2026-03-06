@@ -1161,7 +1161,7 @@ a.lumo-nav-login:hover::before {
 }
 
 .footer-logo-link { display: block; margin-bottom: 0.5rem; }
-.footer-logo { display: block; height: 32px; width: auto; }
+.footer-logo { display: block; height: 42px; width: auto; }
 .footer-brand {
   font-family: 'Satoshi', 'Century Gothic', CenturyGothic, sans-serif;
   font-size: 1.0625rem;
