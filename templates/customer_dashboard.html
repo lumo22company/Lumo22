@@ -204,7 +204,7 @@
           <li>Pause billing for one month and manage intake reminders below.</li>
           <li><strong>Platforms (add, change, or reduce)</strong> and <strong>Story Ideas (add or remove)</strong> — use the buttons below, or Edit form to change platforms and remove Story Ideas.</li>
         </ul>
-        <p style="margin-bottom: 1.25rem;"><a href="/api/billing/portal" class="account-billing-portal-link">Manage billing</a></p>
+        <p style="margin-bottom: 1.25rem;"><a href="/api/billing/portal" class="account-billing-portal-link account-btn-swipe-light">Manage billing</a></p>
         {% for o in sub_orders %}
         {% set pause_biz = (o.get('intake') or {}).get('business_name', '') %}
         {% set pause_label = pause_biz if pause_biz else (o.created_at[:10] if o.created_at else 'Subscription') %}

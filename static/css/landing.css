@@ -1339,6 +1339,11 @@ a.lumo-nav-login:hover::before {
 .thankyou-cta-swipe:hover::before {
   transform: scaleX(1);
 }
+button.thankyou-cta-swipe {
+  cursor: pointer;
+  font: inherit;
+  border: 2px solid var(--lum-gold, #fff200);
+}
 
 /* Log in page: submit button — yellow font + yellow outline, swipe on hover (yellow fill, dark text) */
 .auth-form-wrap .auth-btn.auth-btn-swipe {

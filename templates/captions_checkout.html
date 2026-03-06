@@ -51,7 +51,7 @@
 
       <div class="btn-wrap">
         {% if platforms_invalid %}
-        <a href="/captions#pricing" class="lumo-btn-primary">Back to select platforms</a>
+        <a href="/captions#pricing" class="lumo-btn-primary btn-cta-account-style">Back to select platforms</a>
         {% else %}
         <a href="{{ api_url|default('/api/captions-checkout?platforms=1') }}" id="btn-continue" class="lumo-btn-primary js-terms-checkout btn-cta-account-style">Next step — read &amp; accept terms</a>
         {% endif %}
