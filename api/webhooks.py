@@ -158,6 +158,11 @@ def _handle_captions_payment(session):
         platforms_count = 1
     selected_platforms = (selected_platforms or "").strip() or None
 
+    currency = (session.get("currency") or "gbp") if isinstance(session, dict) else getattr(session, "currency", None) or "gbp"
+    currency = str(currency).strip().lower()
+    if currency not in ("gbp", "usd", "eur"):
+        currency = "gbp"
+
     order_service = CaptionOrderService()
     # Idempotent: if Stripe retries, we may already have an order for this session
     existing = order_service.get_by_stripe_session_id(session_id) if session_id else None
@@ -175,6 +180,8 @@ def _handle_captions_payment(session):
                 order = {**existing, **updates}
     else:
         try:
+            copy_from = (meta.get("copy_from") or "").strip() if isinstance(meta, dict) else getattr(meta, "copy_from", None) or ""
+            copy_from = str(copy_from).strip() if copy_from else None
             order = order_service.create_order(
                 customer_email=customer_email,
                 stripe_session_id=session_id,
@@ -183,62 +190,38 @@ def _handle_captions_payment(session):
                 platforms_count=platforms_count,
                 selected_platforms=selected_platforms,
                 include_stories=include_stories,
+                currency=currency,
+                upgraded_from_token=copy_from if stripe_subscription_id else None,
             )
         except Exception as e:
             print(f"[Stripe webhook] Failed to create order in Supabase: {e}")
             raise
         print(f"[Stripe webhook] Order created id={order.get('id')} token=...{order['token'][-6:]}")
     token = order["token"]
-    # Use hardcoded URL only — no BASE_URL so env vars can't cause "Invalid non-printable ASCII"
-    INTAKE_BASE = "https://lumo-22-production.up.railway.app"
+    base = _sanitize_base_url(Config.BASE_URL or "")
+    if not base or not base.startswith("http"):
+        base = "https://lumo-22-production.up.railway.app"
     safe_token = str(token).strip()
     copy_from = (meta.get("copy_from") or "").strip() if isinstance(meta, dict) else getattr(meta, "copy_from", None) or ""
     copy_from = str(copy_from).strip() if copy_from else ""
-    intake_url = f"{INTAKE_BASE}/captions-intake?t={safe_token}"
+    # copy_from was already used above when creating order (as upgraded_from_token)
+    intake_url = f"{base}/captions-intake?t={safe_token}"
     if copy_from:
         intake_url += f"&copy_from={copy_from}"
-
-    subject = "Your 30 Days of Social Media Captions - next step"
-    body = f"""Hi,
-
-Thanks for your order. Your 30 Days of Social Media Captions will be tailored to your business and voice.
-
-Please complete this short form so we can create your captions. It takes about 2 minutes:
-
-{intake_url}
-
-Once you submit, we'll generate your 30 captions and send them to you by email within a few minutes.
-
-If you have any questions, just reply to this email.
-
-Lumo 22
-"""
 
     print(f"[Stripe webhook] Sending intake email to {customer_email}")
     notif = NotificationService()
     ok = False
     try:
-        ok = notif.send_email(customer_email, subject, body)
+        ok = notif.send_intake_link_email(customer_email, intake_url, order)
     except Exception as send_err:
-        # Always retry with hardcoded URL so env/hidden chars or SendGrid validation can't cause 500
-        print(f"[Stripe webhook] Send failed ({send_err}), retrying with hardcoded URL")
-        fallback_url = intake_url
-        fallback_body = f"""Hi,
-
-Thanks for your order. Your 30 Days of Social Media Captions will be tailored to your business and voice.
-
-Please complete this short form so we can create your captions. It takes about 2 minutes:
-
-{fallback_url}
-
-Once you submit, we'll generate your 30 captions and send them to you by email within a few minutes.
-
-If you have any questions, just reply to this email.
-
-Lumo 22
-"""
+        # Retry with hardcoded URL so env/hidden chars or SendGrid validation can't cause 500
+        print(f"[Stripe webhook] Send failed ({send_err}), retrying with hardcoded fallback URL")
+        fallback_url = f"https://lumo-22-production.up.railway.app/captions-intake?t={safe_token}"
+        if copy_from:
+            fallback_url += f"&copy_from={copy_from}"
         try:
-            ok = notif.send_email(customer_email, subject, fallback_body)
+            ok = notif.send_intake_link_email(customer_email, fallback_url, order)
         except Exception as fallback_err:
             print(f"[Stripe webhook] Fallback send also failed: {fallback_err}")
             raise

@@ -24,6 +24,8 @@ import stripe
 EXPECTED = [
     ("STRIPE_CAPTIONS_PRICE_ID", 9700, False, "Captions one-off £97"),
     ("STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID", 7900, True, "Captions subscription £79/mo"),
+    ("STRIPE_CAPTIONS_STORIES_PRICE_ID", 2900, False, "Stories add-on one-off £29"),
+    ("STRIPE_CAPTIONS_STORIES_SUBSCRIPTION_PRICE_ID", 1700, True, "Stories add-on subscription £17/mo"),
     ("ACTIVATION_LINK_STARTER", 7900, True, "Front Desk Starter £79/mo"),
     ("ACTIVATION_LINK_STANDARD", 14900, True, "Front Desk Growth £149/mo"),
     ("ACTIVATION_LINK_PREMIUM", 29900, True, "Front Desk Pro £299/mo"),
@@ -78,8 +80,13 @@ def main():
 
     all_ok = True
 
-    # 1. Check price IDs (Captions)
-    for key in ["STRIPE_CAPTIONS_PRICE_ID", "STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID"]:
+    # 1. Check price IDs (Captions + Stories)
+    for key in [
+        "STRIPE_CAPTIONS_PRICE_ID",
+        "STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID",
+        "STRIPE_CAPTIONS_STORIES_PRICE_ID",
+        "STRIPE_CAPTIONS_STORIES_SUBSCRIPTION_PRICE_ID",
+    ]:
         pid = os.getenv(key, "").strip()
         if not pid:
             print(f"\n  {key}: not set (optional for subscription)")

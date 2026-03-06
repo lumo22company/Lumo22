@@ -60,7 +60,7 @@ def test_intake_dict_structure():
 
 
 def test_multi_platform_prompt_includes_rotation_instruction():
-    """When multiple platforms are in intake, user prompt must include rotation instruction."""
+    """When multiple platforms are in intake, user prompt must instruct one caption per platform per day."""
     import services.caption_generator as mod
     intake = {
         "business_name": "Test Co",
@@ -69,15 +69,15 @@ def test_multi_platform_prompt_includes_rotation_instruction():
         "goal": "Leads",
     }
     prompt = mod._build_user_prompt(intake)
-    assert "Assign each day" in prompt, "Multi-platform prompt should instruct to assign each day"
-    assert "balanced rotation" in prompt, "Multi-platform prompt should mention balanced rotation"
+    assert "EACH day" in prompt or "each day" in prompt, "Multi-platform prompt should reference each day"
+    assert "EACH of these platforms" in prompt or "one caption for EACH" in prompt, "Multi-platform prompt should require one caption per platform per day"
     assert "**Platform:**" in prompt or "Platform:" in prompt, "Prompt should reference Platform label"
     assert "Instagram" in prompt and "LinkedIn" in prompt
     print("✓ Multi-platform prompt includes rotation instruction")
 
 
 def test_single_platform_prompt_includes_rotation_instruction():
-    """Single platform (e.g. LinkedIn) still gets rotation/label instruction so Platform: is clear."""
+    """Single platform (e.g. LinkedIn) gets per-day and Platform label instruction."""
     import services.caption_generator as mod
     intake = {
         "business_name": "Test Co",
@@ -86,7 +86,8 @@ def test_single_platform_prompt_includes_rotation_instruction():
         "goal": "Leads",
     }
     prompt = mod._build_user_prompt(intake)
-    assert "Assign each day" in prompt, "Single-platform prompt should still assign/label by day"
+    assert "one caption per day" in prompt or "per day" in prompt, "Single-platform prompt should instruct one caption per day"
+    assert "**Platform:**" in prompt or "Platform:" in prompt, "Single-platform prompt should label with Platform"
     assert "LinkedIn" in prompt
     print("✓ Single-platform prompt includes rotation/label instruction")
 

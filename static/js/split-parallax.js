@@ -14,12 +14,8 @@
 
   var leftContent = section.querySelector('.split-left .split-content');
   var rightContent = section.querySelector('.split-right .split-content');
-  var singleContent = section.querySelector('.split-full .split-content');
 
-  var isSplit = leftContent && rightContent;
-  var isSingle = !isSplit && singleContent;
-
-  if (!isSplit && !isSingle) return;
+  if (!leftContent || !rightContent) return;
 
   var MAX_MOVE = 40;
 
@@ -40,15 +36,11 @@
       progress = easeOutCubic(progress);
     }
 
-    if (isSplit) {
-      var leftY = (1 - progress) * MAX_MOVE;
-      var rightY = (1 - progress) * -MAX_MOVE;
-      leftContent.style.transform = 'translateY(' + leftY + 'px)';
-      rightContent.style.transform = 'translateY(' + rightY + 'px)';
-    } else if (isSingle) {
-      var ty = (1 - progress) * (MAX_MOVE * 0.6);
-      singleContent.style.transform = 'translateY(' + ty + 'px)';
-    }
+    var leftY = (1 - progress) * MAX_MOVE;
+    var rightY = (1 - progress) * -MAX_MOVE;
+
+    leftContent.style.transform = 'translateY(' + leftY + 'px)';
+    rightContent.style.transform = 'translateY(' + rightY + 'px)';
   }
 
   function onScroll() {

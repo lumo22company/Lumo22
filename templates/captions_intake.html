@@ -91,9 +91,10 @@
 </head>
 <body class="lumo-landing" data-current-customer-email="{{ (current_customer.email or '')|lower if current_customer else '' }}">
   <nav class="lumo-nav lumo-nav-scrolled">
-    <a href="/" class="lumo-nav-logo">Lumo 22</a>
-    <div class="lumo-nav-links"></div>
-    <a href="/captions" class="lumo-nav-cta">Get my 30 days</a>
+    <div class="lumo-nav-left">
+      <a href="/" class="lumo-nav-logo">Lumo 22</a>
+      <a href="/captions" class="lumo-nav-link">Captions</a>
+    </div>
   </nav>
 
   <main class="intake-page">
@@ -103,18 +104,13 @@
     {% if existing_intake %}
     <p class="intake-edit-notice" style="margin: 0 0 1.25rem; padding: 0.75rem 1rem; background: rgba(0,0,0,0.06); border-radius: 8px; border: 2px solid var(--lum-gold, #c9a227); font-size: 0.9rem; color: #1a1a1a;">Any updates you make here will be reflected in your <strong>next</strong> captions and stories pack, not in packs already delivered. Edits are free; adding Story Ideas or extra platforms may require an additional charge.</p>
     {% endif %}
-    {% if subscribe_url %}
-    <p class="intake-subscribe-cta" style="margin: 0 0 1.25rem; padding: 0.75rem 1rem; background: rgba(0,0,0,0.04); border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); font-size: 0.9rem; color: #1a1a1a;">
-      Want a new pack every month? <a href="{{ subscribe_url }}" class="intake-add-platform-link">Subscribe using this form</a> — your answers will be pre-filled.
-    </p>
-    {% endif %}
     {% if not intake_token %}
     <p class="sub" style="margin-top: 1rem;">Use the link from your order email to complete the form. If you just purchased, check your inbox for a message from us with a personalised link.</p>
     <p class="sub" style="margin-top: 0.5rem;">Haven't bought yet? <a href="/captions" style="color: var(--lum-gold);">Get 30 Days Captions</a></p>
     <p class="back" style="margin-bottom: 1rem;">
-      <a href="/account/edit-form" class="intake-back-account">← Back to your account</a>
+      {% if current_customer %}<a href="/account/edit-form" class="intake-back-account">← Back to your account</a>
       <span style="color: #999; margin: 0 0.5rem;">|</span>
-      <a href="/captions">30 Days Captions</a>
+      {% endif %}<a href="/captions">← Back to form</a>
     </p>
     {% else %}
     <div id="intake-success" style="display: none; margin: 2rem 0;">
@@ -128,17 +124,17 @@
           <p id="ca-email-display" style="margin: 0 0 0.75rem; font-size: 0.9rem; color: var(--lum-text-muted); display: none;">Account for: <strong id="ca-email-text"></strong></p>
           <form id="create-account-form" style="max-width: 320px;">
             <input type="hidden" id="ca-email" value="">
-            <label for="ca-password" style="display:block; font-size:0.9rem; margin-bottom:0.25rem;">Password (min 6 characters)</label>
-            <input type="password" id="ca-password" required minlength="6" style="width:100%; padding:0.5rem 0.75rem; margin-bottom:0.75rem; border-radius:6px; border:1px solid var(--lum-border);">
+            <label for="ca-password" style="display:block; font-size:0.9rem; margin-bottom:0.25rem;">Password (min 10 characters, include 1 number)</label>
+            <input type="password" id="ca-password" required minlength="10" style="width:100%; padding:0.5rem 0.75rem; margin-bottom:0.75rem; border-radius:6px; border:1px solid var(--lum-border);" placeholder="At least 10 characters, 1 number">
             <button type="submit" class="btn-submit" id="ca-btn">Create account</button>
           </form>
         </div>
-        <p id="ca-done" style="display:none; margin:0; color: var(--lum-gold);">Account created! <a href="/account" style="color:inherit;">Go to your account</a></p>
+        <p id="ca-done" style="display:none; margin:0; color: #1a1a1a;">Account created! <a href="/account" style="color: #1a1a1a; font-weight: 600; text-decoration: underline;">Go to your account</a></p>
         <p id="ca-already-logged-in" style="display:none; margin:0; font-weight: 500;">You're logged in. <a href="/account" class="btn-go-account">Go to your account</a></p>
         <p id="ca-already-has-account" style="display:none; margin:0; font-weight: 500;">You already have an account. <a href="/login" style="color: var(--lum-gold);">Log in</a></p>
       </div>
     </div>
-    <div id="intake-error" style="display: none; margin: 2rem 0; padding: 1.5rem; background: rgba(200,80,80,0.15); border-radius: 8px; color: var(--lum-text);"></div>
+    <div id="intake-error" style="display: none; margin: 2rem 0; padding: 1.5rem; background: rgba(200,80,80,0.15); border-radius: 8px; color: #1a1a1a;"></div>
     <div id="intake-upgrade-cta" style="display: none; margin: 0 0 2rem; padding: 1rem 0;"></div>
 
     <form id="captions-intake-form" action="#" method="post" data-platforms-count="{{ platforms_count }}">
@@ -236,25 +232,25 @@
         <label for="platform">Primary platform for these captions?</label>
         <select id="platform" name="platform">
           <option value="">— Select one —</option>
-          <option value="Instagram & Facebook" {% if prefilled_platform == 'Instagram & Facebook' %}selected{% endif %}>Instagram &amp; Facebook</option>
-          <option value="LinkedIn" {% if prefilled_platform == 'LinkedIn' %}selected{% endif %}>LinkedIn</option>
-          <option value="TikTok" {% if prefilled_platform == 'TikTok' %}selected{% endif %}>TikTok</option>
-          <option value="Pinterest" {% if prefilled_platform == 'Pinterest' %}selected{% endif %}>Pinterest</option>
+          <option value="Instagram & Facebook" {% if prefilled_primary == 'Instagram & Facebook' %}selected{% endif %}>Instagram &amp; Facebook</option>
+          <option value="LinkedIn" {% if prefilled_primary == 'LinkedIn' %}selected{% endif %}>LinkedIn</option>
+          <option value="TikTok" {% if prefilled_primary == 'TikTok' %}selected{% endif %}>TikTok</option>
+          <option value="Pinterest" {% if prefilled_primary == 'Pinterest' %}selected{% endif %}>Pinterest</option>
         </select>
         {% endif %}
         {% if existing_intake and platforms_count < 4 %}
         <p class="intake-add-platform-wrap" style="margin: 0.75rem 0 0; font-size: 0.95rem;">
           <a href="/captions?platforms={{ platforms_count + 1 }}" class="intake-add-platform-link">Add another platform (+£29 one-off / +£19/mo)</a>
-          <span class="intake-add-platform-note"> — go to checkout to confirm and pay. Extra platforms are delivered with your <strong>next</strong> PDF pack, not instantly.</span>
+          <span class="intake-add-platform-note" style="color: #1a1a1a;"> — go to checkout to confirm and pay. Extra platforms are delivered with your <strong>next</strong> PDF pack, not instantly.</span>
         </p>
         {% endif %}
         {% if existing_intake %}
-        <p class="intake-change-platform-note" style="margin: 0.5rem 0 0; font-size: 0.9rem; color: var(--lum-text-muted);">To change which platforms or reduce the number (or remove Story Ideas), update above and submit. You'll be asked to accept the new price. Changes apply to your next pack.</p>
+        <p class="intake-change-platform-note" style="margin: 0.5rem 0 0; font-size: 0.9rem; color: #1a1a1a;">To change which platforms or reduce the number (or remove Story Ideas), update above and submit. You'll be asked to accept the new price. Changes apply to your next pack.</p>
         {% endif %}
         <label for="platform_habits">Any platform-specific habits?</label>
         <input type="text" id="platform_habits" name="platform_habits" placeholder="e.g. shorter on Instagram, longer on LinkedIn (optional)" value="{{ existing_intake.get('platform_habits', '') }}">
-        <div id="stories-addon-wrap" class="intake-other-wrap" style="display: none; margin-top: 1rem; padding: 1rem; background: rgba(255,255,255,0.5); border-radius: 8px; border: 1px solid #ddd;">
-          <p class="field-helper" style="margin: 0 0 0.5rem; font-weight: 600;">Using Instagram &amp; Facebook? Add Story Ideas—optionally align each day's Story to your feed caption (same theme, same day) or leave unaligned so they're different.</p>
+        <div id="stories-addon-wrap" class="intake-other-wrap" style="margin-top: 1rem; padding: 1rem; background: rgba(255,255,255,0.5); border-radius: 8px; border: 1px solid #ddd; {% if not stories_paid %}display: none;{% endif %}">
+          <p class="field-helper" style="margin: 0 0 0.5rem; font-weight: 600;">{% if stories_paid %}30 Days Story Ideas included with your order.{% else %}Using Instagram &amp; Facebook? Add Story Ideas—optionally align each day's Story to your feed caption (same theme, same day) or leave unaligned so they're different.{% endif %}</p>
           <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; margin-bottom: 0.25rem;">
             <input type="checkbox" id="include_stories" name="include_stories" {% if existing_intake.get('include_stories') or stories_paid %}checked{% endif %} {% if stories_paid %}disabled{% endif %} style="width: auto;">
             <span>{% if stories_paid %}30 Stories included (already paid){% else %}Add 30 Stories prompts (+£29 one-off / +£17/mo){% endif %}</span>
@@ -292,9 +288,9 @@
           <option value="Launch visibility" {% if existing_intake.get('goal') == 'Launch visibility' %}selected{% endif %}>Launch visibility</option>
           <option value="Grow following" {% if existing_intake.get('goal') == 'Grow following' %}selected{% endif %}>Grow following</option>
           <option value="Consistent presence" {% if existing_intake.get('goal') == 'Consistent presence' %}selected{% endif %}>Consistent presence</option>
-          <option value="Other" {% if existing_intake.get('goal') and existing_intake.get('goal') not in ['More inquiries / leads', 'Build authority', 'Launch visibility', 'Grow following', 'Consistent presence'] %}selected{% endif %}>Other</option>
+          <option value="Other" {% if existing_intake.get('goal') and existing_intake.get('goal') not in ['More inquiries / leads', 'Build authority', 'Launch visibility', 'Grow following', 'Consistent presence'] %}selected{% endif %}>Other — describe below</option>
         </select>
-        <div id="goal_other_wrap" class="intake-other-wrap" style="display: none; margin-top: 0.5rem;">
+        <div id="goal_other_wrap" class="intake-other-wrap" style="margin-top: 0.5rem; {% if not existing_intake.get('goal') or existing_intake.get('goal') in ['More inquiries / leads', 'Build authority', 'Launch visibility', 'Grow following', 'Consistent presence'] %}display: none;{% endif %}">
           <label for="goal_other">Describe your goal</label>
           <input type="text" id="goal_other" name="goal_other" placeholder="e.g. build my email list, promote a new offer" value="{{ existing_intake.get('goal', '') if existing_intake.get('goal') and existing_intake.get('goal') not in ['More inquiries / leads', 'Build authority', 'Launch visibility', 'Grow following', 'Consistent presence'] else '' }}">
         </div>
@@ -325,11 +321,18 @@
       </div>
     </div>
 
-    <p class="back" style="margin-bottom: 1rem;">
-      <a href="/account/edit-form" class="intake-back-account">← Back to your account</a>
-      <span style="color: #999; margin: 0 0.5rem;">|</span>
-      <a href="/captions">30 Days Captions</a>
-    </p>
+    {% if subscribe_url %}
+    {% set _intake_biz = (existing_intake.get('business_name', '') or '')|trim %}
+    <div class="intake-subscribe-cta" style="margin: 2rem 0 1.5rem; padding: 1.25rem 1rem; background: rgba(0,0,0,0.06); border-radius: 8px; border: 1px solid rgba(201,162,39,0.35); font-size: 0.95rem; color: #1a1a1a;">
+      <p style="margin: 0 0 0.75rem; font-weight: 600;">Want a new pack every month?{% if _intake_biz %} <span style="font-weight: 400; color: #555;">({{ _intake_biz }})</span>{% endif %}</p>
+      <p style="margin: 0 0 1rem;">Upgrade to a subscription and your answers from this intake form will be pre-filled on the checkout page. Your first subscription pack arrives 30 days after this one-off pack, so you get continuous content with no overlap.</p>
+      <a href="{{ subscribe_url }}" class="btn-submit" style="display: inline-block; text-decoration: none; text-align: center;">Upgrade to subscription{% if _intake_biz %} — {{ _intake_biz }}{% else %} — use this form’s answers{% endif %}</a>
+    </div>
+    {% endif %}
+
+    {% if current_customer %}
+    <p class="back" style="margin-bottom: 1rem;"><a href="/account/edit-form" class="intake-back-account">← Back to your account</a></p>
+    {% endif %}
     {% endif %}
   </main>
 
@@ -697,13 +700,13 @@
       function toggleStories() {
         var wrap = document.getElementById('stories-addon-wrap');
         if (!wrap) return;
+        var cb = document.getElementById('include_stories');
+        var storiesPaid = cb && cb.disabled;
+        if (storiesPaid) { wrap.style.display = 'block'; return; }
         var platformVal = (platformEl && platformEl.value || '').trim();
         var hasIGFB = platformVal.toLowerCase().indexOf('instagram') !== -1 || platformVal.toLowerCase().indexOf('facebook') !== -1;
         wrap.style.display = hasIGFB ? 'block' : 'none';
-        if (!hasIGFB) {
-          var cb = document.getElementById('include_stories');
-          if (cb) cb.checked = false;
-        }
+        if (!hasIGFB && cb) cb.checked = false;
       }
       toggleStories();
       btns.forEach(function(btn) { btn.addEventListener('click', toggleStories); });
@@ -721,12 +724,11 @@
         return s.indexOf('instagram') !== -1 || s.indexOf('facebook') !== -1;
       }
       function toggleStories() {
+        var cb = document.getElementById('include_stories');
+        if (cb && cb.disabled) { wrap.style.display = 'block'; return; }
         var hasIGFB = hasInstagramFacebook(platformSelect.value);
         wrap.style.display = hasIGFB ? 'block' : 'none';
-        if (!hasIGFB) {
-          var cb = document.getElementById('include_stories');
-          if (cb) cb.checked = false;
-        }
+        if (!hasIGFB && cb) cb.checked = false;
       }
       platformSelect.addEventListener('change', toggleStories);
       toggleStories();

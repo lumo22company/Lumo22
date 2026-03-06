@@ -80,6 +80,21 @@ def _email_wrapper(content: str) -> str:
 </html>"""
 
 
+def _captions_delivery_email_html(has_stories: bool) -> str:
+    """Build explicit HTML for the 30 Days captions delivery email so the body always shows."""
+    if has_stories:
+        content = """<p style="margin:0 0 16px;">Hi,</p>
+<p style="margin:0 0 16px;">Your 30 Days of Social Media Captions and 30 Days of Story Ideas are ready. Both documents are attached.</p>
+<p style="margin:0 0 16px;">Copy each caption and story idea as you need them, or edit to fit.</p>
+<p style="margin:0;">— Lumo 22</p>"""
+    else:
+        content = """<p style="margin:0 0 16px;">Hi,</p>
+<p style="margin:0 0 16px;">Your 30 Days of Social Media Captions are ready. The document is attached.</p>
+<p style="margin:0 0 16px;">Copy each caption as you need it, or edit to fit.</p>
+<p style="margin:0;">— Lumo 22</p>"""
+    return _email_wrapper(content)
+
+
 def _branded_html_email(body_plain: str) -> str:
     """Wrap plain body in Lumo 22 branded HTML (PDF aesthetic: black header/footer, gold accent)."""
     import html
@@ -127,6 +142,55 @@ def _login_link_email_html(account_url: str) -> str:
 <p style="margin:0 0 24px;"><a href="{safe_url}" style="display:inline-block; padding:14px 28px; background:{BRAND_BLACK}; color:{BRAND_TEXT_ON_DARK}; text-decoration:none; border-radius:10px; font-weight:600; letter-spacing: 0.1em; text-transform: uppercase;">Open my account</a></p>
 <p style="margin:0 0 8px; font-size:14px; color:{BRAND_MUTED};">Or copy and paste this link into your browser:</p>
 <p style="margin:0 0 24px; font-size:13px; word-break:break-all; color:#333;">{safe_url}</p>
+<p style="margin:0;">— Lumo 22</p>"""
+    return _email_wrapper(content)
+
+
+def _build_intake_order_summary(order: Optional[Dict[str, Any]]) -> Optional[str]:
+    """Build a short order summary for the intake email. Returns None if no order or nothing to show."""
+    if not order or not isinstance(order, dict):
+        return None
+    n = max(1, min(4, int(order.get("platforms_count") or 1)))
+    is_sub = bool((order.get("stripe_subscription_id") or "").strip())
+    platforms_label = "1 platform" if n == 1 else f"{n} platforms"
+    order_type = "Subscription (£79/month)" if is_sub else "One-off (£97)"
+    selected = (order.get("selected_platforms") or "").strip()
+    if selected:
+        platforms_detail = selected
+    else:
+        platforms_detail = platforms_label
+    stories = bool(order.get("include_stories"))
+    lines = [
+        f"• {order_type}",
+        f"• {platforms_detail}",
+    ]
+    if stories:
+        lines.append("• 30 Days Story Ideas included")
+    return "\n".join(lines)
+
+
+def _intake_link_email_html(intake_url: str, order_summary: Optional[str] = None, is_subscription: bool = False) -> str:
+    """Build branded HTML for captions intake link email — PDF aesthetic, explicit body so it always shows."""
+    import html
+    intake_url = (intake_url or "").strip()
+    if not intake_url or not intake_url.startswith("http"):
+        intake_url = ""
+    safe_url = html.escape(intake_url, quote=True)
+    summary_block = ""
+    if order_summary and order_summary.strip():
+        summary_escaped = html.escape(order_summary.strip()).replace("\n", "<br>\n")
+        summary_block = f"""<p style="margin:0 0 16px; font-size:14px; color:{BRAND_MUTED};"><strong style="color:{BRAND_TEXT};">Order confirmation</strong><br>Here's what you ordered:<br>{summary_escaped}</p>
+"""
+    account_line = "On the form you can also create an account to access your captions and manage your subscription in one place." if is_subscription else "On the form you can also create an account to access your captions in one place."
+    content = f"""<p style="margin:0 0 16px;">Hi,</p>
+<p style="margin:0 0 16px;">Thanks for your order. Your 30 Days of Social Media Captions will be tailored to your business and voice.</p>
+{summary_block}<p style="margin:0 0 12px;">Please complete this short form so we can create your captions. It takes about 2 minutes:</p>
+<p style="margin:0 0 24px;"><a href="{safe_url}" style="display:inline-block; padding:14px 28px; background:{BRAND_BLACK}; color:{BRAND_TEXT_ON_DARK}; text-decoration:none; border-radius:10px; font-weight:600;">Complete the form</a></p>
+<p style="margin:0 0 8px; font-size:14px; color:{BRAND_MUTED};">Or copy and paste this link into your browser:</p>
+<p style="margin:0 0 24px; font-size:13px; word-break:break-all; color:#333;">{safe_url}</p>
+<p style="margin:0 0 16px;">Once you submit, we'll generate your 30 captions and send them to you by email within a few minutes.</p>
+<p style="margin:0 0 16px;">{html.escape(account_line)}</p>
+<p style="margin:0 0 16px;">If you have any questions, just reply to this email.</p>
 <p style="margin:0;">— Lumo 22</p>"""
     return _email_wrapper(content)
 
@@ -310,6 +374,24 @@ If you didn't request this, you can ignore this email. Your email address will s
         html_body = _email_change_verification_html(confirm_url)
         return self.send_email(to_email, subject, body, html_body=html_body)
 
+    def send_intake_link_email(self, to_email: str, intake_url: str, order: Optional[Dict[str, Any]] = None) -> bool:
+        """Send captions intake form link email with explicit HTML body. Optionally include order summary."""
+        if not intake_url or not str(intake_url).strip().startswith("http"):
+            print("[SendGrid] Intake link email NOT sent: invalid intake_url")
+            return False
+        subject = "Your 30 Days of Social Media Captions - next step"
+        order_summary = _build_intake_order_summary(order) if order else None
+        body = "Hi,\n\nThanks for your order. Your 30 Days of Social Media Captions will be tailored to your business and voice.\n\n"
+        if order_summary:
+            body += "Order confirmation — here's what you ordered:\n" + order_summary + "\n\n"
+        body += "Please complete this short form so we can create your captions. It takes about 2 minutes:\n\n"
+        body += intake_url
+        is_sub = bool(order and (order.get("stripe_subscription_id") or "").strip())
+        account_line = "On the form you can also create an account to access your captions and manage your subscription in one place." if is_sub else "On the form you can also create an account to access your captions in one place."
+        body += "\n\nOnce you submit, we'll generate your 30 captions and send them to you by email within a few minutes.\n\n" + account_line + "\n\nIf you have any questions, just reply to this email.\n\nLumo 22"
+        html_body = _intake_link_email_html(intake_url, order_summary, is_subscription=is_sub)
+        return self.send_email(to_email, subject, body, html_body=html_body)
+
     def send_email(
         self,
         to_email: str,
@@ -346,14 +428,14 @@ If you didn't request this, you can ignore this email. Your email address will s
             status = getattr(response, "status_code", None)
             ok = status in [200, 201, 202]
             if ok:
-                print(f"[SendGrid] Email sent OK (status={status}): to={to_email} subject={subject!r}")
+                print(f"[SendGrid] Email sent OK (status={status}) from={from_addr!r} to={to_email} subject={subject!r}")
             else:
                 body_preview = getattr(response, "body", "") or ""
                 if isinstance(body_preview, bytes):
-                    body_preview = body_preview.decode("utf-8", errors="replace")[:300]
+                    body_preview = body_preview.decode("utf-8", errors="replace")[:500]
                 else:
-                    body_preview = str(body_preview)[:300]
-                print(f"[SendGrid] Email rejected (status={status}): to={to_email} subject={subject!r} body={body_preview}")
+                    body_preview = str(body_preview)[:500]
+                print(f"[SendGrid] Email rejected (status={status}) from={from_addr!r} to={to_email} subject={subject!r} body={body_preview!r}")
             return ok
         except Exception as e:
             import traceback
@@ -371,9 +453,11 @@ If you didn't request this, you can ignore this email. Your email address will s
         file_content_bytes: Optional[bytes] = None,
         mime_type: str = "text/plain",
         extra_attachments: Optional[list] = None,
+        html_content: Optional[str] = None,
     ) -> tuple:
         """Send email with one or more attachments. Returns (True, None) on success, (False, error_message) on failure.
-        extra_attachments: optional list of {"filename": str, "content": bytes, "mime_type": str} for additional files."""
+        extra_attachments: optional list of {"filename": str, "content": bytes, "mime_type": str} for additional files.
+        html_content: optional explicit HTML body; if not set, body is converted via _branded_html_email."""
         to_email = _sanitize_email_value(to_email or "")
         if not to_email or "@" not in to_email:
             msg = "Invalid or missing recipient email"
@@ -407,13 +491,13 @@ If you didn't request this, you can ignore this email. Your email address will s
         try:
             from_addr = _sanitize_email_value(Config.FROM_EMAIL or "") or "noreply@lumo22.com"
             from_name = (Config.FROM_NAME or "Lumo 22").strip() or "Lumo 22"
-            html_content = _branded_html_email(body)
+            html_body = html_content if html_content is not None else _branded_html_email(body)
             message = Mail(
                 from_email=Email(from_addr, from_name),
                 to_emails=to_email,
                 subject=subject,
                 plain_text_content=body,
-                html_content=html_content,
+                html_content=html_body,
             )
             attachment_list = []
             for fn, enc, mt in attachments_to_add:

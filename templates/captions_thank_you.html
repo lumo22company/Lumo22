@@ -19,16 +19,35 @@
     .thankyou-card .thankyou-back { margin-top: 2rem; }
     .thankyou-card .thankyou-back a { color: var(--lum-text-muted); text-decoration: none; font-size: 0.95rem; }
     .thankyou-card .thankyou-back a:hover { color: var(--lum-text); }
-    .thankyou-later-btn:hover { border-color: rgba(255,255,255,0.4); color: var(--lum-text); }
+    .thankyou-card .thankyou-cta-row .lumo-btn-primary { background: #fff; color: #1a1a1a; }
+    .thankyou-card .thankyou-cta-row .lumo-btn-primary:hover { background: var(--lum-gold, #fff200); color: #1a1a1a; }
+    .thankyou-card .thankyou-cta-row .thankyou-later-btn {
+      display: inline-block;
+      padding: 18px 36px;
+      background: #fff;
+      color: #1a1a1a;
+      text-decoration: none;
+      font-family: var(--font-body);
+      font-weight: 600;
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      border-radius: 10px;
+      border: 1px solid rgba(0,0,0,0.2);
+      transition: background 0.2s, border-color 0.2s, color 0.2s;
+    }
+    .thankyou-card .thankyou-cta-row .thankyou-later-btn:hover { background: var(--lum-gold, #fff200); color: #1a1a1a; border-color: var(--lum-gold, #fff200); }
     .thankyou-spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid var(--lum-text-muted); border-top-color: transparent; border-radius: 50%; animation: thankyou-spin 0.8s linear infinite; vertical-align: middle; margin-right: 0.5rem; }
     @keyframes thankyou-spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body class="lumo-landing">
   <nav class="lumo-nav lumo-nav-scrolled">
-    <a href="/" class="lumo-nav-logo">Lumo 22</a>
-    <div class="lumo-nav-links"></div>
-    {% if current_customer %}<a href="/account" class="lumo-nav-cta">Account</a>{% else %}<a href="/login" class="lumo-nav-cta lumo-nav-login">Log in</a>{% endif %}
+    <div class="lumo-nav-left">
+      <a href="/" class="lumo-nav-logo">Lumo 22</a>
+      <a href="/captions" class="lumo-nav-link">Captions</a>
+    </div>
+    {% if current_customer %}<a href="/account" class="lumo-nav-cta lumo-nav-account">Account</a>{% else %}<a href="/login" class="lumo-nav-cta lumo-nav-login">Log In</a>{% endif %}
   </nav>
 
   <!-- Same thank-you page for captions one-off and subscription; intake link is polled via session_id. No template vars required. -->
@@ -43,11 +62,19 @@
       <div id="thankyou-form-link" style="display: none;">
         <p id="thankyou-email-msg" style="margin-bottom: 1.25rem;"></p>
         <div class="thankyou-cta-row" style="display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1.5rem;">
-          <a href="#" id="intake-link" class="lumo-btn-primary thankyou-cta">Fill in now</a>
-          <a href="{% if current_customer %}/account{% else %}/{% endif %}" id="later-link" class="thankyou-later-btn" style="display: inline-flex; align-items: center; padding: 0.75rem 1.5rem; background: transparent; color: var(--lum-text-muted); text-decoration: none; font-size: 1rem; border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; transition: border-color 0.2s, color 0.2s;">I'll do it later</a>
+          <a href="#" id="intake-link" class="lumo-btn-primary thankyou-cta">Fill out form now</a>
+          <a href="{% if current_customer %}/account{% else %}/{% endif %}" id="later-link" class="thankyou-later-btn">I'll do it later</a>
         </div>
       </div>
       <p id="thankyou-no-session" style="display: none;">Check your email for a link to the short form. After you submit, we'll create your 30 captions and deliver by email.</p>
+      <div id="thankyou-email-fallback" style="display: none; margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid rgba(255,255,255,0.12);">
+        <p style="margin: 0 0 0.75rem; font-size: 0.95rem;">Or enter the email you used for this order to get your form link:</p>
+        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; max-width: 360px;">
+          <input type="email" id="thankyou-email-input" placeholder="your@email.com" style="flex: 1; min-width: 180px; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.08); color: inherit; font-size: 1rem;">
+          <button type="button" id="thankyou-email-btn" class="lumo-btn-primary" style="padding: 0.6rem 1.25rem;">Get form link</button>
+        </div>
+        <p id="thankyou-email-error" style="display: none; margin: 0.5rem 0 0; font-size: 0.9rem; color: #f99;"></p>
+      </div>
       <p class="thankyou-back"><a href="/captions">← Back to Captions</a> · <a href="/">Lumo 22 home</a></p>
     </div>
   </section>
@@ -67,17 +94,59 @@
       if (!sessionId) {
         messageEl.style.display = 'none';
         noSessionEl.style.display = 'block';
-        noSessionEl.innerHTML = 'Check your email for a link to the form. After you submit, we\'ll create your 30 captions and deliver by email.<br><br>Questions? <a href="mailto:hello@lumo22.com">hello@lumo22.com</a>';
+        noSessionEl.innerHTML = 'Your order is confirmed. Check your email for the form link. If you don\'t see it, enter the email you used below to get your link.';
+        var emailFallbackNoSession = document.getElementById('thankyou-email-fallback');
+        if (emailFallbackNoSession) emailFallbackNoSession.style.display = 'block';
+        var emailBtn = document.getElementById('thankyou-email-btn');
+        var emailInput = document.getElementById('thankyou-email-input');
+        var emailError = document.getElementById('thankyou-email-error');
+        if (emailBtn && emailInput) {
+          emailBtn.onclick = function() {
+            var email = (emailInput.value || '').trim().toLowerCase();
+            if (!email || email.indexOf('@') === -1) {
+              if (emailError) { emailError.textContent = 'Please enter a valid email.'; emailError.style.display = 'block'; }
+              return;
+            }
+            if (emailError) emailError.style.display = 'none';
+            emailBtn.disabled = true;
+            emailBtn.textContent = 'Looking up…';
+            fetch('/api/captions-intake-link-by-email?email=' + encodeURIComponent(email))
+              .then(function(r) { return r.json(); })
+              .then(function(data) {
+                if (data && data.status === 'ok' && data.intake_url) {
+                  noSessionEl.style.display = 'none';
+                  if (emailFallbackNoSession) emailFallbackNoSession.style.display = 'none';
+                  showIntake(data.intake_url, data.customer_email || null, !!data.is_subscription);
+                  formLinkEl.style.display = 'block';
+                } else {
+                  if (emailError) { emailError.textContent = data && data.error ? data.error : 'No order found for this email.'; emailError.style.display = 'block'; }
+                  emailBtn.disabled = false;
+                  emailBtn.textContent = 'Get form link';
+                }
+              })
+              .catch(function() {
+                if (emailError) { emailError.textContent = 'Something went wrong. Please try again or contact us.'; emailError.style.display = 'block'; }
+                emailBtn.disabled = false;
+                emailBtn.textContent = 'Get form link';
+              });
+          };
+        }
         return;
       }
 
-      function showIntake(url, customerEmail) {
+      function showIntake(url, customerEmail, isSubscription) {
         messageEl.style.display = 'none';
+        var emailFallback = document.getElementById('thankyou-email-fallback');
+        if (emailFallback) emailFallback.style.display = 'none';
+        var accountLine = isSubscription
+          ? 'On the form you can also create an account to access your captions and manage your subscription in one place.'
+          : 'On the form you can also create an account to access your captions in one place.';
         var emailText = customerEmail
-          ? 'We\'ve emailed you the form link at <strong>' + escapeHtml(customerEmail) + '</strong>. Complete it to get your captions—usually ready within 15 minutes.'
-          : 'We\'ve emailed you the form link. Complete it to get your captions—usually ready within 15 minutes.';
+          ? 'Thank you. We\'ve emailed you your form at <strong>' + escapeHtml(customerEmail) + '</strong>—fill it in to get started. Your captions are usually ready within 15 minutes. ' + accountLine
+          : 'Thank you. We\'ve emailed you your form—fill it in to get started. Your captions are usually ready within 15 minutes. ' + accountLine;
         emailMsgEl.innerHTML = emailText;
         intakeLinkEl.href = url;
+        intakeLinkEl.textContent = 'Fill out form now';
         formLinkEl.style.display = 'block';
       }
 
@@ -87,30 +156,88 @@
         return div.innerHTML;
       }
 
+      var intakeShown = false;
+      function onResponse(data) {
+        if (data && data.status === 'ok' && data.intake_url) {
+          intakeShown = true;
+          showIntake(data.intake_url, data.customer_email || null, !!data.is_subscription);
+          return true;
+        }
+        return false;
+      }
       function check() {
         fetch('/api/captions-intake-link?session_id=' + encodeURIComponent(sessionId))
-          .then(function(r) { return r.json(); })
+          .then(function(r) {
+            if (!r.ok) return r.text().then(function() { return null; });
+            return r.json();
+          })
           .then(function(data) {
-            if (data.status === 'ok' && data.intake_url) {
-              showIntake(data.intake_url, data.customer_email || null);
-            }
+            if (data) onResponse(data);
           })
           .catch(function() {});
       }
 
+      function showFallback() {
+        if (intakeShown) return;
+        messageEl.innerHTML = 'Your order is confirmed. We\'ve sent the form link to your email—please check your inbox (and spam folder). You can also <a href="#" id="thankyou-refresh" style="color: var(--lum-gold); font-weight: 600;">refresh this page</a> to try again.';
+        var refreshLink = document.getElementById('thankyou-refresh');
+        if (refreshLink) refreshLink.addEventListener('click', function(e) { e.preventDefault(); window.location.reload(); });
+        var emailFallback = document.getElementById('thankyou-email-fallback');
+        if (emailFallback) emailFallback.style.display = 'block';
+        var emailBtn = document.getElementById('thankyou-email-btn');
+        var emailInput = document.getElementById('thankyou-email-input');
+        var emailError = document.getElementById('thankyou-email-error');
+        if (emailBtn && emailInput) {
+          emailBtn.onclick = function() {
+            var email = (emailInput.value || '').trim().toLowerCase();
+            if (!email || email.indexOf('@') === -1) {
+              if (emailError) { emailError.textContent = 'Please enter a valid email.'; emailError.style.display = 'block'; }
+              return;
+            }
+            if (emailError) emailError.style.display = 'none';
+            emailBtn.disabled = true;
+            emailBtn.textContent = 'Looking up…';
+            fetch('/api/captions-intake-link-by-email?email=' + encodeURIComponent(email))
+              .then(function(r) { return r.json(); })
+              .then(function(data) {
+                if (data && data.status === 'ok' && data.intake_url) {
+                  intakeShown = true;
+                  showIntake(data.intake_url, data.customer_email || null, !!data.is_subscription);
+                  if (emailFallback) emailFallback.style.display = 'none';
+                } else {
+                  if (emailError) { emailError.textContent = data && data.error ? data.error : 'No order found for this email.'; emailError.style.display = 'block'; }
+                  emailBtn.disabled = false;
+                  emailBtn.textContent = 'Get form link';
+                }
+              })
+              .catch(function() {
+                if (emailError) { emailError.textContent = 'Something went wrong. Please try again or contact us.'; emailError.style.display = 'block'; }
+                emailBtn.disabled = false;
+                emailBtn.textContent = 'Get form link';
+              });
+          };
+        }
+      }
+
       check();
       var interval = setInterval(function() {
+        if (intakeShown) return;
         fetch('/api/captions-intake-link?session_id=' + encodeURIComponent(sessionId))
-          .then(function(r) { return r.json(); })
+          .then(function(r) {
+            if (!r.ok) return r.text().then(function() { return null; });
+            return r.json();
+          })
           .then(function(data) {
-            if (data.status === 'ok' && data.intake_url) {
-              clearInterval(interval);
-              showIntake(data.intake_url, data.customer_email || null);
-            }
+            if (data && onResponse(data)) clearInterval(interval);
           })
           .catch(function() {});
-      }, 2000);
-      setTimeout(function() { clearInterval(interval); }, 30000);
+      }, 1500);
+      setTimeout(function() {
+        if (intakeShown) return;
+        showFallback();
+      }, 20000);
+      // Keep polling up to 35s; if link arrives after fallback, showIntake hides fallback and shows buttons
+      setTimeout(function() { clearInterval(interval); }, 35000);
     })();
   </script>
 </body>

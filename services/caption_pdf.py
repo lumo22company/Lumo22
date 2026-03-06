@@ -204,16 +204,8 @@ def _make_story_table_vertical(cover: Dict, days: List, normal_style, heading_st
     lbl = ParagraphStyle("TblLbl", parent=tight_style, fontName="Helvetica-Bold")
     day_hdr_style = ParagraphStyle("DayHdrTable", parent=heading_style, backColor=None, borderPadding=0)
     for day_heading, caption_list in days:
-        # Derive a short type label from the idea text so the header reflects the Story type.
-        type_label = "Story"
-        prompt = ""
-        if caption_list:
-            prompt = (caption_list[0].get("hook") or caption_list[0].get("body", "") or "").strip()
-        if prompt:
-            words = prompt.split()
-            if words:
-                type_label = " ".join(words[:4])
-        header_text = f"{day_heading} — {type_label}"
+        # Use only the day + theme (e.g. "Day 1 — Authority / Expertise"); do not append caption preview.
+        header_text = day_heading.strip()
         day_para = Paragraph(f'<font color="#ffffff">{_escape(header_text.upper())}</font>', day_hdr_style)
         # Day heading as separate 1-row table so KeepTogether prevents orphan at page bottom
         hdr_data = [[day_para, ""]]
@@ -258,15 +250,20 @@ def _make_story_table_vertical(cover: Dict, days: List, normal_style, heading_st
 
 
 def _parse_stories_section(md: str) -> List[Tuple[str, List[Dict[str, str]]]]:
-    """Parse ## 30 Story Ideas section; returns list of (day_heading, captions) for PDF."""
+    """Parse ## 30 Story Ideas section; returns list of (day_heading, captions) for PDF.
+    Captures full content per day (until next **Day or end) so 'Suggested wording:' and 'Story hashtags:' are included."""
     days: List[Tuple[str, List[Dict[str, str]]]] = []
     if "## 30 Story Ideas" not in md and "## 30 story ideas" not in md.lower():
         return days
-    for m in re.finditer(r"\*\*Day\s+(\d+)\s*:\*\*\s*([^\n]+)", md, re.I):
+    # Match **Day N:** then everything until the next **Day M:** or end of string
+    pattern = r"\*\*Day\s+(\d+)\s*:\*\*\s*(.*?)(?=\s*\*\*Day\s+\d+\s*:\*\*|$)"
+    for m in re.finditer(pattern, md, re.I | re.DOTALL):
         day_num = m.group(1).strip()
         prompt = m.group(2).strip()
         if not prompt:
             continue
+        # Normalise newlines to space so PDF split on "Suggested wording:" / "Story hashtags:" still works
+        prompt = " ".join(prompt.split())
         day_heading = f"Day {day_num}"
         days.append((day_heading, [{"platform": "Story", "hook": prompt, "body": "", "hashtags": ""}]))
     return days

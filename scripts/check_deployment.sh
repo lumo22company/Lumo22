@@ -34,11 +34,11 @@ check "/website-chat" "200"
 check "/terms" "200"
 
 echo ""
-echo "Content check (login should say 'Digital Front Desk, Chat, and Captions'):"
-if curl -sL "$BASE/login" | grep -q "Digital Front Desk, Chat, and Captions"; then
-  echo "  Login page: NEW design ✓"
+echo "Content check (login page):"
+if curl -sL "$BASE/login" | grep -q "Log in"; then
+  echo "  Login page: OK ✓"
 else
-  echo "  Login page: OLD design (shows 'lead dashboard')"
+  echo "  Login page: unexpected content"
 fi
 
 if curl -sL "$BASE/forgot-password" | grep -q "Forgot password"; then

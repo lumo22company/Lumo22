@@ -78,6 +78,14 @@ except Exception as e:
     _debug_log("app startup error", {"error": str(e)}, "H2")
 # #endregion
 
+@app.before_request
+def redirect_bare_domain_to_www():
+    """Redirect lumo22.com (no www) to www.lumo22.com so Stripe success/cancel URLs land on the host that serves the app."""
+    host = (request.host or "").strip().lower()
+    if host == "lumo22.com":
+        return redirect("https://www.lumo22.com" + (request.full_path or "/"), code=302)
+
+
 @app.context_processor
 def inject_asset_version():
     out = {'asset_version': _asset_version}
@@ -231,14 +239,17 @@ def captions_intake_page():
                 selected_platforms = (order.get("selected_platforms") or "").strip() or ""
                 stories_paid = bool(order.get("include_stories"))
                 is_oneoff = not bool((order.get("stripe_subscription_id") or "").strip())
-                # copy_from: if current order has no intake and copy_from is set, load intake from that order (same customer)
+                # copy_from: only prefill when this order was explicitly upgraded from that one-off (one-off→subscription flow).
+                # If account was deleted and user resubscribes, order has no upgraded_from_token so we do not prefill.
                 if not existing_intake and copy_from:
-                    src_order = svc.get_by_token(copy_from)
-                    if src_order:
-                        src_email = (src_order.get("customer_email") or "").strip().lower()
-                        cur_email = (order.get("customer_email") or "").strip().lower()
-                        if src_email and cur_email and src_email == cur_email:
-                            existing_intake = src_order.get("intake") or {}
+                    upgraded_from = (order.get("upgraded_from_token") or "").strip()
+                    if upgraded_from and upgraded_from == copy_from:
+                        src_order = svc.get_by_token(copy_from)
+                        if src_order:
+                            src_email = (src_order.get("customer_email") or "").strip().lower()
+                            cur_email = (order.get("customer_email") or "").strip().lower()
+                            if src_email and cur_email and src_email == cur_email:
+                                existing_intake = src_order.get("intake") or {}
         except Exception:
             pass
     # Prefill platform from order (chosen at checkout) when they haven't saved intake yet
@@ -259,6 +270,10 @@ def captions_intake_page():
                 seen.add(p)
                 normalized.append(p)
         prefilled_platform = ", ".join(normalized)
+    # For "Primary platform" dropdown (single-platform): use first platform so it preselects
+    prefilled_primary = prefilled_platform.split(",")[0].strip() if prefilled_platform else ""
+    if prefilled_primary in ("Instagram", "Facebook"):
+        prefilled_primary = "Instagram & Facebook"
     now = datetime.utcnow()
     subscribe_url = None
     if token and is_oneoff:
@@ -268,8 +283,11 @@ def captions_intake_page():
             sub_params["selected"] = selected_platforms
         if stories_paid:
             sub_params["stories"] = "1"
+        currency = (order.get("currency") or "gbp").strip().lower()
+        if currency in ("gbp", "usd", "eur"):
+            sub_params["currency"] = currency
         subscribe_url = "/captions-checkout-subscription?" + urlencode(sub_params)
-    r = make_response(render_template('captions_intake.html', intake_token=token, existing_intake=existing_intake, platforms_count=platforms_count, prefilled_platform=prefilled_platform, stories_paid=stories_paid, is_oneoff=is_oneoff, selected_platforms=selected_platforms, subscribe_url=subscribe_url, now=now))
+    r = make_response(render_template('captions_intake.html', intake_token=token, existing_intake=existing_intake, platforms_count=platforms_count, prefilled_platform=prefilled_platform, prefilled_primary=prefilled_primary, stories_paid=stories_paid, is_oneoff=is_oneoff, selected_platforms=selected_platforms, subscribe_url=subscribe_url, now=now))
     r.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     r.headers['Pragma'] = 'no-cache'
     return r
@@ -318,8 +336,10 @@ def captions_checkout_page():
     q = urlencode(params)
     api_url = f"/api/captions-checkout?{q}" if not platforms_invalid else None
     total = prices["oneoff"] + (platforms - 1) * prices["extra_oneoff"] + (prices["stories_oneoff"] if stories else 0)
-    add_stories_url = "/captions?stories=1&platforms=" + str(platforms) + ("&selected=" + quote(selected) if selected else "") if not stories else None
-    add_platforms_url = "/captions#pricing" if platforms < 4 else None
+    captions_prefill = "?" + q + "#pricing"
+    back_to_captions_url = "/captions" + captions_prefill
+    add_stories_url = ("/captions?stories=1&platforms=" + str(platforms) + "&currency=" + currency + ("&selected=" + quote(selected) if selected else "") + "#pricing") if not stories else None
+    add_platforms_url = ("/captions" + captions_prefill) if platforms < 4 else None
     return render_template(
         'captions_checkout.html',
         platforms=platforms,
@@ -331,6 +351,7 @@ def captions_checkout_page():
         platforms_invalid=platforms_invalid,
         add_stories_url=add_stories_url,
         add_platforms_url=add_platforms_url,
+        back_to_captions_url=back_to_captions_url,
     )
 
 
@@ -362,8 +383,18 @@ def captions_checkout_subscription_page():
     q = urlencode(params)
     api_url = f"/api/captions-checkout-subscription?{q}" if not platforms_invalid else None
     total = prices["sub"] + (platforms - 1) * prices["extra_sub"] + (prices["stories_sub"] if stories else 0)
-    add_stories_url = "/captions?stories=1&platforms=" + str(platforms) + ("&selected=" + quote(selected) if selected else "") if not stories else None
-    add_platforms_url = "/captions#pricing" if platforms < 4 else None
+    captions_prefill = "?" + q + "#pricing"
+    back_to_captions_url = "/captions" + captions_prefill
+    if not stories:
+        add_stories_params = "stories=1&platforms=" + str(platforms) + "&currency=" + currency
+        if selected:
+            add_stories_params += "&selected=" + quote(selected)
+        if copy_from:
+            add_stories_params += "&copy_from=" + quote(copy_from)
+        add_stories_url = "/captions?" + add_stories_params + "#pricing"
+    else:
+        add_stories_url = None
+    add_platforms_url = ("/captions" + captions_prefill) if platforms < 4 else None
     return render_template(
         'captions_checkout_subscription.html',
         platforms=platforms,
@@ -375,6 +406,8 @@ def captions_checkout_subscription_page():
         platforms_invalid=platforms_invalid,
         add_stories_url=add_stories_url,
         add_platforms_url=add_platforms_url,
+        back_to_captions_url=back_to_captions_url,
+        is_upgrade_from_oneoff=bool(copy_from),
     )
 
 @app.route('/terms')
@@ -389,8 +422,8 @@ def plans_page():
 
 @app.route('/digital-front-desk')
 def digital_front_desk_page():
-    """Digital Front Desk shelved — show coming-soon page; code kept for existing links."""
-    return render_template('dfd_shelved.html')
+    """DFD shelved — redirect to Captions."""
+    return redirect(url_for('captions_page'))
 
 
 @app.route('/book')
@@ -582,18 +615,14 @@ def _account_context():
     if not customer:
         return None
     email = customer.get("email", "")
-    setups = []
     caption_orders = []
     referral_code = None
     try:
-        from services.front_desk_setup_service import FrontDeskSetupService
         from services.caption_order_service import CaptionOrderService
         from services.customer_auth_service import CustomerAuthService
-        fd_svc = FrontDeskSetupService()
         co_svc = CaptionOrderService()
         auth_svc = CustomerAuthService()
-        setups = fd_svc.get_by_customer_email(email)
-        caption_orders = co_svc.get_by_customer_email(email)
+        caption_orders = co_svc.get_by_customer_email_including_stripe_customer(email)
         referral_code = auth_svc.ensure_referral_code(str(customer["id"]))
         try:
             from api.captions_routes import _get_subscription_pause_info
@@ -620,15 +649,45 @@ def _account_context():
 
     subscription_billing = _get_subscription_billing(caption_orders)
 
+    # Upgrade options for one-off customers: one entry per one-off order so they can choose which pack to base a subscription on
+    subscribe_options = []
+    one_off_orders = [o for o in caption_orders if not (o.get("stripe_subscription_id") or "").strip()]
+    if one_off_orders:
+        from urllib.parse import urlencode
+        for o in one_off_orders:
+            token = (o.get("token") or "").strip()
+            if not token:
+                continue
+            intake = o.get("intake") or {}
+            business_name = (intake.get("business_name") or "").strip() or None
+            platforms_count = max(1, int(o.get("platforms_count", 1)))
+            selected_platforms = (o.get("selected_platforms") or "").strip() or ""
+            stories_paid = bool(o.get("include_stories"))
+            sub_params = {"copy_from": token, "platforms": platforms_count}
+            if selected_platforms:
+                sub_params["selected"] = selected_platforms
+            if stories_paid:
+                sub_params["stories"] = "1"
+            currency = (o.get("currency") or "gbp").strip().lower()
+            if currency in ("gbp", "usd", "eur"):
+                sub_params["currency"] = currency
+            url = "/captions-checkout-subscription?" + urlencode(sub_params)
+            subscribe_options.append({"url": url, "business_name": business_name})
+    # Backward compatibility: single upgrade link (most recent one-off)
+    subscribe_url = subscribe_options[0]["url"] if subscribe_options else None
+    subscribe_business_name = subscribe_options[0]["business_name"] if subscribe_options else None
+
     base = (Config.BASE_URL or request.url_root or "").strip().rstrip("/")
     if base and not base.startswith("http"):
         base = "https://" + base
     return {
         "customer": customer,
-        "setups": setups,
         "caption_orders": caption_orders,
         "current_intake_order": current_intake_order,
         "subscription_billing": subscription_billing,
+        "subscribe_options": subscribe_options,
+        "subscribe_url": subscribe_url,
+        "subscribe_business_name": subscribe_business_name,
         "base_url": base,
         "referral_code": referral_code or "",
         "referral_discount_credits": int(customer.get("referral_discount_credits") or 0),
@@ -736,27 +795,14 @@ def activate_success_page():
 
 @app.route('/front-desk-setup')
 def front_desk_setup_page():
-    """DFD shelved — redirect to shelved page (setup form no longer active)."""
-    return redirect(url_for('digital_front_desk_page'))
+    """DFD shelved — redirect to Captions."""
+    return redirect(url_for('captions_page'))
 
 
 @app.route('/front-desk-setup-done')
 def front_desk_setup_done_page():
-    """One-click 'Mark as connected' — link from the setup email to you. Marks the customer's setup connected and shows confirmation."""
-    from services.front_desk_setup_service import FrontDeskSetupService
-    done_token = request.args.get("t", "").strip()
-    if not done_token:
-        return render_template('front_desk_setup_done.html', error='Missing link'), 400
-    try:
-        svc = FrontDeskSetupService()
-        setup = svc.get_by_done_token(done_token)
-        if not setup:
-            return render_template('front_desk_setup_done.html', error='Invalid or expired link'), 404
-        if setup.get("status") != "connected":
-            svc.mark_connected(setup["id"])
-        return render_template('front_desk_setup_done.html')
-    except Exception as e:
-        return render_template('front_desk_setup_done.html', error=str(e)), 500
+    """DFD shelved — redirect to Captions."""
+    return redirect(url_for('captions_page'))
 
 
 @app.errorhandler(404)

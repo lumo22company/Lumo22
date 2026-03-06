@@ -17,6 +17,15 @@ def _sanitize_url(u: str) -> str:
     return re.sub(r"[\x00-\x1f\x7f]", "", (u or "").strip()).rstrip("/").strip()
 
 
+def validate_password(password: str) -> Tuple[bool, Optional[str]]:
+    """Check password: at least 10 characters, at least 1 number. Returns (ok, error_message)."""
+    if not password or len(password) < 10:
+        return (False, "Password must be at least 10 characters")
+    if not any(c.isdigit() for c in password):
+        return (False, "Password must include at least one number")
+    return (True, None)
+
+
 class CustomerAuthService:
     """Auth for Lumo 22 customers (DFD, Chat, Captions)."""
 
@@ -100,8 +109,9 @@ class CustomerAuthService:
         """Create customer with hashed password. Raises if email exists."""
         if not email or "@" not in email:
             raise ValueError("Valid email required")
-        if not password or len(password) < 6:
-            raise ValueError("Password must be at least 6 characters")
+        ok, err = validate_password(password)
+        if not ok:
+            raise ValueError(err)
         existing = self.get_by_email(email)
         if existing:
             raise ValueError("An account with this email already exists")
@@ -230,8 +240,9 @@ class CustomerAuthService:
         if not customer:
             return (False, "Invalid or expired reset link. Please request a new one.")
 
-        if not new_password or len(new_password) < 6:
-            return (False, "Password must be at least 6 characters")
+        ok, err = validate_password(new_password)
+        if not ok:
+            return (False, err)
 
         try:
             pw_hash = generate_password_hash(new_password, method="pbkdf2:sha256")

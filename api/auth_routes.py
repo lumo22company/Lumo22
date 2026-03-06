@@ -37,8 +37,10 @@ def signup():
 
         if not email or "@" not in email:
             return jsonify({"ok": False, "error": "Valid email required"}), 400
-        if not password or len(password) < 6:
-            return jsonify({"ok": False, "error": "Password must be at least 6 characters"}), 400
+        from services.customer_auth_service import validate_password
+        ok, err = validate_password(password)
+        if not ok:
+            return jsonify({"ok": False, "error": err}), 400
 
         svc = CustomerAuthService()
         customer = svc.create(email=email, password=password, referral_code=referral_code)
@@ -147,6 +149,7 @@ def update_preferences():
             svc = CustomerAuthService()
             if svc.update_marketing_opt_in(str(customer["id"]), bool(opt_in)):
                 return jsonify({"ok": True, "marketing_opt_in": bool(opt_in)}), 200
+            return jsonify({"ok": False, "error": "Couldn't save preference. Please try again."}), 500
         return jsonify({"ok": False, "error": "No valid preferences to update"}), 400
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
@@ -305,8 +308,10 @@ def create_account():
 
         if not email or "@" not in email:
             return jsonify({"ok": False, "error": "Valid email required"}), 400
-        if not password or len(password) < 6:
-            return jsonify({"ok": False, "error": "Password must be at least 6 characters"}), 400
+        from services.customer_auth_service import validate_password
+        ok, err = validate_password(password)
+        if not ok:
+            return jsonify({"ok": False, "error": err}), 400
 
         svc = CustomerAuthService()
         existing = svc.get_by_email(email)

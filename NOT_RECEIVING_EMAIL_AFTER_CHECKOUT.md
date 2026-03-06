@@ -2,6 +2,8 @@
 
 Follow these checks in order. They tell you exactly where the flow is failing.
 
+**Quick start:** After a test payment, check **Railway** → your service → **Deployments** → latest → **View logs**. Look for `[SendGrid] Email sent OK` or `[SendGrid] Email NOT sent` / `Email rejected`. If you see **sent OK** but still no inbox, check **SendGrid** → **Activity** (see step 2b below).
+
 ---
 
 ## 1. Check Stripe webhook response
@@ -45,6 +47,11 @@ You should see lines like:
 | **`[SendGrid] Email NOT sent (no API key)`** | **SENDGRID_API_KEY** missing or empty on Railway. |
 | **`[SendGrid] Error sending email`** | SendGrid rejected the send (e.g. **FROM_EMAIL** not verified, invalid key). Check the error text in the log. |
 | **No `[Stripe webhook]` lines** | Stripe didn’t hit your app, or logs are from before the payment. Confirm step 1 (webhook URL and response). |
+
+**2b. If logs show `[SendGrid] Email sent OK` but you still don't receive:**  
+- Go to **SendGrid** → **Activity**. Find the message to your address (filter by recipient or time).  
+- Status **Delivered** = inbox (check spam/junk). **Deferred** / **Bounce** = fix the recipient or sender reputation. **Processed** = accepted; delivery can take a minute.  
+- Ensure the **From** address in Activity matches a **verified** sender: **SendGrid** → **Settings** → **Sender Authentication** (see [SENDGRID_VERIFY_SENDER_CHECKLIST.md](SENDGRID_VERIFY_SENDER_CHECKLIST.md)).
 
 ---
 

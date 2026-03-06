@@ -44,9 +44,7 @@
       '<p style="margin:0 0 0.75rem;"><a href="mailto:hello@lumo22.com" style="color:#fff200;text-decoration:none;">Email us → hello@lumo22.com</a></p>' +
       '<p style="margin:0 0 0.5rem;font-size:0.85rem;color:#9a9a96;">Quick links:</p>' +
       '<ul style="margin:0;padding-left:1.25rem;color:#e8e6e2;">' +
-      '<li style="margin-bottom:0.25rem;"><a href="' + baseUrl + '/captions" style="color:#fff200;text-decoration:none;">30 Days Captions</a></li>' +
-      '<li style="margin-bottom:0.25rem;"><a href="' + baseUrl + '/digital-front-desk" style="color:#fff200;text-decoration:none;">Digital Front Desk</a></li>' +
-      '<li><a href="' + baseUrl + '/website-chat" style="color:#fff200;text-decoration:none;">Chat Assistant</a></li>' +
+      '<li><a href="' + baseUrl + '/captions" style="color:#fff200;text-decoration:none;">30 Days Captions</a></li>' +
       '</ul>';
     var closeBtn = panel.querySelector('button');
     closeBtn.addEventListener('click', function () { panel.style.display = 'none'; });

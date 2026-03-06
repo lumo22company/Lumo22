@@ -329,7 +329,7 @@ You may reference the actual day/date where it helps (e.g. Monday tip, weekend p
         variety_note = ""
         if is_subscription_variety:
             variety_note = "\n\nThis client receives packs monthly; vary story types and angles (polls, BTS, tips, testimonials, etc.) so this month feels fresh and not repetitive with previous packs.\n"
-        prompt = f"""Generate 30 one-line Story prompts for Instagram/Facebook Stories. One prompt per day (Day 1–30).
+        prompt = f"""Generate 30 Story prompts for Instagram/Facebook Stories. One per day (Day 1–30). Each day must have exactly three parts: Idea, Suggested wording, Story hashtags.
 
 {lang_instruction}
 
@@ -341,28 +341,28 @@ INTAKE:
 {date_block}
 {variety_note}
 
-Each prompt should be a single short line (5–15 words) suggesting what to post in a Story that day. Mix: behind-the-scenes, tips, questions, polls, product highlights, testimonials, process reveals, day-in-the-life. Variety is key.
+For each day provide: (1) Idea — a short description of the Story concept (5–15 words). (2) Suggested wording: — one sentence or short suggestion for what to say or show. (3) Story hashtags: — 3–5 relevant hashtags. Mix types: behind-the-scenes, tips, questions, polls, product highlights, testimonials, process reveals, day-in-the-life. Variety is key.
 
-Output format — markdown only:
+Output format — markdown only, one line per day with all three parts on that line:
 ---
 ## 30 Story Ideas | {business} | {month_year}
 
-**Day 1:** [one-line prompt]
-**Day 2:** [one-line prompt]
+**Day 1:** Idea: [short idea]. Suggested wording: [suggestion]. Story hashtags: #tag1 #tag2 #tag3
+**Day 2:** Idea: [short idea]. Suggested wording: [suggestion]. Story hashtags: #tag1 #tag2 #tag3
 ...
-**Day 30:** [one-line prompt]
+**Day 30:** Idea: [short idea]. Suggested wording: [suggestion]. Story hashtags: #tag1 #tag2 #tag3
 ---
 
-Output the complete list only. No preamble."""
+Use the exact labels "Idea:", "Suggested wording:", and "Story hashtags:" on every line. Output the complete list only. No preamble."""
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": "You write concise, actionable social media content prompts."},
+                    {"role": "system", "content": "You write concise, actionable social media content prompts with Idea, Suggested wording, and Story hashtags for each day."},
                     {"role": "user", "content": prompt},
                 ],
                 temperature=0.7,
-                max_tokens=1500,
+                max_tokens=3500,
             )
             content = (response.choices[0].message.content or "").strip()
             return content if content else ""
@@ -410,7 +410,7 @@ You may reference the actual day/date where it helps. Use only when natural.
         if is_subscription_variety:
             variety_note = "\n\nThis client receives packs monthly; vary story types and angles (polls, BTS, tips, testimonials, etc.) so this month feels fresh and not repetitive with previous packs.\n"
 
-        prompt = f"""Generate 30 one-line Story prompts for Instagram/Facebook Stories. One prompt per day (Day 1–30).
+        prompt = f"""Generate 30 Story prompts for Instagram/Facebook Stories. One per day (Day 1–30). Each day must have exactly three parts: Idea, Suggested wording, Story hashtags.
 
 {lang_instruction}
 
@@ -427,29 +427,29 @@ Here is the theme or focus for each day's main caption:
 
 For each Day N, write a Story prompt that explicitly supports and reinforces that day's caption. Think of it as the visibility layer between posts: behind-the-scenes, polls, quick proof, or micro-examples that keep the message active.
 
-Each prompt should be a single short line (5–20 words). Mix: behind-the-scenes, tips, questions, polls, product highlights, testimonials, process reveals, day-in-the-life. Variety is key, but always tied to that day's caption theme.
+For each day provide: (1) Idea: — short description of the Story concept (5–15 words). (2) Suggested wording: — one sentence or short suggestion for what to say or show. (3) Story hashtags: — 3–5 relevant hashtags. Mix types; variety is key, but always tied to that day's caption theme.
 
-Output format — markdown only:
+Output format — markdown only, one line per day with all three parts on that line:
 ---
 ## 30 Story Ideas | {business} | {month_year}
 
-**Day 1:** [one-line prompt]
-**Day 2:** [one-line prompt]
+**Day 1:** Idea: [short idea]. Suggested wording: [suggestion]. Story hashtags: #tag1 #tag2 #tag3
+**Day 2:** Idea: [short idea]. Suggested wording: [suggestion]. Story hashtags: #tag1 #tag2 #tag3
 ...
-**Day 30:** [one-line prompt]
+**Day 30:** Idea: [short idea]. Suggested wording: [suggestion]. Story hashtags: #tag1 #tag2 #tag3
 ---
 
-Output the complete list only. No preamble."""
+Use the exact labels "Idea:", "Suggested wording:", and "Story hashtags:" on every line. Output the complete list only. No preamble."""
 
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": "You write concise, actionable social media content prompts that align with an existing captions plan."},
+                    {"role": "system", "content": "You write concise, actionable social media content prompts that align with an existing captions plan. Each day must include Idea, Suggested wording, and Story hashtags."},
                     {"role": "user", "content": prompt},
                 ],
                 temperature=0.7,
-                max_tokens=1800,
+                max_tokens=3500,
             )
             content = (response.choices[0].message.content or "").strip()
             return content if content else ""

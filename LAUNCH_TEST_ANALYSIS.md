@@ -1,162 +1,109 @@
-# Website Launch Test Analysis
+# Lumo 22 — Pre-launch test analysis
 
-**Date:** Feb 2025  
-**Scope:** Full site flow, UX, broken links, and launch readiness for 30 Days Captions.
-
----
-
-## 1. Site Structure Overview
-
-| Route | Purpose | Status |
-|-------|---------|--------|
-| `/` | Landing page | ✅ Main entry; CTA → /captions |
-| `/captions` | 30 Days Captions product page | ✅ Core product |
-| `/captions-checkout` | One-off checkout (API redirect) | ✅ |
-| `/captions-checkout-subscription` | Subscription checkout | ✅ |
-| `/captions-thank-you` | Post-payment thank you | ✅ |
-| `/captions-intake` | Intake form (token required) | ✅ |
-| `/account` | Customer dashboard | ✅ |
-| `/login` | Customer login | ✅ |
-| `/signup` | Customer signup | ✅ |
-| `/terms` | Terms & Conditions | ✅ |
-| `/plans` | Redirects to /captions#pricing | ✅ |
-| `/digital-front-desk` | Shows "on hold" page | ✅ Shelved |
-| `/website-chat` | Redirects to /captions | ✅ |
-| `/website-chat-success` | Redirects to /captions | ✅ |
-| `/book` | Redirects to /captions | ✅ |
-| `/404` | Custom not-found page | ✅ |
+**Date:** 3 March 2026  
+**Scope:** Automated tests, code paths, config, and launch readiness.
 
 ---
 
-## 2. Main User Flows
+## 1. Automated test results
 
-### A. Captions purchase flow (happy path)
+| Test suite | Result | Notes |
+|------------|--------|------|
+| **Password validation** | ✅ Pass | `validate_password()` enforces 10+ chars + 1 number. |
+| **test_intake_prefill_and_subscription.py** | ✅ Pass | Prefill from `copy_from`, subscribe_url includes `copy_from` and `stories=1`, no subscribe_url for subscription orders. |
+| **test_intake_add_platform_visibility.py** | ✅ Pass | “Add another platform” visibility and upgrade_required for Stories. |
+| **test_referral_discount.py** | ✅ Pass | Referral coupon applied when ref valid (mocked). |
+| **test_system.py** | ✅ Pass | Imports, config, lead model, OpenAI, Supabase all OK. |
+| **test_intake_business_name.py** | ⚠️ 1 fail | `test_multi_platform_prompt_includes_rotation_instruction` expects "Assign each day" and "balanced rotation" in the **user** prompt. The caption generator uses different wording ("For EACH day (1–30), write one caption for EACH of these platforms..."). **Product behaviour is correct**; the test expectation is outdated. Optional: update the test to match current prompt text or remove the assertion. |
 
-1. **Land** on `/` → hero + "30 Days of Social Captions" split section
-2. **Click** "View Caption Plans" → `/captions`
-3. **Scroll** to pricing → choose platform count, add Stories (optional), select plan
-4. **Click** "Get my 30 days" or "Subscribe" → API creates Stripe Checkout session, redirects to Stripe
-5. **Pay** on Stripe → redirect to `/captions-thank-you?session_id=...`
-6. **Thank you page** → polls `/api/captions-intake-link` until webhook creates order, then shows "Fill in now" + intake URL
-7. **Fill in now** → `/captions-intake?t=TOKEN`
-8. **Submit intake** → captions generated, delivery email sent
-9. **Receive** PDF(s) by email within ~15 minutes
-
-**Dependencies:** Stripe webhook must fire `checkout.session.completed`; BASE_URL, STRIPE_* env vars must be set.
-
-### B. Login / Account flow
-
-1. **Sign up** at `/signup` → creates account
-2. **Log in** at `/login` → session set, redirect to `/account` or `?next=`
-3. **Account** → Information, History, Edit form, Manage subscription, Refer a friend
-4. **Edit form** → update voice/business details for future packs
-5. **Manage subscription** → pause/resume (subscription only)
-
-### C. Navbar and footer
-
-- **Navbar:** Logo → Home; Log in / Sign up (or Account when logged in). **No Captions link** (removed).
-- **Footer:** Captions | Terms | Contact (mailto:hello@lumo22.com)
-- **Primary route to Captions:** Landing CTA "View Caption Plans" and footer "Captions".
+**Summary:** Core flows (auth, intake, subscription, referral, prefill) pass. One failing test is a wording mismatch in the prompt test, not a functional bug.
 
 ---
 
-## 3. Issues & Recommendations
+## 2. Critical paths reviewed
 
-### 🔴 Critical (fix before launch)
+### Auth & account
+- **Signup** (`/signup`, `POST /api/auth/signup`): Password validated (10 chars + 1 number) in service and routes; templates show correct hints and `minlength="10"`.
+- **Login** (`/login`, `POST /api/auth/login`): Email + password; session set; no password rules on login (correct).
+- **Create account** (intake / front-desk): `POST /api/auth/create-account` uses same `validate_password()`; templates updated.
+- **Reset password** (`/reset-password`, `POST /api/auth/reset-password`): Token validated, `validate_password()` applied; templates and JS check length + number.
+- **Forgot password**: Request reset → email with link → reset page with token. Depends on SendGrid and `BASE_URL` for link.
 
-1. **Live URL testing not possible here**  
-   The Railway URL used in docs returned 404 when fetched. You should:
-   - Confirm your live URL (e.g. `lumo22.com` or `lumo-22-production.up.railway.app`)
-   - Manually test the full Captions flow: pay → thank you → intake → delivery email
-   - Test login/signup → account → edit form
-   - Verify Stripe webhook receives `checkout.session.completed` and creates orders
+### Captions purchase flow
+- **Product page** (`/captions`): Currency selector, platforms, Story Ideas checkbox, one-off vs subscription CTAs.
+- **Checkout**: One-off and subscription create Stripe Checkout with correct metadata (platforms, stories, currency, `copy_from` when applicable).
+- **Thank-you** (`/captions-thank-you`): Uses `session_id`; backend fetches session and shows intake link when order exists.
+- **Intake** (`/captions-intake?t=TOKEN`): Loads order by token; prefill from `copy_from` when same customer; submit can trigger immediate delivery or scheduled (upgrade-from-one-off).
+- **Delivery**: `_run_generation_and_deliver`; email with PDF(s); `set_delivered`; subscription renewal via `invoice.paid` webhook.
 
-2. **Stripe configuration**
-   - [ ] Success URL on payment links/checkout: `{BASE_URL}/captions-thank-you`
-   - [ ] Webhook URL: `{BASE_URL}/webhooks/stripe`
-   - [ ] Event: `checkout.session.completed`
-   - [ ] BASE_URL has no trailing slash, no hidden characters
+### Account dashboard
+- **Sections:** Information, History, Edit form, Manage subscription, Refer a friend.
+- **Manage subscription:** Payment method dropdown (custom arrow), pause/resume (pause_collection modify), Add/Remove Story Ideas (add-stories-to-subscription, reduce-subscription).
+- **Resume subscription:** Uses `stripe.Subscription.modify(sub_id, pause_collection="")` (correct for pause_collection; not `Subscription.resume()`).
 
-3. **SendGrid**
-   - [ ] `FROM_EMAIL` (e.g. hello@lumo22.com) is verified
-   - [ ] Intake and delivery emails land in inbox (check spam on first run)
+### Billing & Stripe
+- **Webhook** (`/webhooks/stripe`): `checkout.session.completed` and `invoice.paid` (subscription_cycle) for captions; referral on `invoice.created` where applicable.
+- **Add Stories:** Adds Stories price to existing subscription; proration; order `include_stories` updated.
+- **Remove Stories:** Reduce-subscription removes Stories line item; order updated; new price from next invoice.
 
-### 🟡 Important (should fix)
-
-4. **404 page "Pricing"**  
-   **Recommendation: keep.** The 404 page links "Captions" and "Pricing" — both are useful recovery links. No change.
-
-5. **Terms page CTA**  
-   Terms page navbar shows "View plans" (→ `/captions#pricing`). OK as is.
-
-6. **Refer a friend**  
-   Account sidebar `/account/refer` works (shows referral link). Footer link to `/captions#refer-a-friend` was removed. No further change.
-
-7. **Empty `lumo-nav-links` div**  
-   **Fixed:** Added `.lumo-nav-links:empty { display: none; }` so the empty nav links container is hidden and doesn't create layout gap.
-
-### 🟢 Nice to have
-
-8. **Landing page**  
-   - Hero scroll cue (↓) works with Lenis
-   - Single CTA "View Caption Plans" is clear
-   - No dead links found
-
-9. **Captions page**
-   - Example blocks (caption + story) side-by-side on desktop, stacked on mobile
-   - Tighter spacing on captions block only
-   - "Designed for consistency" section: dark bg, light text
-   - Pricing section with platform/stories add-ons
-
-10. **Thank you page**
-    - Polls for intake link; shows "Fill in now" and "I'll do it later"
-    - No auto-redirect; user chooses
+### Browsing & static
+- **Landing** (`/`), **Terms** (`/terms`), **Captions** (`/captions`), **404**: Routes registered; terms “Last updated: 3 March 2026”.
+- **Plans** (`/plans`): Redirects to `/captions#pricing`.
 
 ---
 
-## 4. Manual Test Checklist
+## 3. Configuration checklist (Railway / env)
 
-Run these on your **live** site:
+Confirm these for production:
 
-| # | Test | Expected |
-|---|------|----------|
-| 1 | Visit `/` | Landing loads; "View Caption Plans" links to /captions |
-| 2 | Click footer "Captions" | Goes to /captions |
-| 3 | On /captions, select 1 platform, click "Get my 30 days" | Redirects to Stripe Checkout |
-| 4 | Complete test payment | Redirects to /captions-thank-you with session_id |
-| 5 | On thank you page | "Fill in now" appears (after webhook); link goes to intake |
-| 6 | Submit intake form | Success message; delivery email received |
-| 7 | Check delivery email | PDF attached; subject correct |
-| 8 | Sign up at /signup | Account created; can log in |
-| 9 | Log in → Account | Dashboard loads; sections work |
-| 10 | Account → Edit form | Form loads; can update and save |
-| 11 | Visit /terms | Terms load; "View plans" works |
-| 12 | Visit /digital-front-desk | "On hold" page; CTA → /captions |
-| 13 | Visit invalid URL | Custom 404 page |
-| 14 | Footer "Terms" | Goes to /terms |
-| 15 | Footer "Contact" | Opens mailto:hello@lumo22.com |
+| Variable | Purpose |
+|----------|---------|
+| `BASE_URL` | https://www.lumo22.com (or your live domain). Used in emails, Stripe success URLs, webhook base. |
+| `STRIPE_SECRET_KEY` | Live key when going live. |
+| `STRIPE_WEBHOOK_SECRET` | Secret for `POST /webhooks/stripe` (e.g. `https://www.lumo22.com/webhooks/stripe`). |
+| `SUPABASE_URL`, `SUPABASE_KEY` or `SUPABASE_SERVICE_ROLE_KEY` | Customers, caption_orders, password reset. |
+| `SENDGRID_API_KEY`, `FROM_EMAIL` | Transactional email (intake, delivery, password reset). |
+| `OPENAI_API_KEY` | Caption (and story) generation. |
+| `CAPTIONS_PAYMENT_LINK` | Optional; Checkout Sessions used for captions flow. |
+| `STRIPE_CAPTIONS_PRICE_ID` | One-off captions (GBP). |
+| `STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID` | Subscription (GBP). |
+| `STRIPE_CAPTIONS_STORIES_PRICE_ID`, `STRIPE_CAPTIONS_STORIES_SUBSCRIPTION_PRICE_ID` | Story Ideas add-on. |
+| `STRIPE_CAPTIONS_EXTRA_PLATFORM_*` | If offering multi-platform. |
+| `STRIPE_REFERRAL_COUPON_ID` | Optional; refer-a-friend discount. |
+| `CRON_SECRET` | If using Railway cron for `/api/captions-send-reminders` (scheduled deliveries). |
+| `SECRET_KEY` | Flask session; set a strong random value in production. |
+
+Stripe Dashboard:
+- Success URLs for Checkout point to `{BASE_URL}/captions-thank-you` (and any other success pages you use).
+- Webhook endpoint: `https://www.lumo22.com/webhooks/stripe` (or your live URL); events: `checkout.session.completed`, `invoice.paid`, `invoice.created` (if using referral).
 
 ---
 
-## 5. Environment / Config Checklist
+## 4. Optional / known gaps
 
-- [ ] `BASE_URL` = your live URL (no trailing slash)
-- [ ] `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` set
-- [ ] `STRIPE_CAPTIONS_PRICE_ID` (and subscription/add-on IDs if used)
-- [ ] `SENDGRID_API_KEY`, `FROM_EMAIL` (verified in SendGrid)
-- [ ] `SUPABASE_URL`, `SUPABASE_KEY` for orders/customers
-- [ ] `OPENAI_API_KEY` for caption generation
-- [ ] Railway/GitHub deploy working (changes go live)
+- **test_intake_business_name.py:** One assertion fails on exact prompt wording ("Assign each day" / "balanced rotation"). Behaviour is correct; update or relax the test if you want the suite fully green.
+- **apscheduler:** Reminder scheduler logs “No module named 'apscheduler'” in some test runs; `apscheduler` is in `requirements.txt`. Ensure it’s installed in the environment where reminders run (e.g. Railway).
+- **Config.validate():** Only checks `OPENAI_API_KEY`, `SUPABASE_URL`, `SUPABASE_KEY`. It does not enforce Stripe or SendGrid for captions; app will 503 or fail at runtime if those are missing when used.
+
+---
+
+## 5. Manual testing (high level)
+
+Use **WEBSITE_TEST_CHECKLIST.html** for step-by-step checks. Priority:
+
+1. **Domain & SSL:** Visit https://www.lumo22.com (or live URL); confirm SSL and redirects.
+2. **Captions:** Select platforms + optional Stories → Get my 30 days or Subscribe → complete with test card 4242… → thank-you → intake link → submit form.
+3. **Account:** Signup (password 10+ chars + 1 number) → login → Account Information, Edit form, Manage subscription (payment method, pause, Add/Remove Story Ideas), Refer a friend, Log out.
+4. **Password reset:** Forgot password → email → reset link → new password (10+ chars + 1 number) → login.
+5. **Emails:** Intake and delivery emails received; from address and links correct.
+6. **Subscription:** Add Stories from account; Remove Story Ideas; pause then resume (no “only resume if paused” error).
 
 ---
 
 ## 6. Summary
 
-**Overall:** The site is structured for a Captions-first launch. Flows are consistent, and Digital Front Desk / Chat are shelved or redirected appropriately.
+- **Automated tests:** Core behaviour passes; one non-functional test failure (prompt wording).
+- **Critical paths:** Auth (signup, login, create-account, reset) and captions (product → checkout → thank-you → intake → delivery) are consistent with current design; account and billing (pause/resume, add/remove Stories) are wired correctly.
+- **Launch readiness:** Code and flows look ready for launch provided env and Stripe (URLs, webhook, success URLs) are set correctly and you run through the manual checklist (especially one full captions purchase and one subscription + account actions).
 
-**Main risks:**
-- Stripe webhook or env misconfig preventing order creation
-- Emails (intake, delivery) going to spam
-- Live URL / deployment mismatch
-
-**Recommendation:** Run the manual checklist on your live URL, then launch when all critical items pass.
+If you want, the next step can be: (1) updating `test_intake_business_name.py` so the multi-platform prompt test matches current copy or is skipped, and (2) a short “go-live” checklist of env and Stripe settings to tick off on the day.

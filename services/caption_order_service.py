@@ -44,12 +44,19 @@ class CaptionOrderService:
         platforms_count: int = 1,
         selected_platforms: Optional[str] = None,
         include_stories: bool = False,
+        currency: Optional[str] = None,
+        upgraded_from_token: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Create order after payment. Returns dict with id, token, customer_email, status.
         platforms_count: number of platforms paid for (1 = base, 2+ = base + add-ons).
         selected_platforms: comma-separated platforms chosen at checkout (e.g. Instagram, LinkedIn).
-        include_stories: True when customer paid for 30 Days Story Ideas add-on at checkout."""
+        include_stories: True when customer paid for 30 Days Story Ideas add-on at checkout.
+        currency: payment currency (gbp, usd, eur). Used for subscribe_url so subscription checkout shows correct currency.
+        upgraded_from_token: For subscription orders upgraded from one-off; first pack delivered 30 days after one-off."""
         token = _token()
+        curr = (currency or "gbp").strip().lower()
+        if curr not in ("gbp", "usd", "eur"):
+            curr = "gbp"
         row = {
             "token": token,
             "customer_email": customer_email,
@@ -60,6 +67,8 @@ class CaptionOrderService:
             "platforms_count": max(1, int(platforms_count)),
             "selected_platforms": (selected_platforms or "").strip() or None,
             "include_stories": bool(include_stories),
+            "currency": curr,
+            "upgraded_from_token": (upgraded_from_token or "").strip() or None,
         }
         result = self.client.table(self.table).insert(row).execute()
         if not result.data:
@@ -88,6 +97,27 @@ class CaptionOrderService:
         result = self.client.table(self.table).select("*").eq("customer_email", e).order("created_at", desc=True).execute()
         return result.data or []
 
+    def get_by_customer_email_including_stripe_customer(self, email: str) -> list:
+        """Get all caption orders for this customer: by email, and any orders with the same Stripe customer ID.
+        Ensures the latest order shows even if they checked out with a different email (same Stripe customer)."""
+        orders_by_email = self.get_by_customer_email(email)
+        seen_ids = {o.get("id") for o in orders_by_email if o.get("id")}
+        stripe_customer_ids = [
+            (o.get("stripe_customer_id") or "").strip()
+            for o in orders_by_email
+            if (o.get("stripe_customer_id") or "").strip()
+        ]
+        for sc_id in stripe_customer_ids:
+            if not sc_id:
+                continue
+            result = self.client.table(self.table).select("*").eq("stripe_customer_id", sc_id).order("created_at", desc=True).execute()
+            for o in result.data or []:
+                if o.get("id") and o["id"] not in seen_ids:
+                    seen_ids.add(o["id"])
+                    orders_by_email.append(o)
+        orders_by_email.sort(key=lambda x: (x.get("created_at") or ""), reverse=True)
+        return orders_by_email
+
     def get_by_stripe_session_id(self, stripe_session_id: str) -> Optional[Dict[str, Any]]:
         """Get order by Stripe checkout session id (for thank-you → intake redirect)."""
         if not stripe_session_id:
@@ -103,9 +133,12 @@ class CaptionOrderService:
         result = self.client.table(self.table).update(updates).eq("id", order_id).execute()
         return bool(result.data)
 
-    def save_intake(self, order_id: str, intake: Dict[str, Any]) -> bool:
-        """Save intake and set status to intake_completed."""
-        return self.update(order_id, {"intake": intake, "status": "intake_completed"})
+    def save_intake(self, order_id: str, intake: Dict[str, Any], scheduled_delivery_at: Optional[str] = None) -> bool:
+        """Save intake and set status to intake_completed. Optional scheduled_delivery_at for upgrade-from-one-off."""
+        updates = {"intake": intake, "status": "intake_completed"}
+        if scheduled_delivery_at:
+            updates["scheduled_delivery_at"] = scheduled_delivery_at
+        return self.update(order_id, updates)
 
     def update_intake_only(self, order_id: str, intake: Dict[str, Any]) -> bool:
         """Update intake JSON without changing status or re-triggering generation."""
@@ -118,7 +151,8 @@ class CaptionOrderService:
         self, order_id: str, captions_md: str, stories_pdf_bytes: Optional[bytes] = None
     ) -> bool:
         """Mark order delivered; optionally store Stories PDF as base64 for account history."""
-        updates = {"status": "delivered", "captions_md": captions_md}
+        now_iso = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+        updates = {"status": "delivered", "captions_md": captions_md, "delivered_at": now_iso}
         if stories_pdf_bytes is not None:
             try:
                 updates["stories_pdf_base64"] = base64.b64encode(stories_pdf_bytes).decode("ascii")
@@ -172,6 +206,32 @@ class CaptionOrderService:
             return True
         except Exception:
             return False
+
+    def get_scheduled_delivery_orders_due(self) -> list:
+        """Orders with intake completed, scheduled_delivery_at in the past. For upgrade-from-one-off first pack."""
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc)
+        result = self.client.table(self.table).select("*").eq(
+            "status", "intake_completed"
+        ).not_.is_("stripe_subscription_id", "null").execute()
+        data = result.data or []
+        out = []
+        for row in data:
+            sched = row.get("scheduled_delivery_at")
+            if not sched:
+                continue
+            try:
+                if isinstance(sched, str):
+                    sched_dt = datetime.fromisoformat(sched.replace("Z", "+00:00"))
+                else:
+                    sched_dt = sched
+                if sched_dt.tzinfo is None:
+                    sched_dt = sched_dt.replace(tzinfo=timezone.utc)
+                if sched_dt <= now:
+                    out.append(row)
+            except Exception:
+                pass
+        return out
 
     def get_active_subscription_orders(self) -> list:
         """Get caption orders that have an active Stripe subscription (for reminder emails)."""

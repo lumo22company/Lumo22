@@ -51,11 +51,11 @@
 </head>
 <body class="lumo-landing">
   <nav class="lumo-nav lumo-nav-scrolled">
-    <a href="/" class="lumo-nav-logo">Lumo 22</a>
-    <div class="lumo-nav-links">
-      <a href="/digital-front-desk">Front Desk</a>
+    <div class="lumo-nav-left">
+      <a href="/" class="lumo-nav-logo">Lumo 22</a>
+      <a href="/captions" class="lumo-nav-link">Captions</a>
     </div>
-    {% if current_customer %}<a href="/account" class="lumo-nav-cta">Account</a>{% else %}<a href="/login" class="lumo-nav-cta lumo-nav-login">Log in</a>{% endif %}
+    {% if current_customer %}<a href="/account" class="lumo-nav-cta lumo-nav-account">Account</a>{% else %}<a href="/login" class="lumo-nav-cta lumo-nav-login">Log in</a>{% endif %}
   </nav>
 
   <main class="setup-page">
@@ -163,8 +163,8 @@
         <p style="margin:0 0 1rem; color: var(--lum-text-muted); font-size: 0.9rem;">Access your chat setup and embed code anytime from your account.</p>
         <form id="create-account-form">
           <input type="hidden" id="ca-email">
-          <label for="ca-password">Password</label>
-          <input type="password" id="ca-password" minlength="6" required style="width:100%;padding:0.5rem;margin-bottom:0.75rem;">
+          <label for="ca-password">Password (min 10 characters, include 1 number)</label>
+          <input type="password" id="ca-password" minlength="10" required style="width:100%;padding:0.5rem;margin-bottom:0.75rem;" placeholder="At least 10 characters, 1 number">
           <button type="submit" class="btn-submit" id="ca-btn">Create account</button>
         </form>
         <p id="ca-done" style="display:none; margin:0; color: var(--lum-gold);">Account created! <a href="/account" style="color:inherit;">Go to your account</a></p>
@@ -291,8 +291,8 @@
         <p style="margin:0 0 0.75rem; font-weight: 600; font-size: 0.95rem;">Create an account</p>
         <form id="create-account-form">
           <input type="hidden" id="ca-email">
-          <label for="ca-password">Password</label>
-          <input type="password" id="ca-password" minlength="6" required style="width:100%;padding:0.5rem;margin-bottom:0.75rem;">
+          <label for="ca-password">Password (min 10 characters, include 1 number)</label>
+          <input type="password" id="ca-password" minlength="10" required style="width:100%;padding:0.5rem;margin-bottom:0.75rem;" placeholder="At least 10 characters, 1 number">
           <button type="submit" class="btn-submit" id="ca-btn">Create account</button>
         </form>
         <p id="ca-done" style="display:none; margin:0; color: var(--lum-gold);">Account created! <a href="/account" style="color:inherit;">Go to your account</a></p>

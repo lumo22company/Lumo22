@@ -6,7 +6,7 @@
       <button type="button" class="terms-modal-close" id="terms-modal-close" aria-label="Close">&times;</button>
     </div>
     <div class="terms-modal-body" id="terms-modal-body">
-      <p class="terms-modal-updated" style="font-size: 0.85rem; margin-bottom: 1rem;">Please scroll to the bottom to continue.</p>
+      <p class="terms-modal-updated" style="font-size: 0.85rem; margin-bottom: 1rem; color: #fff;">Please scroll to the bottom to continue.</p>
       {% include '_terms_content.html' %}
     </div>
     <div class="terms-modal-footer">
@@ -18,7 +18,7 @@
 <style>
   .terms-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 10000; align-items: center; justify-content: center; padding: 1rem; }
   .terms-modal-overlay.open { display: flex; }
-  .terms-modal { background: var(--lum-card-bg, #000000); border: 1px solid var(--lum-border); border-radius: 12px; max-width: 520px; width: 100%; max-height: 90vh; display: flex; flex-direction: column; }
+  .terms-modal { background: rgba(0, 0, 0, 0.45); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 12px; max-width: 520px; width: 100%; max-height: 90vh; display: flex; flex-direction: column; }
   .terms-modal-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--lum-border); display: flex; align-items: center; justify-content: space-between; }
   .terms-modal-header h2 { font-family: 'Encode Sans Condensed', sans-serif; font-size: 1.2rem; margin: 0; }
   .terms-modal-close { background: none; border: none; color: var(--lum-text-muted); cursor: pointer; font-size: 1.5rem; line-height: 1; padding: 0.25rem; }
@@ -32,7 +32,7 @@
   .terms-modal-footer .btn-agree { width: 100%; padding: 0.75rem 1.25rem; background: var(--lum-gold); color: var(--lum-black); border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-family: inherit; font-size: 1rem; }
   .terms-modal-footer .btn-agree:hover:not(:disabled) { opacity: 0.95; }
   .terms-modal-footer .btn-agree:disabled { opacity: 0.5; cursor: not-allowed; }
-  .terms-modal-scroll-hint { font-size: 0.85rem; color: var(--lum-text-muted); margin-top: 0.5rem; }
+  .terms-modal-scroll-hint { font-size: 0.85rem; color: #fff; margin-top: 0.5rem; }
 </style>
 <script>
 (function() {

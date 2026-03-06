@@ -25,8 +25,10 @@
 </head>
 <body class="lumo-landing">
   <nav class="lumo-nav lumo-nav-scrolled">
-    <a href="/" class="lumo-nav-logo">Lumo 22</a>
-    <div class="lumo-nav-links"></div>
+    <div class="lumo-nav-left">
+      <a href="/" class="lumo-nav-logo">Lumo 22</a>
+      <a href="/captions" class="lumo-nav-link">Captions</a>
+    </div>
     <a href="/" class="lumo-nav-cta">Home</a>
   </nav>
 
@@ -39,11 +41,11 @@
       <label for="email">Email</label>
       <input type="email" id="email" name="email" required autocomplete="email" placeholder="you@example.com">
 
-      <label for="password">Password <span style="font-weight:400;color:var(--lum-text-muted);">(min 6 characters)</span></label>
-      <input type="password" id="password" name="password" required minlength="6" autocomplete="new-password">
+      <label for="password">Password <span style="font-weight:400;color:var(--lum-text-muted);">(min 10 characters, include 1 number)</span></label>
+      <input type="password" id="password" name="password" required minlength="10" autocomplete="new-password" placeholder="At least 10 characters, 1 number">
 
       <label for="password_confirm">Confirm password</label>
-      <input type="password" id="password_confirm" name="password_confirm" required minlength="6" autocomplete="new-password">
+      <input type="password" id="password_confirm" name="password_confirm" required minlength="10" autocomplete="new-password">
 
       <button type="submit" class="btn" id="btn">Create account</button>
       <div id="msg" class="msg" style="display: none;"></div>
@@ -69,6 +71,12 @@
         if (pw !== pw2) {
           msg.className = 'msg error';
           msg.textContent = 'Those passwords don\'t match.';
+          msg.style.display = 'block';
+          return;
+        }
+        if (pw.length < 10 || !/\d/.test(pw)) {
+          msg.className = 'msg error';
+          msg.textContent = 'Use at least 10 characters and include 1 number.';
           msg.style.display = 'block';
           return;
         }

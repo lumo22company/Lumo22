@@ -284,7 +284,7 @@ def front_desk_resume_auto_reply():
 
 def _auto_reply_toggle_response(success: bool, message: str):
     """Return a simple HTML page for click-from-email links."""
-    html = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Digital Front Desk</title></head><body style="font-family: system-ui, sans-serif; max-width: 480px; margin: 3rem auto; padding: 1rem; color: #333;"><p>{message}</p><p><a href="/digital-front-desk">Back to Digital Front Desk</a></p></body></html>"""
+    html = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Lumo 22</title></head><body style="font-family: system-ui, sans-serif; max-width: 480px; margin: 3rem auto; padding: 1rem; color: #333;"><p>{message}</p><p><a href="/">Back to Lumo 22</a></p></body></html>"""
     from flask import make_response
     r = make_response(html)
     r.headers["Content-Type"] = "text/html; charset=utf-8"
