@@ -1381,6 +1381,16 @@
   transform: scaleX(1);
 }
 
+/* How it works section (light bg): dark font + dark outline, same yellow swipe on hover */
+.product-page-captions .captions-btn-swipe.captions-btn-swipe-light {
+  color: #1a1a1a !important;
+  border-color: rgba(0, 0, 0, 0.25) !important;
+}
+.product-page-captions .captions-btn-swipe.captions-btn-swipe-light:hover {
+  color: #000 !important;
+  border-color: var(--lum-gold, #fff200) !important;
+}
+
 .product-page-captions .lumo-pricing-card h3 {
   font-family: var(--dfd-font-condensed);
   font-weight: 700;
