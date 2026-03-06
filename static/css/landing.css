@@ -1294,6 +1294,52 @@ a.lumo-nav-login:hover::before {
   transform: scaleX(1);
 }
 
+/* Thank-you page: Fill out form now / I'll do it later — yellow text, yellow outline, swipe on hover */
+.thankyou-cta-swipe {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px 36px;
+  min-height: 48px;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border-radius: 10px;
+  position: relative;
+  overflow: hidden;
+  background: transparent !important;
+  color: var(--lum-gold, #fff200) !important;
+  border: 2px solid var(--lum-gold, #fff200) !important;
+  z-index: 1;
+  transition: color 0.25s ease-out, border-color 0.25s ease-out;
+}
+.thankyou-cta-swipe::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--lum-gold, #fff200);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.35s ease-out;
+  z-index: -1;
+}
+.thankyou-cta-swipe:hover {
+  background: transparent !important;
+  color: #000 !important;
+  border-color: var(--lum-gold, #fff200) !important;
+  transform: none;
+  text-decoration: none;
+}
+.thankyou-cta-swipe:hover::before {
+  transform: scaleX(1);
+}
+
 /* Log in page: submit button — yellow font + yellow outline, swipe on hover (yellow fill, dark text) */
 .auth-form-wrap .auth-btn.auth-btn-swipe {
   position: relative;

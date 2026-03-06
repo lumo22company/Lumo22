@@ -19,24 +19,7 @@
     .thankyou-card .thankyou-back { margin-top: 2rem; }
     .thankyou-card .thankyou-back a { color: var(--lum-text-muted); text-decoration: none; font-size: 0.95rem; }
     .thankyou-card .thankyou-back a:hover { color: var(--lum-text); }
-    .thankyou-card .thankyou-cta-row .lumo-btn-primary { background: #fff; color: #1a1a1a; }
-    .thankyou-card .thankyou-cta-row .lumo-btn-primary:hover { background: var(--lum-gold, #fff200); color: #1a1a1a; }
-    .thankyou-card .thankyou-cta-row .thankyou-later-btn {
-      display: inline-block;
-      padding: 18px 36px;
-      background: #fff;
-      color: #1a1a1a;
-      text-decoration: none;
-      font-family: var(--font-body);
-      font-weight: 600;
-      font-size: 0.7rem;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      border-radius: 10px;
-      border: 1px solid rgba(0,0,0,0.2);
-      transition: background 0.2s, border-color 0.2s, color 0.2s;
-    }
-    .thankyou-card .thankyou-cta-row .thankyou-later-btn:hover { background: var(--lum-gold, #fff200); color: #1a1a1a; border-color: var(--lum-gold, #fff200); }
+    /* Fill out form now / I'll do it later: yellow text, yellow outline, swipe on hover — see landing.css .thankyou-cta-swipe */
     .thankyou-spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid var(--lum-text-muted); border-top-color: transparent; border-radius: 50%; animation: thankyou-spin 0.8s linear infinite; vertical-align: middle; margin-right: 0.5rem; }
     @keyframes thankyou-spin { to { transform: rotate(360deg); } }
   </style>
@@ -62,8 +45,8 @@
       <div id="thankyou-form-link" style="display: none;">
         <p id="thankyou-email-msg" style="margin-bottom: 1.25rem;"></p>
         <div class="thankyou-cta-row" style="display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1.5rem;">
-          <a href="#" id="intake-link" class="lumo-btn-primary thankyou-cta">Fill out form now</a>
-          <a href="{% if current_customer %}/account{% else %}/{% endif %}" id="later-link" class="thankyou-later-btn">I'll do it later</a>
+          <a href="#" id="intake-link" class="thankyou-cta-swipe thankyou-cta">Fill out form now</a>
+          <a href="{% if current_customer %}/account{% else %}/{% endif %}" id="later-link" class="thankyou-cta-swipe">I'll do it later</a>
         </div>
       </div>
       <p id="thankyou-no-session" style="display: none;">Check your email for a link to the short form. After you submit, we'll create your 30 captions and deliver by email.</p>
