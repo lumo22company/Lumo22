@@ -2036,13 +2036,8 @@
 .account-edit-form-list { margin: 0; padding: 0; list-style: none; }
 .account-edit-form-list li {
   margin-bottom: 0.75rem;
-  padding: 1rem 1.25rem;
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: var(--dfd-radius);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
-/* Button on dark: light text and outline, same swipe on hover */
+/* Button on black background: no panel; light text and outline, swipe on hover */
 .account-edit-form-list .account-billing-portal-link.account-btn-swipe-light {
   background: transparent !important;
   color: #fff !important;
