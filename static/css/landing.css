@@ -1168,6 +1168,7 @@ a.lumo-nav-login:hover::before {
   font-weight: 500;
   color: var(--text-on-dark);
   text-decoration: none;
+  text-transform: uppercase;
 }
 .footer-tagline { font-size: 0.8125rem; color: var(--lum-text-muted); margin-top: 2px; line-height: 1.4; }
 

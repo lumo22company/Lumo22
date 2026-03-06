@@ -864,6 +864,7 @@ a.product-card-link:hover {
     font-weight: 500;
     color: #F5F5F2;
     text-decoration: none;
+    text-transform: uppercase;
 }
 
 .footer .footer-tagline {
