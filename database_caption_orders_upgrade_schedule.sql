@@ -1,0 +1,12 @@
+-- Add columns for one-off → subscription upgrade scheduling.
+-- First subscription pack is delivered 30 days after one-off pack (no overlap).
+-- Run in Supabase SQL Editor.
+
+ALTER TABLE caption_orders ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMPTZ;
+COMMENT ON COLUMN caption_orders.delivered_at IS 'When the pack was delivered. Set by set_delivered. Used for upgrade scheduling.';
+
+ALTER TABLE caption_orders ADD COLUMN IF NOT EXISTS upgraded_from_token TEXT;
+COMMENT ON COLUMN caption_orders.upgraded_from_token IS 'For subscription orders: token of the one-off order this was upgraded from (copy_from). First pack delivered 30 days after one-off.';
+
+ALTER TABLE caption_orders ADD COLUMN IF NOT EXISTS scheduled_delivery_at TIMESTAMPTZ;
+COMMENT ON COLUMN caption_orders.scheduled_delivery_at IS 'When to deliver first pack for upgrade-from-one-off. Set on intake submit; cron triggers delivery when due.';

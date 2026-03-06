@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lumo 22 — Website Test Checklist</title>
+  <style>
+    @media print {
+      body { font-size: 11pt; }
+      .no-print { display: none; }
+      .page-break { page-break-before: always; }
+      a { color: #000; text-decoration: none; }
+    }
+    body { font-family: system-ui, -apple-system, sans-serif; max-width: 700px; margin: 0 auto; padding: 2rem; line-height: 1.5; color: #222; }
+    h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+    .subtitle { color: #555; margin-bottom: 2rem; font-size: 0.9rem; }
+    h2 { font-size: 1.1rem; margin-top: 1.5rem; margin-bottom: 0.75rem; border-bottom: 1px solid #ccc; padding-bottom: 0.25rem; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
+    td { padding: 0.4rem 0.5rem 0.4rem 0; vertical-align: top; }
+    td:first-child { width: 1.2em; white-space: nowrap; }
+    .expected { font-size: 0.9rem; color: #444; }
+    .no-print { background: #f5f5f5; padding: 1rem; margin-bottom: 2rem; border-radius: 8px; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <p class="no-print"><strong>To print:</strong> File → Print → Save as PDF, or print directly. Use a pen to check off each box.</p>
+
+  <h1>Lumo 22 — Website Test Checklist</h1>
+  <p class="subtitle">www.lumo22.com — Use this checklist before launch</p>
+
+  <h2>1. Domain & basic access</h2>
+  <table>
+    <tr><td>☐</td><td>Visit <strong>lumo22.com</strong></td></tr>
+    <tr><td></td><td class="expected">Redirects to www.lumo22.com</td></tr>
+    <tr><td>☐</td><td>Visit <strong>www.lumo22.com</strong></td></tr>
+    <tr><td></td><td class="expected">Landing page loads</td></tr>
+    <tr><td>☐</td><td>Check padlock (SSL)</td></tr>
+    <tr><td></td><td class="expected">Valid certificate, no warnings</td></tr>
+  </table>
+
+  <h2>2. Landing page</h2>
+  <table>
+    <tr><td>☐</td><td>Hero loads (logo, text, scroll cue)</td></tr>
+    <tr><td>☐</td><td>Intro bullets display correctly</td></tr>
+    <tr><td>☐</td><td>Click "View Caption Plans"</td></tr>
+    <tr><td></td><td class="expected">Goes to /captions</td></tr>
+    <tr><td>☐</td><td>Footer: click "Captions"</td></tr>
+    <tr><td></td><td class="expected">Goes to /captions</td></tr>
+    <tr><td>☐</td><td>Footer: click "Terms"</td></tr>
+    <tr><td></td><td class="expected">Goes to /terms</td></tr>
+    <tr><td>☐</td><td>Footer: click "Contact"</td></tr>
+    <tr><td></td><td class="expected">Opens mailto:hello@lumo22.com</td></tr>
+    <tr><td>☐</td><td>Footer: click "Lumo 22" logo</td></tr>
+    <tr><td></td><td class="expected">Goes to /</td></tr>
+  </table>
+
+  <h2>3. Captions product page (/captions)</h2>
+  <table>
+    <tr><td>☐</td><td>Page loads fully</td></tr>
+    <tr><td>☐</td><td>Switch currency (£ / $ / €)</td></tr>
+    <tr><td></td><td class="expected">Prices update</td></tr>
+    <tr><td>☐</td><td>Change "How many platforms?"</td></tr>
+    <tr><td></td><td class="expected">Pricing updates</td></tr>
+    <tr><td>☐</td><td>Select Instagram &amp; Facebook (or both)</td></tr>
+    <tr><td></td><td class="expected">"Add Story Ideas" checkbox appears</td></tr>
+    <tr><td>☐</td><td>Toggle "Add Story Ideas"</td></tr>
+    <tr><td></td><td class="expected">Price increases by £29 one-off / £17/mo (or $35/$21, €32/€19)</td></tr>
+    <tr><td>☐</td><td>Click "Get my 30 days" (one-off)</td></tr>
+    <tr><td></td><td class="expected">Redirects to Stripe Checkout</td></tr>
+    <tr><td>☐</td><td>Click "Subscribe" option</td></tr>
+    <tr><td></td><td class="expected">Redirects to Stripe Checkout</td></tr>
+    <tr><td>☐</td><td>Example blocks (desktop)</td></tr>
+    <tr><td></td><td class="expected">Caption & Story side by side</td></tr>
+  </table>
+
+  <h2 class="page-break">4. Stripe checkout & post-payment</h2>
+  <table>
+    <tr><td>☐</td><td>Complete payment (test card 4242 4242 4242 4242)</td></tr>
+    <tr><td></td><td class="expected">Redirects to /captions-thank-you?session_id=...</td></tr>
+    <tr><td>☐</td><td>Thank you page: wait for intake link</td></tr>
+    <tr><td></td><td class="expected">"Fill in now" appears; shows email</td></tr>
+    <tr><td>☐</td><td>Click "Fill in now"</td></tr>
+    <tr><td></td><td class="expected">Goes to /captions-intake?t=TOKEN</td></tr>
+    <tr><td>☐</td><td>Check inbox (and spam) for intake email</td></tr>
+    <tr><td>☐</td><td>Submit intake form</td></tr>
+    <tr><td></td><td class="expected">Success message</td></tr>
+    <tr><td>☐</td><td>Wait ~15 min for delivery email</td></tr>
+    <tr><td></td><td class="expected">Email with PDF attached</td></tr>
+    <tr><td>☐</td><td>Open delivery PDF</td></tr>
+    <tr><td></td><td class="expected">Content looks correct</td></tr>
+  </table>
+
+  <h2>5. Account & auth</h2>
+  <table>
+    <tr><td>☐</td><td>Sign up at /signup</td></tr>
+    <tr><td></td><td class="expected">Account created</td></tr>
+    <tr><td>☐</td><td>Log in at /login</td></tr>
+    <tr><td></td><td class="expected">Redirects to /account</td></tr>
+    <tr><td>☐</td><td>Account Information page</td></tr>
+    <tr><td></td><td class="expected">See email; change email, password, billing links work</td></tr>
+    <tr><td>☐</td><td>Edit form page</td></tr>
+    <tr><td></td><td class="expected">Form loads; can update and save</td></tr>
+    <tr><td>☐</td><td>History page</td></tr>
+    <tr><td></td><td class="expected">Shows orders (if any)</td></tr>
+    <tr><td>☐</td><td>Manage subscription (if subscriber)</td></tr>
+    <tr><td>☐</td><td>Refer a friend page</td></tr>
+    <tr><td></td><td class="expected">Shows referral link</td></tr>
+    <tr><td>☐</td><td>Log out</td></tr>
+    <tr><td></td><td class="expected">Returns to homepage</td></tr>
+  </table>
+
+  <h2>6. Other pages</h2>
+  <table>
+    <tr><td>☐</td><td>Terms page loads</td></tr>
+    <tr><td>☐</td><td>Terms: "View plans" → /captions#pricing</td></tr>
+    <tr><td>☐</td><td>/plans</td></tr>
+    <tr><td></td><td class="expected">Redirects to /captions#pricing</td></tr>
+    <tr><td>☐</td><td>Visit invalid URL (e.g. /fake-page)</td></tr>
+    <tr><td></td><td class="expected">Custom 404 page</td></tr>
+    <tr><td>☐</td><td>404: click "Captions" or "Pricing"</td></tr>
+  </table>
+
+  <h2>7. Emails</h2>
+  <table>
+    <tr><td>☐</td><td>Intake email received</td></tr>
+    <tr><td>☐</td><td>Delivery email received</td></tr>
+    <tr><td>☐</td><td>Emails in inbox (not spam)</td></tr>
+    <tr><td>☐</td><td>From address = hello@lumo22.com</td></tr>
+  </table>
+
+  <h2>8. Mobile</h2>
+  <table>
+    <tr><td>☐</td><td>Landing page on phone</td></tr>
+    <tr><td>☐</td><td>Captions page on phone</td></tr>
+    <tr><td>☐</td><td>Example blocks stack vertically on small screen</td></tr>
+    <tr><td>☐</td><td>Account page on phone</td></tr>
+  </table>
+
+  <h2>9. Story add-on verification</h2>
+  <table>
+    <tr><td>☐</td><td>Purchase with Story Ideas (IG &amp; FB selected, checkbox checked)</td></tr>
+    <tr><td></td><td class="expected">Stripe Checkout shows Stories line item at correct price</td></tr>
+    <tr><td>☐</td><td>Complete payment with Stories</td></tr>
+    <tr><td></td><td class="expected">Intake form shows "30 Stories included (already paid)"</td></tr>
+    <tr><td>☐</td><td>Delivery: 30_Days_Stories.pdf attached if Stories paid</td></tr>
+    <tr><td>☐</td><td>Subscription + Stories: add-stories-to-subscription works from account</td></tr>
+    <tr><td>☐</td><td>Upgrade one-off → subscription: first pack 30 days after one-off (check FAQ)</td></tr>
+  </table>
+
+  <h2>10. Config (Railway & Stripe)</h2>
+  <table>
+    <tr><td>☐</td><td>BASE_URL = https://www.lumo22.com</td></tr>
+    <tr><td>☐</td><td>Stripe webhook URL = https://www.lumo22.com/webhooks/stripe</td></tr>
+    <tr><td>☐</td><td>STRIPE_CAPTIONS_STORIES_PRICE_ID and STRIPE_CAPTIONS_STORIES_SUBSCRIPTION_PRICE_ID set for £29/£17</td></tr>
+  </table>
+
+  <p style="margin-top: 2rem; font-size: 0.9rem; color: #666;">Lumo 22 — Website Test Checklist — Print and check off each item</p>
+</body>
+</html>
