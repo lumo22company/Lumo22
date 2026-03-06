@@ -18,9 +18,11 @@
 <body class="lumo-landing">
   <!-- deploy fingerprint: v={{ asset_version }} (change after redeploy if deploy uses new code) -->
   <nav class="lumo-nav" id="lumo-nav">
-    <a href="/" class="lumo-nav-logo">Lumo 22</a>
-    <div class="lumo-nav-links"></div>
-    {% if current_customer %}<a href="/account" class="lumo-nav-cta">Account</a>{% else %}<span style="display: inline-flex; align-items: center; gap: 0.75rem;"><a href="/login" class="lumo-nav-login">Log in</a><a href="/signup" class="lumo-nav-cta">Sign up</a></span>{% endif %}
+    <div class="lumo-nav-left">
+      <a href="/" class="lumo-nav-logo">Lumo 22</a>
+      <a href="/captions" class="lumo-nav-link">Captions</a>
+    </div>
+    {% if current_customer %}<a href="/account" class="lumo-nav-cta lumo-nav-account">Account</a>{% else %}<span style="display: inline-flex; align-items: center; gap: 0.75rem;"><a href="/login" class="lumo-nav-login">Log in</a><a href="/signup" class="lumo-nav-cta lumo-nav-signup">Sign up</a></span>{% endif %}
   </nav>
 
   {% if inactivity_logout %}
@@ -45,18 +47,18 @@
     <p class="hero-scroll" id="hero-scroll" aria-label="Scroll to explore"><span aria-hidden="true">↓</span></p>
   </section>
 
-  <!-- SECTION 2 — Intro: light section, full width -->
-  <section class="intro section-light" id="what-is-lumo" aria-label="Intro">
+  <!-- SECTION 2 — Intro: light section, slide-in from left -->
+  <section class="intro section-light intro-reveal" id="what-is-lumo" aria-label="Intro" data-reveal>
     <div class="section-inner">
       <h2 class="intro-headline">Your complete social content, written in your voice</h2>
       <div class="intro-body">
         <ul class="intro-bullets" style="list-style: none; padding: 0; margin: 0; max-width: 640px;">
-          <li><strong>30 days of captions and Story prompts</strong><br>Written to sound like you, not like a robot or generic AI.</li>
-          <li><strong>Your tone and audience</strong><br>We capture both so every caption feels human and on-brand.</li>
-          <li><strong>Launch, sale, or event?</strong><br>Tell us and we’ll tailor your captions around it.</li>
-          <li><strong>Designed for consistency</strong><br>30-day chunking, implementation intentions, aligned feed + Stories so you’re more likely to actually post.</li>
-          <li><strong>Ready in 15 minutes</strong><br>One short form, one delivery.</li>
-          <li><strong>Built for small businesses and independents</strong><br>Consistent marketing without the admin, and without the flat, AI-sounding copy other tools push out.</li>
+          <li data-reveal><strong>30 days of captions and Story prompts</strong><br>Written to sound like you, not like a robot or generic AI.</li>
+          <li data-reveal><strong>Your tone and audience</strong><br>We capture both so every caption feels human and on-brand.</li>
+          <li data-reveal><strong>Launch, sale, or event?</strong><br>Tell us and we’ll tailor your captions around it.</li>
+          <li data-reveal><strong>Designed for consistency</strong><br>30-day chunking, implementation intentions, aligned feed + Stories so you’re more likely to actually post.</li>
+          <li data-reveal><strong>Ready in 15 minutes</strong><br>One short form, one delivery.</li>
+          <li data-reveal><strong>Built for small businesses and independents</strong><br>Consistent marketing without the admin, and without the flat, AI-sounding copy other tools push out.</li>
         </ul>
       </div>
     </div>

@@ -34,9 +34,11 @@
 </head>
 <body class="lumo-landing">
   <nav class="lumo-nav lumo-nav-scrolled" id="lumo-nav">
-    <a href="/" class="lumo-nav-logo">Lumo 22</a>
-    <div class="lumo-nav-links"></div>
-    <a href="/signup" class="lumo-nav-cta">Sign up</a>
+    <div class="lumo-nav-left">
+      <a href="/" class="lumo-nav-logo">Lumo 22</a>
+      <a href="/captions" class="lumo-nav-link">Captions</a>
+    </div>
+    <a href="/signup" class="lumo-nav-cta lumo-nav-signup">Sign up</a>
   </nav>
 
   <section class="block block-trust section-dark auth-section">
@@ -54,7 +56,7 @@
           <label for="password">Password</label>
           <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="••••••••">
 
-          <button type="submit" class="auth-btn" id="btn">Log in</button>
+          <button type="submit" class="auth-btn auth-btn-swipe" id="btn">Log in</button>
           {% if login_error %}
           <div class="auth-msg error" style="display: block;">{{ login_error }}</div>
           {% else %}
