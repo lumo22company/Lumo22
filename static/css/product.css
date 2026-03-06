@@ -1347,11 +1347,14 @@
   box-sizing: border-box;
 }
 
-/* Captions product page: same left-to-right yellow swipe on hover (View options, Get my 30 days, Subscribe, sticky CTA) */
+/* Captions product page: yellow font + yellow outline, swipe on hover (View options, Get my 30 days, Subscribe, sticky CTA) */
 .product-page-captions .captions-btn-swipe {
   position: relative;
   overflow: hidden;
   z-index: 1;
+  background: transparent !important;
+  color: var(--lum-gold, #fff200) !important;
+  border: 2px solid var(--lum-gold, #fff200) !important;
 }
 .product-page-captions .captions-btn-swipe::before {
   content: '';
