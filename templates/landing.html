@@ -9,10 +9,12 @@
   <link rel="icon" type="image/png" sizes="48x48" href="{{ url_for('static', filename='images/logo.png') }}">
   <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='images/logo.png') }}">
   <meta name="description" content="30 days of social media captions for small businesses. Written for you, planned for the month. Show up consistently without the daily grind.">
+  <link rel="preload" as="image" href="{{ url_for('static', filename='images/logo.png') }}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Encode+Sans+Condensed:wght@400;500;600;700;800;900&family=PT+Sans+Narrow:wght@400;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
-  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
+  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <noscript><link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet"></noscript>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v={{ asset_version }}">
 </head>
 <body class="lumo-landing">
@@ -38,7 +40,7 @@
       <h1 class="hero-wordmark">
         <span class="hero-logo-wrap">
           <span class="hero-logo-mask">
-            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="" class="hero-logo" width="180" height="60" loading="eager" onerror="this.style.display='none';this.parentNode.nextElementSibling.style.display='block';this.parentNode.nextElementSibling.nextElementSibling.style.display='none';">
+            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="" class="hero-logo" width="180" height="60" loading="eager" fetchpriority="high" onerror="this.style.display='none';this.parentNode.nextElementSibling.style.display='block';this.parentNode.nextElementSibling.nextElementSibling.style.display='none';">
           </span>
           <span class="hero-wordmark-fallback">LUMO 22</span>
           <span class="hero-wordmark-text">LUMO 22</span>
@@ -123,12 +125,11 @@
 
   {% include '_footer.html' %}
 
-  <script src="https://unpkg.com/lenis@1.1.13/dist/lenis.min.js"></script>
-  <script src="{{ url_for('static', filename='js/lenis-smooth-scroll.js') }}?v={{ asset_version }}"></script>
-  <script src="{{ url_for('static', filename='js/section-parallax.js') }}?v={{ asset_version }}"></script>
-  <script src="{{ url_for('static', filename='js/hero-smoke.js') }}?v={{ asset_version }}"></script>
-  <script src="{{ url_for('static', filename='js/split-parallax.js') }}?v={{ asset_version }}"></script>
-  <script src="{{ url_for('static', filename='js/scroll-reveal.js') }}?v={{ asset_version }}"></script>
-  <script src="{{ url_for('static', filename='js/landing.js') }}?v={{ asset_version }}"></script>
+  <link rel="preconnect" href="https://unpkg.com">
+  <script src="https://unpkg.com/lenis@1.1.13/dist/lenis.min.js" defer></script>
+  <script src="{{ url_for('static', filename='js/lenis-smooth-scroll.js') }}?v={{ asset_version }}" defer></script>
+  <script src="{{ url_for('static', filename='js/section-parallax.js') }}?v={{ asset_version }}" defer></script>
+  <script src="{{ url_for('static', filename='js/scroll-reveal.js') }}?v={{ asset_version }}" defer></script>
+  <script src="{{ url_for('static', filename='js/landing.js') }}?v={{ asset_version }}" defer></script>
 </body>
 </html>
