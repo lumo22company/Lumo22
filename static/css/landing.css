@@ -249,7 +249,7 @@ a.lumo-nav-login {
   border: 2px solid #fff200 !important;
   background: transparent !important;
   background-color: transparent !important;
-  color: #fff !important;
+  color: var(--lum-gold, #fff200) !important;
   padding: 0.5rem 1.25rem !important;
   border-radius: 8px;
   text-decoration: none;
@@ -295,7 +295,7 @@ a.lumo-nav-login:hover::before {
   border: 2px solid #fff200 !important;
   background: transparent !important;
   background-color: transparent !important;
-  color: #fff !important;
+  color: var(--lum-gold, #fff200) !important;
   border-radius: 8px;
   text-transform: none;
 }
