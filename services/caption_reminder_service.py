@@ -64,6 +64,7 @@ def run_reminders() -> Dict[str, Any]:
     order_service = CaptionOrderService()
     notif = NotificationService()
     base = _safe_base_url()
+    deleted_emails = order_service.get_deleted_account_emails()
     now = datetime.now(timezone.utc)
     cutoff = now.timestamp() + (REMINDER_DAYS_BEFORE * 24 * 60 * 60)
     # We send if period_end is within the next 5–6 days (one-day window so cron doesn't miss)
@@ -101,15 +102,18 @@ def run_reminders() -> Dict[str, Any]:
                 errors.append(f"Order {order.get('id')}: missing token or email")
                 skipped += 1
                 continue
+            if email.strip().lower() in deleted_emails:
+                skipped += 1
+                continue
 
             intake_url = f"{base}/captions-intake?t={token}"
             account_url = f"{base}/account"
-            subject = "Update your captions intake before your next pack"
+            subject = "Update your form before your next pack"
             body = f"""Hi,
 
-Your next 30 Days of Social Media Captions pack is coming soon. You can update your intake (business details, voice, platforms) anytime before we generate it.
+Your next 30 Days of Social Media Captions pack is coming soon. You can update your form (business details, voice, platforms) anytime before we generate it.
 
-Do you have an event, promotion or something else coming up? Update your intake form to tell us about it and we'll tailor your captions to fit.
+Do you have an event, promotion or something else coming up? Update your form to tell us about it and we'll tailor your captions to fit.
 
 Click here to review or update your form:
 
@@ -121,7 +125,9 @@ You can turn these email reminders off in your account: {account_url}
 
 Lumo 22
 """
-            ok = notif.send_email(email, subject, body)
+            from services.notifications import _captions_reminder_email_html
+            html_body = _captions_reminder_email_html(intake_url, account_url)
+            ok = notif.send_email(email, subject, body, html_body=html_body)
             if ok:
                 # Store period end as ISO for TIMESTAMPTZ (Postgres)
                 period_end_iso = datetime.utcfromtimestamp(period_end_ts).strftime("%Y-%m-%dT%H:%M:%SZ")

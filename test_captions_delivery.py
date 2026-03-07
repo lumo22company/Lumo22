@@ -41,7 +41,7 @@ def main():
             print(f"ERROR: No order found for token {token_arg[:8]}...")
             sys.exit(1)
         if not order.get("intake"):
-            print("ERROR: Order has no intake. Submit the intake form first, then run again with this token.")
+            print("ERROR: Order has no intake. Submit the form first, then run again with this token.")
             sys.exit(1)
         order_id = order["id"]
         intake = order["intake"]

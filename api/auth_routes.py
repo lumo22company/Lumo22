@@ -107,6 +107,7 @@ def delete_account():
         if email:
             from services.caption_order_service import CaptionOrderService
             co_svc = CaptionOrderService()
+            co_svc.add_to_deleted_blocklist(email)
             co_svc.delete_by_customer_email(email)
         svc = CustomerAuthService()
         if svc.delete_by_id(str(customer_id)):

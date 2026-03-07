@@ -22,8 +22,10 @@ def main():
     from services.notifications import (
         _branded_html_email,
         _password_reset_email_html,
-        _login_link_email_html,
         _email_change_verification_html,
+        _intake_link_email_html,
+        _captions_delivery_email_html,
+        _captions_reminder_email_html,
     )
 
     out_dir = project_root / "email_samples"
@@ -32,41 +34,20 @@ def main():
 
     samples = []
 
-    # 1. Intake email (after captions purchase)
-    intake_body = """Hi,
+    # 1. Form link email (after captions purchase) — uses production template
+    intake_url = "https://www.lumo22.com/captions-intake?t=sample-token"
+    samples.append(("intake.html", "Form link (after captions purchase)", _intake_link_email_html(intake_url, "• One-off (£97)\n• 1 platform", is_subscription=False)))
 
-Thanks for your order. Your 30 Days of Social Media Captions will be tailored to your business and voice.
+    # 2. Delivery email — uses production template
+    samples.append(("delivery.html", "Delivery email (with attachment)", _captions_delivery_email_html(has_stories=False)))
+    samples.append(("delivery_stories.html", "Delivery email (with Stories)", _captions_delivery_email_html(has_stories=True)))
 
-Please complete this short form so we can create your captions. It takes about 2 minutes:
+    # 3. Caption reminder
+    account_url = "https://www.lumo22.com/account"
+    samples.append(("reminder.html", "Pre-pack reminder", _captions_reminder_email_html(intake_url, account_url)))
 
-https://www.lumo22.com/captions-intake?t=sample-token
-
-Once you submit, we'll generate your 30 captions and send them to you by email within a few minutes.
-
-If you have any questions, just reply to this email.
-
-Lumo 22
-"""
-    samples.append(("intake.html", "Intake link (after captions purchase)", _branded_html_email(intake_body)))
-
-    # 2. Delivery email (plain — actual has PDF attached)
-    delivery_body = """Hi,
-
-Your 30 Days of Social Media Captions are ready.
-
-Attached you'll find your 30_Days_Captions.pdf (and 30_Days_Stories.pdf if you added Story Ideas).
-
-Copy, edit, and post. If you need anything, just reply.
-
-Lumo 22
-"""
-    samples.append(("delivery.html", "Delivery email (with attachment)", _branded_html_email(delivery_body)))
-
-    # 3. Password reset
+    # 4. Password reset
     samples.append(("password_reset.html", "Password reset", _password_reset_email_html("https://www.lumo22.com/reset-password?token=sample-token")))
-
-    # 4. Login link
-    samples.append(("login_link.html", "Login link (magic link)", _login_link_email_html("https://www.lumo22.com/login?login_token=sample-token")))
 
     # 5. Email change verification
     samples.append(("email_change.html", "Email change verification", _email_change_verification_html("https://www.lumo22.com/change-email-confirm?token=sample-token")))

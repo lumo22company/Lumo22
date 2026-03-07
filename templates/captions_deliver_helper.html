@@ -26,7 +26,7 @@
   <h1>Captions delivery test</h1>
   <p>Paste the full link from your email or browser below, then click the button. We’ll run the delivery test and show you what happened.</p>
 
-  <label for="url">Paste your intake form link or thank-you page link</label>
+  <label for="url">Paste your form link or thank-you page link</label>
   <input type="text" id="url" name="url" placeholder="e.g. https://lumo-22-production.up.railway.app/captions-intake?t=abc123... or .../captions-thank-you?session_id=cs_...">
   <button type="button" id="run">Run delivery test</button>
 
@@ -49,7 +49,7 @@
       btn.addEventListener('click', function() {
         var raw = (input.value || '').trim();
         if (!raw) {
-          showResult('Please paste your intake or thank-you link in the box above.', 'info');
+          showResult('Please paste your form or thank-you link in the box above.', 'info');
           return;
         }
         try {
@@ -60,7 +60,7 @@
           t = (t || '').trim();
           sessionId = (sessionId || '').trim();
           if (!t && !sessionId) {
-            showResult('That link doesn’t contain a token or session_id.\n\nUse the full link from your order email (intake form) or the thank-you page right after payment (it has session_id= in the address bar).', 'error');
+            showResult('That link doesn’t contain a token or session_id.\n\nUse the full link from your order email (form link) or the thank-you page right after payment (it has session_id= in the address bar).', 'error');
             return;
           }
           var apiUrl = window.location.origin + '/api/captions-deliver-test?';

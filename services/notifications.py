@@ -95,6 +95,30 @@ def _captions_delivery_email_html(has_stories: bool) -> str:
     return _email_wrapper(content)
 
 
+def _captions_reminder_email_html(intake_url: str, account_url: str) -> str:
+    """Build explicit HTML for the captions intake reminder email so the body always shows."""
+    import html
+    intake_url = (intake_url or "").strip()
+    account_url = (account_url or "").strip()
+    if not intake_url or not intake_url.startswith("http"):
+        intake_url = ""
+    if not account_url or not account_url.startswith("http"):
+        account_url = ""
+    safe_intake = html.escape(intake_url, quote=True)
+    safe_account = html.escape(account_url, quote=True)
+    content = f"""<p style="margin:0 0 16px;">Hi,</p>
+<p style="margin:0 0 16px;">Your next 30 Days of Social Media Captions pack is coming soon. You can update your form (business details, voice, platforms) anytime before we generate it.</p>
+<p style="margin:0 0 16px;">Do you have an event, promotion or something else coming up? Update your form to tell us about it and we'll tailor your captions to fit.</p>
+<p style="margin:0 0 12px;">Click here to review or update your form:</p>
+<p style="margin:0 0 24px;"><a href="{safe_intake}" style="display:inline-block; padding:14px 28px; background:{BRAND_GOLD}; color:{BRAND_BLACK}; text-decoration:none; border-radius:10px; font-weight:600;">Update my form</a></p>
+<p style="margin:0 0 8px; font-size:14px; color:{BRAND_MUTED};">Or copy and paste this link into your browser:</p>
+<p style="margin:0 0 24px; font-size:13px; word-break:break-all; color:#333;">{safe_intake}</p>
+<p style="margin:0 0 16px;">This takes about 2 minutes. If you don't change anything, we'll use your existing details.</p>
+<p style="margin:0 0 16px;">You can turn these email reminders off in your <a href="{safe_account}" style="color:{BRAND_BLACK}; text-decoration:none; border-bottom:1px solid {BRAND_BLACK};">account</a>.</p>
+<p style="margin:0;">— Lumo 22</p>"""
+    return _email_wrapper(content)
+
+
 def _branded_html_email(body_plain: str) -> str:
     """Wrap plain body in Lumo 22 branded HTML (PDF aesthetic: black header/footer, gold accent)."""
     import html
@@ -123,25 +147,10 @@ def _password_reset_email_html(reset_url: str) -> str:
     content = f"""<p style="margin:0 0 16px;">Hi,</p>
 <p style="margin:0 0 16px;">You requested a password reset for your Lumo 22 account.</p>
 <p style="margin:0 0 12px;">Click the link below to set a new password (link expires in 1 hour):</p>
-<p style="margin:0 0 24px;"><a href="{safe_url}" style="display:inline-block; padding:14px 28px; background:{BRAND_BLACK}; color:{BRAND_TEXT_ON_DARK}; text-decoration:none; border-radius:10px; font-weight:600; letter-spacing: 0.1em; text-transform: uppercase;">Reset my password</a></p>
+<p style="margin:0 0 24px;"><a href="{safe_url}" style="display:inline-block; padding:14px 28px; background:{BRAND_GOLD}; color:{BRAND_BLACK}; text-decoration:none; border-radius:10px; font-weight:600;">Reset my password</a></p>
 <p style="margin:0 0 8px; font-size:14px; color:{BRAND_MUTED};">Or copy and paste this link into your browser:</p>
 <p style="margin:0 0 24px; font-size:13px; word-break:break-all; color:#333;">{safe_url}</p>
 <p style="margin:0 0 16px;">If you didn't request this, you can ignore this email. Your password will stay the same.</p>
-<p style="margin:0;">— Lumo 22</p>"""
-    return _email_wrapper(content)
-
-
-def _login_link_email_html(account_url: str) -> str:
-    """Build branded HTML for login link — PDF aesthetic (dark header/footer, black CTA)."""
-    import html
-    account_url = (account_url if isinstance(account_url, str) else "") or ""
-    if not account_url or not account_url.startswith("http"):
-        account_url = ""
-    safe_url = html.escape(account_url, quote=True)
-    content = f"""<p style="margin:0 0 16px;">Click the link below to open your account (link works once, expires in 2 minutes):</p>
-<p style="margin:0 0 24px;"><a href="{safe_url}" style="display:inline-block; padding:14px 28px; background:{BRAND_BLACK}; color:{BRAND_TEXT_ON_DARK}; text-decoration:none; border-radius:10px; font-weight:600; letter-spacing: 0.1em; text-transform: uppercase;">Open my account</a></p>
-<p style="margin:0 0 8px; font-size:14px; color:{BRAND_MUTED};">Or copy and paste this link into your browser:</p>
-<p style="margin:0 0 24px; font-size:13px; word-break:break-all; color:#333;">{safe_url}</p>
 <p style="margin:0;">— Lumo 22</p>"""
     return _email_wrapper(content)
 
@@ -185,7 +194,7 @@ def _intake_link_email_html(intake_url: str, order_summary: Optional[str] = None
     content = f"""<p style="margin:0 0 16px;">Hi,</p>
 <p style="margin:0 0 16px;">Thanks for your order. Your 30 Days of Social Media Captions will be tailored to your business and voice.</p>
 {summary_block}<p style="margin:0 0 12px;">Please complete this short form so we can create your captions. It takes about 2 minutes:</p>
-<p style="margin:0 0 24px;"><a href="{safe_url}" style="display:inline-block; padding:14px 28px; background:{BRAND_BLACK}; color:{BRAND_TEXT_ON_DARK}; text-decoration:none; border-radius:10px; font-weight:600;">Complete the form</a></p>
+<p style="margin:0 0 24px;"><a href="{safe_url}" style="display:inline-block; padding:14px 28px; background:{BRAND_GOLD}; color:{BRAND_BLACK}; text-decoration:none; border-radius:10px; font-weight:600;">Complete the form</a></p>
 <p style="margin:0 0 8px; font-size:14px; color:{BRAND_MUTED};">Or copy and paste this link into your browser:</p>
 <p style="margin:0 0 24px; font-size:13px; word-break:break-all; color:#333;">{safe_url}</p>
 <p style="margin:0 0 16px;">Once you submit, we'll generate your 30 captions and send them to you by email within a few minutes.</p>
@@ -203,7 +212,7 @@ def _email_change_verification_html(confirm_url: str) -> str:
     safe_url = html.escape(confirm_url, quote=True)
     content = f"""<p style="margin:0 0 16px;">You requested to change the email address for your Lumo 22 account to this address.</p>
 <p style="margin:0 0 12px;">Click the link below to confirm the change (link expires in 1 hour):</p>
-<p style="margin:0 0 24px;"><a href="{safe_url}" style="display:inline-block; padding:14px 28px; background:{BRAND_BLACK}; color:{BRAND_TEXT_ON_DARK}; text-decoration:none; border-radius:10px; font-weight:600; letter-spacing: 0.1em; text-transform: uppercase;">Confirm email change</a></p>
+<p style="margin:0 0 24px;"><a href="{safe_url}" style="display:inline-block; padding:14px 28px; background:{BRAND_GOLD}; color:{BRAND_BLACK}; text-decoration:none; border-radius:10px; font-weight:600;">Confirm email change</a></p>
 <p style="margin:0 0 8px; font-size:14px; color:{BRAND_MUTED};">Or copy and paste this link into your browser:</p>
 <p style="margin:0 0 24px; font-size:13px; word-break:break-all; color:#333;">{safe_url}</p>
 <p style="margin:0 0 16px;">If you didn't request this, you can ignore this email. Your email address will stay the same.</p>
@@ -335,24 +344,6 @@ If you didn't request this, you can ignore this email. Your password will stay t
         html_body = _password_reset_email_html(reset_url)
         return self.send_email(to_email, subject, body, html_body=html_body)
 
-    def send_login_link_email(self, to_email: str, account_url: str) -> bool:
-        """Send login link email with plain and HTML body; link is explicit in HTML so it always appears."""
-        account_url = (account_url if isinstance(account_url, str) else "") or ""
-        if not account_url or not account_url.startswith("http"):
-            print("[SendGrid] Login link NOT sent: invalid account_url (empty or not http)")
-            return False
-        subject = "Your Lumo 22 login link"
-        body = f"""Click the link below to open your account (link works once, expires in 2 minutes):
-
-{account_url}
-
-If the link doesn't work, copy and paste the link above into your browser.
-
-— Lumo 22
-"""
-        html_body = _login_link_email_html(account_url)
-        return self.send_email(to_email, subject, body, html_body=html_body)
-
     def send_email_change_verification_email(self, to_email: str, confirm_url: str) -> bool:
         """Send email change verification to the NEW email address; link confirms the change."""
         if not confirm_url or not confirm_url.startswith("http"):
@@ -409,6 +400,10 @@ If you didn't request this, you can ignore this email. Your email address will s
         if not to_email or "@" not in to_email:
             print(f"[SendGrid] Email NOT sent (invalid to_email): subject={subject!r}")
             return False
+        body = (body or "").strip()
+        if not body:
+            print(f"[SendGrid] Email NOT sent (empty body): subject={subject!r} to={to_email}")
+            return False
         if not self.sendgrid_client:
             print(f"[SendGrid] Email NOT sent (no API key): subject={subject!r} to={to_email}")
             return False
@@ -462,6 +457,11 @@ If you didn't request this, you can ignore this email. Your email address will s
         if not to_email or "@" not in to_email:
             msg = "Invalid or missing recipient email"
             print(f"[SendGrid] Email with attachment NOT sent (invalid to_email): subject={subject!r}")
+            return (False, msg)
+        body = (body or "").strip()
+        if not body:
+            msg = "Email body is empty"
+            print(f"[SendGrid] Email with attachment NOT sent (empty body): subject={subject!r} to={to_email}")
             return (False, msg)
         if not self.sendgrid_client:
             msg = "SendGrid not configured (missing SENDGRID_API_KEY)"

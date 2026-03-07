@@ -73,6 +73,7 @@ class CaptionOrderService:
         result = self.client.table(self.table).insert(row).execute()
         if not result.data:
             raise RuntimeError("Failed to create caption order")
+        self.remove_from_deleted_blocklist(customer_email)
         return result.data[0]
 
     def get_by_token(self, token: str) -> Optional[Dict[str, Any]]:
@@ -183,16 +184,62 @@ class CaptionOrderService:
         return self.update(order_id, {"status": "hidden"})
 
     def delete_by_customer_email(self, email: str) -> bool:
-        """Permanently delete all caption orders for this customer email (for account deletion)."""
+        """Permanently delete all caption orders for this customer (for account deletion).
+        Deletes by customer_email and by stripe_customer_id (catches orders from different checkout emails)."""
+        if not email or "@" not in email:
+            return False
+        e = email.strip().lower()
+        try:
+            # Fetch orders first (before delete) to get stripe_customer_ids
+            orders = self.get_by_customer_email(email)
+            stripe_ids = [
+                (o.get("stripe_customer_id") or "").strip()
+                for o in orders
+                if (o.get("stripe_customer_id") or "").strip()
+            ]
+            # Delete by customer_email
+            self.client.table(self.table).delete().eq("customer_email", e).execute()
+            # Also delete orders linked via same Stripe customer (may have different checkout email)
+            for sc_id in stripe_ids:
+                try:
+                    self.client.table(self.table).delete().eq("stripe_customer_id", sc_id).execute()
+                except Exception:
+                    pass
+            return True
+        except Exception:
+            return False
+
+    def add_to_deleted_blocklist(self, email: str) -> bool:
+        """Add email to blocklist so reminder/marketing emails are never sent (for account deletion)."""
+        if not email or "@" not in email:
+            return False
+        e = email.strip().lower()
+        try:
+            self.client.table("deleted_account_emails").insert({"email": e}).execute()
+            return True
+        except Exception:
+            # Idempotent: duplicate email already in blocklist
+            return True
+
+    def remove_from_deleted_blocklist(self, email: str) -> bool:
+        """Remove email from blocklist when they create a new order (resubscribe)."""
         if not email or "@" not in email:
             return False
         try:
-            self.client.table(self.table).delete().eq(
-                "customer_email", email.strip().lower()
+            self.client.table("deleted_account_emails").delete().eq(
+                "email", email.strip().lower()
             ).execute()
             return True
         except Exception:
             return False
+
+    def get_deleted_account_emails(self) -> frozenset:
+        """Return set of emails that must not receive any reminders (deleted accounts)."""
+        try:
+            result = self.client.table("deleted_account_emails").select("email").execute()
+            return frozenset((r.get("email") or "").strip().lower() for r in (result.data or []) if (r.get("email") or "").strip())
+        except Exception:
+            return frozenset()
 
     def update_customer_email(self, old_email: str, new_email: str) -> bool:
         """Update customer_email on all caption orders for this customer (for email change)."""

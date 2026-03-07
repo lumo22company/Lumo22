@@ -12,21 +12,6 @@ webhook_bp = Blueprint('webhooks', __name__, url_prefix='/webhooks')
 # --- Stripe (30 Days Captions) ---
 CAPTIONS_AMOUNT_PENCE = 9700  # £97
 
-# --- Stripe (Digital Front Desk) — monthly amounts in pence ---
-# Email only: £79, £149, £299. Bundle (tier + £59, 5% off): £131, £198, £340.
-FRONT_DESK_AMOUNTS_PENCE = (7900, 14900, 29900, 13100, 19800, 34000)
-FRONT_DESK_PLAN_NAMES = {
-    7900: "Starter", 14900: "Growth", 29900: "Pro",
-    13100: "Starter + Chat", 19800: "Growth + Chat", 34000: "Pro + Chat",
-}
-
-# --- Stripe (Chat Assistant) — single fixed price £59/month ---
-CHAT_AMOUNTS_PENCE = (5900,)
-
-# Subscription amounts that include chat — when cancelled, disable widget
-DFD_CHAT_SUBSCRIPTION_AMOUNTS_PENCE = (5900, 13100, 19800, 34000)  # Chat-only £59, bundles
-
-
 def _sanitize_base_url(raw: str) -> str:
     """Remove non-printable ASCII (e.g. newline from env) so URLs are valid."""
     if not raw or not isinstance(raw, str):
@@ -243,244 +228,6 @@ def _handle_captions_payment(session):
         print(f"[Stripe webhook] Referrer credit increment failed (non-fatal): {e}")
 
 
-def _get_session_amount_total(session):
-    """Get amount_total from session; for subscriptions it may be in line_items or require a fetch."""
-    amount_raw = session.get("amount_total")
-    if amount_raw is not None:
-        try:
-            return int(amount_raw)
-        except (TypeError, ValueError):
-            pass
-    # Subscription checkout sometimes has amount in line_items (may not be in default webhook payload)
-    items = (session.get("line_items") or {}).get("data") if isinstance(session.get("line_items"), dict) else None
-    if items and len(items) > 0:
-        first = items[0]
-        amt = first.get("amount_total") if isinstance(first, dict) else getattr(first, "amount_total", None)
-        if amt is not None:
-            try:
-                return int(amt)
-            except (TypeError, ValueError):
-                pass
-    # Fetch session with line_items if amount still missing (e.g. subscription, Stripe didn't expand)
-    try:
-        import stripe
-        sid = session.get("id") if hasattr(session, "get") else getattr(session, "id", None)
-        if Config.STRIPE_SECRET_KEY and sid:
-            stripe.api_key = Config.STRIPE_SECRET_KEY
-            full = stripe.checkout.Session.retrieve(sid, expand=["line_items"])
-            amount_raw = full.get("amount_total")
-            if amount_raw is not None:
-                return int(amount_raw)
-            items = (full.get("line_items") or {}).get("data") if isinstance(full.get("line_items"), dict) else None
-            if items and len(items) > 0:
-                amt = items[0].get("amount_total") if isinstance(items[0], dict) else getattr(items[0], "amount_total", None)
-                if amt is not None:
-                    return int(amt)
-    except Exception as e:
-        print(f"[Stripe webhook] Could not retrieve session for amount_total: {e}")
-    return None
-
-
-def _is_front_desk_payment(session):
-    """True if this checkout is for Digital Front Desk (Starter £79, Growth £149, Pro £299 monthly)."""
-    if _is_captions_payment(session):
-        return False
-    if _is_chat_payment(session):
-        return False
-    amount = _get_session_amount_total(session)
-    if amount is None:
-        print("[Stripe webhook] Front Desk: amount_total missing in session; not matching.")
-        return False
-    currency = (session.get("currency") or "gbp").lower()
-    if currency != "gbp":
-        print(f"[Stripe webhook] Front Desk: currency={currency} not GBP; not matching.")
-        return False
-    if amount not in FRONT_DESK_AMOUNTS_PENCE:
-        print(f"[Stripe webhook] Front Desk: amount={amount} not in {FRONT_DESK_AMOUNTS_PENCE}; not matching.")
-        return False
-    return True
-
-
-def _is_chat_payment(session):
-    """True if this checkout is for Chat Assistant (£59/month)."""
-    meta = (session.get("metadata") or {}) if isinstance(session, dict) else {}
-    if meta.get("product") == "chat":
-        print("[Stripe webhook] Chat: matched by metadata product=chat")
-        return True
-    amount = _get_session_amount_total(session)
-    if amount is None:
-        return False
-    currency = (session.get("currency") or "gbp").lower()
-    if currency != "gbp":
-        return False
-    if amount in CHAT_AMOUNTS_PENCE:
-        print(f"[Stripe webhook] Chat: matched by amount={amount} GBP")
-        return True
-    return False
-
-
-def _handle_front_desk_payment(session):
-    """Send setup email for Digital Front Desk — takes customer through setup straight away."""
-    from services.notifications import NotificationService
-
-    customer_email = _get_customer_email_from_session(session)
-    if not customer_email:
-        print("[Stripe webhook] Front Desk: no customer email in session; setup email not sent. Check Stripe webhook payload or expand customer_details.")
-        return
-    amount = _get_session_amount_total(session) or 0
-    plan_name = FRONT_DESK_PLAN_NAMES.get(amount, "Digital Front Desk")
-
-    base = (Config.BASE_URL or "").strip().rstrip("/")
-    base = re.sub(r"[\x00-\x1f\x7f]", "", base) if base else "https://lumo-22-production.up.railway.app"
-    if base and not base.startswith("http"):
-        base = "https://" + base
-    setup_url = f"{base}/front-desk-setup"
-
-    subject = "Your Digital Front Desk — complete your setup"
-    body = f"""Hi,
-
-You're on the {plan_name} plan. Complete your setup in 3 steps so we can get you live:
-
-Step 1 — Open your setup form
-Click the link below (takes about 2 minutes):
-
-{setup_url}
-
-Step 2 — Enter your details
-• Your email (so we can contact you)
-• Business name
-• The email address you want us to monitor for enquiries (e.g. hello@ or enquiries@)
-• Your booking link (Calendly, Fresha, etc.) — if you're on Growth or Pro, or leave blank for now
-
-Step 3 — Submit
-We'll receive your details and connect everything. You'll be live within 24 hours.
-
-If anything's unclear, just reply to this email.
-
-Lumo 22
-"""
-
-    print(f"[Stripe webhook] Sending Front Desk setup email to {customer_email}")
-    notif = NotificationService()
-    ok = notif.send_email(customer_email, subject, body)
-    if ok:
-        print(f"[Stripe webhook] Front Desk setup email sent to {customer_email}")
-    else:
-        print(f"[Stripe webhook] Front Desk setup email FAILED to send to {customer_email}")
-
-
-def _handle_chat_payment(session):
-    """Create pending chat-only setup and send email with link to complete setup (get embed code)."""
-    from services.notifications import NotificationService
-    from services.front_desk_setup_service import FrontDeskSetupService
-
-    customer_email = _get_customer_email_from_session(session)
-    if not customer_email:
-        print("[Stripe webhook] Chat: no customer email in session; setup email not sent.")
-        return
-    print(f"[Stripe webhook] Chat: handling payment for {customer_email}")
-    svc = FrontDeskSetupService()
-    try:
-        setup = svc.create_chat_only_pending(customer_email)
-    except Exception as e:
-        print(f"[Stripe webhook] Chat: create_chat_only_pending failed: {e}")
-        raise
-    done_token = setup.get("done_token")
-    if not done_token:
-        print("[Stripe webhook] Chat: no done_token after create.")
-        return
-    base = (Config.BASE_URL or "").strip().rstrip("/")
-    base = re.sub(r"[\x00-\x1f\x7f]", "", base) if base else "https://lumo-22-production.up.railway.app"
-    if base and not base.startswith("http"):
-        base = "https://" + base
-    setup_url = f"{base}/front-desk-setup?product=chat&t={done_token}"
-
-    subject = "Your Website Chat Widget — complete your setup"
-    body = f"""Hi,
-
-Thanks for signing up for the Website Chat Widget. Complete your setup in 2 minutes to get your embed code:
-
-{setup_url}
-
-You'll enter:
-• Your business name
-• Where to send leads (email address)
-• Optional: booking link, short description of your business
-
-Once you submit, we'll show your embed code — add it to your website and your chat will go live.
-
-If anything's unclear, just reply to this email.
-
-Lumo 22
-"""
-    print(f"[Stripe webhook] Sending Chat setup email to {customer_email}")
-    notif = NotificationService()
-    ok = notif.send_email(customer_email, subject, body)
-    if ok:
-        print(f"[Stripe webhook] Chat setup email sent to {customer_email}")
-    else:
-        print(f"[Stripe webhook] Chat setup email FAILED to send to {customer_email}")
-
-
-def _handle_subscription_deleted(subscription):
-    """
-    When a DFD/chat subscription is cancelled, disable chat for that customer
-    so their embedded widget no longer works (get_by_chat_widget_key requires chat_enabled=True).
-    Only acts on subscriptions that include chat: £59 chat-only, or bundles (£131/£198/£340).
-    """
-    import stripe
-    from services.front_desk_setup_service import FrontDeskSetupService
-
-    sub_id = (subscription.get("id") or "").strip()
-    if not sub_id:
-        print("[Stripe webhook] subscription.deleted: no subscription id; skipping.")
-        return
-    # Fetch with expand to get price amounts and customer email
-    try:
-        sub = stripe.Subscription.retrieve(
-            sub_id, expand=["items.data.price", "customer"]
-        )
-    except Exception as e:
-        print(f"[Stripe webhook] subscription.deleted: could not retrieve subscription: {e}")
-        return
-    # Check if this subscription includes chat (by amount)
-    items = (sub.get("items") or {}).get("data") or []
-    includes_chat = False
-    for item in items:
-        price = item.get("price")
-        if isinstance(price, dict):
-            amt = price.get("unit_amount") or 0
-            if amt in DFD_CHAT_SUBSCRIPTION_AMOUNTS_PENCE:
-                includes_chat = True
-                break
-        elif price:
-            amt = getattr(price, "unit_amount", None) or 0
-            if amt in DFD_CHAT_SUBSCRIPTION_AMOUNTS_PENCE:
-                includes_chat = True
-                break
-    if not includes_chat:
-        print(f"[Stripe webhook] subscription.deleted: subscription {sub_id[:20]}... not a chat product; skipping.")
-        return
-    # Get customer email
-    customer = sub.get("customer")
-    if isinstance(customer, dict):
-        customer_email = (customer.get("email") or "").strip()
-    else:
-        customer_email = ""
-    if not customer_email and isinstance(customer, str):
-        try:
-            c = stripe.Customer.retrieve(customer)
-            customer_email = (getattr(c, "email", None) or (c.get("email") if isinstance(c, dict) else None) or "").strip()
-        except Exception:
-            customer_email = ""
-    if not customer_email or "@" not in customer_email:
-        print("[Stripe webhook] subscription.deleted: no customer email; cannot disable chat.")
-        return
-    svc = FrontDeskSetupService()
-    count = svc.disable_chat_for_customer(customer_email)
-    print(f"[Stripe webhook] subscription.deleted: disabled chat for {customer_email} ({count} setup(s))")
-
-
 @webhook_bp.route('/stripe', methods=['GET', 'POST'])
 def stripe_webhook():
     """
@@ -616,22 +363,6 @@ def stripe_webhook():
             print(f"[Stripe webhook] invoice.created: applied referrer 10% to invoice {invoice_id[:20]}... for {customer_email}")
             return jsonify({"received": True}), 200
 
-        if event_type == "customer.subscription.deleted":
-            subscription = event.get("data", {}).get("object") if isinstance(event, dict) else None
-            if not subscription or not isinstance(subscription, dict):
-                print("[Stripe webhook] customer.subscription.deleted: missing or invalid object; skipping.")
-                return jsonify({"received": True}), 200
-            try:
-                _handle_subscription_deleted(subscription)
-            except Exception as e:
-                import traceback
-                print(f"[Stripe webhook] SUBSCRIPTION DELETED HANDLER FAILED: {e}")
-                traceback.print_exc()
-                detail = (str(e) or repr(e))[:400]
-                detail = "".join(c for c in detail if ord(c) < 128)
-                return jsonify({"error": "Handler failed", "detail": detail or "Unknown error"}), 500
-            return jsonify({"received": True}), 200
-
         if event_type == "checkout.session.completed":
             session = event.get("data", {}).get("object") if isinstance(event, dict) else None
             if not session or not isinstance(session, dict):
@@ -641,9 +372,7 @@ def stripe_webhook():
             meta = (session.get("metadata") or {}) if isinstance(session.get("metadata"), dict) else {}
             is_captions = _is_captions_payment(session)
             is_captions_sub = _is_captions_subscription_payment(session)
-            is_chat = _is_chat_payment(session)
-            is_front_desk = _is_front_desk_payment(session)
-            print(f"[Stripe webhook] checkout.session.completed amount_total={amount} metadata={meta} is_captions={is_captions} is_captions_sub={is_captions_sub} is_chat={is_chat} is_front_desk={is_front_desk}")
+            print(f"[Stripe webhook] checkout.session.completed amount_total={amount} metadata={meta} is_captions={is_captions} is_captions_sub={is_captions_sub}")
             if is_captions or is_captions_sub:
                 try:
                     _handle_captions_payment(session)
@@ -654,28 +383,8 @@ def stripe_webhook():
                     detail = (str(e) or repr(e))[:400]
                     detail = "".join(c for c in detail if ord(c) < 128)
                     return jsonify({"error": "Handler failed", "detail": detail or "Unknown error"}), 500
-            elif is_chat:
-                try:
-                    _handle_chat_payment(session)
-                except Exception as e:
-                    import traceback
-                    print(f"[Stripe webhook] CHAT HANDLER FAILED: {e}")
-                    traceback.print_exc()
-                    detail = (str(e) or repr(e))[:400]
-                    detail = "".join(c for c in detail if ord(c) < 128)
-                    return jsonify({"error": "Handler failed", "detail": detail or "Unknown error"}), 500
-            elif is_front_desk:
-                try:
-                    _handle_front_desk_payment(session)
-                except Exception as e:
-                    import traceback
-                    print(f"[Stripe webhook] FRONT DESK HANDLER FAILED: {e}")
-                    traceback.print_exc()
-                    detail = (str(e) or repr(e))[:400]
-                    detail = "".join(c for c in detail if ord(c) < 128)
-                    return jsonify({"error": "Handler failed", "detail": detail or "Unknown error"}), 500
             else:
-                print("[Stripe webhook] Not captions, chat, or Front Desk payment; no action.")
+                print("[Stripe webhook] Not a captions payment; no action.")
 
         return jsonify({"received": True}), 200
     except Exception as e:
@@ -785,28 +494,9 @@ def zapier_webhook():
 @webhook_bp.route('/sendgrid-inbound', methods=['POST'])
 def sendgrid_inbound():
     """
-    SendGrid Inbound Parse: receives parsed inbound email as multipart/form-data.
-    Look up front_desk_setups by recipient (forwarding_email), generate reply with OpenAI, send via SendGrid.
+    SendGrid Inbound Parse endpoint. DFD/Chat removed — return 200 so SendGrid doesn't retry.
     """
-    try:
-        # SendGrid sends: to, from, subject, text, html, envelope, etc.
-        to_addr = request.form.get("to", "").strip()
-        from_addr = request.form.get("from", "").strip()
-        subject = request.form.get("subject", "").strip()
-        text = request.form.get("text", "").strip()
-        html = request.form.get("html", "").strip()
-        if not to_addr:
-            print("[SendGrid inbound] Missing 'to'")
-            return "", 400
-        from services.inbound_reply_service import process_inbound
-        ok = process_inbound(to_addr=to_addr, from_addr=from_addr, subject=subject, text=text, html=html)
-        # Inbound Parse expects 200 to stop retries
-        return "", 200
-    except Exception as e:
-        print(f"[SendGrid inbound] Error: {e}")
-        import traceback
-        traceback.print_exc()
-        return "", 500
+    return "", 200
 
 
 @webhook_bp.route('/generic', methods=['POST'])

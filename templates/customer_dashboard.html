@@ -186,7 +186,7 @@
           {% endfor %}
         </ul>
         {% else %}
-        <p class="account-section-desc">No caption orders yet. After you purchase, you can edit your intake form here.</p>
+        <p class="account-section-desc">No caption orders yet. After you purchase, you can edit your form here.</p>
         <p class="account-section-desc" style="font-size: 0.9rem; color: rgba(255,255,255,0.75); margin-top: 0.5rem;">Orders are linked to the email you used at checkout. If a recent order is missing, check you're logged in with that same email.</p>
         <p><a href="/captions" style="color: #8b6914; font-weight: 500;">Get 30 Days Captions</a></p>
         {% endif %}
@@ -201,7 +201,7 @@
         <ul class="account-section-desc" style="margin: 0 0 1.25rem; padding-left: 1.25rem; line-height: 1.7; color: #ffffff;">
           <li>Cancel your subscription, update your billing info, or view invoices in Stripe’s secure portal.</li>
           <li>Use a different card for each subscription—add or update cards via Manage billing, then choose which card to use for each.</li>
-          <li>Pause billing for one month and manage intake reminders below.</li>
+          <li>Pause billing for one month and manage form reminders below.</li>
           <li><strong>Platforms (add, change, or reduce)</strong> and <strong>Story Ideas (add or remove)</strong> — use the buttons below, or Edit form to change platforms and remove Story Ideas.</li>
         </ul>
         <p style="margin-bottom: 1.25rem;"><a href="/api/billing/portal" class="account-billing-portal-link account-btn-swipe-light">Manage billing</a></p>
@@ -231,10 +231,10 @@
           </div>
           <div class="account-settings-row" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid rgba(0,0,0,0.06);">
             <div>
-              <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Intake reminders</div>
-              <div class="account-settings-desc">Email me before each pack so I can update my intake</div>
+              <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Form reminders</div>
+              <div class="account-settings-desc">Email me before each pack so I can update my form</div>
             </div>
-            <div id="reminder-toggle-{{ o.id }}" role="button" tabindex="0" class="account-toggle {% if not o.reminder_opt_out %}on{% endif %}" aria-label="Toggle intake reminders" data-order-id="{{ o.id }}" onclick="toggleReminder(this)" onkeydown="if(event.key==='Enter'||event.key===' ') { event.preventDefault(); toggleReminder(this); }"></div>
+            <div id="reminder-toggle-{{ o.id }}" role="button" tabindex="0" class="account-toggle {% if not o.reminder_opt_out %}on{% endif %}" aria-label="Toggle form reminders" data-order-id="{{ o.id }}" onclick="toggleReminder(this)" onkeydown="if(event.key==='Enter'||event.key===' ') { event.preventDefault(); toggleReminder(this); }"></div>
           </div>
           <div class="account-settings-row" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid rgba(0,0,0,0.06);">
             <div>

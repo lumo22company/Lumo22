@@ -49,269 +49,30 @@ def init_services():
     except Exception as e:
         print(f"Warning: CRM service not available: {e}")
 
-def _front_desk_base_url():
-    """Base URL for links in emails (sanitized)."""
-    import re
-    base = (Config.BASE_URL or "").strip().rstrip("/")
-    base = re.sub(r"[\x00-\x1f\x7f]", "", base) if base else "https://lumo-22-production.up.railway.app"
-    if base and not base.startswith("http"):
-        base = "https://" + base
-    return base
-
-
 @api_bp.route('/front-desk-setup', methods=['POST'])
 def front_desk_setup():
-    """
-    Receive Digital Front Desk setup form, or chat-only setup completion.
-    - Full Front Desk: creates new setup, emails you + customer.
-    - Chat-only (product=chat, setup_token=t): updates pending row, returns embed code.
-    """
-    try:
-        data = request.get_json() or {}
-        product = (data.get('product') or '').strip().lower()
-        setup_token = (data.get('setup_token') or '').strip()
-
-        # Chat-only: complete pending setup and return embed code
-        if product == 'chat' and setup_token:
-            business_name = (data.get('business_name') or '').strip()
-            enquiry_email = (data.get('enquiry_email') or '').strip()
-            booking_link = (data.get('booking_link') or '').strip() or None
-            business_description = (data.get('business_description') or '').strip() or None
-            enquiry_types = data.get('enquiry_types')
-            if isinstance(enquiry_types, list):
-                enquiry_types = [str(x).strip() for x in enquiry_types if x]
-            else:
-                enquiry_types = None
-            opening_hours = (data.get('opening_hours') or '').strip() or None
-            reply_same_day = bool(data.get('reply_same_day'))
-            reply_24h = bool(data.get('reply_24h'))
-            tone = (data.get('tone') or '').strip() or None
-            good_lead_rules = (data.get('good_lead_rules') or '').strip() or None
-            if not business_name or not enquiry_email:
-                return jsonify({'ok': False, 'error': 'Please fill in business name and enquiry email.'}), 400
-            if '@' not in enquiry_email:
-                return jsonify({'ok': False, 'error': 'Please enter a valid enquiry email.'}), 400
-            try:
-                from services.front_desk_setup_service import FrontDeskSetupService
-                svc = FrontDeskSetupService()
-                setup = svc.complete_chat_only_setup(
-                    done_token=setup_token,
-                    business_name=business_name,
-                    enquiry_email=enquiry_email,
-                    booking_link=booking_link,
-                    business_description=business_description,
-                    enquiry_types=enquiry_types,
-                    opening_hours=opening_hours,
-                    reply_same_day=reply_same_day,
-                    reply_24h=reply_24h,
-                    tone=tone,
-                    good_lead_rules=good_lead_rules,
-                )
-            except Exception as db_err:
-                print(f"[front-desk-setup] Chat complete failed: {db_err}")
-                return jsonify({'ok': False, 'error': 'Invalid or expired setup link. Please use the link from your email.'}), 400
-            if not setup:
-                return jsonify({'ok': False, 'error': 'Invalid or expired setup link. Please use the link from your email.'}), 400
-            base = _front_desk_base_url()
-            widget_key = setup.get('chat_widget_key') or ''
-            # Embed snippet: script loads widget; key identifies the setup. TODO: actual embed.js URL when widget exists.
-            embed_snippet = f'<script src="{base}/static/js/chat-widget.js" data-key="{widget_key}" async></script>'
-            return jsonify({
-                'ok': True,
-                'product': 'chat',
-                'chat_widget_key': widget_key,
-                'embed_snippet': embed_snippet,
-                'customer_email': (setup.get('customer_email') or enquiry_email or '').strip(),
-            }), 200
-
-        # Full Front Desk: create new setup
-        customer_email = (data.get('customer_email') or '').strip()
-        business_name = (data.get('business_name') or '').strip()
-        enquiry_email = (data.get('enquiry_email') or '').strip()
-        booking_link = (data.get('booking_link') or '').strip() or None
-        if not customer_email or not business_name or not enquiry_email:
-            return jsonify({'ok': False, 'error': 'Please fill in your email, business name, and enquiry email.'}), 400
-        if '@' not in customer_email or '@' not in enquiry_email:
-            return jsonify({'ok': False, 'error': 'Please enter valid email addresses.'}), 400
-
-        tone = (data.get('tone') or '').strip() or None
-        reply_style_examples = (data.get('reply_style_examples') or '').strip() or None
-        tight_scheduling_enabled = bool(data.get('tight_scheduling_enabled'))
-        raw_gap = data.get('minimum_gap_between_appointments')
-        minimum_gap_between_appointments = 60
-        if raw_gap is not None:
-            try:
-                minimum_gap_between_appointments = max(15, min(480, int(raw_gap)))
-            except (TypeError, ValueError):
-                pass
-        raw_duration = data.get('appointment_duration_minutes')
-        appointment_duration_minutes = 60
-        if raw_duration is not None:
-            try:
-                appointment_duration_minutes = max(15, min(120, int(raw_duration)))
-            except (TypeError, ValueError):
-                pass
-        work_start = (data.get('work_start') or '').strip() or '09:00'
-        work_end = (data.get('work_end') or '').strip() or '17:00'
-        booking_platform = (data.get('booking_platform') or 'generic').strip().lower()
-        calendly_api_token = (data.get('calendly_api_token') or '').strip() or None
-        calendly_event_type_uri = (data.get('calendly_event_type_uri') or '').strip() or None
-        vagaro_access_token = (data.get('vagaro_access_token') or '').strip() or None
-        vagaro_business_id = (data.get('vagaro_business_id') or '').strip() or None
-        vagaro_service_id = (data.get('vagaro_service_id') or '').strip() or None
-        auto_reply_enabled = data.get('auto_reply_enabled', True)
-        if isinstance(auto_reply_enabled, str):
-            auto_reply_enabled = auto_reply_enabled.strip().lower() in ('1', 'true', 'yes', 'on')
-        else:
-            auto_reply_enabled = bool(auto_reply_enabled)
-        skip_reply_domains = (data.get('skip_reply_domains') or '').strip() or None
-        try:
-            from services.front_desk_setup_service import FrontDeskSetupService
-            svc = FrontDeskSetupService()
-            setup = svc.create(
-                customer_email=customer_email,
-                business_name=business_name,
-                enquiry_email=enquiry_email,
-                booking_link=booking_link,
-                tone=tone,
-                reply_style_examples=reply_style_examples,
-                tight_scheduling_enabled=tight_scheduling_enabled,
-                minimum_gap_between_appointments=minimum_gap_between_appointments,
-                appointment_duration_minutes=appointment_duration_minutes,
-                work_start=work_start,
-                work_end=work_end,
-                booking_platform=booking_platform,
-                calendly_api_token=calendly_api_token,
-                calendly_event_type_uri=calendly_event_type_uri,
-                vagaro_access_token=vagaro_access_token,
-                vagaro_business_id=vagaro_business_id,
-                vagaro_service_id=vagaro_service_id,
-                auto_reply_enabled=auto_reply_enabled,
-                skip_reply_domains=skip_reply_domains,
-            )
-            forwarding_email = setup.get("forwarding_email") or ""
-        except Exception as db_err:
-            print(f"[front-desk-setup] DB save failed: {db_err}")
-            forwarding_email = ""
-
-        to_business = Config.FROM_EMAIL or 'hello@lumo22.com'
-        subject_business = f"Digital Front Desk setup: {business_name}"
-        body_business = f"""New Digital Front Desk setup submitted:
-
-Customer email: {customer_email}
-Business name: {business_name}
-Enquiry email to monitor: {enquiry_email}
-Booking link: {booking_link or '(none)'}
-Opening hours: {work_start}–{work_end}
-Appointment duration (from their booking system): {appointment_duration_minutes} min
-Reply tone: {tone or '(default)'}
-Forwarding address (for auto-reply): {forwarding_email or '(not set)'}
-Auto-reply: {'on' if auto_reply_enabled else 'off (customer will use pause link to turn on)'}
-Skip reply domains (only reply to external): {skip_reply_domains or '(none)'}
-
-Forward enquiries to the forwarding address above and we'll auto-reply. No action needed from you — the setup is already active.
-"""
-
-        notif = NotificationService()
-        ok1 = notif.send_email(to_business, subject_business, body_business)
-        if not ok1:
-            return jsonify({'ok': False, 'error': 'Could not send setup. Please try again or email hello@lumo22.com.'}), 500
-
-        # Confirmation to customer: forwarding address + pause/resume links so they can handle emails manually when they want
-        subject_customer = "Your Digital Front Desk setup — next step"
-        base = _front_desk_base_url()
-        pause_url = f"{base}/api/front-desk-setup/pause-auto-reply?token={setup.get('done_token', '')}"
-        resume_url = f"{base}/api/front-desk-setup/resume-auto-reply?token={setup.get('done_token', '')}"
-        body_customer = f"""Hi,
-
-Thanks for submitting your setup for {business_name}.
-
-Your unique forwarding address for auto-replies is:
-
-  {forwarding_email or "(we'll email it to you separately)"}
-
-Forward any enquiry emails to this address and we'll send a professional reply on your behalf (you can set up a rule in your email client to forward from {enquiry_email} to the address above).
-
-When you want to handle emails yourself, turn auto-reply off (no new auto-replies will be sent until you turn it back on):
-  {pause_url}
-
-To turn auto-reply back on:
-  {resume_url}
-
-We'll be in touch if we need anything else.
-
-Lumo 22
-"""
-        notif.send_email(customer_email, subject_customer, body_customer)
-
-        return jsonify({'ok': True, 'customer_email': customer_email}), 200
-    except Exception as e:
-        print(f"[front-desk-setup] Error: {e}")
-        return jsonify({'ok': False, 'error': 'Something went wrong. Please try again.'}), 500
+    """DFD discontinued — return 410 Gone."""
+    return jsonify({'ok': False, 'error': 'This product is no longer available.'}), 410
 
 
 @api_bp.route('/front-desk-setup/pause-auto-reply', methods=['GET'])
 def front_desk_pause_auto_reply():
-    """Turn off auto-reply for this setup (customer handles emails manually). Token in query: token=."""
-    token = (request.args.get('token') or '').strip()
-    if not token:
-        return _auto_reply_toggle_response(False, "Missing token.")
-    try:
-        from services.front_desk_setup_service import FrontDeskSetupService
-        svc = FrontDeskSetupService()
-        ok = svc.set_auto_reply_by_done_token(token, False)
-        return _auto_reply_toggle_response(ok, "Auto-reply is now paused." if ok else "Invalid or expired link.")
-    except Exception as e:
-        print(f"[pause-auto-reply] Error: {e}")
-        return _auto_reply_toggle_response(False, "Something went wrong.")
+    """DFD discontinued — redirect to home."""
+    from flask import redirect
+    return redirect('/')
 
 
 @api_bp.route('/front-desk-setup/resume-auto-reply', methods=['GET'])
 def front_desk_resume_auto_reply():
-    """Turn auto-reply back on for this setup. Token in query: token=."""
-    token = (request.args.get('token') or '').strip()
-    if not token:
-        return _auto_reply_toggle_response(False, "Missing token.")
-    try:
-        from services.front_desk_setup_service import FrontDeskSetupService
-        svc = FrontDeskSetupService()
-        ok = svc.set_auto_reply_by_done_token(token, True)
-        return _auto_reply_toggle_response(ok, "Auto-reply is back on." if ok else "Invalid or expired link.")
-    except Exception as e:
-        print(f"[resume-auto-reply] Error: {e}")
-        return _auto_reply_toggle_response(False, "Something went wrong.")
-
-
-def _auto_reply_toggle_response(success: bool, message: str):
-    """Return a simple HTML page for click-from-email links."""
-    html = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Lumo 22</title></head><body style="font-family: system-ui, sans-serif; max-width: 480px; margin: 3rem auto; padding: 1rem; color: #333;"><p>{message}</p><p><a href="/">Back to Lumo 22</a></p></body></html>"""
-    from flask import make_response
-    r = make_response(html)
-    r.headers["Content-Type"] = "text/html; charset=utf-8"
-    return r
+    """DFD discontinued — redirect to home."""
+    from flask import redirect
+    return redirect('/')
 
 
 @api_bp.route('/chat-widget/status', methods=['GET'])
 def chat_widget_status():
-    """
-    Validate chat widget key. Returns {valid: true/false}.
-    Used by embed script so disabled/cancelled subscriptions do not show the bubble.
-    Site key (SITE_CHAT_WIDGET_KEY) always returns valid for the Lumo 22 marketing site's demo/help widget.
-    """
-    from config import Config
-    key = (request.args.get("key") or "").strip()
-    if not key:
-        return jsonify({"valid": False}), 200
-    site_key = getattr(Config, "SITE_CHAT_WIDGET_KEY", None)
-    if site_key and key == site_key:
-        return jsonify({"valid": True}), 200
-    try:
-        from services.front_desk_setup_service import FrontDeskSetupService
-        svc = FrontDeskSetupService()
-        setup = svc.get_by_chat_widget_key(key)
-        return jsonify({"valid": bool(setup)}), 200
-    except Exception:
-        return jsonify({"valid": False}), 200
+    """Chat widget discontinued — always returns valid: false."""
+    return jsonify({"valid": False}), 200
 
 
 @api_bp.route('/health', methods=['GET'])
@@ -353,27 +114,9 @@ def available_slots():
         gap_minutes = 60
         slot_minutes = 60
 
-        setup_token = (request.args.get("setup") or "").strip()
-        use_setup_config = False
-        setup = None
         work_start = request.args.get("work_start") or None
         work_end = request.args.get("work_end") or None
-        if setup_token:
-            from services.front_desk_setup_service import FrontDeskSetupService
-            try:
-                svc = FrontDeskSetupService()
-                setup = svc.get_by_done_token(setup_token)
-                if setup and (setup.get("product_type") or "front_desk") == "front_desk":
-                    slot_minutes = max(15, min(120, setup.get("appointment_duration_minutes") or 60))
-                    tight_schedule = bool(setup.get("tight_scheduling_enabled"))
-                    gap_minutes = max(5, min(480, setup.get("minimum_gap_between_appointments") or 60))
-                    work_start = (setup.get("work_start") or "").strip() or "09:00"
-                    work_end = (setup.get("work_end") or "").strip() or "17:00"
-                    use_setup_config = True  # customer cannot override; use business's booking platform settings
-            except Exception:
-                pass
-
-        if not use_setup_config:
+        if True:
             if raw_gap is not None:
                 try:
                     gap_minutes = max(5, min(480, int(raw_gap)))
@@ -390,18 +133,7 @@ def available_slots():
         day = datetime.strptime(date_str[:10], "%Y-%m-%d").date()
         slots = []
 
-        provider_used = False
-        if use_setup_config and setup:
-            platform = (setup.get("booking_platform") or "generic").strip().lower()
-            if platform in ("calendly", "vagaro"):
-                try:
-                    from services.booking_providers import get_available_slots_for_setup
-                    slots = get_available_slots_for_setup(setup, day)
-                    provider_used = True
-                except Exception as e:
-                    print(f"[available-slots] Provider error, falling back to generic: {e}")
-
-        if not provider_used and not slots:
+        if not slots:
             from services.availability import get_available_slots
             from services.appointments_service import get_appointments_for_date
             existing = get_appointments_for_date(day, default_duration_minutes=slot_minutes)
@@ -434,24 +166,8 @@ def available_slots():
 
 @api_bp.route('/booking-info', methods=['GET'])
 def booking_info():
-    """
-    Return booking_link and business_name for a setup token.
-    Used by the booking page so customers can confirm and go to Calendly/Fresha.
-    """
-    setup_token = (request.args.get("setup") or "").strip()
-    if not setup_token:
-        return jsonify({"booking_link": None, "business_name": None}), 200
-    try:
-        from services.front_desk_setup_service import FrontDeskSetupService
-        svc = FrontDeskSetupService()
-        setup = svc.get_by_done_token(setup_token)
-        if not setup or (setup.get("product_type") or "front_desk") != "front_desk":
-            return jsonify({"booking_link": None, "business_name": None}), 200
-        booking_link = (setup.get("booking_link") or "").strip() or None
-        business_name = (setup.get("business_name") or "").strip() or None
-        return jsonify({"booking_link": booking_link, "business_name": business_name}), 200
-    except Exception:
-        return jsonify({"booking_link": None, "business_name": None}), 200
+    """DFD discontinued — always returns null."""
+    return jsonify({"booking_link": None, "business_name": None}), 200
 
 
 @api_bp.route('/capture', methods=['POST'])

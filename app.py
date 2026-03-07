@@ -434,8 +434,8 @@ def booking_page():
 
 @app.route('/book-demo')
 def booking_demo_page():
-    """Demo booking page to test Smart Scheduling: slot picker, duration, Group appointments together."""
-    return render_template('booking.html')
+    """DFD discontinued — redirect to Captions."""
+    return redirect(url_for('captions_page'))
 
 
 @app.route('/website-chat')
@@ -470,7 +470,7 @@ def customer_login_required(f):
 
 @app.route('/signup')
 def customer_signup_page():
-    """Signup for Lumo 22 customers (DFD, Chat, Captions)."""
+    """Signup for Lumo 22 customers (Captions)."""
     return render_template('customer_signup.html')
 
 
@@ -500,50 +500,6 @@ def customer_login_page():
         except Exception:
             return render_template('customer_login.html', login_error='Something went wrong. Please try again.', next_url=next_url)
     return render_template('customer_login.html')
-
-
-@app.route('/send-login-link', methods=['POST'])
-def send_login_link():
-    """Send a one-time login link by email. Works even when password/cookie login fails."""
-    import logging
-    try:
-        email = (request.form.get('email') or (request.get_json(silent=True) or {}).get('email') or '').strip().lower()
-    except Exception:
-        email = ''
-    if not email or '@' not in email:
-        return jsonify({"ok": False, "error": "Valid email required"}), 400
-    try:
-        from services.customer_auth_service import CustomerAuthService
-        from services.notifications import NotificationService
-        svc = CustomerAuthService()
-        customer = svc.get_by_email(email)
-        if not customer or not isinstance(customer, dict):
-            return jsonify({"ok": True, "message": "If an account exists, we've sent a login link to that email."}), 200
-        customer_id = customer.get("id")
-        customer_email = (customer.get("email") or email) if isinstance(customer.get("email"), str) else email
-        if customer_id is None or customer_id == "":
-            logging.warning("[Login link] Customer row missing id for %s", email)
-            return jsonify({"ok": False, "error": "Account data invalid. Try again."}), 500
-        # Always use a known-good base so the link is never blank in the email (env can be empty on Railway)
-        fallback_base = "https://lumo-22-production.up.railway.app"
-        raw = (getattr(Config, "BASE_URL", None) or "").strip() or fallback_base
-        base = "".join(c for c in (raw if isinstance(raw, str) else "") if ord(c) >= 32 and c not in "\n\r\t").rstrip("/") or fallback_base
-        if not base.startswith("http"):
-            base = "https://" + base.lstrip("/")
-        login_token = _create_login_token(str(customer_id), customer_email)
-        account_url = (base.rstrip("/") + "/account?login_token=" + login_token)
-        account_url = "".join(c for c in account_url if ord(c) >= 32 and c not in "\n\r\t")
-        if not account_url.startswith("http"):
-            account_url = fallback_base.rstrip("/") + "/account?login_token=" + login_token
-        logging.info("[Login link] Sending to %s with URL=%s...", email, account_url[:80] if account_url else "(empty)")
-        notif = NotificationService()
-        sent = notif.send_login_link_email(email, account_url)
-        if not sent:
-            return jsonify({"ok": False, "error": "Could not send email. Try again later."}), 503
-        return jsonify({"ok": True, "message": "Check your email for the login link."}), 200
-    except Exception as e:
-        logging.exception("[Login link] Error: %s", e)
-        return jsonify({"ok": False, "error": "Something went wrong. Try again."}), 500
 
 
 @app.route('/forgot-password')

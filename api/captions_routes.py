@@ -684,7 +684,7 @@ def captions_deliver_test():
     Start caption generation + delivery in the background (same as after intake).
     Returns immediately so the request does not time out (502). Generation runs in a thread.
     Options:
-      ?t=TOKEN   — copy the full token from your intake link (address bar: .../captions-intake?t=XXX)
+      ?t=TOKEN   — copy the full token from your form link (address bar: .../captions-intake?t=XXX)
       ?session_id=cs_xxx — or use the session_id from the thank-you page URL after payment
     Returns JSON: {"ok": true, "message": "..."} or {"ok": false, "error": "..."}.
     """
@@ -694,7 +694,7 @@ def captions_deliver_test():
     if not token and not session_id:
         return jsonify({
             "ok": False,
-            "error": "Missing ?t=TOKEN or ?session_id=cs_xxx. Use the token from your intake link (the part after t= in the address bar), or the session_id from the thank-you page URL.",
+            "error": "Missing ?t=TOKEN or ?session_id=cs_xxx. Use the token from your form link (the part after t= in the address bar), or the session_id from the thank-you page URL.",
         }), 200
     try:
         from services.caption_order_service import CaptionOrderService
@@ -707,7 +707,7 @@ def captions_deliver_test():
         if not order:
             return jsonify({
                 "ok": False,
-                "error": "Order not found. Use the full token from your intake link (address bar: .../captions-intake?t=XXX), or try ?session_id= with the session_id from the thank-you page URL.",
+                "error": "Order not found. Use the full token from your form link (address bar: .../captions-intake?t=XXX), or try ?session_id= with the session_id from the thank-you page URL.",
             }), 200
         order_id = order["id"]
         if not order.get("intake"):
