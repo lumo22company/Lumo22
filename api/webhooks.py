@@ -273,8 +273,15 @@ def stripe_webhook():
             if not sub_id:
                 print("[Stripe webhook] invoice.paid: no subscription on invoice; skipping.")
                 return jsonify({"received": True}), 200
-            sub_price_id = (getattr(Config, "STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID", None) or "").strip()
-            if not sub_price_id:
+            # Accept any captions subscription price (GBP, USD, EUR)
+            valid_price_ids = [
+                p for p in [
+                    (getattr(Config, "STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID", None) or "").strip(),
+                    (getattr(Config, "STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID_USD", None) or "").strip(),
+                    (getattr(Config, "STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID_EUR", None) or "").strip(),
+                ] if p
+            ]
+            if not valid_price_ids:
                 return jsonify({"received": True}), 200
             is_captions = False
             lines_data = (invoice.get("lines") or {})
@@ -290,7 +297,7 @@ def stripe_webhook():
                     pid = price
                 else:
                     pid = getattr(price, "id", None) if price else None
-                if pid == sub_price_id:
+                if pid and pid in valid_price_ids:
                     is_captions = True
                     break
             if not is_captions:

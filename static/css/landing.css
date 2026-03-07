@@ -35,7 +35,7 @@ html.lenis body {
   --lum-surface-elevated: #000000;
   --lum-text: #F5F5F2;
   --lum-text-muted: #9a9a96;
-  --lum-text-subtle: #6b6b68;
+  --lum-text-subtle: #7a7a76;
   --lum-gold: #fff200;      /* Accent yellow site-wide */
   --lum-black: #000000;    /* Text on gold / light accents */
   --lum-border: rgba(255, 255, 255, 0.06);
@@ -150,6 +150,17 @@ input[type="checkbox"] { accent-color: #fff200; }
   text-decoration: none;
 }
 .lumo-nav-logo:hover { color: var(--lum-gold); }
+
+/* Links: ensure distinguishable without color alone (Lighthouse accessibility) */
+.footer-links a,
+.footer-questions a,
+.intro-body a,
+.block-inner a { text-decoration: underline; text-underline-offset: 0.2em; }
+.footer-links a:hover,
+.footer-questions a:hover { text-decoration-color: currentColor; }
+.lumo-nav-logo:focus-visible,
+.lumo-nav-link:focus-visible,
+.lumo-nav-cta:focus-visible { outline: 2px solid var(--lum-gold); outline-offset: 2px; }
 
 .lumo-nav-link {
   font-family: var(--font-body);
@@ -1114,7 +1125,8 @@ a.lumo-nav-login:hover::before {
 }
 
 .trust-item { text-align: center; }
-.trust-item h4 {
+.trust-item h4,
+.trust-item .trust-item-title {
   font-family: var(--font-display);
   font-size: 1.5rem;
   font-weight: 500;

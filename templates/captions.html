@@ -41,8 +41,8 @@
       box-shadow: 0 0 0 2px rgba(255,242,0,0.4) !important;
     }
     @media (max-width: 640px) { .captions-checkbox-group { flex-wrap: wrap; } }
-    .dfd-btn.btn-disabled { opacity: 0.6; }
-    .dfd-btn.btn-disabled:hover { opacity: 0.75; }
+    .dfd-btn.btn-disabled { opacity: 0.6; pointer-events: none; cursor: not-allowed; }
+    .dfd-btn.btn-disabled:hover { opacity: 0.6; }
     /* Example blocks — match PDF layout: black header, white content, gold labels */
     .captions-example-block { max-width: 520px; margin: 0 auto; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.08); }
     .captions-example-block .example-day-header { background: #000; color: #fff; padding: 0.6rem 1rem; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
@@ -75,6 +75,7 @@
     {% if current_customer %}<a href="/account" class="lumo-nav-cta lumo-nav-account">Account</a>{% else %}<span style="display: inline-flex; align-items: center; gap: 0.75rem;"><a href="/login" class="lumo-nav-login">Log In</a><a href="/signup" class="lumo-nav-cta lumo-nav-signup">Sign up</a></span>{% endif %}
   </nav>
 
+  <main id="main-content">
   <!-- 1. HERO — full-width black, left-aligned -->
   <section class="dfd-hero captions-reveal" id="captions-hero" data-reveal>
     <div class="dfd-hero-inner">
@@ -376,6 +377,7 @@
     <a href="{{ captions_payment_link|default('#pricing') }}" class="sticky-cta-btn sticky-cta-btn-accent captions-btn-swipe">Get my 30 days</a>
     {% endif %}
   </div>
+  </main>
 
   {% include '_footer.html' %}
 
@@ -470,7 +472,7 @@
       if (oneoffCta) {
         oneoffCta.href = isValid ? targetHref : '#pricing';
         oneoffCta.classList.toggle('btn-disabled', !isValid);
-        oneoffCta.setAttribute('aria-disabled', !isValid);
+        oneoffCta.setAttribute('tabindex', isValid ? '0' : '-1');
       }
       var stickyOneoff = document.getElementById('captions-sticky-oneoff-cta');
       if (stickyOneoff) stickyOneoff.href = isValid ? targetHref : '#pricing';
@@ -480,7 +482,7 @@
         subCta.href = isValid ? subHref : '#pricing';
         subCta.textContent = 'Subscribe — ' + sym + subTotal(n, stories) + '/month';
         subCta.classList.toggle('btn-disabled', !isValid);
-        subCta.setAttribute('aria-disabled', !isValid);
+        subCta.setAttribute('tabindex', isValid ? '0' : '-1');
       }
       if (errEl) errEl.style.display = isValid ? 'none' : 'block';
       updatePlatformOptionsAndStoriesLabel();

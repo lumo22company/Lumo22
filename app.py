@@ -78,6 +78,17 @@ except Exception as e:
     _debug_log("app startup error", {"error": str(e)}, "H2")
 # #endregion
 
+@app.after_request
+def add_security_headers(response):
+    """Add security headers for Lighthouse Best Practices."""
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    if request.is_secure or request.headers.get("X-Forwarded-Proto") == "https":
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
+
+
 @app.before_request
 def redirect_bare_domain_to_www():
     """Redirect lumo22.com (no www) to www.lumo22.com so Stripe success/cancel URLs land on the host that serves the app."""
