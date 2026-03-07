@@ -421,6 +421,11 @@ def captions_checkout_subscription_page():
         is_upgrade_from_oneoff=bool(copy_from),
     )
 
+@app.route('/privacy')
+def privacy_page():
+    """Privacy policy page."""
+    return render_template('privacy.html')
+
 @app.route('/terms')
 def terms_page():
     """Terms & Conditions."""

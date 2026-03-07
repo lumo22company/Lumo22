@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy | Lumo 22</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
+  <meta name="description" content="Privacy policy for Lumo 22. How we collect, use, and protect your data.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Encode+Sans+Condensed:wght@400;500;600;700&family=Inter+Tight:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v={{ asset_version }}">
+  <style>
+    .privacy-page { padding: 6rem 1.5rem 4rem; max-width: 680px; margin: 0 auto; }
+    .privacy-page h1 { font-family: var(--font-display); font-size: 1.75rem; margin-bottom: 0.5rem; }
+    .privacy-page h2 { font-family: 'Encode Sans Condensed', sans-serif; font-size: 1.15rem; margin-top: 2rem; margin-bottom: 0.75rem; color: var(--lum-text); }
+    .privacy-page p, .privacy-page ul { color: var(--lum-text-muted); line-height: 1.7; margin-bottom: 1rem; }
+    .privacy-page ul { padding-left: 1.5rem; }
+    .privacy-page a { color: var(--lum-gold); text-decoration: underline; text-underline-offset: 0.2em; }
+    .privacy-page a:hover { text-decoration-color: currentColor; }
+  </style>
+</head>
+<body class="lumo-landing">
+  <nav class="lumo-nav lumo-nav-scrolled">
+    <div class="lumo-nav-left">
+      <a href="/" class="lumo-nav-logo">Lumo 22</a>
+      <a href="/captions" class="lumo-nav-link">Captions</a>
+    </div>
+    <a href="/captions#pricing" class="lumo-nav-cta">View plans</a>
+  </nav>
+
+  <main class="privacy-page">
+    <h1>Privacy Policy</h1>
+    {% include '_privacy_content.html' %}
+    <p style="margin-top: 2.5rem;"><a href="/captions">← Back to Captions</a> · <a href="/terms">Terms</a> · <a href="/">Lumo 22 home</a></p>
+  </main>
+
+  {% include '_footer.html' %}
+</body>
+</html>
