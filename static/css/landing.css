@@ -1196,29 +1196,6 @@ a.lumo-nav-login:hover::before {
 }
 .footer-links a:hover { color: var(--text-on-dark); }
 
-.footer-translate-wrap {
-  margin-left: var(--space-xl);
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-.footer-translate-label {
-  font-size: 0.875rem;
-  color: var(--lum-text-muted);
-}
-.footer-translate-element .goog-te-gadget {
-  font-size: 0.875rem !important;
-  color: var(--lum-text-muted) !important;
-  font-family: inherit !important;
-}
-.footer-translate-element .goog-te-gadget a,
-.footer-translate-element .goog-te-menu-value span {
-  color: var(--lum-text-muted) !important;
-}
-.footer-translate-element .goog-te-gadget a:hover {
-  color: var(--text-on-dark) !important;
-}
-
 .footer-questions {
   margin: var(--space-md) 0 0;
   font-size: 0.875rem;
@@ -1267,9 +1244,7 @@ a.lumo-nav-login:hover::before {
   .who-cards { grid-template-columns: 1fr; }
 
   .footer-inner { flex-direction: column; align-items: flex-start; }
-  .footer-links { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
   .footer-links a { margin-left: 0; margin-right: var(--space-md); }
-  .footer-translate-wrap { margin-left: 0; margin-top: 0.25rem; }
 
   .chat-container { min-height: 360px; }
 }
