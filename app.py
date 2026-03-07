@@ -99,7 +99,9 @@ def redirect_bare_domain_to_www():
 
 @app.context_processor
 def inject_asset_version():
+    from datetime import datetime
     out = {'asset_version': _asset_version}
+    out['today_str'] = datetime.utcnow().strftime('%d %B %Y')
     try:
         out['current_customer'] = get_current_customer()
     except Exception:
