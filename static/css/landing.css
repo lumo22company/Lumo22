@@ -167,13 +167,11 @@ input[type="checkbox"] { accent-color: #fff200; }
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: #ffffff;
-  text-decoration: underline;
-  text-underline-offset: 0.2em;
-  text-decoration-color: rgba(255,255,255,0.5);
+  text-decoration: none;
   font-size: 0.7rem;
-  transition: color var(--duration-fast), text-decoration-color var(--duration-fast);
+  transition: color var(--duration-fast);
 }
-.lumo-nav-link:hover { color: var(--lum-gold); text-decoration-color: var(--lum-gold); }
+.lumo-nav-link:hover { color: var(--lum-gold); }
 
 .lumo-nav-links { display: flex; gap: var(--space-xl); }
 .lumo-nav-links:empty { display: none; }
@@ -1196,23 +1194,21 @@ a.lumo-nav-login:hover::before {
 
 .footer-links a {
   color: var(--lum-text-muted);
-  text-decoration: underline;
-  text-underline-offset: 0.2em;
-  text-decoration-color: rgba(255,255,255,0.4);
+  text-decoration: none;
   font-size: 0.875rem;
   margin-left: var(--space-xl);
   min-height: 44px;
   display: inline-flex;
   align-items: center;
-  transition: color var(--duration-fast), text-decoration-color var(--duration-fast);
+  transition: color var(--duration-fast);
 }
-.footer-links a:hover { color: var(--text-on-dark); text-decoration-color: currentColor; }
+.footer-links a:hover { color: var(--text-on-dark); }
 
 .footer-questions {
   margin: var(--space-md) 0 0;
   font-size: 0.875rem;
 }
-.footer-questions a { color: var(--lum-text-muted); text-decoration: underline; text-underline-offset: 0.2em; }
+.footer-questions a { color: var(--lum-text-muted); text-decoration: none; }
 .footer-questions a:hover { color: var(--text-on-dark); }
 
 .lumo-landing .footer-left {
