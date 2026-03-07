@@ -2143,6 +2143,11 @@
 .account-page-wrap .footer .footer-bottom { color: #444; }
 .account-page-wrap .footer .footer-links a:hover,
 .account-page-wrap .footer .footer-questions a:hover { color: #000; }
+.account-page-wrap .footer .footer-translate-label,
+.account-page-wrap .footer .footer-translate-element .goog-te-gadget,
+.account-page-wrap .footer .footer-translate-element .goog-te-gadget a,
+.account-page-wrap .footer .footer-translate-element .goog-te-menu-value span { color: #444 !important; }
+.account-page-wrap .footer .footer-translate-element .goog-te-gadget a:hover { color: #000 !important; }
 
 /* Responsive: stack sidebar on small screens */
 @media (max-width: 768px) {
