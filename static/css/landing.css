@@ -167,11 +167,13 @@ input[type="checkbox"] { accent-color: #fff200; }
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: #ffffff;
-  text-decoration: none;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  text-decoration-color: rgba(255,255,255,0.5);
   font-size: 0.7rem;
-  transition: color var(--duration-fast);
+  transition: color var(--duration-fast), text-decoration-color var(--duration-fast);
 }
-.lumo-nav-link:hover { color: var(--lum-gold); }
+.lumo-nav-link:hover { color: var(--lum-gold); text-decoration-color: var(--lum-gold); }
 
 .lumo-nav-links { display: flex; gap: var(--space-xl); }
 .lumo-nav-links:empty { display: none; }
@@ -180,14 +182,16 @@ input[type="checkbox"] { accent-color: #fff200; }
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: #ffffff;
-  text-decoration: none;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  text-decoration-color: rgba(255,255,255,0.5);
   font-size: 0.7rem;
-  transition: color var(--duration-fast);
+  transition: color var(--duration-fast), text-decoration-color var(--duration-fast);
   min-height: 44px;
   display: inline-flex;
   align-items: center;
 }
-.lumo-nav-links a:hover { color: var(--lum-gold); }
+.lumo-nav-links a:hover { color: var(--lum-gold); text-decoration-color: var(--lum-gold); }
 
 /* Nav CTA: Dayos “Schedule a Demo” style — solid pill, hover lift (hover-loop up), 0.3s ease-in-out */
 .lumo-nav-cta {
@@ -554,9 +558,15 @@ a.lumo-nav-login:hover::before {
   opacity: 0.7;
   transition: opacity 0.4s var(--ease-out);
   cursor: pointer;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  appearance: none;
 }
 
 .hero-scroll.hidden { opacity: 0; pointer-events: none; }
+.hero-scroll:focus-visible { outline: 2px solid var(--lum-gold); outline-offset: 4px; }
 
 /* ——— SECTION 2: Split — Full height, yellow grow-from-centre hover, same as Explore button. ——— */
 .split {
@@ -1186,21 +1196,23 @@ a.lumo-nav-login:hover::before {
 
 .footer-links a {
   color: var(--lum-text-muted);
-  text-decoration: none;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  text-decoration-color: rgba(255,255,255,0.4);
   font-size: 0.875rem;
   margin-left: var(--space-xl);
   min-height: 44px;
   display: inline-flex;
   align-items: center;
-  transition: color var(--duration-fast);
+  transition: color var(--duration-fast), text-decoration-color var(--duration-fast);
 }
-.footer-links a:hover { color: var(--text-on-dark); }
+.footer-links a:hover { color: var(--text-on-dark); text-decoration-color: currentColor; }
 
 .footer-questions {
   margin: var(--space-md) 0 0;
   font-size: 0.875rem;
 }
-.footer-questions a { color: var(--lum-text-muted); text-decoration: none; }
+.footer-questions a { color: var(--lum-text-muted); text-decoration: underline; text-underline-offset: 0.2em; }
 .footer-questions a:hover { color: var(--text-on-dark); }
 
 .lumo-landing .footer-left {
