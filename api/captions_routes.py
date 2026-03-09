@@ -1065,7 +1065,8 @@ def captions_download():
 
 def _get_subscription_pause_info(stripe_subscription_id: str):
     """Fetch subscription from Stripe; return {paused: bool, resumes_at: str or None}."""
-    if not stripe_subscription_id or not Config.STRIPE_SECRET_KEY:
+    from api.stripe_utils import is_valid_stripe_subscription_id
+    if not stripe_subscription_id or not Config.STRIPE_SECRET_KEY or not is_valid_stripe_subscription_id(stripe_subscription_id):
         return None
     try:
         import stripe
@@ -1124,6 +1125,9 @@ def captions_pause_subscription():
         sub_id = (order.get("stripe_subscription_id") or "").strip()
         if not sub_id:
             return jsonify({"ok": False, "error": "This order is not a subscription"}), 400
+        from api.stripe_utils import is_valid_stripe_subscription_id
+        if not is_valid_stripe_subscription_id(sub_id):
+            return jsonify({"ok": False, "error": "Invalid subscription"}), 400
 
         stripe.api_key = Config.STRIPE_SECRET_KEY
         sub = stripe.Subscription.retrieve(sub_id)
@@ -1187,6 +1191,9 @@ def captions_resume_subscription():
         sub_id = (order.get("stripe_subscription_id") or "").strip()
         if not sub_id:
             return jsonify({"ok": False, "error": "This order is not a subscription"}), 400
+        from api.stripe_utils import is_valid_stripe_subscription_id
+        if not is_valid_stripe_subscription_id(sub_id):
+            return jsonify({"ok": False, "error": "Invalid subscription"}), 400
 
         stripe.api_key = Config.STRIPE_SECRET_KEY
         sub = stripe.Subscription.retrieve(sub_id)
@@ -1199,7 +1206,13 @@ def captions_resume_subscription():
         # only works when status is "paused" (different mechanism).
         stripe.Subscription.modify(sub_id, pause_collection="")
         return jsonify({"ok": True, "message": "Subscription resumed."}), 200
-    except stripe.StripeError as e:
+    except stripe.error.InvalidRequestError as e:
+        # Subscription may be cancelled, deleted, or in unexpected state
+        msg = str(e).lower()
+        if "no such" in msg or "deleted" in msg or "canceled" in msg or "cancel" in msg:
+            return jsonify({"ok": False, "error": "This subscription is no longer active and cannot be resumed."}), 400
+        return jsonify({"ok": False, "error": (str(e) or "Could not resume")[:200]}), 400
+    except stripe.error.StripeError as e:
         return jsonify({"ok": False, "error": str(e)[:200]}), 400
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500

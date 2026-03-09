@@ -37,18 +37,21 @@ def _is_captions_subscription_payment(session) -> bool:
     meta = (session.get("metadata") or {}) if isinstance(session, dict) else {}
     if meta.get("product") == "captions_subscription":
         return True
-    sub_price_id = getattr(Config, "STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID", None) or ""
-    if not sub_price_id:
-        return False
+    sub_price_ids = [
+        (getattr(Config, "STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID", None) or "").strip(),
+        (getattr(Config, "STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID_USD", None) or "").strip(),
+        (getattr(Config, "STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID_EUR", None) or "").strip(),
+    ]
+    sub_price_ids = [x for x in sub_price_ids if x]
     for item in (session.get("line_items") or {}).get("data") or []:
         pid = (item.get("price") or {}).get("id") if isinstance(item.get("price"), dict) else getattr(item.get("price"), "id", None)
-        if pid == sub_price_id:
+        if pid and pid in sub_price_ids:
             return True
     return False
 
 
 def _is_captions_payment(session) -> bool:
-    """True if this checkout is for 30 Days Captions (one-off £97)."""
+    """True if this checkout is for 30 Days Captions (one-off, any currency)."""
     meta = (session.get("metadata") or {}) if isinstance(session, dict) else {}
     if meta.get("product") == "captions":
         return True
@@ -57,13 +60,19 @@ def _is_captions_payment(session) -> bool:
         amount = int(amount_raw) if amount_raw is not None else 0
     except (TypeError, ValueError):
         amount = 0
-    if amount == CAPTIONS_AMOUNT_PENCE:
+    currency = (session.get("currency") or "gbp").strip().lower() if isinstance(session, dict) else "gbp"
+    if currency == "gbp" and amount == CAPTIONS_AMOUNT_PENCE:
         return True
-    price_id = Config.STRIPE_CAPTIONS_PRICE_ID if hasattr(Config, "STRIPE_CAPTIONS_PRICE_ID") else None
-    if price_id:
-        for item in (session.get("line_items") or {}).get("data") or []:
-            if item.get("price", {}).get("id") == price_id:
-                return True
+    # Match by price ID (GBP, USD, EUR)
+    captions_price_ids = []
+    for key in ("STRIPE_CAPTIONS_PRICE_ID", "STRIPE_CAPTIONS_PRICE_ID_USD", "STRIPE_CAPTIONS_PRICE_ID_EUR"):
+        pid = (getattr(Config, key, None) or "").strip()
+        if pid:
+            captions_price_ids.append(pid)
+    for item in (session.get("line_items") or {}).get("data") or []:
+        pid = item.get("price", {}).get("id") if isinstance(item.get("price"), dict) else getattr(item.get("price"), "id", None)
+        if pid and pid in captions_price_ids:
+            return True
     return False
 
 

@@ -97,6 +97,9 @@ def set_subscription_payment_method():
         payment_method_id = (data.get("payment_method_id") or "").strip()
         if not subscription_id or not payment_method_id:
             return jsonify({"ok": False, "error": "subscription_id and payment_method_id required"}), 400
+        from api.stripe_utils import is_valid_stripe_subscription_id
+        if not is_valid_stripe_subscription_id(subscription_id):
+            return jsonify({"ok": False, "error": "Invalid subscription"}), 400
     except Exception:
         return jsonify({"ok": False, "error": "Invalid request"}), 400
 
@@ -149,8 +152,11 @@ def add_stories_to_subscription():
     try:
         data = request.get_json() or {}
         subscription_id = (data.get("subscription_id") or "").strip()
+        from api.stripe_utils import is_valid_stripe_subscription_id
         if not subscription_id:
             return jsonify({"ok": False, "error": "subscription_id required"}), 400
+        if not is_valid_stripe_subscription_id(subscription_id):
+            return jsonify({"ok": False, "error": "Invalid subscription"}), 400
     except Exception:
         return jsonify({"ok": False, "error": "Invalid request"}), 400
 
@@ -259,6 +265,9 @@ def reduce_subscription():
     subscription_id = (order.get("stripe_subscription_id") or "").strip()
     if not subscription_id:
         return jsonify({"ok": False, "error": "This order is not a subscription"}), 400
+    from api.stripe_utils import is_valid_stripe_subscription_id
+    if not is_valid_stripe_subscription_id(subscription_id):
+        return jsonify({"ok": False, "error": "Invalid subscription"}), 400
 
     order_platforms = max(1, int(order.get("platforms_count", 1)))
     order_has_stories = bool(order.get("include_stories"))

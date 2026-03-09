@@ -76,9 +76,10 @@ def run_reminders() -> Dict[str, Any]:
     skipped = 0
     errors = []
 
+    from api.stripe_utils import is_valid_stripe_subscription_id
     for order in orders:
         sub_id = (order.get("stripe_subscription_id") or "").strip()
-        if not sub_id:
+        if not sub_id or not is_valid_stripe_subscription_id(sub_id):
             skipped += 1
             continue
         try:

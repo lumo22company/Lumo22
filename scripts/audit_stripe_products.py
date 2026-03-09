@@ -18,33 +18,35 @@ load_dotenv()
 
 import stripe
 
-# --- What the app uses (from config and webhooks) ---
+# --- What the app uses: captions + stories only (Front Desk/Chat/bundles retired) ---
 CAPTIONS_AMOUNT_PENCE = 9700   # £97 one-off
 CAPTIONS_SUB_AMOUNT_PENCE = 7900  # £79/month subscription
-FRONT_DESK_AMOUNTS_PENCE = {7900, 14900, 29900, 13100, 19800, 34000}
-CHAT_AMOUNTS_PENCE = {5900}
+STORIES_ONE_OFF_PENCE = 2900   # £29
+STORIES_SUB_PENCE = 1700       # £17/mo
 
-# All amounts the webhook recognises
-KEEP_AMOUNTS_PENCE = FRONT_DESK_AMOUNTS_PENCE | CHAT_AMOUNTS_PENCE | {CAPTIONS_AMOUNT_PENCE, CAPTIONS_SUB_AMOUNT_PENCE}
+# Only these amounts count as "in use" (for captions/stories products)
+KEEP_AMOUNTS_PENCE = {CAPTIONS_AMOUNT_PENCE, CAPTIONS_SUB_AMOUNT_PENCE, STORIES_ONE_OFF_PENCE, STORIES_SUB_PENCE}
+# Product names we keep (avoids matching archived products that share prices, e.g. £79)
+KEEP_PRODUCT_NAMES = {"30 Days of Social Media Captions", "30 Days Story Ideas"}
 
-# Price IDs from env (these are definitely in use)
+# Price IDs from env (captions + stories)
 def get_env_price_ids():
     ids = set()
-    for key in ["STRIPE_CAPTIONS_PRICE_ID", "STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID"]:
+    for key in [
+        "STRIPE_CAPTIONS_PRICE_ID",
+        "STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID",
+        "STRIPE_CAPTIONS_STORIES_PRICE_ID",
+        "STRIPE_CAPTIONS_STORIES_SUBSCRIPTION_PRICE_ID",
+    ]:
         v = os.getenv(key, "").strip()
         if v:
             ids.add(v)
     return ids
 
-# Payment link URLs from env (we'll fetch links and match)
+# Payment link URLs from env (captions-only; Front Desk/Chat/bundles retired)
 def get_env_payment_link_urls():
     keys = [
         "CAPTIONS_PAYMENT_LINK",
-        "CHAT_PAYMENT_LINK",
-        "ACTIVATION_LINK",
-        "ACTIVATION_LINK_STARTER", "ACTIVATION_LINK_STANDARD", "ACTIVATION_LINK_PREMIUM",
-        "ACTIVATION_LINK_STARTER_BUNDLE", "ACTIVATION_LINK_STANDARD_BUNDLE", "ACTIVATION_LINK_PREMIUM_BUNDLE",
-        "CHAT_PAYMENT_LINK_STARTER", "CHAT_PAYMENT_LINK_GROWTH", "CHAT_PAYMENT_LINK_PRO",
     ]
     urls = set()
     for k in keys:
@@ -96,7 +98,7 @@ def main():
     in_use_products = []
     unused_products = []
 
-    for product in stripe.Product.list(limit=100, expand=["data.default_price"]).auto_paging_iter():
+    for product in stripe.Product.list(limit=100, expand=["data.default_price"], active=True).auto_paging_iter():
         if product.get("deleted"):
             continue
         name = product.get("name") or "(unnamed)"
@@ -111,6 +113,9 @@ def main():
 
         used_reasons = []
         any_used = False
+        if name in KEEP_PRODUCT_NAMES:
+            any_used = True
+            used_reasons.append("captions/stories product (kept)")
         for p in prices:
             if p.get("deleted"):
                 continue
@@ -118,19 +123,17 @@ def main():
             if pid in in_use_price_ids:
                 used_reasons.append(f"price {pid[:20]}... in env or in-use payment link")
                 any_used = True
-            else:
+            elif name in KEEP_PRODUCT_NAMES:
                 amount = p.get("unit_amount")
                 recur = p.get("recurring")
                 curr = (p.get("currency") or "").lower()
                 if curr == "gbp" and amount is not None:
-                    if recur:
-                        if amount in KEEP_AMOUNTS_PENCE:
-                            used_reasons.append(f"price £{amount//100}/mo matches webhook")
-                            any_used = True
-                    else:
-                        if amount == CAPTIONS_AMOUNT_PENCE:
-                            used_reasons.append(f"price £{amount//100} one-off matches captions")
-                            any_used = True
+                    if recur and amount in (CAPTIONS_SUB_AMOUNT_PENCE, STORIES_SUB_PENCE):
+                        used_reasons.append(f"price £{amount//100}/mo matches captions/stories")
+                        any_used = True
+                    elif not recur and amount in (CAPTIONS_AMOUNT_PENCE, STORIES_ONE_OFF_PENCE):
+                        used_reasons.append(f"price £{amount//100} one-off matches captions/stories")
+                        any_used = True
 
         if any_used:
             in_use_products.append((product, prices, used_reasons))

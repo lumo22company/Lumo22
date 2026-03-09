@@ -716,9 +716,10 @@ def _get_subscription_billing(caption_orders):
                 "brand": (card.get("brand") or "card").capitalize(),
                 "last4": card.get("last4") or "****",
             })
+        from api.stripe_utils import is_valid_stripe_subscription_id
         for o in caption_orders:
             sub_id = (o.get("stripe_subscription_id") or "").strip()
-            if not sub_id:
+            if not sub_id or not is_valid_stripe_subscription_id(sub_id):
                 continue
             try:
                 sub = stripe.Subscription.retrieve(sub_id, expand=["default_payment_method"])
