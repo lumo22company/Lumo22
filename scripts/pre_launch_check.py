@@ -96,12 +96,36 @@ def check_env():
     return ok
 
 
-def check_live(base_url):
-    """Ping key endpoints on live site."""
+def _try_url(url):
+    """Fetch URL, return status code or error string."""
     try:
         import urllib.request
-    except ImportError:
-        import urllib.request  # part of stdlib
+        req = urllib.request.Request(url, headers={"User-Agent": "Lumo22-PreLaunch"})
+        with urllib.request.urlopen(req, timeout=15) as r:
+            return r.getcode()
+    except Exception as e:
+        return f"Error: {str(e)[:50]}"
+
+
+def _www_alt(base):
+    """If base is apex (no www), return www variant for same domain."""
+    base = base.rstrip("/")
+    if not base or "localhost" in base:
+        return None
+    if "://www." in base:
+        return None
+    try:
+        from urllib.parse import urlparse
+        p = urlparse(base)
+        if p.hostname and "." in p.hostname and not p.hostname.startswith("www."):
+            return f"{p.scheme}://www.{p.hostname}"
+    except Exception:
+        pass
+    return None
+
+
+def check_live(base_url):
+    """Ping key endpoints on live site. If apex fails, try www variant."""
     base = base_url.rstrip("/")
     endpoints = [
         ("/", 200),
@@ -109,21 +133,33 @@ def check_live(base_url):
         ("/terms", 200),
         ("/captions-thank-you", 200),
     ]
-    print("Live site check:")
+    print("Live site check (BASE_URL=" + base + "):")
     all_ok = True
+    used_www_fallback = False
+    www_url = _www_alt(base)
     for path, expect in endpoints:
         url = base + path
-        try:
-            req = urllib.request.Request(url, headers={"User-Agent": "Lumo22-PreLaunch"})
-            with urllib.request.urlopen(req, timeout=15) as r:
-                got = r.getcode()
-        except Exception as e:
-            got = f"Error: {str(e)[:40]}"
-            all_ok = False
+        got = _try_url(url)
+        if got != expect:
+            # Try www variant (apex often 404s on subpaths with GoDaddy forwarding)
+            if www_url:
+                alt_got = _try_url(www_url + path)
+                if alt_got == expect:
+                    got = expect
+                    used_www_fallback = True
+                    if path == "/":
+                        print(f"  ✓ {path} → 200 (via {www_url})")
+                    else:
+                        print(f"  ✓ {path} → 200 (use BASE_URL={www_url})")
+                    continue
         status = "✓" if got == expect else "✗"
         if got != expect:
             all_ok = False
         print(f"  {status} {path} → {got}")
+    if not all_ok and www_url:
+        print(f"\n  Tip: Set BASE_URL={www_url} (see GODADDY_DNS_RAILWAY.md)")
+    elif used_www_fallback:
+        print(f"\n  Tip: Set BASE_URL={www_url} in .env and Railway so links use the canonical domain")
     return all_ok
 
 

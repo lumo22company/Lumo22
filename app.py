@@ -118,6 +118,10 @@ app.register_blueprint(billing_bp)
 
 # Captions pre-pack reminder: run daily at 9am UTC (no separate cron service needed)
 def _start_captions_reminder_scheduler():
+    # Only start in production (avoids apscheduler import in dev, no need locally)
+    is_prod = (os.getenv("FLASK_ENV") or "").strip().lower() == "production"
+    if not is_prod:
+        return
     try:
         from apscheduler.schedulers.background import BackgroundScheduler
         from apscheduler.triggers.cron import CronTrigger

@@ -59,11 +59,19 @@ After DNS propagates, anyone opening **lumo22.com** will be redirected to **http
 
 ---
 
-## 5. Check
+## 5. Use www in BASE_URL
+
+Set **BASE_URL** to the canonical domain that works for all paths:
+- **BASE_URL=https://www.lumo22.com** (recommended; www CNAME goes straight to Railway)
+- Apex (lumo22.com) forwards to www but can 404 on subpaths like /captions with some setups.
+
+In **Railway** → Variables, set `BASE_URL=https://www.lumo22.com` (no trailing slash). Do the same in `.env` for local tests.
+
+## 6. Check
 
 - Wait 5–30 minutes (sometimes up to a few hours).
 - Open **https://www.lumo22.com** and **https://lumo22.com** — both should load your app.
-- Visiting **lumo22.com** should redirect to **https://www.lumo22.com** (the app does this).
+- Visiting **lumo22.com** should redirect to **https://www.lumo22.com**.
 
 ---
 
