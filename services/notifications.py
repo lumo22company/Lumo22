@@ -177,11 +177,41 @@ def _build_intake_order_summary(order: Optional[Dict[str, Any]]) -> Optional[str
     return "\n".join(lines)
 
 
-def _order_receipt_email_html() -> str:
-    """Build branded HTML for order receipt — payment received, intake link coming shortly."""
+def _format_amount_paid(amount_total: Optional[int], currency: str) -> Optional[str]:
+    """Format Stripe amount_total (pence/cents) for display. Returns None if invalid."""
+    if amount_total is None or not isinstance(amount_total, (int, float)):
+        return None
+    try:
+        amt = int(amount_total)
+    except (TypeError, ValueError):
+        return None
+    currency = (currency or "gbp").strip().lower()
+    if currency == "gbp":
+        return f"£{amt / 100:.2f}"
+    if currency == "usd":
+        return f"${amt / 100:.2f}"
+    if currency == "eur":
+        return f"€{amt / 100:.2f}"
+    return f"{amt / 100:.2f} {currency.upper()}"
+
+
+def _order_receipt_email_html(order_summary: Optional[str] = None, amount_paid: Optional[str] = None) -> str:
+    """Build branded HTML for order receipt — payment received, products, price, intake link coming soon."""
+    import html
+    receipt_block = ""
+    if order_summary or amount_paid:
+        lines = []
+        if order_summary and order_summary.strip():
+            summary_escaped = html.escape(order_summary.strip()).replace("\n", "<br>\n")
+            lines.append(summary_escaped)
+        if amount_paid:
+            lines.append(f"<strong>Amount paid:</strong> {html.escape(amount_paid)}")
+        if lines:
+            receipt_block = f"""<p style="margin:0 0 16px; font-size:14px; color:{BRAND_MUTED}; border:1px solid rgba(0,0,0,0.08); border-radius:8px; padding:16px; background:#fafafa;"><strong style="color:{BRAND_TEXT};">Order details</strong><br>{'<br>'.join(lines)}</p>
+"""
     content = f"""<p style="margin:0 0 16px;">Hi,</p>
 <p style="margin:0 0 16px;">Thanks for your order. We've received your payment for 30 Days of Social Media Captions.</p>
-<p style="margin:0 0 16px;">You'll receive an email shortly with a link to complete your short intake form (about 2 minutes). Once you submit, we'll generate your captions and send them to you by email within a few minutes.</p>
+{receipt_block}<p style="margin:0 0 16px;">You'll receive an email soon with a link to complete your short intake form (about 2 minutes). Once you submit, we'll generate your captions and send them to you by email within a few minutes.</p>
 <p style="margin:0 0 16px;">If you don't see the intake email, check your spam folder or reply to this email and we'll help.</p>
 <p style="margin:0;">— Lumo 22</p>"""
     return _email_wrapper(content)
@@ -443,19 +473,47 @@ If you didn't request this, you can ignore this email. Your email address will s
         html_body = _email_change_verification_html(confirm_url)
         return self.send_email(to_email, subject, body, html_body=html_body)
 
-    def send_order_receipt_email(self, to_email: str) -> bool:
-        """Send order receipt (payment received, intake link coming shortly). Sent right after checkout."""
+    def send_order_receipt_email(
+        self,
+        to_email: str,
+        order: Optional[Dict[str, Any]] = None,
+        session: Optional[Any] = None,
+    ) -> bool:
+        """Send order receipt (payment received, products, price, intake link coming soon). Sent right after checkout.
+        order: caption order dict for product summary. session: Stripe checkout session for amount_paid."""
         subject = "Thanks for your order — 30 Days of Social Media Captions"
-        body = """Hi,
+        order_summary = _build_intake_order_summary(order) if order else None
+        amount_paid = None
+        currency = "gbp"
+        if session:
+            amt_raw = session.get("amount_total") if hasattr(session, "get") else getattr(session, "amount_total", None)
+            curr_raw = session.get("currency") if hasattr(session, "get") else getattr(session, "currency", "gbp")
+            currency = str(curr_raw or "gbp").strip().lower() if curr_raw else "gbp"
+            amount_paid = _format_amount_paid(amt_raw, currency)
 
-Thanks for your order. We've received your payment for 30 Days of Social Media Captions.
-
-You'll receive an email shortly with a link to complete your short intake form (about 2 minutes). Once you submit, we'll generate your captions and send them to you by email within a few minutes.
-
-If you don't see the intake email, check your spam folder or reply to this email and we'll help.
-
-— Lumo 22"""
-        html_body = _order_receipt_email_html()
+        body_lines = [
+            "Hi,",
+            "",
+            "Thanks for your order. We've received your payment for 30 Days of Social Media Captions.",
+            "",
+        ]
+        if order_summary or amount_paid:
+            body_lines.append("Order details:")
+            if order_summary:
+                body_lines.append(order_summary)
+            if amount_paid:
+                body_lines.append(f"Amount paid: {amount_paid}")
+            body_lines.extend(["", ""])
+        body_lines.extend([
+            "You'll receive an email soon with a link to complete your short intake form (about 2 minutes). "
+            "Once you submit, we'll generate your captions and send them to you by email within a few minutes.",
+            "",
+            "If you don't see the intake email, check your spam folder or reply to this email and we'll help.",
+            "",
+            "— Lumo 22",
+        ])
+        body = "\n".join(body_lines)
+        html_body = _order_receipt_email_html(order_summary=order_summary, amount_paid=amount_paid)
         return self.send_email(to_email, subject, body, html_body=html_body)
 
     def send_intake_link_email(self, to_email: str, intake_url: str, order: Optional[Dict[str, Any]] = None) -> bool:

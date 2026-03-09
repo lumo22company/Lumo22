@@ -117,6 +117,8 @@ class Config:
 
     # Cron job auth: shared secret for /api/captions-send-reminders (Railway cron). Generate with: openssl rand -hex 32
     CRON_SECRET = _sanitize_header_value(os.getenv('CRON_SECRET', '').strip() or '')
+    # Test endpoint: secret for /api/captions-deliver-test (triggers generation). If set, ?secret=XXX required. In production, set this.
+    CAPTIONS_DELIVER_TEST_SECRET = _sanitize_header_value(os.getenv('CAPTIONS_DELIVER_TEST_SECRET', '').strip() or '')
 
     # Site chat widget: key for the Lumo 22 marketing site's own chat bubble (demo + help). When set, widget appears and status endpoint returns valid.
     SITE_CHAT_WIDGET_KEY = (os.getenv('SITE_CHAT_WIDGET_KEY', '').strip() or None)

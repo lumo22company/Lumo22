@@ -11,7 +11,9 @@ Sent right after Stripe checkout, before the intake link. Wording:
 >
 > Thanks for your order. We've received your payment for 30 Days of Social Media Captions.
 >
-> You'll receive an email shortly with a link to complete your short intake form (about 2 minutes). Once you submit, we'll generate your captions and send them to you by email within a few minutes.
+> Order details (when available): product summary + amount paid.
+>
+> You'll receive an email soon with a link to complete your short intake form (about 2 minutes). Once you submit, we'll generate your captions and send them to you by email within a few minutes.
 >
 > If you don't see the intake email, check your spam folder or reply to this email and we'll help.
 >

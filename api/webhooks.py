@@ -196,7 +196,7 @@ def _handle_captions_payment(session):
 
     notif = NotificationService()
     try:
-        notif.send_order_receipt_email(customer_email)
+        notif.send_order_receipt_email(customer_email, order=order, session=session)
     except Exception as receipt_err:
         print(f"[Stripe webhook] Receipt email failed (non-fatal): {receipt_err}")
     print(f"[Stripe webhook] Sending intake email to {customer_email}")

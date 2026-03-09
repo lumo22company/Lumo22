@@ -399,7 +399,7 @@ def _send_intake_email_for_order(order: dict) -> None:
         from services.notifications import NotificationService
         notif = NotificationService()
         try:
-            notif.send_order_receipt_email(customer_email)
+            notif.send_order_receipt_email(customer_email, order=order)
         except Exception as e:
             print(f"[captions-intake-link] Receipt email failed (non-fatal): {e!r}")
         ok = notif.send_intake_link_email(customer_email, intake_url, order)
@@ -687,12 +687,20 @@ def captions_deliver_test():
     """
     Start caption generation + delivery in the background (same as after intake).
     Returns immediately so the request does not time out (502). Generation runs in a thread.
+    Protected: if CAPTIONS_DELIVER_TEST_SECRET is set, ?secret=XXX must match.
     Options:
       ?t=TOKEN   — copy the full token from your form link (address bar: .../captions-intake?t=XXX)
       ?session_id=cs_xxx — or use the session_id from the thank-you page URL after payment
+      ?secret=XXX — required when CAPTIONS_DELIVER_TEST_SECRET is set in env
     Returns JSON: {"ok": true, "message": "..."} or {"ok": false, "error": "..."}.
     """
     import threading
+    from config import Config
+    test_secret = (Config.CAPTIONS_DELIVER_TEST_SECRET or "").strip()
+    if test_secret:
+        provided = (request.args.get("secret") or "").strip()
+        if not provided or provided != test_secret:
+            return jsonify({"ok": False, "error": "Missing or invalid ?secret="}), 403
     token = (request.args.get("t") or request.args.get("token") or "").strip()
     session_id = (request.args.get("session_id") or "").strip()
     if not token and not session_id:

@@ -26,20 +26,15 @@ REQUIRED = [
     "STRIPE_WEBHOOK_SECRET",
 ]
 
+# Captions is the only active product
 PAYMENT_LINKS = [
-    "ACTIVATION_LINK_STARTER",
-    "ACTIVATION_LINK_STANDARD",
-    "ACTIVATION_LINK_PREMIUM",
-    "CHAT_PAYMENT_LINK",
     "CAPTIONS_PAYMENT_LINK",
 ]
 
 OPTIONAL = [
     "STRIPE_CAPTIONS_PRICE_ID",
     "STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID",
-    "ACTIVATION_LINK_STARTER_BUNDLE",
-    "ACTIVATION_LINK_STANDARD_BUNDLE",
-    "ACTIVATION_LINK_PREMIUM_BUNDLE",
+    "CAPTIONS_DELIVER_TEST_SECRET",
 ]
 
 
@@ -67,15 +62,16 @@ def check_env():
         print(f"  {status} {key}: {hint}")
     print()
 
-    # Payment links
-    print("Payment links:")
-    for key in PAYMENT_LINKS:
-        val = os.getenv(key, "").strip()
-        status = "✓" if val and "buy.stripe.com" in val else "✗"
-        if status == "✗":
-            ok = False
-        hint = val[:30] + "…" if val and len(val) > 30 else (val or "(missing)")
-        print(f"  {status} {key}")
+    # Payment (Captions)
+    print("Captions payment:")
+    captions_link = os.getenv("CAPTIONS_PAYMENT_LINK", "").strip()
+    captions_price = os.getenv("STRIPE_CAPTIONS_PRICE_ID", "").strip()
+    has_link = captions_link and "buy.stripe.com" in captions_link
+    has_price = captions_price and captions_price.startswith("price_")
+    status = "✓" if has_link or has_price else "✗"
+    if status == "✗":
+        ok = False
+    print(f"  {status} CAPTIONS_PAYMENT_LINK or STRIPE_CAPTIONS_PRICE_ID (need one)")
     print()
 
     # BASE_URL format
@@ -110,13 +106,8 @@ def check_live(base_url):
     endpoints = [
         ("/", 200),
         ("/captions", 200),
-        ("/digital-front-desk", 200),
-        ("/activate", 200),
-        ("/website-chat", 200),
         ("/terms", 200),
-        ("/activate-success", 200),
         ("/captions-thank-you", 200),
-        ("/website-chat-success", 200),
     ]
     print("Live site check:")
     all_ok = True

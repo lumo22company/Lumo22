@@ -58,8 +58,15 @@ def main():
     # 6. Welcome + email verification (signup)
     samples.append(("welcome_verify.html", "Welcome + email verification (signup)", _welcome_and_verify_email_html("https://www.lumo22.com/verify-email?token=sample-token")))
 
-    # 7. Order receipt (thanks for your order)
-    samples.append(("order_receipt.html", "Order receipt (thanks for your order)", _order_receipt_email_html()))
+    # 7. Order receipt (thanks for your order) — with product summary and amount
+    samples.append((
+        "order_receipt.html",
+        "Order receipt (thanks for your order)",
+        _order_receipt_email_html(
+            order_summary="• One-off (£97)\n• 2 platforms\n• 30 Days Story Ideas included",
+            amount_paid="£126.00",
+        ),
+    ))
 
     # 8. Plan change confirmation (upgrade/add-on)
     samples.append((
