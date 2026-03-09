@@ -244,6 +244,7 @@ input[type="checkbox"] { accent-color: #fff200; }
 .lumo-nav-cta.lumo-nav-account,
 .lumo-nav-cta.lumo-nav-signup {
   padding: 1rem 1.75rem !important;
+  min-width: 120px !important;
   font-size: 0.7rem !important;
   font-weight: 600 !important;
   letter-spacing: 0.2em !important;
@@ -270,6 +271,7 @@ a.lumo-nav-login {
   background-color: transparent !important;
   color: var(--lum-gold, #fff200) !important;
   padding: 1rem 1.75rem !important;
+  min-width: 120px;
   border-radius: 12px;
   text-decoration: none;
   font-size: 0.7rem;
@@ -314,6 +316,7 @@ a.lumo-nav-login:hover::before {
 /* Override lumo-nav-cta when Log in has both classes (checkout, forgot password, etc.) — match View options */
 .lumo-nav-cta.lumo-nav-login {
   padding: 1rem 1.75rem !important;
+  min-width: 120px !important;
   font-size: 0.7rem !important;
   font-weight: 600 !important;
   letter-spacing: 0.2em !important;
