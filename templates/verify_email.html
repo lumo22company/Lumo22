@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% if success %}Email verified | Lumo 22{% else %}Verification failed | Lumo 22{% endif %}</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v={{ asset_version }}">
+  <style>
+    .verify-section { padding-top: 8rem; padding-bottom: 4rem; min-height: 60vh; display: flex; align-items: center; justify-content: center; }
+    .verify-card { max-width: 480px; margin: 0 auto; padding: 2.5rem; background: var(--lum-card-bg, rgba(255,255,255,0.03)); border-radius: 16px; border: 1px solid var(--lum-border); text-align: center; }
+    .verify-card h1 { font-family: var(--font-display); font-size: 1.75rem; margin-bottom: 1rem; }
+    .verify-card p { color: var(--lum-text-muted); line-height: 1.6; margin-bottom: 1.5rem; }
+    .verify-card .back-links { margin-top: 1.5rem; }
+    .verify-card .back-links a { color: var(--lum-gold); text-decoration: none; font-size: 0.95rem; }
+    .verify-card .back-links a:hover { text-decoration: underline; }
+    .verify-card .back-links span { color: var(--lum-text-subtle); margin: 0 0.5rem; }
+  </style>
+</head>
+<body class="lumo-landing">
+  <nav class="lumo-nav lumo-nav-scrolled">
+    <div class="lumo-nav-left">
+      <a href="/" class="lumo-nav-logo">Lumo 22</a>
+      <a href="/captions" class="lumo-nav-link">Captions</a>
+    </div>
+    <a href="/login" class="lumo-nav-cta lumo-nav-signup">Log in</a>
+  </nav>
+
+  <section class="lumo-section verify-section">
+    <div class="verify-card">
+      {% if success %}
+      <h1>Email verified</h1>
+      <p>Your email has been verified. You can now log in to your account.</p>
+      <div class="back-links">
+        <a href="/login">Log in</a>
+        <span>·</span>
+        <a href="/captions">View Caption Plans</a>
+        <span>·</span>
+        <a href="/">Home</a>
+      </div>
+      {% else %}
+      <h1>Verification failed</h1>
+      <p>{{ error or "This link is invalid or has expired. Please request a new verification email from the signup page." }}</p>
+      <div class="back-links">
+        <a href="/signup">Sign up again</a>
+        <span>·</span>
+        <a href="/login">Log in</a>
+        <span>·</span>
+        <a href="/">Home</a>
+      </div>
+      {% endif %}
+    </div>
+  </section>
+
+  {% include '_footer.html' %}
+</body>
+</html>

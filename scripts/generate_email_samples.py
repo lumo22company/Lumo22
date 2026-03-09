@@ -26,6 +26,9 @@ def main():
         _intake_link_email_html,
         _captions_delivery_email_html,
         _captions_reminder_email_html,
+        _welcome_and_verify_email_html,
+        _order_receipt_email_html,
+        _plan_change_confirmation_email_html,
     )
 
     out_dir = project_root / "email_samples"
@@ -51,6 +54,34 @@ def main():
 
     # 5. Email change verification
     samples.append(("email_change.html", "Email change verification", _email_change_verification_html("https://www.lumo22.com/change-email-confirm?token=sample-token")))
+
+    # 6. Welcome + email verification (signup)
+    samples.append(("welcome_verify.html", "Welcome + email verification (signup)", _welcome_and_verify_email_html("https://www.lumo22.com/verify-email?token=sample-token")))
+
+    # 7. Order receipt (thanks for your order)
+    samples.append(("order_receipt.html", "Order receipt (thanks for your order)", _order_receipt_email_html()))
+
+    # 8. Plan change confirmation (upgrade/add-on)
+    samples.append((
+        "plan_change_upgrade.html",
+        "Plan change confirmation (upgrade/add Stories/add platforms)",
+        _plan_change_confirmation_email_html(
+            "Your plan has been updated. Story Ideas and/or extra platforms have been added to your subscription.",
+            "Your new price will be reflected on your next invoice. Changes apply to your next pack.",
+            "https://www.lumo22.com/account",
+        ),
+    ))
+
+    # 9. Plan change confirmation (downgrade/reduce)
+    samples.append((
+        "plan_change_reduce.html",
+        "Plan change confirmation (downgrade/reduce platforms/remove Stories)",
+        _plan_change_confirmation_email_html(
+            "Your plan has been updated. Your subscription now includes fewer platforms and/or Stories.",
+            "Your new (lower) price will be reflected on your next invoice. Changes apply to your next pack.",
+            "https://www.lumo22.com/account",
+        ),
+    ))
 
     import re
     for filename, label, html in samples:

@@ -194,8 +194,12 @@ def _handle_captions_payment(session):
     if copy_from:
         intake_url += f"&copy_from={copy_from}"
 
-    print(f"[Stripe webhook] Sending intake email to {customer_email}")
     notif = NotificationService()
+    try:
+        notif.send_order_receipt_email(customer_email)
+    except Exception as receipt_err:
+        print(f"[Stripe webhook] Receipt email failed (non-fatal): {receipt_err}")
+    print(f"[Stripe webhook] Sending intake email to {customer_email}")
     ok = False
     try:
         ok = notif.send_intake_link_email(customer_email, intake_url, order)
@@ -319,6 +323,39 @@ def stripe_webhook():
             thread = threading.Thread(target=_run_generation_and_deliver, args=(order_id,))
             thread.daemon = True
             thread.start()
+            return jsonify({"received": True}), 200
+
+        if event_type == "customer.subscription.updated":
+            # Plan change via Stripe billing portal: send confirmation email
+            sub_obj = event.get("data", {}).get("object") if isinstance(event, dict) else None
+            if not sub_obj or not isinstance(sub_obj, dict):
+                return jsonify({"received": True}), 200
+            sub_id = (sub_obj.get("id") or "").strip()
+            if not sub_id:
+                return jsonify({"received": True}), 200
+            from services.caption_order_service import CaptionOrderService
+            from services.notifications import NotificationService
+            order_service = CaptionOrderService()
+            order = order_service.get_by_stripe_subscription_id(sub_id)
+            if not order:
+                return jsonify({"received": True}), 200
+            customer_email = (order.get("customer_email") or "").strip()
+            if customer_email and "@" in customer_email:
+                base = (Config.BASE_URL or "https://www.lumo22.com").strip().rstrip("/")
+                if not base.startswith("http"):
+                    base = "https://" + base
+                account_url = base + "/account"
+                try:
+                    notif = NotificationService()
+                    notif.send_plan_change_confirmation_email(
+                        customer_email,
+                        change_summary="Your subscription has been updated.",
+                        when_effective="Changes will apply to your next pack. Your new price will be reflected on your next invoice.",
+                        account_url=account_url,
+                    )
+                    print(f"[Stripe webhook] Plan change confirmation sent to {customer_email}")
+                except Exception as e:
+                    print(f"[Stripe webhook] Plan change confirmation email failed: {e}")
             return jsonify({"received": True}), 200
 
         if event_type == "invoice.created":

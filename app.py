@@ -507,6 +507,8 @@ def customer_login_page():
             customer = svc.get_by_email(email)
             if not customer or not svc.verify_password(customer, password):
                 return render_template('customer_login.html', login_error='Invalid email or password.', next_url=next_url)
+            if not customer.get('email_verified', True):
+                return render_template('customer_login.html', login_error='Please verify your email before logging in. Check your inbox or request a new verification link.', needs_verification=True, verification_email=email, next_url=next_url)
             svc.update_last_login(customer['id'])
             session.permanent = True
             session['customer_id'] = str(customer['id'])
@@ -531,6 +533,25 @@ def reset_password_page():
     """Reset password: token from email, set new password."""
     token = request.args.get('token', '').strip()
     return render_template('reset_password.html', token=token)
+
+
+@app.route('/verify-email')
+def verify_email_page():
+    """Verify email: token from signup welcome email. Marks email verified and redirects to login."""
+    token = request.args.get('token', '').strip()
+    if not token:
+        return render_template('verify_email.html', success=False, error="No verification link found. Please request a new one.")
+    try:
+        from services.customer_auth_service import CustomerAuthService
+        svc = CustomerAuthService()
+        ok, customer, err = svc.confirm_email_verification(token)
+        if not ok:
+            return render_template('verify_email.html', success=False, error=err)
+        return render_template('verify_email.html', success=True)
+    except Exception as e:
+        import logging
+        logging.exception("verify_email failed: %s", e)
+        return render_template('verify_email.html', success=False, error="Something went wrong. Please try again or contact hello@lumo22.com.")
 
 
 @app.route('/change-email-confirm')

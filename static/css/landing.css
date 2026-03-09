@@ -246,6 +246,7 @@ input[type="checkbox"] { accent-color: #fff200; }
   background: transparent !important;
   color: var(--lum-gold, #fff200) !important;
   border: 2px solid var(--lum-gold, #fff200) !important;
+  text-transform: none;
 }
 .lumo-nav-cta.lumo-nav-account:hover,
 .lumo-nav-cta.lumo-nav-signup:hover {

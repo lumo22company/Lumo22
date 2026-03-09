@@ -386,7 +386,7 @@ def _get_session_attr(session, key, default=None):
 
 
 def _send_intake_email_for_order(order: dict) -> None:
-    """Send the intake form link email for an order (used by webhook and by API fallback)."""
+    """Send receipt email then intake form link email for an order (used by webhook and by API fallback)."""
     token = (order.get("token") or "").strip()
     customer_email = (order.get("customer_email") or "").strip()
     if not token or not customer_email or "@" not in customer_email:
@@ -398,6 +398,10 @@ def _send_intake_email_for_order(order: dict) -> None:
     try:
         from services.notifications import NotificationService
         notif = NotificationService()
+        try:
+            notif.send_order_receipt_email(customer_email)
+        except Exception as e:
+            print(f"[captions-intake-link] Receipt email failed (non-fatal): {e!r}")
         ok = notif.send_intake_link_email(customer_email, intake_url, order)
         if ok:
             print(f"[captions-intake-link] Sent intake email to {customer_email}")

@@ -189,6 +189,63 @@ class CustomerAuthService:
         except Exception:
             return False
 
+    def set_email_verification_token(self, customer_id: str) -> Optional[str]:
+        """Set email verification token for new signup. Returns token or None. Valid 24 hours."""
+        if not customer_id:
+            return None
+        token = secrets.token_urlsafe(32)
+        expires = datetime.utcnow() + timedelta(hours=24)
+        try:
+            self.client.table(self.table).update({
+                "email_verification_token": token,
+                "email_verification_expires": expires.isoformat(),
+                "updated_at": datetime.utcnow().isoformat(),
+            }).eq("id", customer_id).execute()
+            return token
+        except Exception:
+            return None
+
+    def get_by_email_verification_token(self, token: str) -> Optional[Dict[str, Any]]:
+        """Get customer by valid email verification token. Returns None if expired or invalid."""
+        if not token or len(token) < 20:
+            return None
+        try:
+            result = self.client.table(self.table).select("*").eq(
+                "email_verification_token", token
+            ).execute()
+        except Exception:
+            return None
+        if not result.data or len(result.data) == 0:
+            return None
+        c = result.data[0]
+        expires = c.get("email_verification_expires")
+        if expires:
+            try:
+                exp_str = str(expires).replace("Z", "")[:19]
+                exp_dt = datetime.fromisoformat(exp_str)
+                if datetime.utcnow() > exp_dt:
+                    return None
+            except (TypeError, ValueError):
+                return None
+        return c
+
+    def confirm_email_verification(self, token: str) -> Tuple[bool, Optional[Dict[str, Any]], Optional[str]]:
+        """Confirm email verification. Returns (success, customer, error_message). Clears token on success."""
+        customer = self.get_by_email_verification_token(token)
+        if not customer:
+            return (False, None, "Invalid or expired link. Please request a new verification email.")
+        try:
+            self.client.table(self.table).update({
+                "email_verified": True,
+                "email_verification_token": None,
+                "email_verification_expires": None,
+                "updated_at": datetime.utcnow().isoformat(),
+            }).eq("id", customer["id"]).execute()
+            customer["email_verified"] = True
+            return (True, customer, None)
+        except Exception as e:
+            return (False, None, str(e))
+
     def request_password_reset(self, email: str) -> Tuple[bool, Optional[str]]:
         """
         Create password reset token for customer. Returns (success, token_or_error).

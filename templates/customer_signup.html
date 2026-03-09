@@ -98,9 +98,10 @@
         .then(function(data) {
           if (data.ok) {
             msg.className = 'msg success';
-            msg.textContent = 'You\'re in. Taking you to your account…';
+            msg.textContent = data.message || 'Check your email to verify your address — then you can log in.';
             msg.style.display = 'block';
-            window.location.href = '/account';
+            btn.disabled = false;
+            btn.textContent = 'Create account';
           } else {
             msg.className = 'msg error';
             msg.textContent = data.error || 'Something didn\'t go through — try again.';

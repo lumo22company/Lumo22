@@ -66,6 +66,9 @@
         </form>
 
         <div class="auth-links">
+          {% if needs_verification %}
+          <p><button type="button" id="resend-verify-btn" style="background:none;border:none;padding:0;color:var(--lum-gold);cursor:pointer;font-size:0.9rem;font-family:inherit;">Resend verification email</button></p>
+          {% endif %}
           <p><a href="/forgot-password">Forgot password?</a></p>
           <p class="auth-muted">Don't have an account? <a href="/signup">Sign up</a></p>
           <p class="auth-muted"><a href="/">← Back to Lumo 22</a></p>
@@ -85,6 +88,32 @@
         form.addEventListener('submit', function() {
           btn.disabled = true;
           btn.textContent = 'Logging in…';
+        });
+      }
+      var resendBtn = document.getElementById('resend-verify-btn');
+      var emailInput = document.getElementById('email');
+      if (resendBtn && emailInput) {
+        resendBtn.addEventListener('click', function() {
+          resendBtn.disabled = true;
+          resendBtn.textContent = 'Sending…';
+          fetch('/api/auth/resend-verification', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: emailInput.value.trim() })
+          })
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (data.ok) {
+              resendBtn.textContent = data.message || 'Verification email sent. Check your inbox.';
+            } else {
+              resendBtn.textContent = data.error || 'Failed. Try again.';
+              resendBtn.disabled = false;
+            }
+          })
+          .catch(function() {
+            resendBtn.textContent = 'Failed. Try again.';
+            resendBtn.disabled = false;
+          });
         });
       }
     })();

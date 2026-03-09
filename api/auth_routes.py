@@ -26,9 +26,21 @@ def get_current_customer():
     return None
 
 
+def _base_url():
+    """Build base URL for verification links."""
+    fallback = "https://www.lumo22.com"
+    raw = (Config.BASE_URL or request.url_root or fallback).strip().rstrip("/")
+    base = "".join(c for c in raw if ord(c) >= 32 and c not in "\n\r\t")
+    if not base:
+        base = fallback
+    if not base.startswith("http"):
+        base = "https://" + base
+    return base
+
+
 @auth_bp.route("/signup", methods=["POST"])
 def signup():
-    """Create account: email + password."""
+    """Create account: email + password. Sends verification email; user must verify before login."""
     try:
         data = request.get_json() or {}
         email = (data.get("email") or "").strip().lower()
@@ -45,11 +57,17 @@ def signup():
         svc = CustomerAuthService()
         customer = svc.create(email=email, password=password, referral_code=referral_code)
 
-        session.permanent = True
-        session["customer_id"] = str(customer["id"])
-        session["customer_email"] = customer["email"]
+        token = svc.set_email_verification_token(str(customer["id"]))
+        if token:
+            verify_url = _base_url().rstrip("/") + "/verify-email?token=" + token
+            notif = NotificationService()
+            notif.send_welcome_and_verification_email(email, verify_url)
 
-        return jsonify({"ok": True, "email": customer["email"]}), 201
+        return jsonify({
+            "ok": True,
+            "email": customer["email"],
+            "message": "Account created. Check your email to verify your address — then you can log in."
+        }), 201
     except ValueError as e:
         return jsonify({"ok": False, "error": str(e)}), 400
     except Exception as e:
@@ -58,7 +76,7 @@ def signup():
 
 @auth_bp.route("/login", methods=["POST"])
 def login():
-    """Login: email + password."""
+    """Login: email + password. Requires verified email."""
     try:
         data = request.get_json(silent=True) or request.form or {}
         email = (data.get("email") or "").strip().lower()
@@ -74,6 +92,14 @@ def login():
         if not svc.verify_password(customer, password):
             return jsonify({"ok": False, "error": "Invalid email or password"}), 401
 
+        # Require email verification (existing customers have email_verified=true from migration)
+        if not customer.get("email_verified", True):
+            return jsonify({
+                "ok": False,
+                "error": "Please verify your email before logging in. Check your inbox or request a new link.",
+                "needs_verification": True,
+            }), 403
+
         svc.update_last_login(customer["id"])
 
         session.permanent = True
@@ -81,6 +107,40 @@ def login():
         session["customer_email"] = customer["email"]
 
         return jsonify({"ok": True, "email": customer["email"]}), 200
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@auth_bp.route("/resend-verification", methods=["POST"])
+def resend_verification():
+    """Resend email verification link. Body: { "email": "user@example.com" }."""
+    try:
+        data = request.get_json() or {}
+        email = (data.get("email") or "").strip().lower()
+        if not email or "@" not in email:
+            return jsonify({"ok": False, "error": "Valid email required"}), 400
+
+        svc = CustomerAuthService()
+        customer = svc.get_by_email(email)
+        if not customer:
+            return jsonify({"ok": True, "message": "If an account exists with that email, you'll receive a verification link shortly."}), 200
+        if customer.get("email_verified", True):
+            return jsonify({"ok": True, "message": "This account is already verified. You can log in."}), 200
+
+        token = svc.set_email_verification_token(str(customer["id"]))
+        if not token:
+            return jsonify({"ok": False, "error": "Could not create verification link. Please try again."}), 500
+
+        verify_url = _base_url().rstrip("/") + "/verify-email?token=" + token
+        notif = NotificationService()
+        sent = notif.send_welcome_and_verification_email(email, verify_url)
+        if not sent:
+            return jsonify({
+                "ok": False,
+                "error": "We couldn't send the verification email. Please try again or contact hello@lumo22.com."
+            }), 503
+
+        return jsonify({"ok": True, "message": "Verification email sent. Check your inbox (and spam)."}), 200
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
 
@@ -299,8 +359,8 @@ def reset_password():
 @auth_bp.route("/create-account", methods=["POST"])
 def create_account():
     """
-    Create account for existing customer (e.g. after DFD/Captions/Chat setup).
-    Used when they set a password after completing a form.
+    Create account (e.g. after completing captions intake). Sends verification email;
+    user must verify before login — same flow as main signup.
     """
     try:
         data = request.get_json() or {}
@@ -321,11 +381,17 @@ def create_account():
 
         customer = svc.create(email=email, password=password)
 
-        session.permanent = True
-        session["customer_id"] = str(customer["id"])
-        session["customer_email"] = customer["email"]
+        token = svc.set_email_verification_token(str(customer["id"]))
+        if token:
+            verify_url = _base_url().rstrip("/") + "/verify-email?token=" + token
+            notif = NotificationService()
+            notif.send_welcome_and_verification_email(email, verify_url)
 
-        return jsonify({"ok": True, "email": customer["email"]}), 201
+        return jsonify({
+            "ok": True,
+            "email": customer["email"],
+            "message": "Account created. Check your email to verify your address — then you can log in.",
+        }), 201
     except ValueError as e:
         return jsonify({"ok": False, "error": str(e)}), 400
     except Exception as e:

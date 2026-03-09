@@ -3,7 +3,15 @@ Billing portal: redirect customers to Stripe's hosted billing portal.
 Requires customer login and a stripe_customer_id from a caption subscription.
 """
 from flask import Blueprint, request, jsonify, redirect, url_for
+from config import Config
 from api.auth_routes import get_current_customer
+
+
+def _account_url():
+    base = (Config.BASE_URL or request.url_root or "https://www.lumo22.com").strip().rstrip("/")
+    if not base.startswith("http"):
+        base = "https://" + base
+    return base.rstrip("/") + "/account"
 
 billing_bp = Blueprint("billing", __name__, url_prefix="/api/billing")
 
@@ -197,6 +205,19 @@ def add_stories_to_subscription():
             intake = dict(intake)
             intake["include_stories"] = True
             co_svc.update_intake_only(order["id"], intake)
+        customer_email = (order.get("customer_email") or "").strip()
+        if customer_email and "@" in customer_email:
+            try:
+                from services.notifications import NotificationService
+                notif = NotificationService()
+                notif.send_plan_change_confirmation_email(
+                    customer_email,
+                    change_summary="Story Ideas has been added to your subscription. You'll be charged a prorated amount.",
+                    when_effective="Stories will be included in your next pack.",
+                    account_url=_account_url(),
+                )
+            except Exception as e:
+                print(f"[billing] Plan change confirmation email failed: {e}")
         return jsonify({
             "ok": True,
             "message": "Story Ideas added to your subscription. You'll be charged a prorated amount; Stories will be included in your next pack.",
@@ -294,6 +315,22 @@ def reduce_subscription():
         return jsonify({"ok": False, "error": msg}), 400
 
     co_svc.update(order["id"], {"platforms_count": new_platforms, "include_stories": new_stories})
+
+    customer_email = (order.get("customer_email") or "").strip()
+    if customer_email and "@" in customer_email:
+        try:
+            from services.notifications import NotificationService
+            notif = NotificationService()
+            change_summary = "Your plan has been updated. Your new price will be reflected on your next invoice."
+            when_effective = "Changes apply to your next pack."
+            notif.send_plan_change_confirmation_email(
+                customer_email,
+                change_summary=change_summary,
+                when_effective=when_effective,
+                account_url=_account_url(),
+            )
+        except Exception as e:
+            print(f"[billing] Plan change confirmation email failed: {e}")
 
     return jsonify({
         "ok": True,

@@ -178,6 +178,16 @@ def _build_intake_order_summary(order: Optional[Dict[str, Any]]) -> Optional[str
     return "\n".join(lines)
 
 
+def _order_receipt_email_html() -> str:
+    """Build branded HTML for order receipt — payment received, intake link coming shortly."""
+    content = f"""<p style="margin:0 0 16px;">Hi,</p>
+<p style="margin:0 0 16px;">Thanks for your order. We've received your payment for 30 Days of Social Media Captions.</p>
+<p style="margin:0 0 16px;">You'll receive an email shortly with a link to complete your short intake form (about 2 minutes). Once you submit, we'll generate your captions and send them to you by email within a few minutes.</p>
+<p style="margin:0 0 16px;">If you don't see the intake email, check your spam folder or reply to this email and we'll help.</p>
+<p style="margin:0;">— Lumo 22</p>"""
+    return _email_wrapper(content)
+
+
 def _intake_link_email_html(intake_url: str, order_summary: Optional[str] = None, is_subscription: bool = False) -> str:
     """Build branded HTML for captions intake link email — PDF aesthetic, explicit body so it always shows."""
     import html
@@ -200,6 +210,38 @@ def _intake_link_email_html(intake_url: str, order_summary: Optional[str] = None
 <p style="margin:0 0 16px;">Once you submit, we'll generate your 30 captions and send them to you by email within a few minutes.</p>
 <p style="margin:0 0 16px;">{html.escape(account_line)}</p>
 <p style="margin:0 0 16px;">If you have any questions, just reply to this email.</p>
+<p style="margin:0;">— Lumo 22</p>"""
+    return _email_wrapper(content)
+
+
+def _welcome_and_verify_email_html(verify_url: str) -> str:
+    """Build branded HTML for welcome + email verification — single email after signup."""
+    import html
+    if not verify_url or not str(verify_url).strip().startswith("http"):
+        verify_url = ""
+    safe_url = html.escape(verify_url, quote=True)
+    content = f"""<p style="margin:0 0 16px;">Hi,</p>
+<p style="margin:0 0 16px;">Welcome to Lumo 22. You've created an account.</p>
+<p style="margin:0 0 16px;">To get started, please verify your email address by clicking the link below (link expires in 24 hours):</p>
+<p style="margin:0 0 24px;"><a href="{safe_url}" style="display:inline-block; padding:14px 28px; background:{BRAND_GOLD}; color:{BRAND_BLACK}; text-decoration:none; border-radius:10px; font-weight:600;">Verify my email</a></p>
+<p style="margin:0 0 8px; font-size:14px; color:{BRAND_MUTED};">Or copy and paste this link into your browser:</p>
+<p style="margin:0 0 24px; font-size:13px; word-break:break-all; color:#333;">{safe_url}</p>
+<p style="margin:0 0 16px;">Once verified, you can log in to your account, buy 30 Days of Social Media Captions, or manage your subscription.</p>
+<p style="margin:0 0 16px;">If you didn't create this account, you can ignore this email.</p>
+<p style="margin:0;">— Lumo 22</p>"""
+    return _email_wrapper(content)
+
+
+def _plan_change_confirmation_email_html(change_summary: str, when_effective: str, account_url: str) -> str:
+    """Build branded HTML for plan change (upgrade/downgrade/add-on) confirmation."""
+    import html
+    safe_summary = html.escape(change_summary or "Your plan has been updated.", quote=False)
+    safe_when = html.escape(when_effective or "Changes apply to your next pack.", quote=False)
+    safe_account = html.escape(account_url or "", quote=True)
+    content = f"""<p style="margin:0 0 16px;">Hi,</p>
+<p style="margin:0 0 16px;">{safe_summary}</p>
+<p style="margin:0 0 16px;"><strong>When does this take effect?</strong> {safe_when}</p>
+<p style="margin:0 0 16px;">You can manage your subscription anytime in your <a href="{safe_account}" style="color:{BRAND_BLACK}; text-decoration:none; border-bottom:1px solid {BRAND_BLACK};">account</a>.</p>
 <p style="margin:0;">— Lumo 22</p>"""
     return _email_wrapper(content)
 
@@ -344,6 +386,43 @@ If you didn't request this, you can ignore this email. Your password will stay t
         html_body = _password_reset_email_html(reset_url)
         return self.send_email(to_email, subject, body, html_body=html_body)
 
+    def send_welcome_and_verification_email(self, to_email: str, verify_url: str) -> bool:
+        """Send welcome + email verification (combined). One email after signup."""
+        if not verify_url or not str(verify_url).strip().startswith("http"):
+            print("[SendGrid] Welcome/verification email NOT sent: invalid verify_url")
+            return False
+        subject = "Welcome to Lumo 22 — verify your email"
+        body = """Hi,
+
+Welcome to Lumo 22. You've created an account.
+
+To get started, please verify your email address by clicking the link below (link expires in 24 hours):
+
+""" + verify_url + """
+
+Once verified, you can log in to your account, buy 30 Days of Social Media Captions, or manage your subscription.
+
+If you didn't create this account, you can ignore this email.
+
+— Lumo 22"""
+        html_body = _welcome_and_verify_email_html(verify_url)
+        return self.send_email(to_email, subject, body, html_body=html_body)
+
+    def send_plan_change_confirmation_email(self, to_email: str, change_summary: str, when_effective: str, account_url: str) -> bool:
+        """Send confirmation when customer upgrades, downgrades, or adds Stories."""
+        subject = "Your Lumo 22 plan has been updated"
+        body = f"""Hi,
+
+{change_summary or "Your plan has been updated."}
+
+When does this take effect? {when_effective or "Changes apply to your next pack."}
+
+You can manage your subscription anytime in your account: {account_url or ""}
+
+— Lumo 22"""
+        html_body = _plan_change_confirmation_email_html(change_summary, when_effective, account_url)
+        return self.send_email(to_email, subject, body, html_body=html_body)
+
     def send_email_change_verification_email(self, to_email: str, confirm_url: str) -> bool:
         """Send email change verification to the NEW email address; link confirms the change."""
         if not confirm_url or not confirm_url.startswith("http"):
@@ -363,6 +442,21 @@ If you didn't request this, you can ignore this email. Your email address will s
 — Lumo 22
 """
         html_body = _email_change_verification_html(confirm_url)
+        return self.send_email(to_email, subject, body, html_body=html_body)
+
+    def send_order_receipt_email(self, to_email: str) -> bool:
+        """Send order receipt (payment received, intake link coming shortly). Sent right after checkout."""
+        subject = "Thanks for your order — 30 Days of Social Media Captions"
+        body = """Hi,
+
+Thanks for your order. We've received your payment for 30 Days of Social Media Captions.
+
+You'll receive an email shortly with a link to complete your short intake form (about 2 minutes). Once you submit, we'll generate your captions and send them to you by email within a few minutes.
+
+If you don't see the intake email, check your spam folder or reply to this email and we'll help.
+
+— Lumo 22"""
+        html_body = _order_receipt_email_html()
         return self.send_email(to_email, subject, body, html_body=html_body)
 
     def send_intake_link_email(self, to_email: str, intake_url: str, order: Optional[Dict[str, Any]] = None) -> bool:

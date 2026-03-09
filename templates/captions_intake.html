@@ -129,7 +129,7 @@
             <button type="submit" class="btn-submit" id="ca-btn">Create account</button>
           </form>
         </div>
-        <p id="ca-done" style="display:none; margin:0; color: #1a1a1a;">Account created! <a href="/account" style="color: #1a1a1a; font-weight: 600; text-decoration: underline;">Go to your account</a></p>
+        <p id="ca-done" style="display:none; margin:0; color: #1a1a1a;"><span id="ca-done-msg">Check your email to verify your address — then you can log in.</span> <a href="/login" style="color: #1a1a1a; font-weight: 600; text-decoration: underline;">Log in</a></p>
         <p id="ca-already-logged-in" style="display:none; margin:0; font-weight: 500;">You're logged in. <a href="/account" class="btn-go-account">Go to your account</a></p>
         <p id="ca-already-has-account" style="display:none; margin:0; font-weight: 500;">You already have an account. <a href="/login" style="color: var(--lum-gold);">Log in</a></p>
       </div>
@@ -742,7 +742,7 @@
         var pwEl = document.getElementById('ca-password');
         var pw = pwEl ? pwEl.value : '';
         if (!email) { alert('Just need your email to continue.'); return; }
-        if (pw.length < 6) { alert('Password must be at least 6 characters.'); return; }
+        if (pw.length < 10) { alert('Password must be at least 10 characters and include a number.'); return; }
         var caBtn = document.getElementById('ca-btn');
         if (caBtn) { caBtn.disabled = true; caBtn.textContent = 'Creating…'; }
         fetch('/api/auth/create-account', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email.toLowerCase(), password: pw }) })
@@ -752,7 +752,9 @@
               var formEl = document.getElementById('create-account-form');
               if (formEl) formEl.style.display = 'none';
               var doneEl = document.getElementById('ca-done');
+              var msgEl = document.getElementById('ca-done-msg');
               if (doneEl) doneEl.style.display = 'block';
+              if (msgEl) msgEl.textContent = data.message || 'Check your email to verify your address — then you can log in.';
             } else {
               alert(data.error || 'Something didn\'t go through — try again.');
               if (caBtn) { caBtn.disabled = false; caBtn.textContent = 'Create account'; }
