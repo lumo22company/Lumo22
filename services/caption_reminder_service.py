@@ -111,17 +111,19 @@ def run_reminders() -> Dict[str, Any]:
             subject = "Update your form before your next pack"
             body = f"""Hi,
 
-Your next 30 Days of Social Media Captions pack is coming soon. You can update your form (business details, voice, platforms) anytime before we generate it.
+Your next 30 Days of Social Media Captions pack is coming soon. You can update your preferences (business details, voice, platforms) anytime before we generate it.
 
 Do you have an event, promotion or something else coming up? Update your form to tell us about it and we'll tailor your captions to fit.
 
-Click here to review or update your form:
+Update my form: {intake_url}
+
+Or copy and paste this link into your browser:
 
 {intake_url}
 
 This takes about 2 minutes. If you don't change anything, we'll use your existing details.
 
-You can turn these email reminders off in your account: {account_url}
+You can turn these reminders off in your account: {account_url}
 
 Lumo 22
 """

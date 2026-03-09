@@ -1,6 +1,6 @@
 # Lumo 22 Brand Style Guide
 
-> **Lighting the way to better business**
+> **Lighting the way to smarter socials**
 
 ---
 

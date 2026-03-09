@@ -44,7 +44,7 @@ def _email_footer_html() -> str:
       <td style="padding: 24px 32px; background: {BRAND_BLACK}; font-size: 12px; color: {BRAND_MUTED}; font-family: {BRAND_FONT};">
         <p style="margin:0 0 12px;"><img src="{logo_url}" alt="Lumo 22" width="100" height="auto" style="display:block; height:auto; max-width:100px; opacity: 0.9;" /></p>
         <p style="margin:0;"><a href="mailto:hello@lumo22.com" style="color:{BRAND_GOLD}; text-decoration:none;">hello@lumo22.com</a></p>
-        <p style="margin:10px 0 0; color: rgba(245,245,242,0.7); font-size: 11px;">Lighting the way to better business</p>
+        <p style="margin:10px 0 0; color: rgba(245,245,242,0.7); font-size: 11px;">Lighting the way to smarter socials</p>
       </td>
     </tr>"""
 
@@ -107,14 +107,13 @@ def _captions_reminder_email_html(intake_url: str, account_url: str) -> str:
     safe_intake = html.escape(intake_url, quote=True)
     safe_account = html.escape(account_url, quote=True)
     content = f"""<p style="margin:0 0 16px;">Hi,</p>
-<p style="margin:0 0 16px;">Your next 30 Days of Social Media Captions pack is coming soon. You can update your form (business details, voice, platforms) anytime before we generate it.</p>
+<p style="margin:0 0 16px;">Your next 30 Days of Social Media Captions pack is coming soon. You can update your preferences (business details, voice, platforms) anytime before we generate it.</p>
 <p style="margin:0 0 16px;">Do you have an event, promotion or something else coming up? Update your form to tell us about it and we'll tailor your captions to fit.</p>
-<p style="margin:0 0 12px;">Click here to review or update your form:</p>
 <p style="margin:0 0 24px;"><a href="{safe_intake}" style="display:inline-block; padding:14px 28px; background:{BRAND_GOLD}; color:{BRAND_BLACK}; text-decoration:none; border-radius:10px; font-weight:600;">Update my form</a></p>
 <p style="margin:0 0 8px; font-size:14px; color:{BRAND_MUTED};">Or copy and paste this link into your browser:</p>
 <p style="margin:0 0 24px; font-size:13px; word-break:break-all; color:#333;">{safe_intake}</p>
 <p style="margin:0 0 16px;">This takes about 2 minutes. If you don't change anything, we'll use your existing details.</p>
-<p style="margin:0 0 16px;">You can turn these email reminders off in your <a href="{safe_account}" style="color:{BRAND_BLACK}; text-decoration:none; border-bottom:1px solid {BRAND_BLACK};">account</a>.</p>
+<p style="margin:0 0 16px;">You can turn these reminders off in your <a href="{safe_account}" style="color:{BRAND_BLACK}; text-decoration:none; border-bottom:1px solid {BRAND_BLACK};">account</a>.</p>
 <p style="margin:0;">— Lumo 22</p>"""
     return _email_wrapper(content)
 
