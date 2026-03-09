@@ -240,13 +240,18 @@ input[type="checkbox"] { accent-color: #fff200; }
   transform: none;
 }
 
-/* Account and Sign up: yellow font and outline, same swipe on hover */
+/* Account and Sign up: yellow font and outline, same swipe on hover — match View options (dfd-btn-hero-cta) */
 .lumo-nav-cta.lumo-nav-account,
 .lumo-nav-cta.lumo-nav-signup {
+  padding: 1rem 1.75rem !important;
+  font-size: 0.7rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.2em !important;
+  text-transform: uppercase;
+  border-radius: 12px !important;
   background: transparent !important;
   color: var(--lum-gold, #fff200) !important;
   border: 2px solid var(--lum-gold, #fff200) !important;
-  text-transform: none;
 }
 .lumo-nav-cta.lumo-nav-account:hover,
 .lumo-nav-cta.lumo-nav-signup:hover {
@@ -254,7 +259,7 @@ input[type="checkbox"] { accent-color: #fff200; }
   border-color: var(--lum-gold, #fff200) !important;
 }
 
-/* Log in button: rectangle with rounded corners, yellow border */
+/* Log in button: match View options (dfd-btn-hero-cta) — yellow outline, swipe on hover */
 .lumo-nav a.lumo-nav-login,
 .lumo-nav .lumo-nav-login,
 a.lumo-nav-login {
@@ -264,11 +269,12 @@ a.lumo-nav-login {
   background: transparent !important;
   background-color: transparent !important;
   color: var(--lum-gold, #fff200) !important;
-  padding: 0.5rem 1.25rem !important;
-  border-radius: 8px;
+  padding: 1rem 1.75rem !important;
+  border-radius: 12px;
   text-decoration: none;
-  font-size: 0.9rem;
-  font-weight: 500;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
   display: inline-flex !important;
   align-items: center;
   justify-content: center;
@@ -304,14 +310,18 @@ a.lumo-nav-login:hover {
 a.lumo-nav-login:hover::before {
   transform: scaleX(1);
 }
-/* Override lumo-nav-cta when Log in has both classes (checkout, forgot password, etc.) — sentence case, not uppercase */
+/* Override lumo-nav-cta when Log in has both classes (checkout, forgot password, etc.) — match View options */
 .lumo-nav-cta.lumo-nav-login {
+  padding: 1rem 1.75rem !important;
+  font-size: 0.7rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.2em !important;
+  text-transform: uppercase;
   border: 2px solid #fff200 !important;
   background: transparent !important;
   background-color: transparent !important;
   color: var(--lum-gold, #fff200) !important;
-  border-radius: 8px;
-  text-transform: none;
+  border-radius: 12px !important;
 }
 .lumo-nav-cta.lumo-nav-login::before {
   content: '';
