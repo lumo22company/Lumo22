@@ -275,6 +275,7 @@ a.lumo-nav-login {
   font-size: 0.7rem;
   font-weight: 600;
   letter-spacing: 0.2em;
+  text-transform: uppercase;
   display: inline-flex !important;
   align-items: center;
   justify-content: center;
