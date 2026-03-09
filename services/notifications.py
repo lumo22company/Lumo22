@@ -263,6 +263,17 @@ def _welcome_and_verify_email_html(verify_url: str) -> str:
     return _email_wrapper(content)
 
 
+def _subscription_cancelled_email_html(captions_url: str) -> str:
+    """Build branded HTML for subscription cancelled confirmation."""
+    import html
+    safe_url = html.escape(captions_url or "", quote=True)
+    content = f"""<p style="margin:0 0 16px;">Hi,</p>
+<p style="margin:0 0 16px;">Your 30 Days of Social Media Captions subscription has been cancelled. You'll keep access until the end of your current billing period.</p>
+<p style="margin:0 0 16px;">We're sorry to see you go. If you change your mind, you can subscribe again anytime at <a href="{safe_url}" style="color:{BRAND_BLACK}; text-decoration:none; border-bottom:1px solid {BRAND_BLACK};">lumo22.com/captions</a>.</p>
+<p style="margin:0;">— Lumo 22</p>"""
+    return _email_wrapper(content)
+
+
 def _plan_change_confirmation_email_html(change_summary: str, when_effective: str, account_url: str) -> str:
     """Build branded HTML for plan change (upgrade/downgrade/add-on) confirmation."""
     import html
@@ -452,6 +463,19 @@ You can manage your subscription anytime in your account: {account_url or ""}
 
 — Lumo 22"""
         html_body = _plan_change_confirmation_email_html(change_summary, when_effective, account_url)
+        return self.send_email(to_email, subject, body, html_body=html_body)
+
+    def send_subscription_cancelled_email(self, to_email: str, captions_url: str) -> bool:
+        """Send confirmation when customer cancels their subscription."""
+        subject = "Your subscription has been cancelled"
+        body = f"""Hi,
+
+Your 30 Days of Social Media Captions subscription has been cancelled. You'll keep access until the end of your current billing period.
+
+We're sorry to see you go. If you change your mind, you can subscribe again anytime at {captions_url or "lumo22.com/captions"}.
+
+— Lumo 22"""
+        html_body = _subscription_cancelled_email_html(captions_url)
         return self.send_email(to_email, subject, body, html_body=html_body)
 
     def send_email_change_verification_email(self, to_email: str, confirm_url: str) -> bool:

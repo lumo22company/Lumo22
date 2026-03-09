@@ -29,6 +29,7 @@ def main():
         _welcome_and_verify_email_html,
         _order_receipt_email_html,
         _plan_change_confirmation_email_html,
+        _subscription_cancelled_email_html,
     )
 
     out_dir = project_root / "email_samples"
@@ -80,7 +81,14 @@ def main():
         ),
     ))
 
-    # 9. Plan change confirmation (downgrade/reduce)
+    # 9. Subscription cancelled
+    samples.append((
+        "subscription_cancelled.html",
+        "Subscription cancelled confirmation",
+        _subscription_cancelled_email_html("https://www.lumo22.com/captions"),
+    ))
+
+    # 10. Plan change confirmation (downgrade/reduce)
     samples.append((
         "plan_change_reduce.html",
         "Plan change confirmation (downgrade/reduce platforms/remove Stories)",

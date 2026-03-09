@@ -42,7 +42,7 @@ What’s in place and what’s left to do before going live.
 
 ### Stripe
 - [ ] **Success URL** — Captions one-off/subscription → `{BASE_URL}/captions-thank-you`
-- [ ] **Webhook** — URL = `{BASE_URL}/webhooks/stripe`, events: `checkout.session.completed`, `invoice.paid`, `customer.subscription.updated`
+- [ ] **Webhook** — URL = `{BASE_URL}/webhooks/stripe`, events: `checkout.session.completed`, `invoice.paid`, `customer.subscription.updated`, `customer.subscription.deleted`
 - [ ] **Signing secret** → Railway `STRIPE_WEBHOOK_SECRET`
 
 ### Content

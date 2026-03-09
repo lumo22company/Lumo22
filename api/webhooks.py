@@ -325,6 +325,34 @@ def stripe_webhook():
             thread.start()
             return jsonify({"received": True}), 200
 
+        if event_type == "customer.subscription.deleted":
+            # Subscription cancelled: send confirmation email (captions only)
+            sub_obj = event.get("data", {}).get("object") if isinstance(event, dict) else None
+            if not sub_obj or not isinstance(sub_obj, dict):
+                return jsonify({"received": True}), 200
+            sub_id = (sub_obj.get("id") or "").strip()
+            if not sub_id:
+                return jsonify({"received": True}), 200
+            from services.caption_order_service import CaptionOrderService
+            from services.notifications import NotificationService
+            order_service = CaptionOrderService()
+            order = order_service.get_by_stripe_subscription_id(sub_id)
+            if not order:
+                return jsonify({"received": True}), 200
+            customer_email = (order.get("customer_email") or "").strip()
+            if customer_email and "@" in customer_email:
+                base = _sanitize_base_url(Config.BASE_URL or "https://www.lumo22.com")
+                if not base or not base.startswith("http"):
+                    base = "https://www.lumo22.com"
+                captions_url = base.rstrip("/") + "/captions"
+                try:
+                    notif = NotificationService()
+                    notif.send_subscription_cancelled_email(customer_email, captions_url)
+                    print(f"[Stripe webhook] Subscription cancelled confirmation sent to {customer_email}")
+                except Exception as e:
+                    print(f"[Stripe webhook] Subscription cancelled email failed: {e}")
+            return jsonify({"received": True}), 200
+
         if event_type == "customer.subscription.updated":
             # Plan change via Stripe billing portal: send confirmation email
             sub_obj = event.get("data", {}).get("object") if isinstance(event, dict) else None
