@@ -2727,7 +2727,7 @@
   display: inline-flex;
   align-items: center;
 }
-/* Log in button: rectangle with rounded corners, yellow border (override nav CTA on product pages) */
+/* Log in button: rectangle with rounded corners, yellow border (override nav CTA on product pages) — match Sign up (12px) */
 .product-page-dfd .lumo-nav a.lumo-nav-login,
 .product-page-captions .lumo-nav a.lumo-nav-login,
 .product-page-dfd .lumo-nav .lumo-nav-login,
@@ -2738,7 +2738,7 @@
   background: transparent !important;
   background-color: transparent !important;
   color: var(--lum-gold, #fff200) !important;
-  border-radius: 8px !important;
+  border-radius: 12px !important;
 }
 /* Swipe hover: transparent so ::before yellow fill (from landing.css) shows */
 .product-page-dfd .lumo-nav a.lumo-nav-login:hover,
@@ -2756,6 +2756,6 @@
   background: transparent !important;
   background-color: transparent !important;
   color: var(--lum-gold, #fff200) !important;
-  border-radius: 8px !important;
+  border-radius: 12px !important;
 }
 /* FAQ summary: tap target via original padding (already ~44px+), avoid overriding to prevent arrow overlap */
