@@ -42,8 +42,9 @@ def main():
     samples.append(("intake.html", "Form link (after captions purchase)", _intake_link_email_html(intake_url, "• One-off (£97)\n• 1 platform", is_subscription=False)))
 
     # 2. Delivery email — uses production template
-    samples.append(("delivery.html", "Delivery email (with attachment)", _captions_delivery_email_html(has_stories=False)))
-    samples.append(("delivery_stories.html", "Delivery email (with Stories)", _captions_delivery_email_html(has_stories=True)))
+    samples.append(("delivery.html", "Delivery email (with attachment)", _captions_delivery_email_html(has_stories=False, has_subscription=False)))
+    samples.append(("delivery_stories.html", "Delivery email (with Stories)", _captions_delivery_email_html(has_stories=True, has_subscription=False)))
+    samples.append(("delivery_subscription.html", "Delivery email (subscription - with delete note)", _captions_delivery_email_html(has_stories=False, has_subscription=True)))
 
     # 3. Caption reminder
     account_url = "https://www.lumo22.com/account"

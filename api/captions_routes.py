@@ -637,18 +637,22 @@ def _run_generation_and_deliver(order_id: str):
                     "mime_type": "application/pdf",
                 })
         subject = "Your 30 Days of Social Media Captions"
+        has_sub = bool(row.get("stripe_subscription_id"))
         if extra_attachments:
             body = (
                 "Hi,\n\nYour 30 Days of Social Media Captions and 30 Days of Story Ideas are ready. "
-                "Both documents are attached.\n\nCopy each caption and story idea as you need them, or edit to fit.\n\nLumo 22\n"
+                "Both documents are attached.\n\nCopy each caption and story idea as you need them, or edit to fit.\n\n"
             )
         else:
             body = (
                 "Hi,\n\nYour 30 Days of Social Media Captions are ready. The document is attached.\n\n"
-                "Copy each caption as you need it, or edit to fit.\n\nLumo 22\n"
+                "Copy each caption as you need it, or edit to fit.\n\n"
             )
+        if has_sub:
+            body += "Deleting this email or the PDF does not cancel your subscription. To cancel, go to your account → Manage subscription.\n\n"
+        body += "Lumo 22\n"
         notif = NotificationService()
-        delivery_html = _captions_delivery_email_html(bool(extra_attachments))
+        delivery_html = _captions_delivery_email_html(bool(extra_attachments), has_subscription=has_sub)
         print(f"[Captions] Sending delivery email to {customer_email} for order {order_id}")
         ok, send_error = notif.send_email_with_attachment(
             customer_email,

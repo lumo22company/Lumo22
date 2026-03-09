@@ -80,18 +80,20 @@ def _email_wrapper(content: str) -> str:
 </html>"""
 
 
-def _captions_delivery_email_html(has_stories: bool) -> str:
+def _captions_delivery_email_html(has_stories: bool, has_subscription: bool = False) -> str:
     """Build explicit HTML for the 30 Days captions delivery email so the body always shows."""
     if has_stories:
         content = """<p style="margin:0 0 16px;">Hi,</p>
 <p style="margin:0 0 16px;">Your 30 Days of Social Media Captions and 30 Days of Story Ideas are ready. Both documents are attached.</p>
-<p style="margin:0 0 16px;">Copy each caption and story idea as you need them, or edit to fit.</p>
-<p style="margin:0;">— Lumo 22</p>"""
+<p style="margin:0 0 16px;">Copy each caption and story idea as you need them, or edit to fit.</p>"""
     else:
         content = """<p style="margin:0 0 16px;">Hi,</p>
 <p style="margin:0 0 16px;">Your 30 Days of Social Media Captions are ready. The document is attached.</p>
-<p style="margin:0 0 16px;">Copy each caption as you need it, or edit to fit.</p>
-<p style="margin:0;">— Lumo 22</p>"""
+<p style="margin:0 0 16px;">Copy each caption as you need it, or edit to fit.</p>"""
+    if has_subscription:
+        content += """
+<p style="margin:0 0 16px; font-size:14px; color:#666;">Deleting this email or the PDF does not cancel your subscription. To cancel, go to your account → Manage subscription.</p>"""
+    content += "\n<p style=\"margin:0;\">— Lumo 22</p>"
     return _email_wrapper(content)
 
 

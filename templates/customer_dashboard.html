@@ -141,7 +141,7 @@
               <a href="/api/captions-download?t={{ o.token }}&type=stories&inline=1" target="_blank" rel="noopener" class="account-btn-link account-btn-link--primary">View Stories</a>
               <a href="/api/captions-download?t={{ o.token }}&type=stories" class="account-btn-link account-btn-link--secondary">Download Stories PDF</a>
               {% endif %}
-              <button type="button" class="account-btn-link account-history-delete" data-token="{{ o.token }}" onclick="deletePackFromHistory(this)" aria-label="Delete pack from history">Delete</button>
+              <button type="button" class="account-btn-link account-history-delete" data-token="{{ o.token }}" data-is-subscription="{{ '1' if is_sub else '0' }}" onclick="showDeletePackModal(this)" aria-label="Delete pack from history">Delete</button>
             </div>
           </div>
           {% endfor %}
@@ -200,6 +200,7 @@
         {% if sub_orders %}
         <ul class="account-section-desc" style="margin: 0 0 1.25rem; padding-left: 1.25rem; line-height: 1.7; color: #ffffff;">
           <li>Cancel your subscription, update your billing info, or view invoices in Stripe’s secure portal.</li>
+          <li>Removing or deleting a PDF from your history does not cancel your subscription. Use Manage billing below to cancel.</li>
           <li>Use a different card for each subscription—add or update cards via Manage billing, then choose which card to use for each.</li>
           <li>Pause billing for one month and manage form reminders below.</li>
           <li><strong>Platforms (add, change, or reduce)</strong> and <strong>Story Ideas (add or remove)</strong> — use the buttons below, or Edit form to change platforms and remove Story Ideas.</li>
@@ -328,6 +329,18 @@
         <div class="account-delete-modal-buttons">
           <button type="button" class="account-delete-modal-btn account-delete-modal-keep" onclick="closeRemoveStoriesModal()">Cancel</button>
           <button type="button" id="remove-stories-modal-confirm" class="account-delete-modal-btn account-remove-stories-confirm" disabled>I have read and agree — accept new price</button>
+        </div>
+      </div>
+    </div>
+    <div id="delete-pack-modal" class="account-delete-modal" role="dialog" aria-labelledby="delete-pack-modal-title" aria-modal="true" hidden>
+      <div class="account-delete-modal-backdrop" onclick="closeDeletePackModal()"></div>
+      <div class="account-delete-modal-box">
+        <h2 id="delete-pack-modal-title" class="account-delete-modal-title">Remove pack from history?</h2>
+        <p class="account-delete-modal-text">Are you sure you want to remove this pack from your history? Once removed, it cannot be undone.</p>
+        <p id="delete-pack-sub-note" class="account-delete-modal-text" style="font-size: 0.9rem; color: #666; margin-top: 0.75rem; display: none;">Deleting or removing the PDF does not cancel your subscription. To cancel, go to Manage subscription.</p>
+        <div class="account-delete-modal-buttons">
+          <button type="button" class="account-delete-modal-btn account-delete-modal-keep" onclick="closeDeletePackModal()">Cancel</button>
+          <button type="button" class="account-delete-modal-btn account-delete-modal-confirm" id="delete-pack-confirm-btn">Remove from history</button>
         </div>
       </div>
     </div>
@@ -544,11 +557,35 @@
       }
       window.resumeSubscription = resumeSubscription;
 
-      function deletePackFromHistory(btn) {
+      var deletePackPendingBtn = null;
+      function showDeletePackModal(btn) {
         if (!btn) return;
         var token = btn.getAttribute('data-token');
         if (!token) return;
-        if (!confirm('Are you sure you want to delete this pack from your history? Once deleted, it cannot be undone.')) return;
+        deletePackPendingBtn = btn;
+        var modal = document.getElementById('delete-pack-modal');
+        var subNote = document.getElementById('delete-pack-sub-note');
+        if (modal && subNote) {
+          var isSub = btn.getAttribute('data-is-subscription') === '1';
+          subNote.style.display = isSub ? 'block' : 'none';
+          modal.removeAttribute('hidden');
+          modal.classList.add('account-delete-modal--open');
+        }
+      }
+      function closeDeletePackModal() {
+        deletePackPendingBtn = null;
+        var modal = document.getElementById('delete-pack-modal');
+        if (modal) {
+          modal.setAttribute('hidden', '');
+          modal.classList.remove('account-delete-modal--open');
+        }
+      }
+      function confirmDeletePack() {
+        var btn = deletePackPendingBtn;
+        if (!btn) return;
+        var token = btn.getAttribute('data-token');
+        if (!token) return;
+        closeDeletePackModal();
         btn.disabled = true;
         btn.textContent = 'Deleting…';
         fetch('/api/captions/hide-pack', {
@@ -575,7 +612,14 @@
           btn.textContent = 'Delete';
         });
       }
-      window.deletePackFromHistory = deletePackFromHistory;
+      (function initDeletePackModal() {
+        var modal = document.getElementById('delete-pack-modal');
+        var confirmBtn = document.getElementById('delete-pack-confirm-btn');
+        var backdrop = modal ? modal.querySelector('.account-delete-modal-backdrop') : null;
+        if (backdrop) backdrop.addEventListener('click', closeDeletePackModal);
+        if (confirmBtn) confirmBtn.addEventListener('click', confirmDeletePack);
+      })();
+      window.showDeletePackModal = showDeletePackModal;
 
       var addStoriesPendingBtn = null;
       function showAddStoriesModal(btn) {
