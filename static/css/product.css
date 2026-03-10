@@ -1600,15 +1600,15 @@
   gap: 3.5rem;
   min-height: calc(100vh - 60px);
   padding-top: 80px; /* Clear fixed lumo-nav (~64–80px) */
+  padding-bottom: 2rem; /* Space before footer */
+  position: relative;
+  z-index: 2; /* Above footer so sticky sidebar stays on top when overlapping */
 }
 .account-sidebar {
   width: 260px;
   flex-shrink: 0;
   padding: 2rem 0 2rem 1.5rem;
-  position: sticky;
-  top: 80px; /* Align with content below fixed nav */
-  max-height: calc(100vh - 80px);
-  overflow-y: auto;
+  position: static;
   background: #000;
 }
 .account-sidebar-title {
@@ -2725,6 +2725,19 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Upgrade form: ensure selects and controls receive clicks (no overlay blocking) */
+.account-upgrade-form {
+  position: relative;
+  z-index: 1;
+}
+.account-upgrade-form select,
+.account-upgrade-form input,
+.account-upgrade-form button,
+.account-upgrade-form .account-upgrade-currency-btn {
+  position: relative;
+  z-index: 2;
 }
 
 /* Upgrade subscription button: swipe left-to-right yellow fill on hover, dark text */
