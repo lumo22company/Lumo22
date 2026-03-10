@@ -406,9 +406,9 @@
             </div>
             {% if o.subscription_pause and o.subscription_pause.paused %}
             <span class="account-pause-badge" style="font-size: 0.85rem; font-weight: 500; color: #555; padding: 0.35rem 0.75rem; background: rgba(0,0,0,0.06); border-radius: 12px; margin-right: 0.5rem;">Paused</span>
-            <button type="button" class="dfd-btn dfd-btn-secondary account-resume-btn" data-order-id="{{ o.id }}" onclick="resumeSubscription(this)">Resume subscription</button>
+            <button type="button" class="account-billing-portal-link account-btn-swipe-light account-resume-btn" data-order-id="{{ o.id }}" onclick="resumeSubscription(this)">Resume subscription</button>
             {% else %}
-            <button type="button" class="dfd-btn dfd-btn-secondary account-pause-btn" data-order-id="{{ o.id }}" onclick="pauseSubscription(this)">Pause for 1 month</button>
+            <button type="button" class="account-billing-portal-link account-btn-swipe-light account-pause-btn" data-order-id="{{ o.id }}" onclick="pauseSubscription(this)">Pause for 1 month</button>
             {% endif %}
           </div>
           {% if not o.get('include_stories') %}
@@ -427,7 +427,7 @@
             </div>
             {% set _platforms = o.platforms_count|default(1)|int %}
 {% set _new_price = 79 + (_platforms - 1) * 19 %}
-<button type="button" class="account-remove-stories-btn dfd-btn dfd-btn-secondary" data-order-token="{{ o.token }}" data-platforms-count="{{ _platforms }}" data-new-price="{{ _new_price }}" data-new-price-symbol="£" onclick="showRemoveStoriesModal(this)">Remove Story Ideas</button>
+<button type="button" class="account-remove-stories-btn account-billing-portal-link account-btn-swipe-light" data-order-token="{{ o.token }}" data-platforms-count="{{ _platforms }}" data-new-price="{{ _new_price }}" data-new-price-symbol="£" onclick="showRemoveStoriesModal(this)">Remove Story Ideas</button>
           </div>
           {% endif %}
         </div>
