@@ -82,7 +82,7 @@
               <a href="/forgot-password" class="account-billing-portal-link account-btn-swipe-light">Change password</a>
             </div>
           </div>
-          <div class="account-info-row{% if request.args.get('billing') == 'no_sub' %} account-info-row--no-divider-below{% endif %}">
+          <div class="account-info-row">
             <div>
               <span class="account-info-label">Billing</span>
               <div class="account-info-value">Payment method and invoices</div>
@@ -96,7 +96,7 @@
             No subscription found. If you're on the monthly plan, use the link in your order emails to manage billing.
           </div>
           {% endif %}
-          <div class="account-info-row">
+          <div class="account-info-row account-info-row--marketing">
             <div>
               <span class="account-info-label">Marketing emails</span>
               <div class="account-info-value">Tips, updates, and offers from Lumo 22</div>
