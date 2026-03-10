@@ -379,7 +379,7 @@
           <p style="margin: 0 0 0.75rem; color: #333;">You'll be charged <strong id="get-pack-sooner-amount">{{ _gps_symbol }}{{ _gps_total }}</strong> now. Your next billing date will be 30 days from today. Your pack will be emailed to you within a few minutes.</p>
           <p style="margin: 0 0 1rem; font-size: 0.9rem; color: #555;">By confirming you agree to be charged now.</p>
           <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
-            <button type="button" id="get-pack-sooner-confirm-btn" class="lumo-btn-primary account-btn-swipe-dark" data-order-token="{{ get_pack_order_token }}" data-order-id="{{ _gps_order.id if _gps_order else '' }}">Confirm and get my pack</button>
+            <button type="button" id="get-pack-sooner-confirm-btn" class="lumo-btn-primary account-btn-swipe-dark" data-order-token="{{ get_pack_order_token }}" data-order-id="{{ _gps_order.get('id', '') if _gps_order else '' }}">Confirm and get my pack</button>
             <a href="/account/pause" class="account-billing-portal-link account-btn-swipe-light">Cancel</a>
           </div>
           <p id="get-pack-sooner-error" style="display: none; margin: 0.75rem 0 0; color: #c00; font-size: 0.9rem;"></p>
@@ -402,19 +402,19 @@
         {% set pause_biz = (o.get('intake') or {}).get('business_name', '') %}
         {% set pause_label = pause_biz if pause_biz else (o.created_at[:10] if o.created_at else 'Subscription') %}
         {% set sub_id = (o.get('stripe_subscription_id') or '')|trim %}
-        {% set current_pm = (subscription_billing.subscription_payment_methods.get(sub_id) if subscription_billing else None) %}
+        {% set current_pm = (subscription_billing.get('subscription_payment_methods') or {}).get(sub_id) if subscription_billing else None %}
         <div class="account-pause-block" style="margin-bottom: 1rem;">
           <div class="account-pause-panel-title" style="font-size: 0.9rem; font-weight: 600; color: #000; margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(0,0,0,0.08);">{{ pause_label }}</div>
           <div class="account-settings-row account-payment-method-row" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid rgba(0,0,0,0.06);" data-subscription-id="{{ sub_id }}">
             <div>
               <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Payment method</div>
-              <div class="account-settings-desc account-payment-method-display">{% if current_pm %}{{ current_pm.brand }} ****{{ current_pm.last4 }}{% else %}—{% endif %}</div>
+              <div class="account-settings-desc account-payment-method-display">{% if current_pm %}{{ current_pm.get('brand', '') }} ****{{ current_pm.get('last4', '') }}{% else %}—{% endif %}</div>
             </div>
             <div class="account-payment-method-select-wrap">
-              {% if subscription_billing and subscription_billing.payment_methods %}
+              {% if subscription_billing and subscription_billing.get('payment_methods') %}
               <select class="account-payment-method-select" aria-label="Choose card for this subscription" data-subscription-id="{{ sub_id }}">
-                {% for pm in subscription_billing.payment_methods %}
-                <option value="{{ pm.id }}" {% if current_pm and current_pm.id == pm.id %}selected{% endif %}>{{ pm.brand }} ****{{ pm.last4 }}</option>
+                {% for pm in (subscription_billing.get('payment_methods') or []) %}
+                <option value="{{ pm.get('id', '') }}" {% if current_pm and current_pm.get('id') == pm.get('id') %}selected{% endif %}>{{ pm.get('brand', '') }} ****{{ pm.get('last4', '') }}</option>
                 {% endfor %}
               </select>
               {% else %}
