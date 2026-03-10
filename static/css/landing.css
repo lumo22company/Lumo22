@@ -1376,8 +1376,9 @@ a.lumo-nav-login:hover::before {
   transform: scaleX(1);
 }
 
-/* Log in page: submit button — yellow font + yellow outline, swipe on hover (yellow fill, dark text) */
-.auth-form-wrap .auth-btn.auth-btn-swipe {
+/* Auth buttons (log in, forgot password, reset password): yellow font + yellow outline, swipe on hover (yellow fill, dark text) */
+.auth-form-wrap .auth-btn.auth-btn-swipe,
+.auth-page .btn.auth-btn-swipe {
   position: relative;
   overflow: hidden;
   background: transparent !important;
@@ -1386,7 +1387,8 @@ a.lumo-nav-login:hover::before {
   z-index: 1;
   transition: color 0.25s ease-out, border-color 0.25s ease-out;
 }
-.auth-form-wrap .auth-btn.auth-btn-swipe::before {
+.auth-form-wrap .auth-btn.auth-btn-swipe::before,
+.auth-page .btn.auth-btn-swipe::before {
   content: '';
   position: absolute;
   left: 0;
@@ -1399,13 +1401,15 @@ a.lumo-nav-login:hover::before {
   transition: transform 0.35s ease-out;
   z-index: -1;
 }
-.auth-form-wrap .auth-btn.auth-btn-swipe:hover:not(:disabled) {
+.auth-form-wrap .auth-btn.auth-btn-swipe:hover:not(:disabled),
+.auth-page .btn.auth-btn-swipe:hover:not(:disabled) {
   background: transparent !important;
   color: #000 !important;
   border-color: var(--lum-gold, #fff200) !important;
   transform: none;
 }
-.auth-form-wrap .auth-btn.auth-btn-swipe:hover:not(:disabled)::before {
+.auth-form-wrap .auth-btn.auth-btn-swipe:hover:not(:disabled)::before,
+.auth-page .btn.auth-btn-swipe:hover:not(:disabled)::before {
   transform: scaleX(1);
 }
 
