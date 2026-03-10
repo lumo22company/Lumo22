@@ -99,7 +99,7 @@
                 if (data && data.status === 'ok' && data.intake_url) {
                   noSessionEl.style.display = 'none';
                   if (emailFallbackNoSession) emailFallbackNoSession.style.display = 'none';
-                  showIntake(data.intake_url, data.customer_email || null, !!data.is_subscription);
+                  showIntake(data.intake_url, data.customer_email || null, !!data.is_subscription, !!data.is_prefilled_from_oneoff);
                   formLinkEl.style.display = 'block';
                 } else {
                   if (emailError) { emailError.textContent = data && data.error ? data.error : 'No order found for this email.'; emailError.style.display = 'block'; }
@@ -117,16 +117,19 @@
         return;
       }
 
-      function showIntake(url, customerEmail, isSubscription) {
+      function showIntake(url, customerEmail, isSubscription, isPrefilledFromOneoff) {
         messageEl.style.display = 'none';
         var emailFallback = document.getElementById('thankyou-email-fallback');
         if (emailFallback) emailFallback.style.display = 'none';
+        var prefilledNote = isPrefilledFromOneoff
+          ? ' <strong>Your form is prefilled</strong> with your answers from your one-off pack—you can review or edit and submit. '
+          : ' ';
         var accountLine = isSubscription
           ? 'On the form you can also create an account to access your captions and manage your subscription in one place.'
           : 'On the form you can also create an account to access your captions in one place.';
         var emailText = customerEmail
-          ? 'Thank you. We\'ve emailed you your form at <strong>' + escapeHtml(customerEmail) + '</strong>—fill it in to get started. Your captions are usually ready within 15 minutes. ' + accountLine
-          : 'Thank you. We\'ve emailed you your form—fill it in to get started. Your captions are usually ready within 15 minutes. ' + accountLine;
+          ? 'Thank you. We\'ve emailed you your form at <strong>' + escapeHtml(customerEmail) + '</strong>—fill it in to get started.' + prefilledNote + 'Your captions are usually ready within 15 minutes. ' + accountLine
+          : 'Thank you. We\'ve emailed you your form—fill it in to get started.' + prefilledNote + 'Your captions are usually ready within 15 minutes. ' + accountLine;
         emailMsgEl.innerHTML = emailText;
         intakeLinkEl.href = url;
         intakeLinkEl.textContent = 'Fill out form now';
@@ -143,7 +146,7 @@
       function onResponse(data) {
         if (data && data.status === 'ok' && data.intake_url) {
           intakeShown = true;
-          showIntake(data.intake_url, data.customer_email || null, !!data.is_subscription);
+          showIntake(data.intake_url, data.customer_email || null, !!data.is_subscription, !!data.is_prefilled_from_oneoff);
           return true;
         }
         return false;
@@ -185,7 +188,7 @@
               .then(function(data) {
                 if (data && data.status === 'ok' && data.intake_url) {
                   intakeShown = true;
-                  showIntake(data.intake_url, data.customer_email || null, !!data.is_subscription);
+                  showIntake(data.intake_url, data.customer_email || null, !!data.is_subscription, !!data.is_prefilled_from_oneoff);
                   if (emailFallback) emailFallback.style.display = 'none';
                 } else {
                   if (emailError) { emailError.textContent = data && data.error ? data.error : 'No order found for this email.'; emailError.style.display = 'block'; }

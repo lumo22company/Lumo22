@@ -158,10 +158,11 @@ def _handle_captions_payment(session):
         currency = "gbp"
 
     order_service = CaptionOrderService()
-    # Idempotent: if Stripe retries, we may already have an order for this session
+    # Idempotent: if Stripe retries or API created first, we may already have an order
     existing = order_service.get_by_stripe_session_id(session_id) if session_id else None
+    order_created_here = False
     if existing:
-        print(f"[Stripe webhook] Order already exists for session {session_id[:20]}..., resending intake email")
+        print(f"[Stripe webhook] Order already exists for session {session_id[:20]}..., skipping emails (already sent)")
         order = existing
         if stripe_customer_id or stripe_subscription_id:
             updates = {}
@@ -190,6 +191,7 @@ def _handle_captions_payment(session):
         except Exception as e:
             print(f"[Stripe webhook] Failed to create order in Supabase: {e}")
             raise
+        order_created_here = True
         print(f"[Stripe webhook] Order created id={order.get('id')} token=...{order['token'][-6:]}")
     token = order["token"]
     base = _sanitize_base_url(Config.BASE_URL or "")
@@ -203,30 +205,32 @@ def _handle_captions_payment(session):
     if copy_from:
         intake_url += f"&copy_from={copy_from}"
 
-    notif = NotificationService()
-    try:
-        notif.send_order_receipt_email(customer_email, order=order, session=session)
-    except Exception as receipt_err:
-        print(f"[Stripe webhook] Receipt email failed (non-fatal): {receipt_err}")
-    print(f"[Stripe webhook] Sending intake email to {customer_email}")
-    ok = False
-    try:
-        ok = notif.send_intake_link_email(customer_email, intake_url, order)
-    except Exception as send_err:
-        # Retry with hardcoded URL so env/hidden chars or SendGrid validation can't cause 500
-        print(f"[Stripe webhook] Send failed ({send_err}), retrying with hardcoded fallback URL")
-        fallback_url = f"https://lumo-22-production.up.railway.app/captions-intake?t={safe_token}"
-        if copy_from:
-            fallback_url += f"&copy_from={copy_from}"
+    # Only send emails when we created the order; if existing, API or prior webhook already sent
+    if order_created_here:
+        notif = NotificationService()
         try:
-            ok = notif.send_intake_link_email(customer_email, fallback_url, order)
-        except Exception as fallback_err:
-            print(f"[Stripe webhook] Fallback send also failed: {fallback_err}")
-            raise
-    if not ok:
-        print(f"[Stripe webhook] intake-link email FAILED to send to {customer_email}")
-    else:
-        print(f"[Stripe webhook] intake-link email sent to {customer_email}")
+            notif.send_order_receipt_email(customer_email, order=order, session=session)
+        except Exception as receipt_err:
+            print(f"[Stripe webhook] Receipt email failed (non-fatal): {receipt_err}")
+        print(f"[Stripe webhook] Sending intake email to {customer_email}")
+        ok = False
+        try:
+            ok = notif.send_intake_link_email(customer_email, intake_url, order)
+        except Exception as send_err:
+            # Retry with hardcoded URL so env/hidden chars or SendGrid validation can't cause 500
+            print(f"[Stripe webhook] Send failed ({send_err}), retrying with hardcoded fallback URL")
+            fallback_url = f"https://lumo-22-production.up.railway.app/captions-intake?t={safe_token}"
+            if copy_from:
+                fallback_url += f"&copy_from={copy_from}"
+            try:
+                ok = notif.send_intake_link_email(customer_email, fallback_url, order)
+            except Exception as fallback_err:
+                print(f"[Stripe webhook] Fallback send also failed: {fallback_err}")
+                raise
+        if not ok:
+            print(f"[Stripe webhook] intake-link email FAILED to send to {customer_email}")
+        else:
+            print(f"[Stripe webhook] intake-link email sent to {customer_email}")
 
     # Referrer reward: if the purchaser was referred (has account with referred_by_customer_id), give referrer one credit.
     try:

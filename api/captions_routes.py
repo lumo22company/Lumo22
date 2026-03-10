@@ -385,16 +385,29 @@ def _get_session_attr(session, key, default=None):
     return getattr(session, key, default)
 
 
-def _send_intake_email_for_order(order: dict) -> None:
-    """Send receipt email then intake form link email for an order (used by webhook and by API fallback)."""
+def _build_intake_url(order: dict) -> str:
+    """Build intake URL for an order, including copy_from when order was upgraded from one-off."""
     token = (order.get("token") or "").strip()
-    customer_email = (order.get("customer_email") or "").strip()
-    if not token or not customer_email or "@" not in customer_email:
-        return
+    if not token:
+        return ""
     base = (Config.BASE_URL or "").strip().rstrip("/")
     if not base or not base.startswith("http"):
         base = "https://lumo-22-production.up.railway.app"
     intake_url = f"{base}/captions-intake?t={token}"
+    copy_from = (order.get("upgraded_from_token") or "").strip()
+    if copy_from:
+        intake_url += f"&copy_from={copy_from}"
+    return intake_url
+
+
+def _send_intake_email_for_order(order: dict) -> None:
+    """Send receipt email then intake form link email for an order (used by webhook and by API fallback)."""
+    customer_email = (order.get("customer_email") or "").strip()
+    if not customer_email or "@" not in customer_email:
+        return
+    intake_url = _build_intake_url(order)
+    if not intake_url:
+        return
     try:
         from services.notifications import NotificationService
         notif = NotificationService()
@@ -511,24 +524,20 @@ def captions_intake_link():
                 return jsonify({"status": "pending"}), 200
     if not order:
         return jsonify({"status": "pending"}), 200
-    base = (Config.BASE_URL or "").strip().rstrip("/")
-    if base and not base.startswith("http://") and not base.startswith("https://"):
-        base = "https://" + base
-    token = order.get("token") or ""
-    if not token:
+    intake_url = _build_intake_url(order)
+    if not intake_url:
         return jsonify({"status": "pending"}), 200
-    intake_url = f"{base}/captions-intake?t={token}"
     customer_email = (order.get("customer_email") or "").strip()
-    # Ensure intake email is sent whenever we return the link (e.g. order found by email — webhook may not have sent)
-    if (order.get("status") or "").strip().lower() == "awaiting_intake":
-        _send_intake_email_for_order(order)
+    # Only send intake email when WE created the order (fallback); if order existed, webhook already sent
     is_subscription = bool((order.get("stripe_subscription_id") or "").strip())
+    is_prefilled_from_oneoff = bool((order.get("upgraded_from_token") or "").strip())
     print(f"[captions-intake-link] Returning intake_url for session_id={session_id[:20]}...")
     return jsonify({
         "status": "ok",
         "intake_url": intake_url,
         "customer_email": customer_email or None,
         "is_subscription": is_subscription,
+        "is_prefilled_from_oneoff": is_prefilled_from_oneoff,
     }), 200
 
 
@@ -562,19 +571,19 @@ def captions_intake_link_by_email():
                 break
     if not order:
         return jsonify({"status": "error", "error": "No order found for this email. Check the address or contact us."}), 200
-    base = (Config.BASE_URL or "").strip().rstrip("/")
-    if base and not base.startswith("http://") and not base.startswith("https://"):
-        base = "https://" + base
-    token = (order.get("token") or "").strip()
-    intake_url = f"{base}/captions-intake?t={token}"
+    intake_url = _build_intake_url(order)
+    if not intake_url:
+        return jsonify({"status": "error", "error": "Order has no token."}), 200
     if (order.get("status") or "").strip().lower() == "awaiting_intake":
         _send_intake_email_for_order(order)
     is_subscription = bool((order.get("stripe_subscription_id") or "").strip())
+    is_prefilled_from_oneoff = bool((order.get("upgraded_from_token") or "").strip())
     return jsonify({
         "status": "ok",
         "intake_url": intake_url,
         "customer_email": email,
         "is_subscription": is_subscription,
+        "is_prefilled_from_oneoff": is_prefilled_from_oneoff,
     }), 200
 
 

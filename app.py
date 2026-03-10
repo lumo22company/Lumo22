@@ -605,7 +605,7 @@ def change_email_confirm_page():
         return render_template('change_email_confirm.html', success=False, error="Something went wrong. Please try again or contact hello@lumo22.com.")
 
 
-_ACCOUNT_SECTIONS = frozenset({"information", "history", "edit-form", "pause", "refer"})
+_ACCOUNT_SECTIONS = frozenset({"information", "history", "edit-form", "upgrade", "pause", "refer"})
 
 
 def _account_context():
@@ -687,6 +687,8 @@ def _account_context():
         "subscribe_options": subscribe_options,
         "subscribe_url": subscribe_url,
         "subscribe_business_name": subscribe_business_name,
+        "one_off_orders": one_off_orders,
+        "captions_prices": CAPTIONS_DISPLAY_PRICES,
         "base_url": base,
         "referral_code": referral_code or "",
         "referral_discount_credits": int(customer.get("referral_discount_credits") or 0),
@@ -756,6 +758,9 @@ def account_page(section=None):
     ctx = _account_context()
     if not ctx:
         return redirect(url_for('customer_login_page'))
+    # Upgrade section only for one-off customers; redirect others to edit-form
+    if section == "upgrade" and not ctx.get("subscribe_options"):
+        section = "edit-form"
     ctx["current_section"] = section
     return render_template("customer_dashboard.html", **ctx)
 
