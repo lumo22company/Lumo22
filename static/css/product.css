@@ -1776,12 +1776,15 @@
   text-decoration: none;
 }
 .account-info-actions a:hover { text-decoration: underline; }
-.account-billing-no-sub {
-  margin: 0;
+.account-billing-no-sub-box {
+  margin: 0.5rem 0 0;
+  padding: 0.5rem 0.75rem;
   font-size: 0.9rem;
   color: #c00;
-  text-align: right;
-  max-width: 280px;
+  text-align: left;
+  background: rgba(200, 80, 80, 0.12);
+  border: 1px solid rgba(200, 80, 80, 0.5);
+  border-radius: 6px;
 }
 .account-info-row--delete {
   border-top: 1px solid rgba(0,0,0,0.12);

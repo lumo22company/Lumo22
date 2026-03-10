@@ -89,11 +89,13 @@
             </div>
             <div class="account-info-actions">
               <a href="/api/billing/portal" class="account-billing-portal-link account-btn-swipe-light">Manage billing</a>
-              {% if request.args.get('billing') == 'no_sub' %}
-              <p class="account-billing-no-sub">No subscription found. If you're on the monthly plan, use the link in your order emails to manage billing.</p>
-              {% endif %}
             </div>
           </div>
+          {% if request.args.get('billing') == 'no_sub' %}
+          <div class="account-billing-no-sub-box">
+            No subscription found. If you're on the monthly plan, use the link in your order emails to manage billing.
+          </div>
+          {% endif %}
           <div class="account-info-row">
             <div>
               <span class="account-info-label">Marketing emails</span>
