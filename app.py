@@ -824,7 +824,21 @@ def internal_error(error):
     traceback.print_exc()
     payload = {'error': 'Internal server error'}
     if os.environ.get('SHOW_500_DETAIL'):
-        payload['detail'] = str(error) if error else 'Unknown'
+        orig = getattr(error, 'original_exception', error)
+        payload['detail'] = '{}: {}'.format(type(orig).__name__, str(orig)) if orig else 'Unknown'
+    return jsonify(payload), 500
+
+@app.errorhandler(Exception)
+def catch_all_exception(error):
+    """Capture unhandled exceptions so we return the real error message when SHOW_500_DETAIL is set."""
+    from werkzeug.exceptions import HTTPException
+    if isinstance(error, HTTPException):
+        return error.get_response()
+    import traceback
+    traceback.print_exc()
+    payload = {'error': 'Internal server error'}
+    if os.environ.get('SHOW_500_DETAIL'):
+        payload['detail'] = '{}: {}'.format(type(error).__name__, str(error))
     return jsonify(payload), 500
 
 if __name__ == '__main__':
