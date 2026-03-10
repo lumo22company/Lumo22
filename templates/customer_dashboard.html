@@ -40,11 +40,7 @@
 
     <main class="account-main{% if current_section == 'history' %} account-main--wide{% endif %}">
       {% if current_section == 'information' %}
-      {% if request.args.get('billing') == 'no_sub' %}
-      <div class="account-info-panel" style="margin-bottom: 1rem; background: rgba(255,200,0,0.1); border-color: rgba(255,200,0,0.3);">
-        <p style="margin: 0; color: #333;">No subscription found. If you're on the monthly plan, use the link in your order emails to manage billing.</p>
-      </div>
-      {% elif request.args.get('billing') == 'error' %}
+      {% if request.args.get('billing') == 'error' %}
       <div class="account-info-panel" style="margin-bottom: 1rem; background: rgba(200,80,80,0.08); border-color: rgba(200,80,80,0.25);">
         <p style="margin: 0; color: #333;">Could not open billing portal. Please try again or email hello@lumo22.com.</p>
       </div>
@@ -93,6 +89,9 @@
             </div>
             <div class="account-info-actions">
               <a href="/api/billing/portal" class="account-billing-portal-link account-btn-swipe-light">Manage billing</a>
+              {% if request.args.get('billing') == 'no_sub' %}
+              <p class="account-billing-no-sub">No subscription found. If you're on the monthly plan, use the link in your order emails to manage billing.</p>
+              {% endif %}
             </div>
           </div>
           <div class="account-info-row">
@@ -430,7 +429,7 @@
         }
       }
 
-      function toggleMarketing() {
+      window.toggleMarketing = function() {
         var wrap = document.getElementById('marketing-toggle-wrap');
         var errEl = document.getElementById('marketing-toggle-error');
         if (!wrap) return;
