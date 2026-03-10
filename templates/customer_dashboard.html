@@ -344,10 +344,11 @@
           checkoutBtn.addEventListener('click', function(e) {
             if (!validate()) {
               e.preventDefault();
+              e.stopImmediatePropagation();
               alert('Please select ' + (platformsSelect.value || 1) + ' platform(s) for your subscription.');
-              return;
+              return false;
             }
-          });
+          }, true);
         }
         syncFromPrefill();
       })();
