@@ -2631,13 +2631,13 @@
 .account-page-wrap .account-payment-method-select {
   font: inherit;
   font-size: 0.9rem;
-  padding: 0.4rem 2.25rem 0.4rem 0.75rem;
+  padding: 0.4rem 2.5rem 0.4rem 0.75rem;
   border: 1px solid rgba(0,0,0,0.2);
   border-radius: var(--dfd-radius);
   background-color: #fff;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 0.75rem center;
+  background-position: right 1rem center;
   background-size: 10px;
   -webkit-appearance: none;
   -moz-appearance: none;
@@ -2727,6 +2727,16 @@
   justify-content: center;
 }
 
+/* Upgrade section: left-align heading and description to match rest of account content */
+.account-upgrade-section {
+  text-align: left;
+}
+.account-upgrade-section h2,
+.account-upgrade-section .account-section-desc {
+  display: block;
+  width: fit-content;
+}
+
 /* Upgrade form: ensure selects and controls receive clicks (no overlay blocking) */
 .account-upgrade-form {
   position: relative;
@@ -2738,6 +2748,15 @@
 .account-upgrade-form .account-upgrade-currency-btn {
   position: relative;
   z-index: 2;
+}
+/* Dropdown arrows: more space from right border */
+.account-upgrade-form select {
+  padding-right: 2rem !important;
+}
+
+/* Captions page dropdown: more space for native arrow */
+.product-page-captions #captions-platforms {
+  padding: 0.6rem 1.25rem 0.6rem 0.75rem !important;
 }
 
 /* Upgrade subscription button: swipe left-to-right yellow fill on hover, dark text */

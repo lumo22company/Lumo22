@@ -230,7 +230,7 @@
           </div>
           <div style="margin-bottom: 1.25rem;" id="upgrade-stories-wrap">
             <label class="account-upgrade-cb-label" style="display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.95rem; color: #fff; font-weight: 600;">
-              <input type="checkbox" id="upgrade-stories-cb" class="upgrade-stories-cb"> 30 Days Story Ideas (+<span id="upgrade-stories-price">17</span>/mo)
+              <input type="checkbox" id="upgrade-stories-cb" class="upgrade-stories-cb"> 30 Days Story Ideas (+<span id="upgrade-stories-price">£17</span>/mo)
             </label>
           </div>
           <div style="margin-bottom: 1.25rem;">
@@ -299,7 +299,7 @@
           var n = parseInt(platformsSelect.value, 10) || 1;
           var stories = storiesCb && storiesCb.checked;
           var total = p.sub + (n - 1) * p.extra_sub + (stories ? p.stories_sub : 0);
-          if (storiesPriceEl) storiesPriceEl.textContent = p.stories_sub;
+          if (storiesPriceEl) storiesPriceEl.textContent = p.symbol + p.stories_sub;
           if (priceDisplay) priceDisplay.textContent = p.symbol + total;
           var selected = getSelected();
           var copyFrom = prefillSelect ? prefillSelect.value : '';
