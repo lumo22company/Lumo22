@@ -159,9 +159,6 @@
       <section class="account-section-block">
         <h2>Edit form</h2>
         {% set edit_form_orders = caption_orders|selectattr('stripe_subscription_id')|list if caption_orders else [] %}
-        {% if not edit_form_orders and current_intake_order %}
-          {% set edit_form_orders = [current_intake_order] %}
-        {% endif %}
         {% if edit_form_orders %}
         <ul class="account-section-desc" style="margin: 0 0 1.25rem; padding-left: 1.25rem; line-height: 1.7; color: #ffffff;">
           <li>Update your voice, topics, and preferences.</li>
@@ -186,8 +183,13 @@
           </li>
           {% endfor %}
         </ul>
+        {% elif subscribe_options %}
+        <p class="account-section-desc">One-off packs can't be edited — upgrade to a subscription to edit your pack. Your answers will be prefilled from your original form.{% if subscribe_options|length > 1 %} You have more than one one-off pack — choose which one to base the subscription on below.{% endif %}</p>
+        {% for opt in subscribe_options %}
+        <p style="margin-bottom: 0.5rem;"><a href="{{ opt.url }}" class="dfd-btn dfd-btn-secondary account-upgrade-subscription-btn">Upgrade to subscription{% if opt.business_name %} — {{ opt.business_name }}{% else %} — use this pack's choices{% endif %}</a></p>
+        {% endfor %}
         {% else %}
-        <p class="account-section-desc">No caption orders yet. After you purchase, you can edit your form here.</p>
+        <p class="account-section-desc">No caption orders yet. After you purchase, you can edit your form here (subscriptions) or upgrade to a subscription if you bought a one-off.</p>
         <p class="account-section-desc" style="font-size: 0.9rem; color: rgba(255,255,255,0.75); margin-top: 0.5rem;">Orders are linked to the email you used at checkout. If a recent order is missing, check you're logged in with that same email.</p>
         <p><a href="/captions" style="color: #8b6914; font-weight: 500;">Get 30 Days Captions</a></p>
         {% endif %}
