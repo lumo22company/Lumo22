@@ -1776,6 +1776,7 @@
   text-decoration: none;
 }
 .account-info-actions a:hover { text-decoration: underline; }
+.account-info-row--no-divider-below { border-bottom: none; }
 .account-billing-no-sub-box {
   margin: 0.5rem 0 0;
   padding: 0.5rem 0.75rem;
@@ -1785,9 +1786,9 @@
   background: rgba(200, 80, 80, 0.12);
   border: 1px solid rgba(200, 80, 80, 0.5);
   border-radius: 6px;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
 }
 .account-info-row--delete {
-  border-top: 1px solid rgba(0,0,0,0.12);
   margin-top: 0.5rem;
   padding-top: 1rem;
 }
