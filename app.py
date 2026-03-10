@@ -820,6 +820,8 @@ def not_found(error):
 
 @app.errorhandler(500)
 def internal_error(error):
+    import traceback
+    traceback.print_exc()
     return jsonify({'error': 'Internal server error'}), 500
 
 if __name__ == '__main__':

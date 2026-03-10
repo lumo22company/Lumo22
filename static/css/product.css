@@ -2114,6 +2114,55 @@
   text-decoration: none;
 }
 
+/* Manage billing button on dark background (Manage subscription header) — yellow font and outline */
+.account-pause-manage-billing .account-btn-swipe-dark,
+.account-pause-manage-billing a.account-btn-swipe-dark {
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+  background: transparent !important;
+  color: var(--lum-gold, #fff200) !important;
+  border: 2px solid var(--lum-gold, #fff200) !important;
+  text-decoration: none;
+  transition: color 0.25s ease-out, border-color 0.25s ease-out;
+  font-family: var(--font-body) !important;
+  font-weight: 600 !important;
+  font-size: 0.7rem !important;
+  letter-spacing: 0.2em !important;
+  text-transform: uppercase !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 20px;
+  min-height: 44px;
+  border-radius: var(--radius-btn);
+}
+.account-pause-manage-billing .account-btn-swipe-dark::before,
+.account-pause-manage-billing a.account-btn-swipe-dark::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--lum-gold, #fff200);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.35s ease-out;
+  z-index: -1;
+}
+.account-pause-manage-billing .account-btn-swipe-dark:hover,
+.account-pause-manage-billing a.account-btn-swipe-dark:hover {
+  color: #000 !important;
+  border-color: var(--lum-gold, #fff200) !important;
+  background: transparent !important;
+  text-decoration: none;
+}
+.account-pause-manage-billing .account-btn-swipe-dark:hover::before,
+.account-pause-manage-billing a.account-btn-swipe-dark:hover::before {
+  transform: scaleX(1);
+}
+
 /* Pause subscription block */
 .account-pause-block {
   background: #fff;
@@ -2753,7 +2802,7 @@
 }
 /* Dropdown arrows: more space from right border */
 .account-upgrade-form select {
-  padding-right: 2.5rem !important;
+  padding-right: 3rem !important;
 }
 
 /* Captions page dropdown: more space for native arrow */

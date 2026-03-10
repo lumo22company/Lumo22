@@ -367,7 +367,7 @@
         {% set _gps_platforms = (_gps_order.platforms_count or 1)|int %}
         {% set _gps_stories = _gps_order.include_stories %}
         {% set _gps_currency = (_gps_order.currency or 'gbp')|lower %}
-        {% set _gps_prices = captions_prices.get(_gps_currency, captions_prices.gbp) %}
+        {% set _gps_prices = captions_prices.get(_gps_currency, captions_prices['gbp']) %}
         {% set _gps_total = _gps_prices.sub + (_gps_platforms - 1) * _gps_prices.extra_sub + (_gps_prices.stories_sub if _gps_stories else 0) %}
         {% set _gps_symbol = _gps_prices.symbol %}
         {% else %}
@@ -469,7 +469,7 @@
             {% set _gps_platforms = o.platforms_count|default(1)|int %}
             {% set _gps_stories = o.include_stories %}
             {% set _gps_currency = (o.currency or 'gbp')|lower %}
-            {% set _gps_p = captions_prices.get(_gps_currency, captions_prices.gbp) %}
+            {% set _gps_p = captions_prices.get(_gps_currency, captions_prices['gbp']) %}
             {% set _gps_total = _gps_p.sub + (_gps_platforms - 1) * _gps_p.extra_sub + (_gps_p.stories_sub if _gps_stories else 0) %}
             <button type="button" class="account-get-pack-sooner-btn account-billing-portal-link account-btn-swipe-light" data-order-id="{{ o.id }}" data-order-token="{{ o.token }}" data-amount="{{ _gps_p.symbol }}{{ _gps_total }}" data-amount-symbol="{{ _gps_p.symbol }}" onclick="showGetPackSoonerModal(this)">Get my pack sooner</button>
           </div>
