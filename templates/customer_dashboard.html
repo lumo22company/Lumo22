@@ -356,9 +356,36 @@
       {% endif %}
 
       {% if current_section == 'pause' %}
+      {% set sub_orders = caption_orders|selectattr('stripe_subscription_id')|list if caption_orders else [] %}
+      {% set get_pack_sooner = request.args.get('get_pack_sooner') == '1' %}
+      {% set get_pack_order_token = request.args.get('order_token', '')|trim %}
       <section class="account-section-block">
         <h2>Manage subscription</h2>
-        {% set sub_orders = caption_orders|selectattr('stripe_subscription_id')|list if caption_orders else [] %}
+        {% if get_pack_sooner and get_pack_order_token %}
+        {% set _gps_order = sub_orders|selectattr('token', 'equalto', get_pack_order_token)|first if sub_orders else none %}
+        {% if _gps_order %}
+        {% set _gps_platforms = (_gps_order.platforms_count or 1)|int %}
+        {% set _gps_stories = _gps_order.include_stories %}
+        {% set _gps_currency = (_gps_order.currency or 'gbp')|lower %}
+        {% set _gps_prices = captions_prices.get(_gps_currency, captions_prices.gbp) %}
+        {% set _gps_total = _gps_prices.sub + (_gps_platforms - 1) * _gps_prices.extra_sub + (_gps_prices.stories_sub if _gps_stories else 0) %}
+        {% set _gps_symbol = _gps_prices.symbol %}
+        {% else %}
+        {% set _gps_total = 79 %}
+        {% set _gps_symbol = '£' %}
+        {% endif %}
+        <div id="get-pack-sooner-confirm-panel" class="account-info-panel" data-order-token="{{ get_pack_order_token }}" data-amount="{{ _gps_symbol }}{{ _gps_total }}" style="margin-bottom: 1.25rem; background: rgba(201,162,39,0.12); border: 1px solid rgba(201,162,39,0.35);">
+          <h3 style="font-size: 1.1rem; margin: 0 0 0.75rem; color: #1a1a1a;">Form updated. Ready to get your pack sooner?</h3>
+          <p style="margin: 0 0 0.75rem; color: #333;">You'll be charged <strong id="get-pack-sooner-amount">{{ _gps_symbol }}{{ _gps_total }}</strong> now. Your next billing date will be 30 days from today. Your pack will be emailed to you within a few minutes.</p>
+          <p style="margin: 0 0 1rem; font-size: 0.9rem; color: #555;">By confirming you agree to be charged now.</p>
+          <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
+            <button type="button" id="get-pack-sooner-confirm-btn" class="lumo-btn-primary account-btn-swipe-dark" data-order-token="{{ get_pack_order_token }}" data-order-id="{{ _gps_order.id if _gps_order else '' }}">Confirm and get my pack</button>
+            <a href="/account/pause" class="account-billing-portal-link account-btn-swipe-light">Cancel</a>
+          </div>
+          <p id="get-pack-sooner-error" style="display: none; margin: 0.75rem 0 0; color: #c00; font-size: 0.9rem;"></p>
+        </div>
+        {% endif %}
+        {% endif %}
         {% if sub_orders %}
         <ul class="account-section-desc" style="margin: 0 0 1.25rem; padding-left: 1.25rem; line-height: 1.7; color: #ffffff;">
           <li>Cancel your subscription, update your billing info, or view invoices in Stripe’s secure portal.</li>
@@ -367,8 +394,8 @@
           <li>Pause billing for one month and manage form reminders below.</li>
           <li><strong>Platforms (add, change, or reduce)</strong> and <strong>Story Ideas (add or remove)</strong> — use the buttons below, or Edit form to change platforms and remove Story Ideas.</li>
         </ul>
-        <div style="margin-bottom: 1.25rem; display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
-          <a href="/api/billing/portal" class="account-billing-portal-link account-btn-swipe-light">Manage billing</a>
+        <div class="account-pause-manage-billing" style="margin-bottom: 1.25rem; display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
+          <a href="/api/billing/portal" class="account-billing-portal-link account-btn-swipe-dark">Manage billing</a>
           <span class="account-settings-desc" style="margin: 0; font-size: 0.9rem; color: #fff;">— cancel subscription, update card, or view invoices</span>
         </div>
         {% for o in sub_orders %}
@@ -433,6 +460,20 @@
 <button type="button" class="account-remove-stories-btn account-billing-portal-link account-btn-swipe-light" data-order-token="{{ o.token }}" data-platforms-count="{{ _platforms }}" data-new-price="{{ _new_price }}" data-new-price-symbol="£" onclick="showRemoveStoriesModal(this)">Remove Story Ideas</button>
           </div>
           {% endif %}
+          {% if not (o.subscription_pause and o.subscription_pause.paused) %}
+          <div class="account-settings-row account-get-pack-sooner-row">
+            <div class="account-get-pack-sooner-text">
+              <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Get your pack sooner</div>
+              <div class="account-settings-desc">Need your next pack before your renewal date? You'll be charged now and get it within minutes. Your next billing date resets to 30 days from today.</div>
+            </div>
+            {% set _gps_platforms = o.platforms_count|default(1)|int %}
+            {% set _gps_stories = o.include_stories %}
+            {% set _gps_currency = (o.currency or 'gbp')|lower %}
+            {% set _gps_p = captions_prices.get(_gps_currency, captions_prices.gbp) %}
+            {% set _gps_total = _gps_p.sub + (_gps_platforms - 1) * _gps_p.extra_sub + (_gps_p.stories_sub if _gps_stories else 0) %}
+            <button type="button" class="account-get-pack-sooner-btn account-billing-portal-link account-btn-swipe-light" data-order-id="{{ o.id }}" data-order-token="{{ o.token }}" data-amount="{{ _gps_p.symbol }}{{ _gps_total }}" data-amount-symbol="{{ _gps_p.symbol }}" onclick="showGetPackSoonerModal(this)">Get my pack sooner</button>
+          </div>
+          {% endif %}
         </div>
         {% endfor %}
         {% else %}
@@ -470,6 +511,31 @@
       {% endif %}
     </main>
 
+    <div id="get-pack-sooner-modal" class="account-delete-modal get-pack-sooner-modal" role="dialog" aria-labelledby="get-pack-sooner-modal-title" aria-modal="true" hidden>
+      <div class="account-delete-modal-backdrop" onclick="closeGetPackSoonerModal()"></div>
+      <div class="account-delete-modal-box" style="max-width: 480px;">
+        <h2 id="get-pack-sooner-modal-title" class="account-delete-modal-title">Get your pack sooner</h2>
+        <p class="account-delete-modal-text">Do you need to update your form first? Changes (voice, topics, key dates) will be reflected in this pack.</p>
+        <div class="account-delete-modal-buttons" style="flex-wrap: wrap; gap: 0.75rem;">
+          <a href="#" id="get-pack-sooner-update-link" class="account-delete-modal-btn account-add-stories-confirm" style="text-decoration: none; text-align: center;">Update my form</a>
+          <button type="button" class="account-delete-modal-btn account-delete-modal-keep" id="get-pack-sooner-use-current-btn">Use current details</button>
+          <button type="button" class="account-delete-modal-btn account-delete-modal-keep" onclick="closeGetPackSoonerModal()">Cancel</button>
+        </div>
+      </div>
+    </div>
+    <div id="get-pack-sooner-confirm-modal" class="account-delete-modal get-pack-sooner-confirm-modal" role="dialog" aria-labelledby="get-pack-sooner-confirm-title" aria-modal="true" hidden>
+      <div class="account-delete-modal-backdrop" onclick="closeGetPackSoonerConfirmModal()"></div>
+      <div class="account-delete-modal-box" style="max-width: 480px;">
+        <h2 id="get-pack-sooner-confirm-title" class="account-delete-modal-title">Confirm and get your pack</h2>
+        <p class="account-delete-modal-text">You'll be charged <strong id="get-pack-sooner-confirm-amount"></strong> now. Your next billing date will be 30 days from today. Your pack will be emailed to you within a few minutes.</p>
+        <p class="account-delete-modal-text" style="font-size: 0.9rem; color: #555;">By confirming you agree to be charged now.</p>
+        <div class="account-delete-modal-buttons">
+          <button type="button" class="account-delete-modal-btn account-delete-modal-keep" onclick="closeGetPackSoonerConfirmModal()">Cancel</button>
+          <button type="button" id="get-pack-sooner-confirm-modal-btn" class="account-delete-modal-btn account-add-stories-confirm">Confirm and get my pack</button>
+        </div>
+        <p id="get-pack-sooner-confirm-error" style="display: none; margin-top: 0.75rem; color: #c00; font-size: 0.9rem;"></p>
+      </div>
+    </div>
     <div id="add-stories-modal" class="account-delete-modal add-stories-modal" role="dialog" aria-labelledby="add-stories-modal-title" aria-modal="true" hidden>
       <div class="account-delete-modal-backdrop" onclick="closeAddStoriesModal()"></div>
       <div class="account-delete-modal-box">
@@ -923,6 +989,111 @@
       })();
       window.showRemoveStoriesModal = showRemoveStoriesModal;
       window.closeRemoveStoriesModal = closeRemoveStoriesModal;
+
+      var getPackSoonerPending = null;
+      function showGetPackSoonerModal(btn) {
+        if (!btn) return;
+        var token = btn.getAttribute('data-order-token');
+        var orderId = btn.getAttribute('data-order-id');
+        var amount = btn.getAttribute('data-amount') || '£79';
+        if (!token) return;
+        getPackSoonerPending = { token: token, orderId: orderId, amount: amount };
+        var modal = document.getElementById('get-pack-sooner-modal');
+        var link = document.getElementById('get-pack-sooner-update-link');
+        if (modal && link) {
+          var base = window.location.origin + '/captions-intake';
+          var returnUrl = window.location.origin + '/account/pause?get_pack_sooner=1&order_token=' + encodeURIComponent(token);
+          link.href = base + '?t=' + encodeURIComponent(token) + '&return_url=' + encodeURIComponent(returnUrl);
+          modal.removeAttribute('hidden');
+          modal.classList.add('account-delete-modal--open');
+        }
+        var useCurrentBtn = document.getElementById('get-pack-sooner-use-current-btn');
+        if (useCurrentBtn) useCurrentBtn.onclick = function() {
+          closeGetPackSoonerModal();
+          showGetPackSoonerConfirmModal(getPackSoonerPending);
+        };
+      }
+      function closeGetPackSoonerModal() {
+        getPackSoonerPending = null;
+        var modal = document.getElementById('get-pack-sooner-modal');
+        if (modal) {
+          modal.setAttribute('hidden', '');
+          modal.classList.remove('account-delete-modal--open');
+        }
+      }
+      function showGetPackSoonerConfirmModal(data) {
+        if (!data) return;
+        var modal = document.getElementById('get-pack-sooner-confirm-modal');
+        var amountEl = document.getElementById('get-pack-sooner-confirm-amount');
+        var confirmBtn = document.getElementById('get-pack-sooner-confirm-modal-btn');
+        var errEl = document.getElementById('get-pack-sooner-confirm-error');
+        if (!modal || !amountEl || !confirmBtn) return;
+        amountEl.textContent = data.amount || '£79';
+        confirmBtn.dataset.orderId = data.orderId || '';
+        confirmBtn.dataset.orderToken = data.token || '';
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = 'Confirm and get my pack';
+        if (errEl) errEl.style.display = 'none';
+        modal.removeAttribute('hidden');
+        modal.classList.add('account-delete-modal--open');
+      }
+      function closeGetPackSoonerConfirmModal() {
+        var modal = document.getElementById('get-pack-sooner-confirm-modal');
+        if (modal) {
+          modal.setAttribute('hidden', '');
+          modal.classList.remove('account-delete-modal--open');
+        }
+      }
+      function confirmGetPackSooner() {
+        var btn = document.getElementById('get-pack-sooner-confirm-modal-btn');
+        var panelBtn = document.getElementById('get-pack-sooner-confirm-btn');
+        var errEl = document.getElementById('get-pack-sooner-confirm-error') || document.getElementById('get-pack-sooner-error');
+        var target = btn || panelBtn;
+        if (!target) return;
+        var orderId = target.dataset.orderId || '';
+        var token = target.dataset.orderToken || '';
+        if (!orderId && !token) {
+          if (errEl) { errEl.textContent = 'Missing order.'; errEl.style.display = 'block'; }
+          return;
+        }
+        if (errEl) errEl.style.display = 'none';
+        target.disabled = true;
+        target.textContent = 'Processing…';
+        fetch('/api/captions/get-pack-sooner', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ order_id: orderId || undefined, token: token || undefined }),
+          credentials: 'same-origin'
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.ok) {
+            alert(data.message || 'Your pack will be emailed to you within a few minutes.');
+            window.location.href = '/account/pause';
+          } else {
+            if (errEl) { errEl.textContent = data.error || 'Something went wrong. Try again.'; errEl.style.display = 'block'; }
+            target.disabled = false;
+            target.textContent = 'Confirm and get my pack';
+          }
+        })
+        .catch(function() {
+          if (errEl) { errEl.textContent = 'Something went wrong. Try again.'; errEl.style.display = 'block'; }
+          target.disabled = false;
+          target.textContent = 'Confirm and get my pack';
+        });
+      }
+      (function initGetPackSooner() {
+        var confirmModalBtn = document.getElementById('get-pack-sooner-confirm-modal-btn');
+        var confirmPanelBtn = document.getElementById('get-pack-sooner-confirm-btn');
+        if (confirmModalBtn) confirmModalBtn.addEventListener('click', confirmGetPackSooner);
+        if (confirmPanelBtn) confirmPanelBtn.addEventListener('click', confirmGetPackSooner);
+        var backdrop = document.querySelector('#get-pack-sooner-modal .account-delete-modal-backdrop');
+        if (backdrop) backdrop.addEventListener('click', closeGetPackSoonerModal);
+        var confirmBackdrop = document.querySelector('#get-pack-sooner-confirm-modal .account-delete-modal-backdrop');
+        if (confirmBackdrop) confirmBackdrop.addEventListener('click', closeGetPackSoonerConfirmModal);
+      })();
+      window.showGetPackSoonerModal = showGetPackSoonerModal;
+      window.closeGetPackSoonerModal = closeGetPackSoonerModal;
 
       function toggleEmailChangeForm() {
         var form = document.getElementById('account-change-email-form');

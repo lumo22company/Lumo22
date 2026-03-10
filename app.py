@@ -269,6 +269,7 @@ def captions_intake_page():
                                 existing_intake = src_order.get("intake") or {}
         except Exception:
             pass
+    return_url = request.args.get("return_url", "").strip()
     # Prefill platform from order (chosen at checkout) when they haven't saved intake yet
     prefilled_platform = (existing_intake.get("platform") or "").strip() if existing_intake else ""
     if not prefilled_platform and selected_platforms:
@@ -304,7 +305,7 @@ def captions_intake_page():
         if currency in ("gbp", "usd", "eur"):
             sub_params["currency"] = currency
         subscribe_url = "/captions-checkout-subscription?" + urlencode(sub_params)
-    r = make_response(render_template('captions_intake.html', intake_token=token, existing_intake=existing_intake, platforms_count=platforms_count, prefilled_platform=prefilled_platform, prefilled_primary=prefilled_primary, stories_paid=stories_paid, is_oneoff=is_oneoff, selected_platforms=selected_platforms, subscribe_url=subscribe_url, now=now))
+    r = make_response(render_template('captions_intake.html', intake_token=token, existing_intake=existing_intake, platforms_count=platforms_count, prefilled_platform=prefilled_platform, prefilled_primary=prefilled_primary, stories_paid=stories_paid, is_oneoff=is_oneoff, selected_platforms=selected_platforms, subscribe_url=subscribe_url, now=now, return_url=return_url))
     r.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     r.headers['Pragma'] = 'no-cache'
     return r

@@ -89,7 +89,7 @@
     .intake-add-platform-note { color: var(--lum-text-muted, #666); }
   </style>
 </head>
-<body class="lumo-landing" data-current-customer-email="{{ (current_customer.email or '')|lower if current_customer else '' }}">
+<body class="lumo-landing" data-current-customer-email="{{ (current_customer.email or '')|lower if current_customer else '' }}" data-return-url="{{ return_url or '' }}">
   <nav class="lumo-nav lumo-nav-scrolled">
     <div class="lumo-nav-left">
       <a href="/" class="lumo-nav-logo">Lumo 22</a>
@@ -514,6 +514,11 @@
         .then(function(r){ return r.json().then(function(j){ return { status: r.status, json: j }; }); })
         .then(function(result) {
           if (result.status === 200 && result.json.success) {
+            var returnUrl = (document.body.getAttribute('data-return-url') || '').trim();
+            if (returnUrl) {
+              window.location.href = returnUrl;
+              return;
+            }
             var rs = document.getElementById('review-step');
             if (rs) rs.classList.remove('show');
             var ctaEl = document.getElementById('intake-upgrade-cta');
@@ -928,6 +933,11 @@
         .then(function(r) { return r.json().then(function(j) { return { status: r.status, json: j }; }); })
         .then(function(result) {
           if (result.status === 200 && result.json.success) {
+            var returnUrl = (document.body.getAttribute('data-return-url') || '').trim();
+            if (returnUrl) {
+              window.location.href = returnUrl;
+              return;
+            }
             reviewStep.classList.remove('show');
             var ctaEl = document.getElementById('intake-upgrade-cta');
             if (ctaEl) { ctaEl.style.display = 'none'; ctaEl.innerHTML = ''; }

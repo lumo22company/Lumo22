@@ -1266,6 +1266,83 @@ def captions_reminder_preference():
         return jsonify({"ok": False, "error": str(e)}), 500
 
 
+@captions_bp.route("/captions/get-pack-sooner", methods=["POST"])
+def captions_get_pack_sooner():
+    """
+    Reset subscription billing cycle to charge now and deliver pack immediately.
+    Requires login. Order must belong to customer, have active subscription, and not be paused.
+    Modifies Stripe subscription with billing_cycle_anchor='now', then triggers generation.
+    """
+    from api.auth_routes import get_current_customer
+    from api.stripe_utils import is_valid_stripe_subscription_id
+    import threading
+
+    customer = get_current_customer()
+    if not customer:
+        return jsonify({"ok": False, "error": "Not logged in"}), 401
+    email = (customer.get("email") or "").strip().lower()
+    if not email or "@" not in email:
+        return jsonify({"ok": False, "error": "Invalid customer"}), 400
+    if not Config.STRIPE_SECRET_KEY:
+        return jsonify({"ok": False, "error": "Billing not configured"}), 503
+
+    try:
+        data = request.get_json() or {}
+        order_id = (data.get("order_id") or "").strip()
+        token = (data.get("token") or data.get("order_token") or "").strip()
+        if not order_id and not token:
+            return jsonify({"ok": False, "error": "order_id or token required"}), 400
+
+        from services.caption_order_service import CaptionOrderService
+        order_service = CaptionOrderService()
+        if token:
+            order = order_service.get_by_token(token)
+        else:
+            order = order_service.get_by_id(order_id) if order_id else None
+        if not order:
+            return jsonify({"ok": False, "error": "Order not found"}), 404
+        order_id = order["id"]
+        order_email = (order.get("customer_email") or "").strip().lower()
+        if order_email != email:
+            return jsonify({"ok": False, "error": "This order does not belong to your account"}), 403
+
+        sub_id = (order.get("stripe_subscription_id") or "").strip()
+        if not sub_id:
+            return jsonify({"ok": False, "error": "This order is not a subscription"}), 400
+        if not is_valid_stripe_subscription_id(sub_id):
+            return jsonify({"ok": False, "error": "Invalid subscription"}), 400
+
+        if not order.get("intake"):
+            return jsonify({"ok": False, "error": "Please complete your form first. Edit your form then try again."}), 400
+
+        # Check subscription is not paused
+        pause_info = _get_subscription_pause_info(sub_id)
+        if pause_info and pause_info.get("paused"):
+            return jsonify({"ok": False, "error": "Your subscription is paused. Resume it first to get your pack sooner."}), 400
+
+        import stripe
+        stripe.api_key = Config.STRIPE_SECRET_KEY
+        stripe.Subscription.modify(
+            sub_id,
+            billing_cycle_anchor="now",
+            proration_behavior="create_prorations",
+        )
+        # Stripe creates and pays invoice. On success, trigger generation.
+        thread = threading.Thread(target=_run_generation_and_deliver, args=(order_id,))
+        thread.daemon = True
+        thread.start()
+        return jsonify({
+            "ok": True,
+            "message": "Your pack will be generated and emailed to you within a few minutes.",
+        }), 200
+    except stripe.error.CardError as e:
+        return jsonify({"ok": False, "error": e.user_message or "Your card was declined. Please try a different payment method."}), 400
+    except stripe.error.StripeError as e:
+        return jsonify({"ok": False, "error": str(e)[:200]}), 400
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
 @captions_bp.route("/captions/hide-pack", methods=["POST"])
 def captions_hide_pack():
     """
