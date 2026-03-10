@@ -822,7 +822,10 @@ def not_found(error):
 def internal_error(error):
     import traceback
     traceback.print_exc()
-    return jsonify({'error': 'Internal server error'}), 500
+    payload = {'error': 'Internal server error'}
+    if os.environ.get('SHOW_500_DETAIL'):
+        payload['detail'] = str(error) if error else 'Unknown'
+    return jsonify(payload), 500
 
 if __name__ == '__main__':
     # Initialize services

@@ -362,14 +362,14 @@
       <section class="account-section-block">
         <h2>Manage subscription</h2>
         {% if get_pack_sooner and get_pack_order_token %}
-        {% set _gps_order = sub_orders|selectattr('token', 'equalto', get_pack_order_token)|first if sub_orders else none %}
+        {% set _gps_order = none %}{% for so in (sub_orders or []) %}{% if not _gps_order and (so.get('token') or '') == get_pack_order_token %}{% set _gps_order = so %}{% endif %}{% endfor %}
         {% if _gps_order %}
-        {% set _gps_platforms = (_gps_order.platforms_count or 1)|int %}
-        {% set _gps_stories = _gps_order.include_stories %}
-        {% set _gps_currency = (_gps_order.currency or 'gbp')|lower %}
+        {% set _gps_platforms = (_gps_order.get('platforms_count') or 1)|int %}
+        {% set _gps_stories = _gps_order.get('include_stories') %}
+        {% set _gps_currency = (_gps_order.get('currency') or 'gbp')|lower %}
         {% set _gps_prices = captions_prices.get(_gps_currency, captions_prices['gbp']) %}
-        {% set _gps_total = _gps_prices.sub + (_gps_platforms - 1) * _gps_prices.extra_sub + (_gps_prices.stories_sub if _gps_stories else 0) %}
-        {% set _gps_symbol = _gps_prices.symbol %}
+        {% set _gps_total = _gps_prices.get('sub', 79) + (_gps_platforms - 1) * _gps_prices.get('extra_sub', 19) + (_gps_prices.get('stories_sub', 17) if _gps_stories else 0) %}
+        {% set _gps_symbol = _gps_prices.get('symbol', '£') %}
         {% else %}
         {% set _gps_total = 79 %}
         {% set _gps_symbol = '£' %}
@@ -400,7 +400,7 @@
         </div>
         {% for o in sub_orders %}
         {% set pause_biz = (o.get('intake') or {}).get('business_name', '') %}
-        {% set pause_label = pause_biz if pause_biz else (o.created_at[:10] if o.created_at else 'Subscription') %}
+        {% set pause_label = pause_biz if pause_biz else ((o.get('created_at') or '')[:10] if o.get('created_at') else 'Subscription') %}
         {% set sub_id = (o.get('stripe_subscription_id') or '')|trim %}
         {% set current_pm = (subscription_billing.get('subscription_payment_methods') or {}).get(sub_id) if subscription_billing else None %}
         <div class="account-pause-block" style="margin-bottom: 1rem;">
@@ -427,18 +427,18 @@
               <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Form reminders</div>
               <div class="account-settings-desc">Email me before each pack so I can update my form</div>
             </div>
-            <div id="reminder-toggle-{{ o.id }}" role="button" tabindex="0" class="account-toggle {% if not o.reminder_opt_out %}on{% endif %}" aria-label="Toggle form reminders" data-order-id="{{ o.id }}" onclick="toggleReminder(this)" onkeydown="if(event.key==='Enter'||event.key===' ') { event.preventDefault(); toggleReminder(this); }"></div>
+            <div id="reminder-toggle-{{ o.get('id', '') }}" role="button" tabindex="0" class="account-toggle {% if not o.get('reminder_opt_out') %}on{% endif %}" aria-label="Toggle form reminders" data-order-id="{{ o.get('id', '') }}" onclick="toggleReminder(this)" onkeydown="if(event.key==='Enter'||event.key===' ') { event.preventDefault(); toggleReminder(this); }"></div>
           </div>
           <div class="account-settings-row" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid rgba(0,0,0,0.06);">
             <div>
               <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Pause subscription</div>
-              <div class="account-settings-desc">{% if o.subscription_pause and o.subscription_pause.paused %}Paused — resumes {{ o.subscription_pause.resumes_at or 'automatically' }}{% else %}Pause billing for 1 month (no charge, no pack){% endif %}</div>
+              <div class="account-settings-desc">{% if (o.get('subscription_pause') or {}).get('paused') %}Paused — resumes {{ (o.get('subscription_pause') or {}).get('resumes_at') or 'automatically' }}{% else %}Pause billing for 1 month (no charge, no pack){% endif %}</div>
             </div>
-            {% if o.subscription_pause and o.subscription_pause.paused %}
+            {% if (o.get('subscription_pause') or {}).get('paused') %}
             <span class="account-pause-badge" style="font-size: 0.85rem; font-weight: 500; color: #555; padding: 0.35rem 0.75rem; background: rgba(0,0,0,0.06); border-radius: 12px; margin-right: 0.5rem;">Paused</span>
-            <button type="button" class="account-billing-portal-link account-btn-swipe-light account-resume-btn" data-order-id="{{ o.id }}" onclick="resumeSubscription(this)">Resume subscription</button>
+            <button type="button" class="account-billing-portal-link account-btn-swipe-light account-resume-btn" data-order-id="{{ o.get('id', '') }}" onclick="resumeSubscription(this)">Resume subscription</button>
             {% else %}
-            <button type="button" class="account-billing-portal-link account-btn-swipe-light account-pause-btn" data-order-id="{{ o.id }}" onclick="pauseSubscription(this)">Pause for 1 month</button>
+            <button type="button" class="account-billing-portal-link account-btn-swipe-light account-pause-btn" data-order-id="{{ o.get('id', '') }}" onclick="pauseSubscription(this)">Pause for 1 month</button>
             {% endif %}
           </div>
           {% if not o.get('include_stories') %}
@@ -455,23 +455,23 @@
               <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Story Ideas</div>
               <div class="account-settings-desc">Included in this subscription. You'll receive Stories with each pack. You can also remove Story Ideas from the Edit form.</div>
             </div>
-            {% set _platforms = o.platforms_count|default(1)|int %}
+            {% set _platforms = (o.get('platforms_count') or 1)|int %}
 {% set _new_price = 79 + (_platforms - 1) * 19 %}
-<button type="button" class="account-remove-stories-btn account-billing-portal-link account-btn-swipe-light" data-order-token="{{ o.token }}" data-platforms-count="{{ _platforms }}" data-new-price="{{ _new_price }}" data-new-price-symbol="£" onclick="showRemoveStoriesModal(this)">Remove Story Ideas</button>
+<button type="button" class="account-remove-stories-btn account-billing-portal-link account-btn-swipe-light" data-order-token="{{ o.get('token', '') }}" data-platforms-count="{{ _platforms }}" data-new-price="{{ _new_price }}" data-new-price-symbol="£" onclick="showRemoveStoriesModal(this)">Remove Story Ideas</button>
           </div>
           {% endif %}
-          {% if not (o.subscription_pause and o.subscription_pause.paused) %}
+          {% if not (o.get('subscription_pause') or {}).get('paused') %}
           <div class="account-settings-row account-get-pack-sooner-row">
             <div class="account-get-pack-sooner-text">
               <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Get your pack sooner</div>
               <div class="account-settings-desc">Need your next pack before your renewal date? You'll be charged now and get it within minutes. Your next billing date resets to 30 days from today.</div>
             </div>
-            {% set _gps_platforms = o.platforms_count|default(1)|int %}
-            {% set _gps_stories = o.include_stories %}
-            {% set _gps_currency = (o.currency or 'gbp')|lower %}
+            {% set _gps_platforms = (o.get('platforms_count') or 1)|int %}
+            {% set _gps_stories = o.get('include_stories') %}
+            {% set _gps_currency = (o.get('currency') or 'gbp')|lower %}
             {% set _gps_p = captions_prices.get(_gps_currency, captions_prices['gbp']) %}
-            {% set _gps_total = _gps_p.sub + (_gps_platforms - 1) * _gps_p.extra_sub + (_gps_p.stories_sub if _gps_stories else 0) %}
-            <button type="button" class="account-get-pack-sooner-btn account-billing-portal-link account-btn-swipe-light" data-order-id="{{ o.id }}" data-order-token="{{ o.token }}" data-amount="{{ _gps_p.symbol }}{{ _gps_total }}" data-amount-symbol="{{ _gps_p.symbol }}" onclick="showGetPackSoonerModal(this)">Get my pack sooner</button>
+            {% set _gps_total = _gps_p.get('sub', 79) + (_gps_platforms - 1) * _gps_p.get('extra_sub', 19) + (_gps_p.get('stories_sub', 17) if _gps_stories else 0) %}
+            <button type="button" class="account-get-pack-sooner-btn account-billing-portal-link account-btn-swipe-light" data-order-id="{{ o.get('id', '') }}" data-order-token="{{ o.get('token', '') }}" data-amount="{{ _gps_p.get('symbol', '£') }}{{ _gps_total }}" data-amount-symbol="{{ _gps_p.get('symbol', '£') }}" onclick="showGetPackSoonerModal(this)">Get my pack sooner</button>
           </div>
           {% endif %}
         </div>
