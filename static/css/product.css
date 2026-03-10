@@ -1776,6 +1776,7 @@
   text-decoration: none;
 }
 .account-info-actions a:hover { text-decoration: underline; }
+.account-info-row--no-divider-below { border-bottom: none; }
 .account-billing-no-sub-box {
   margin: 0.5rem 0 0;
   padding: 0.5rem 0.75rem;
