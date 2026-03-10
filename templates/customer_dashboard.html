@@ -324,6 +324,9 @@
         });
         document.querySelectorAll('.upgrade-which-cb').forEach(function(cb) {
           cb.addEventListener('change', function() {
+            var n = parseInt(platformsSelect.value, 10) || 1;
+            var checked = document.querySelectorAll('.upgrade-which-cb:checked');
+            if (checked.length > n && this.checked) this.checked = false;
             storiesWrap.style.display = hasInstaFb() ? 'block' : 'none';
             if (!hasInstaFb() && storiesCb) storiesCb.checked = false;
             updatePrice();
