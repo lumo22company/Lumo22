@@ -143,4 +143,66 @@ Lumo 22
             errors.append(f"Order {order.get('id')} sub {sub_id[:20]}...: {e}")
             skipped += 1
 
+    # One-off: gently remind customers who haven't completed intake yet (awaiting_intake).
+    try:
+        awaiting_orders = order_service.get_awaiting_intake_orders()
+        from datetime import timedelta
+        for order in awaiting_orders:
+            status = (order.get("status") or "").strip().lower()
+            if status != "awaiting_intake":
+                continue
+            email = (order.get("customer_email") or "").strip()
+            token = (order.get("token") or "").strip()
+            if not token or not email or "@" not in email:
+                skipped += 1
+                continue
+            if email.strip().lower() in deleted_emails:
+                skipped += 1
+                continue
+            created_raw = order.get("created_at")
+            if not created_raw:
+                skipped += 1
+                continue
+            try:
+                if isinstance(created_raw, str):
+                    created_dt = datetime.fromisoformat(created_raw.replace("Z", "+00:00"))
+                else:
+                    created_dt = created_raw
+                if created_dt.tzinfo is None:
+                    created_dt = created_dt.replace(tzinfo=timezone.utc)
+            except Exception:
+                skipped += 1
+                continue
+            age_hours = (now - created_dt).total_seconds() / 3600.0
+            # Send a single gentle reminder ~1–2 days after purchase.
+            if age_hours < 24.0 or age_hours >= 48.0:
+                skipped += 1
+                continue
+            intake_url = f"{base}/captions-intake?t={token}"
+            subject = "Complete your form to get your captions"
+            body = f"""Hi,
+
+Thanks for your order of 30 Days of Social Media Captions.
+
+Before we can start writing, we need a few details about your business, audience, and voice.
+
+Complete your form: {intake_url}
+
+Or copy and paste this link into your browser:
+
+{intake_url}
+
+This takes about 5–10 minutes. Once it's done, we'll generate your captions and email your pack.
+
+Lumo 22
+"""
+            ok = notif.send_email(email, subject, body)
+            if ok:
+                sent += 1
+            else:
+                errors.append(f"Order {order.get('id')}: intake reminder email send failed")
+                skipped += 1
+    except Exception as e:
+        errors.append(f"awaiting_intake_reminders: {e}")
+
     return {"sent": sent, "skipped": skipped, "errors": errors}

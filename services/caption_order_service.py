@@ -287,6 +287,13 @@ class CaptionOrderService:
         ).not_.is_("stripe_subscription_id", "null").execute()
         return result.data or []
 
+    def get_awaiting_intake_orders(self) -> list:
+        """Get recent orders that are still awaiting intake (for one-off intake reminders)."""
+        result = self.client.table(self.table).select(
+            "id, token, customer_email, status, created_at"
+        ).eq("status", "awaiting_intake").execute()
+        return result.data or []
+
     def get_by_stripe_subscription_id(self, stripe_subscription_id: str) -> Optional[Dict[str, Any]]:
         """Get order by Stripe subscription id."""
         if not stripe_subscription_id:
