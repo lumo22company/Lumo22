@@ -390,8 +390,8 @@ def stripe_webhook():
                     notif = NotificationService()
                     notif.send_plan_change_confirmation_email(
                         customer_email,
-                        change_summary="Your subscription has been updated.",
-                        when_effective="Changes will apply to your next pack. Your new price will be reflected on your next invoice.",
+                        change_summary="What changed: Your subscription settings were updated in Stripe (plan and/or add-ons). Your new price will be reflected on your next invoice.",
+                        when_effective="Changes apply to your next pack. Packs already delivered will not change.",
                         account_url=account_url,
                     )
                     print(f"[Stripe webhook] Plan change confirmation sent to {customer_email}")

@@ -218,8 +218,8 @@ def add_stories_to_subscription():
                 notif = NotificationService()
                 notif.send_plan_change_confirmation_email(
                     customer_email,
-                    change_summary="Story Ideas has been added to your subscription. You'll be charged a prorated amount.",
-                    when_effective="Stories will be included in your next pack.",
+                    change_summary="What changed: 30 Days Story Ideas has been added to your subscription. You'll be charged a prorated amount for the rest of this billing period.",
+                    when_effective="Stories will be included in your next pack. Your new price will be reflected on your next invoice.",
                     account_url=_account_url(),
                 )
             except Exception as e:
@@ -330,8 +330,22 @@ def reduce_subscription():
         try:
             from services.notifications import NotificationService
             notif = NotificationService()
-            change_summary = "Your plan has been updated. Your new price will be reflected on your next invoice."
-            when_effective = "Changes apply to your next pack."
+            # Make the email explicit about what changed.
+            # Examples:
+            # - Reduced from 3 platforms to 1.
+            # - Removed Story Ideas.
+            # - Both.
+            change_bits = []
+            if new_platforms < order_platforms:
+                change_bits.append(f"your subscription now includes {new_platforms} platform{'s' if new_platforms != 1 else ''} instead of {order_platforms}")
+            if order_has_stories and not new_stories:
+                change_bits.append("Story Ideas has been removed from your subscription")
+            if not change_bits:
+                change_text = "your plan has been updated."
+            else:
+                change_text = "; ".join(change_bits) + "."
+            change_summary = f"What changed: {change_text} Your new (lower) price will be reflected on your next invoice."
+            when_effective = "Changes apply to your next pack. Packs already delivered will not change."
             notif.send_plan_change_confirmation_email(
                 customer_email,
                 change_summary=change_summary,
@@ -343,5 +357,5 @@ def reduce_subscription():
 
     return jsonify({
         "ok": True,
-        "message": f"Your plan has been updated. Your new price will be reflected on your next invoice. Changes apply to your next pack.",
+        "message": "Your plan has been updated. Your new (lower) price will be reflected on your next invoice. Changes apply to your next pack. Packs already delivered will not change.",
     }), 200
