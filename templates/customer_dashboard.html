@@ -1008,8 +1008,9 @@
         }
         var useCurrentBtn = document.getElementById('get-pack-sooner-use-current-btn');
         if (useCurrentBtn) useCurrentBtn.onclick = function() {
+          var data = getPackSoonerPending;
           closeGetPackSoonerModal();
-          showGetPackSoonerConfirmModal(getPackSoonerPending);
+          showGetPackSoonerConfirmModal(data);
         };
       }
       function closeGetPackSoonerModal() {
