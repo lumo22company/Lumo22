@@ -139,6 +139,7 @@
 
     <form id="captions-intake-form" action="#" method="post" data-platforms-count="{{ platforms_count }}">
       <input type="hidden" name="token" id="intake_token" value="{{ intake_token }}">
+      <p id="intake-validation-hint" style="display: none; margin: -0.5rem 0 1rem; font-size: 0.9rem; color: #c00;"></p>
       <div class="form-section">
         <h2>Business</h2>
         <label for="business_name">What is your business name? <span style="color:#999;">(required)</span></label>
@@ -307,7 +308,6 @@
         <label for="caption_examples">Paste 1–3 example captions you like — from your own posts, competitors, or inspiration. We'll match this style, tone, and structure where relevant.</label>
         <textarea id="caption_examples" name="caption_examples" placeholder="Paste example captions here (optional)" style="min-height: 140px;">{{ existing_intake.get('caption_examples', '') }}</textarea>
       </div>
-      <p id="intake-validation-hint" style="display: none; margin-bottom: 1rem; font-size: 0.9rem; color: #c00;"></p>
       <button type="button" class="btn-submit" id="btn-review">{% if existing_intake %}Review changes{% else %}Next step{% endif %}</button>
     </form>
 
@@ -422,10 +422,14 @@
       else { var pCbs = document.querySelectorAll('input[name="platform_cb"]'); if (pCbs.length) { var pv = [].filter.call(pCbs, function(x){ return x.checked; }).map(function(x){ return x.value; }); var pEl = document.getElementById('platform'); if(pEl) pEl.value = pv.join(', '); } }
       var hint = document.getElementById('intake-validation-hint');
       if (hint) { hint.style.display = 'none'; hint.textContent = ''; }
+      var allFields = form.querySelectorAll('input, textarea, select');
+      allFields.forEach(function(el){ el.style.borderColor = ''; el.style.backgroundColor = ''; });
       if (!form.checkValidity()) {
         form.reportValidity();
-        var inv = form.querySelector(':invalid'); if (inv && inv.scrollIntoView) inv.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        if (hint) { hint.textContent = 'Please complete the required fields above (e.g. business name).'; hint.style.display = 'block'; }
+        var invalids = form.querySelectorAll(':invalid');
+        invalids.forEach(function(el){ el.style.borderColor = '#c00'; el.style.backgroundColor = 'rgba(200,0,0,0.06)'; });
+        var inv = invalids[0]; if (inv && inv.scrollIntoView) inv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        if (hint) { hint.textContent = 'Please complete the required fields.'; hint.style.display = 'block'; }
         return;
       }
       function sect(t,v){ var p = document.createElement('p'); p.textContent = v || '(not provided)'; if(!v) p.className = 'empty'; var h = document.createElement('h3'); h.textContent = t; var d = document.createElement('div'); d.className = 'review-section'; d.appendChild(h); d.appendChild(p); return d; }
@@ -847,16 +851,18 @@
         var reviewStep = document.getElementById('review-step');
         var reviewContent = document.getElementById('review-content');
         if (!form || !reviewStep || !reviewContent) return;
-        var hintEl = document.getElementById('intake-validation-hint');
-        if (hintEl) { hintEl.style.display = 'none'; hintEl.textContent = ''; }
+      var hintEl = document.getElementById('intake-validation-hint');
+      if (hintEl) { hintEl.style.display = 'none'; hintEl.textContent = ''; }
         syncAudience();
         syncVoiceWords();
         if (document.querySelectorAll('.platform-btn, input[name="platform_cb"]').length) syncPlatforms();
         if (!form.checkValidity()) {
           form.reportValidity();
-          var firstInvalid = form.querySelector(':invalid');
-          if (firstInvalid && firstInvalid.scrollIntoView) firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          if (hintEl) { hintEl.textContent = 'Please complete the required fields above (e.g. business name).'; hintEl.style.display = 'block'; }
+        var invalids = form.querySelectorAll(':invalid');
+        invalids.forEach(function(el){ el.style.borderColor = '#c00'; el.style.backgroundColor = 'rgba(200,0,0,0.06)'; });
+        var firstInvalid = invalids[0];
+        if (firstInvalid && firstInvalid.scrollIntoView) firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        if (hintEl) { hintEl.textContent = 'Please complete the required fields.'; hintEl.style.display = 'block'; }
           return;
         }
         reviewContent.innerHTML = '';
