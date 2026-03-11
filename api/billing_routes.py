@@ -7,11 +7,69 @@ from config import Config
 from api.auth_routes import get_current_customer
 
 
+# Display prices for plan-change emails (subscription base + extra platform + stories)
+_DISPLAY_PRICES = {
+    "gbp": {"symbol": "£", "sub": 79, "extra_sub": 19, "stories_sub": 17},
+    "usd": {"symbol": "$", "sub": 99, "extra_sub": 24, "stories_sub": 21},
+    "eur": {"symbol": "€", "sub": 89, "extra_sub": 22, "stories_sub": 19},
+}
+
+
 def _account_url():
     base = (Config.BASE_URL or request.url_root or "https://www.lumo22.com").strip().rstrip("/")
     if not base.startswith("http"):
         base = "https://" + base
     return base.rstrip("/") + "/account"
+
+
+def _subscription_monthly_price(currency: str, platforms: int, include_stories: bool) -> tuple[str, int]:
+    """Return (symbol, amount) for subscription monthly price, e.g. ('£', 96)."""
+    prices = _DISPLAY_PRICES.get((currency or "gbp").strip().lower(), _DISPLAY_PRICES["gbp"])
+    amount = prices["sub"] + max(0, platforms - 1) * prices["extra_sub"]
+    if include_stories:
+        amount += prices["stories_sub"]
+    return (prices["symbol"], amount)
+
+
+def subscription_platforms_and_stories_from_stripe(sub_obj: dict) -> tuple[int, bool]:
+    """
+    Parse a Stripe subscription object (from API or webhook event) into our plan shape.
+    Returns (platforms_count, include_stories). Used for plan-change emails from webhook.
+    """
+    base_ids = set()
+    for key in (
+        "STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID",
+        "STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID_USD",
+        "STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID_EUR",
+    ):
+        pid = (getattr(Config, key, None) or "").strip()
+        if pid:
+            base_ids.add(pid)
+    extra_id = (getattr(Config, "STRIPE_CAPTIONS_EXTRA_PLATFORM_SUBSCRIPTION_PRICE_ID", None) or "").strip()
+    stories_id = (getattr(Config, "STRIPE_CAPTIONS_STORIES_SUBSCRIPTION_PRICE_ID", None) or "").strip()
+    items_raw = sub_obj.get("items")
+    items = (items_raw.get("data") if isinstance(items_raw, dict) else []) if items_raw else []
+    if not isinstance(items, list):
+        items = []
+    extra_qty = 0
+    include_stories = False
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        price = item.get("price")
+        price_id = (price.get("id") if isinstance(price, dict) else None) or (price if isinstance(price, str) else None)
+        if not price_id:
+            continue
+        qty = int(item.get("quantity", 1)) or 1
+        if price_id in base_ids:
+            pass
+        elif price_id == extra_id:
+            extra_qty += qty
+        elif price_id == stories_id and qty > 0:
+            include_stories = True
+    platforms = 1 + extra_qty
+    return (platforms, include_stories)
+
 
 billing_bp = Blueprint("billing", __name__, url_prefix="/api/billing")
 
@@ -216,11 +274,17 @@ def add_stories_to_subscription():
             try:
                 from services.notifications import NotificationService
                 notif = NotificationService()
+                currency = (order.get("currency") or "gbp").strip().lower()
+                platforms = max(1, int(order.get("platforms_count", 1)))
+                old_sym, old_amt = _subscription_monthly_price(currency, platforms, False)
+                new_sym, new_amt = _subscription_monthly_price(currency, platforms, True)
                 notif.send_plan_change_confirmation_email(
                     customer_email,
                     change_summary="What changed: 30 Days Story Ideas has been added to your subscription. You'll be charged a prorated amount for the rest of this billing period.",
-                    when_effective="Stories will be included in your next pack. Your new price will be reflected on your next invoice.",
+                    when_effective="Stories will be included in your next pack.",
                     account_url=_account_url(),
+                    new_price_display=f"{new_sym}{new_amt}",
+                    old_price_display=f"{old_sym}{old_amt}",
                 )
             except Exception as e:
                 print(f"[billing] Plan change confirmation email failed: {e}")
@@ -344,13 +408,18 @@ def reduce_subscription():
                 change_text = "your plan has been updated."
             else:
                 change_text = "; ".join(change_bits) + "."
-            change_summary = f"What changed: {change_text} Your new (lower) price will be reflected on your next invoice."
+            change_summary = f"What changed: {change_text}"
             when_effective = "Changes apply to your next pack. Packs already delivered will not change."
+            currency = (order.get("currency") or "gbp").strip().lower()
+            old_sym, old_amt = _subscription_monthly_price(currency, order_platforms, order_has_stories)
+            new_sym, new_amt = _subscription_monthly_price(currency, new_platforms, new_stories)
             notif.send_plan_change_confirmation_email(
                 customer_email,
                 change_summary=change_summary,
                 when_effective=when_effective,
                 account_url=_account_url(),
+                new_price_display=f"{new_sym}{new_amt}",
+                old_price_display=f"{old_sym}{old_amt}",
             )
         except Exception as e:
             print(f"[billing] Plan change confirmation email failed: {e}")

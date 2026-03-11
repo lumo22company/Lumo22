@@ -292,15 +292,28 @@ def _subscription_cancelled_email_html(captions_url: str) -> str:
     return _email_wrapper(content)
 
 
-def _plan_change_confirmation_email_html(change_summary: str, when_effective: str, account_url: str) -> str:
+def _plan_change_confirmation_email_html(
+    change_summary: str,
+    when_effective: str,
+    account_url: str,
+    new_price_display: str | None = None,
+    old_price_display: str | None = None,
+) -> str:
     """Build branded HTML for plan change (upgrade/downgrade/add-on) confirmation."""
     import html
     safe_summary = html.escape(change_summary or "Your plan has been updated.", quote=False)
     safe_when = html.escape(when_effective or "Changes apply to your next pack.", quote=False)
     safe_account = html.escape(account_url or "", quote=True)
+    price_line = ""
+    if new_price_display:
+        if old_price_display:
+            price_line = f'<p style="margin:0 0 16px;"><strong>New price:</strong> {html.escape(new_price_display)}/month (was {html.escape(old_price_display)}/month).</p>'
+        else:
+            price_line = f'<p style="margin:0 0 16px;"><strong>New price:</strong> {html.escape(new_price_display)}/month.</p>'
     content = f"""<p style="margin:0 0 16px;">Hi,</p>
 <p style="margin:0 0 12px;">You made changes to your Lumo 22 subscription.</p>
 <p style="margin:0 0 16px;">{safe_summary}</p>
+{price_line}
 <p style="margin:0 0 16px;"><strong>When does this take effect?</strong> {safe_when}</p>
 <p style="margin:0 0 16px;">You can manage your subscription anytime in your <a href="{safe_account}" style="color:{BRAND_BLACK}; text-decoration:none; border-bottom:1px solid {BRAND_BLACK};">account</a>.</p>
 <p style="margin:0;">— Lumo 22</p>"""
@@ -469,21 +482,39 @@ If you didn't create this account, you can ignore this email.
         html_body = _welcome_and_verify_email_html(verify_url)
         return self.send_email(to_email, subject, body, html_body=html_body)
 
-    def send_plan_change_confirmation_email(self, to_email: str, change_summary: str, when_effective: str, account_url: str) -> bool:
+    def send_plan_change_confirmation_email(
+        self,
+        to_email: str,
+        change_summary: str,
+        when_effective: str,
+        account_url: str,
+        new_price_display: str | None = None,
+        old_price_display: str | None = None,
+    ) -> bool:
         """Send confirmation when customer upgrades, downgrades, or adds Stories."""
         subject = "Your Lumo 22 plan has been updated"
+        price_block = ""
+        if new_price_display:
+            if old_price_display:
+                price_block = f"\nNew price: {new_price_display}/month (was {old_price_display}/month).\n"
+            else:
+                price_block = f"\nNew price: {new_price_display}/month.\n"
         body = f"""Hi,
 
 You made changes to your Lumo 22 subscription.
 
 {change_summary or "Your plan has been updated."}
-
+{price_block}
 When does this take effect? {when_effective or "Changes apply to your next pack."}
 
 You can manage your subscription anytime in your account: {account_url or ""}
 
 — Lumo 22"""
-        html_body = _plan_change_confirmation_email_html(change_summary, when_effective, account_url)
+        html_body = _plan_change_confirmation_email_html(
+            change_summary, when_effective, account_url,
+            new_price_display=new_price_display,
+            old_price_display=old_price_display,
+        )
         return self.send_email(to_email, subject, body, html_body=html_body)
 
     def send_subscription_cancelled_email(self, to_email: str, captions_url: str) -> bool:

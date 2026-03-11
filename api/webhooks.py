@@ -367,7 +367,7 @@ def stripe_webhook():
             return jsonify({"received": True}), 200
 
         if event_type == "customer.subscription.updated":
-            # Plan change via Stripe billing portal: send confirmation email
+            # Plan change via Stripe billing portal: send confirmation email with explicit pricing
             sub_obj = event.get("data", {}).get("object") if isinstance(event, dict) else None
             if not sub_obj or not isinstance(sub_obj, dict):
                 return jsonify({"received": True}), 200
@@ -376,6 +376,7 @@ def stripe_webhook():
                 return jsonify({"received": True}), 200
             from services.caption_order_service import CaptionOrderService
             from services.notifications import NotificationService
+            from api.billing_routes import _subscription_monthly_price, subscription_platforms_and_stories_from_stripe
             order_service = CaptionOrderService()
             order = order_service.get_by_stripe_subscription_id(sub_id)
             if not order:
@@ -387,12 +388,33 @@ def stripe_webhook():
                     base = "https://" + base
                 account_url = base + "/account"
                 try:
+                    currency = (order.get("currency") or "gbp").strip().lower()
+                    old_platforms = max(1, int(order.get("platforms_count", 1)))
+                    old_stories = bool(order.get("include_stories"))
+                    new_platforms, new_stories = subscription_platforms_and_stories_from_stripe(sub_obj)
+                    change_bits = []
+                    if new_platforms != old_platforms:
+                        change_bits.append(f"your subscription now includes {new_platforms} platform{'s' if new_platforms != 1 else ''} instead of {old_platforms}")
+                    if new_stories and not old_stories:
+                        change_bits.append("30 Days Story Ideas has been added to your subscription")
+                    elif old_stories and not new_stories:
+                        change_bits.append("Story Ideas has been removed from your subscription")
+                    if not change_bits:
+                        change_text = "your plan has been updated."
+                    else:
+                        change_text = "; ".join(change_bits) + "."
+                    change_summary = f"What changed: {change_text}"
+                    when_effective = "Changes apply to your next pack. Packs already delivered will not change."
+                    old_sym, old_amt = _subscription_monthly_price(currency, old_platforms, old_stories)
+                    new_sym, new_amt = _subscription_monthly_price(currency, new_platforms, new_stories)
                     notif = NotificationService()
                     notif.send_plan_change_confirmation_email(
                         customer_email,
-                        change_summary="What changed: Your subscription settings were updated in Stripe (plan and/or add-ons). Your new price will be reflected on your next invoice.",
-                        when_effective="Changes apply to your next pack. Packs already delivered will not change.",
+                        change_summary=change_summary,
+                        when_effective=when_effective,
                         account_url=account_url,
+                        new_price_display=f"{new_sym}{new_amt}",
+                        old_price_display=f"{old_sym}{old_amt}",
                     )
                     print(f"[Stripe webhook] Plan change confirmation sent to {customer_email}")
                 except Exception as e:
