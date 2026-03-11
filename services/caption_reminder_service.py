@@ -196,7 +196,9 @@ This takes about 5–10 minutes. Once it's done, we'll generate your captions an
 
 Lumo 22
 """
-            ok = notif.send_email(email, subject, body)
+            from services.notifications import _captions_intake_reminder_email_html
+            html_body = _captions_intake_reminder_email_html(intake_url)
+            ok = notif.send_email(email, subject, body, html_body=html_body)
             if ok:
                 sent += 1
             else:

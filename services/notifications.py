@@ -245,6 +245,24 @@ def _intake_link_email_html(intake_url: str, order_summary: Optional[str] = None
     return _email_wrapper(content)
 
 
+def _captions_intake_reminder_email_html(intake_url: str) -> str:
+    """Branded HTML for one-off intake reminder (customer hasn't completed form yet)."""
+    import html
+    intake_url = (intake_url or "").strip()
+    if not intake_url or not intake_url.startswith("http"):
+        intake_url = ""
+    safe_url = html.escape(intake_url, quote=True)
+    content = f"""<p style="margin:0 0 16px;">Hi,</p>
+<p style="margin:0 0 16px;">Thanks for your order of 30 Days of Social Media Captions.</p>
+<p style="margin:0 0 16px;">Before we can start writing, we need a few details about your business, audience, and voice.</p>
+<p style="margin:0 0 12px;">Complete this short form so we can create your pack:</p>
+<p style="margin:0 0 24px;"><a href="{safe_url}" style="display:inline-block; padding:14px 28px; background:{BRAND_GOLD}; color:{BRAND_BLACK}; text-decoration:none; border-radius:10px; font-weight:600;">Complete your form</a></p>
+<p style="margin:0 0 8px; font-size:14px; color:{BRAND_MUTED};">Or copy and paste this link into your browser:</p>
+<p style="margin:0 0 24px; font-size:13px; word-break:break-all; color:#333;">{safe_url}</p>
+<p style="margin:0 0 16px;">This takes about 5–10 minutes. Once it's done, we'll generate your captions and email your pack.</p>
+<p style="margin:0;">— Lumo 22</p>"""
+    return _email_wrapper(content)
+
 def _welcome_and_verify_email_html(verify_url: str) -> str:
     """Build branded HTML for welcome + email verification — single email after signup."""
     import html
