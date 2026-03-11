@@ -75,8 +75,8 @@ def main():
         "plan_change_upgrade.html",
         "Plan change confirmation (upgrade/add Stories/add platforms)",
         _plan_change_confirmation_email_html(
-            "Your plan has been updated. Story Ideas and/or extra platforms have been added to your subscription.",
-            "Your new price will be reflected on your next invoice. Changes apply to your next pack.",
+            "What changed: 30 Days Story Ideas has been added to your subscription. You'll be charged a prorated amount for the rest of this billing period.",
+            "Stories will be included in your next pack. Your new price will be reflected on your next invoice.",
             "https://www.lumo22.com/account",
         ),
     ))
@@ -93,8 +93,8 @@ def main():
         "plan_change_reduce.html",
         "Plan change confirmation (downgrade/reduce platforms/remove Stories)",
         _plan_change_confirmation_email_html(
-            "Your plan has been updated. Your subscription now includes fewer platforms and/or Stories.",
-            "Your new (lower) price will be reflected on your next invoice. Changes apply to your next pack.",
+            "What changed: Your subscription now includes fewer platforms and/or Stories. Your new (lower) price will be reflected on your next invoice.",
+            "Changes apply to your next pack. Packs already delivered will not change.",
             "https://www.lumo22.com/account",
         ),
     ))
