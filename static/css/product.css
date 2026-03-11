@@ -2842,22 +2842,22 @@
   margin-left: auto;
 }
 
-/* Get your pack sooner modals — liquid glass look */
+/* Remove Story Ideas + Get your pack sooner: same formatting, slightly more translucent */
+#remove-stories-modal .account-delete-modal-box,
 #get-pack-sooner-modal .account-delete-modal-box,
 #get-pack-sooner-confirm-modal .account-delete-modal-box {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.0));
-  backdrop-filter: blur(28px) saturate(190%);
-  -webkit-backdrop-filter: blur(28px) saturate(190%);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow:
-    0 18px 48px rgba(0, 0, 0, 0.35),
-    0 0 0 1px rgba(255, 255, 255, 0.12) inset;
+  background: rgba(0, 0, 0, 0.48);
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
 }
+#remove-stories-modal .account-delete-modal-backdrop,
 #get-pack-sooner-modal .account-delete-modal-backdrop,
 #get-pack-sooner-confirm-modal .account-delete-modal-backdrop {
-  background: radial-gradient(circle at top left, rgba(255, 255, 255, 0.18), transparent 55%),
-              radial-gradient(circle at bottom right, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.75));
+  background: rgba(0, 0, 0, 0.38);
 }
+/* Get your pack sooner: yellow primary buttons (match Add Story Ideas) */
 #get-pack-sooner-modal .account-delete-modal-buttons .account-delete-modal-btn,
 #get-pack-sooner-confirm-modal .account-delete-modal-buttons .account-delete-modal-btn {
   background: var(--lum-gold, #fff200);
@@ -2874,10 +2874,9 @@
 #get-pack-sooner-modal .account-delete-modal-buttons .account-delete-modal-btn.account-delete-modal-keep,
 #get-pack-sooner-confirm-modal .account-delete-modal-buttons .account-delete-modal-btn.account-delete-modal-keep {
   background: transparent;
-  color: #111;
-  border-color: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.4);
 }
-/* Update my form: filled yellow, no dark outline */
 #get-pack-sooner-update-link.account-delete-modal-btn {
   border-color: transparent !important;
   box-shadow: 0 0.2rem 0.7rem rgba(0, 0, 0, 0.35);

@@ -512,22 +512,22 @@
 
     <div id="get-pack-sooner-modal" class="account-delete-modal get-pack-sooner-modal" role="dialog" aria-labelledby="get-pack-sooner-modal-title" aria-modal="true" hidden>
       <div class="account-delete-modal-backdrop" onclick="closeGetPackSoonerModal()"></div>
-      <div class="account-delete-modal-box" style="max-width: 480px;">
+      <div class="account-delete-modal-box remove-stories-modal-box" style="max-width: 520px;">
         <h2 id="get-pack-sooner-modal-title" class="account-delete-modal-title">Get your pack sooner</h2>
         <p class="account-delete-modal-text">Do you need to update your form first? Changes (voice, topics, key dates) will be reflected in this pack.</p>
-        <div class="account-delete-modal-buttons" style="flex-wrap: wrap; gap: 0.75rem;">
-          <a href="#" id="get-pack-sooner-update-link" class="account-delete-modal-btn account-add-stories-confirm" style="text-decoration: none; text-align: center;">Update my form</a>
-          <button type="button" class="account-delete-modal-btn account-delete-modal-keep" id="get-pack-sooner-use-current-btn">Use current details</button>
+        <div class="account-delete-modal-buttons">
           <button type="button" class="account-delete-modal-btn account-delete-modal-keep" onclick="closeGetPackSoonerModal()">Cancel</button>
+          <button type="button" class="account-delete-modal-btn account-delete-modal-keep" id="get-pack-sooner-use-current-btn">Use current details</button>
+          <a href="#" id="get-pack-sooner-update-link" class="account-delete-modal-btn account-add-stories-confirm" style="text-decoration: none; text-align: center;">Update my form</a>
         </div>
       </div>
     </div>
     <div id="get-pack-sooner-confirm-modal" class="account-delete-modal get-pack-sooner-confirm-modal" role="dialog" aria-labelledby="get-pack-sooner-confirm-title" aria-modal="true" hidden>
       <div class="account-delete-modal-backdrop" onclick="closeGetPackSoonerConfirmModal()"></div>
-      <div class="account-delete-modal-box" style="max-width: 480px;">
+      <div class="account-delete-modal-box remove-stories-modal-box" style="max-width: 520px;">
         <h2 id="get-pack-sooner-confirm-title" class="account-delete-modal-title">Confirm and get your pack</h2>
         <p class="account-delete-modal-text">You'll be charged <strong id="get-pack-sooner-confirm-amount"></strong> now. Your next billing date will be 30 days from today. Your pack will be emailed to you within a few minutes.</p>
-        <p class="account-delete-modal-text" style="font-size: 0.9rem; color: #555;">By confirming you agree to be charged now.</p>
+        <p class="account-delete-modal-text" style="font-size: 0.85rem; margin-bottom: 0.75rem;">By confirming you agree to be charged now.</p>
         <div class="account-delete-modal-buttons">
           <button type="button" class="account-delete-modal-btn account-delete-modal-keep" onclick="closeGetPackSoonerConfirmModal()">Cancel</button>
           <button type="button" id="get-pack-sooner-confirm-modal-btn" class="account-delete-modal-btn account-add-stories-confirm">Confirm and get my pack</button>
