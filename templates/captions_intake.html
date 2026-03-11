@@ -144,8 +144,8 @@
         <h2>Business</h2>
         <label for="business_name">What is your business name? <span style="color:#999;">(required)</span></label>
         <input type="text" id="business_name" name="business_name" required placeholder="e.g. Lumo 22, Acme Coaching" value="{{ existing_intake.get('business_name', '') }}">
-        <label for="business_type">What type of business do you run?</label>
-        <select id="business_type" name="business_type">
+        <label for="business_type">What type of business do you run? <span style="color:#999;">(required)</span></label>
+        <select id="business_type" name="business_type" required>
           <option value="">— Select one —</option>
           <option value="Consultancy" {% if existing_intake.get('business_type') == 'Consultancy' %}selected{% endif %}>Consultancy</option>
           <option value="Agency" {% if existing_intake.get('business_type') == 'Agency' %}selected{% endif %}>Agency</option>
@@ -156,8 +156,8 @@
           <option value="Other" {% if existing_intake.get('business_type') and existing_intake.get('business_type') not in ['Consultancy', 'Agency', 'Coach / Mentor', 'Product brand / E-commerce', 'Product brand', 'E-commerce', 'Service business', 'Creative / Freelancer'] %}selected{% endif %}>Other</option>
         </select>
         <input type="text" id="business_type_other" name="business_type_other" placeholder="Specify your business type" class="intake-other-field" style="display: none; margin-top: 0.5rem;" value="{{ existing_intake.get('business_type', '') if existing_intake.get('business_type') and existing_intake.get('business_type') not in ['Consultancy', 'Agency', 'Coach / Mentor', 'Product brand / E-commerce', 'Product brand', 'E-commerce', 'Service business', 'Creative / Freelancer'] else '' }}">
-        <label for="offer_one_line">In one sentence, what do you offer and to whom?</label>
-        <textarea id="offer_one_line" name="offer_one_line" placeholder="e.g. We help busy founders build a content habit without the daily grind">{{ existing_intake.get('offer_one_line', '') }}</textarea>
+        <label for="offer_one_line">In one sentence, what do you offer and to whom? <span style="color:#999;">(required)</span></label>
+        <textarea id="offer_one_line" name="offer_one_line" required placeholder="e.g. We help busy founders build a content habit without the daily grind">{{ existing_intake.get('offer_one_line', '') }}</textarea>
         <p class="field-helper">A couple of sentences is enough.</p>
       </div>
       <div class="form-section">
@@ -176,8 +176,8 @@
         </div>
         <input type="text" id="audience_other" name="audience_other" placeholder="Other (e.g. coaches, agencies)" style="margin-top: 0.75rem;" value="">
         <input type="hidden" id="audience" name="audience" value="{{ existing_intake.get('audience', '') }}">
-        <label for="audience_cares">What do they care about most when they land on your content?</label>
-        <textarea id="audience_cares" name="audience_cares" placeholder="e.g. quick wins, feeling less overwhelmed, practical tips">{{ existing_intake.get('audience_cares', '') }}</textarea>
+        <label for="audience_cares">What do they care about most when they land on your content? <span style="color:#999;">(required)</span></label>
+        <textarea id="audience_cares" name="audience_cares" required placeholder="e.g. quick wins, feeling less overwhelmed, practical tips">{{ existing_intake.get('audience_cares', '') }}</textarea>
       </div>
       <div class="form-section">
         <h2>Voice</h2>
@@ -230,8 +230,8 @@
         </div>
         <input type="hidden" id="platform" name="platform" value="{{ existing_intake.get('platform', '') or prefilled_platform }}">
         {% else %}
-        <label for="platform">Primary platform for these captions?</label>
-        <select id="platform" name="platform">
+        <label for="platform">Primary platform for these captions? <span style="color:#999;">(required)</span></label>
+        <select id="platform" name="platform" required>
           <option value="">— Select one —</option>
           <option value="Instagram & Facebook" {% if prefilled_primary == 'Instagram & Facebook' %}selected{% endif %}>Instagram &amp; Facebook</option>
           <option value="LinkedIn" {% if prefilled_primary == 'LinkedIn' %}selected{% endif %}>LinkedIn</option>
@@ -281,8 +281,8 @@
       </div>
       <div class="form-section">
         <h2>Goal for this month</h2>
-        <label for="goal">What's the main outcome you want from this 30 days?</label>
-        <select id="goal" name="goal">
+        <label for="goal">What's the main outcome you want from this 30 days? <span style="color:#999;">(required)</span></label>
+        <select id="goal" name="goal" required>
           <option value="">— Select one —</option>
           <option value="More inquiries / leads" {% if existing_intake.get('goal') == 'More inquiries / leads' %}selected{% endif %}>More inquiries / leads</option>
           <option value="Build authority" {% if existing_intake.get('goal') == 'Build authority' %}selected{% endif %}>Build authority</option>
