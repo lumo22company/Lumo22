@@ -301,7 +301,12 @@ def _plan_change_confirmation_email_html(
 ) -> str:
     """Build branded HTML for plan change (upgrade/downgrade/add-on) confirmation."""
     import html
-    safe_summary = html.escape(change_summary or "Your plan has been updated.", quote=False)
+    raw_summary = change_summary or "Your plan has been updated."
+    safe_summary = html.escape(raw_summary, quote=False)
+    if safe_summary.startswith("What changed: "):
+        summary_html = f'<strong>What changed:</strong> {safe_summary[14:]}'
+    else:
+        summary_html = safe_summary
     safe_when = html.escape(when_effective or "Changes apply to your next pack.", quote=False)
     safe_account = html.escape(account_url or "", quote=True)
     price_line = ""
@@ -312,7 +317,7 @@ def _plan_change_confirmation_email_html(
             price_line = f'<p style="margin:0 0 16px;"><strong>New price:</strong> {html.escape(new_price_display)}/month.</p>'
     content = f"""<p style="margin:0 0 16px;">Hi,</p>
 <p style="margin:0 0 12px;">You made changes to your Lumo 22 subscription.</p>
-<p style="margin:0 0 16px;">{safe_summary}</p>
+<p style="margin:0 0 16px;">{summary_html}</p>
 {price_line}
 <p style="margin:0 0 16px;"><strong>When does this take effect?</strong> {safe_when}</p>
 <p style="margin:0 0 16px;">You can manage your subscription anytime in your <a href="{safe_account}" style="color:{BRAND_BLACK}; text-decoration:none; border-bottom:1px solid {BRAND_BLACK};">account</a>.</p>
