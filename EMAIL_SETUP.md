@@ -44,3 +44,20 @@ This avoids duplicate or competing emails. Lumo 22 handles receipts, plan change
 | Product (intake link, delivery, reminder) | Lumo 22 |
 | Auth (welcome, password, email change) | Lumo 22 |
 | Failed payment | Stripe |
+
+---
+
+## Verification
+
+All email templates have been verified to produce non-empty content. Run:
+
+```bash
+python3 scripts/verify_all_emails.py
+```
+
+To regenerate sample HTML files for preview:
+
+```bash
+python3 scripts/generate_email_samples.py
+# Open email_samples/index.html in a browser
+```
