@@ -280,7 +280,7 @@ def add_stories_to_subscription():
                 new_sym, new_amt = _subscription_monthly_price(currency, platforms, True)
                 notif.send_plan_change_confirmation_email(
                     customer_email,
-                    change_summary="What changed: 30 Days Story Ideas has been added to your subscription. You'll be charged a prorated amount for the rest of this billing period.",
+                    change_summary="What changed: 30 Days Story Ideas has been added to your subscription.",
                     when_effective="Stories will be included in your next pack.",
                     account_url=_account_url(),
                     new_price_display=f"{new_sym}{new_amt}",
@@ -290,7 +290,7 @@ def add_stories_to_subscription():
                 print(f"[billing] Plan change confirmation email failed: {e}")
         return jsonify({
             "ok": True,
-            "message": "Story Ideas added to your subscription. You'll be charged a prorated amount; Stories will be included in your next pack.",
+            "message": "Story Ideas added to your subscription. Stories will be included in your next pack.",
         }), 200
     except stripe.error.StripeError as e:
         msg = getattr(e, "user_message", None) or str(e) or "Stripe error"

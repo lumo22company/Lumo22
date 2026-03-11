@@ -75,7 +75,7 @@ def main():
         "plan_change_upgrade.html",
         "Plan change confirmation (upgrade/add Stories/add platforms)",
         _plan_change_confirmation_email_html(
-            "What changed: 30 Days Story Ideas has been added to your subscription. You'll be charged a prorated amount for the rest of this billing period.",
+            "What changed: 30 Days Story Ideas has been added to your subscription.",
             "Stories will be included in your next pack.",
             "https://www.lumo22.com/account",
             new_price_display="£96",
