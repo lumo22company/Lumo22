@@ -1391,6 +1391,12 @@
   box-sizing: border-box;
 }
 
+@media (max-width: 768px) {
+  .captions-sub-price {
+    display: none;
+  }
+}
+
 /* Captions product page: yellow font + yellow outline, swipe on hover (View options, Get my 30 days, Subscribe, sticky CTA) */
 .product-page-captions .captions-btn-swipe {
   position: relative;

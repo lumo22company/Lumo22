@@ -299,7 +299,7 @@
             <li>Cancel anytime</li>
           </ul>
           <div class="dfd-pricing-footer">
-            <a href="/captions-checkout-subscription?platforms=1" id="captions-sub-cta" class="dfd-btn dfd-btn-accent captions-btn-swipe">Subscribe — £79/month</a>
+            <a href="/captions-checkout-subscription?platforms=1" id="captions-sub-cta" class="dfd-btn dfd-btn-accent captions-btn-swipe">Subscribe<span class="captions-sub-price"> — £79/month</span></a>
           </div>
         </div>
         {% endif %}
@@ -501,7 +501,8 @@
       if (subSave) subSave.textContent = 'Save ' + sym + (oneoffTotal(n, stories) - subTotal(n, stories)) + ' vs one-off';
       if (subCta) {
         subCta.href = isValid ? subHref : '#pricing';
-        subCta.textContent = 'Subscribe — ' + sym + subTotal(n, stories) + '/month';
+        var priceSpan = subCta.querySelector('.captions-sub-price');
+        if (priceSpan) priceSpan.textContent = ' — ' + sym + subTotal(n, stories) + '/month';
         subCta.classList.toggle('btn-disabled', !isValid);
         subCta.setAttribute('tabindex', isValid ? '0' : '-1');
       }

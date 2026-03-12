@@ -30,6 +30,8 @@
     .auth-links .auth-muted { color: var(--lum-text-muted); }
     .auth-links .auth-muted a { color: var(--lum-text-muted); }
     .auth-links .auth-muted a:hover { color: var(--lum-text); }
+    .auth-links .auth-muted a.auth-signup-link { color: var(--lum-gold) !important; }
+    .auth-links .auth-muted a.auth-signup-link:hover { color: var(--lum-ivory) !important; }
   </style>
 </head>
 <body class="lumo-landing">
@@ -70,7 +72,7 @@
           <p><button type="button" id="resend-verify-btn" style="background:none;border:none;padding:0;color:var(--lum-gold);cursor:pointer;font-size:0.9rem;font-family:inherit;">Resend verification email</button></p>
           {% endif %}
           <p><a href="/forgot-password">Forgot password?</a></p>
-          <p class="auth-muted">Don't have an account? <a href="/signup">Sign up</a></p>
+          <p class="auth-muted">Don't have an account? <a href="/signup" class="auth-signup-link">Sign up</a></p>
           <p class="auth-muted"><a href="/">← Back to Lumo 22</a></p>
         </div>
       </div>
