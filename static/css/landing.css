@@ -140,6 +140,9 @@ input[type="checkbox"] { accent-color: #fff200; }
   align-items: center;
   gap: var(--space-xl);
 }
+.lumo-nav-link-home {
+  display: none;
+}
 .lumo-nav-toggle {
   display: none;
   flex-direction: column;
@@ -1266,7 +1269,7 @@ a.lumo-nav-login:hover::before {
     padding: 0.75rem 1.25rem;
   }
   .lumo-nav-left {
-    gap: 0.75rem;
+    display: none;
   }
   .lumo-nav-toggle {
     display: inline-flex;
@@ -1284,6 +1287,23 @@ a.lumo-nav-login:hover::before {
     flex-direction: column;
     gap: 0.25rem;
     align-items: flex-end;
+  }
+  .lumo-nav-links a {
+    min-height: 32px;
+    text-decoration: none;
+    text-underline-offset: 0;
+  }
+  .lumo-nav-link-home {
+    display: inline-flex;
+    font-weight: 600;
+  }
+  .lumo-nav-cta {
+    background: transparent;
+    border: none;
+    padding: 0;
+    min-width: 0;
+    border-radius: 0;
+    color: #ffffff;
   }
   .lumo-nav.is-open .lumo-nav-links {
     display: flex;
