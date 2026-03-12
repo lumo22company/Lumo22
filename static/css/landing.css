@@ -83,18 +83,22 @@ html.lenis body {
 
 @media (max-width: 768px) {
   .intro .section-inner {
-    max-width: none;
-    width: 100%;
-    margin: 0;
-    padding: var(--space-md) 1rem;
-    border-radius: 0;
+    max-width: none !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: var(--space-md) 0.5rem !important;
+    border-radius: 0 !important;
   }
   .intro .intro-body {
-    max-width: 100%;
-    margin-bottom: var(--space-xl);
+    max-width: 100% !important;
+    margin: 0 0 var(--space-lg) 0 !important;
+    padding: 0 !important;
   }
   .intro .intro-bullets {
     max-width: 100% !important;
+    width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
   }
   .intro .intro-bullets li {
     font-size: 1rem;
@@ -104,13 +108,8 @@ html.lenis body {
 
 @media (max-width: 480px) {
   .intro .section-inner {
-    padding-left: 0.5rem;
-    padding-right: 0.5rem;
-  }
-  .intro .intro-bullets {
-    width: 100%;
-    margin-left: 0;
-    margin-right: 0;
+    padding-left: 0.25rem !important;
+    padding-right: 0.25rem !important;
   }
 }
 
