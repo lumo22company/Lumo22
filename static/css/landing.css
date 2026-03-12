@@ -998,6 +998,9 @@ a.lumo-nav-login:hover::before {
   .who-card {
     padding: var(--space-md);
   }
+  .who-card-title {
+    line-height: 1.15;
+  }
   .who-card-desc {
     font-size: 0.95rem;
     line-height: 1.5;
