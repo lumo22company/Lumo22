@@ -3188,7 +3188,13 @@
   transform: scaleX(1);
 }
 .account-get-pack-sooner-row .account-get-pack-sooner-btn {
-  margin-left: auto;
+  margin-left: 0;
+}
+
+@media (min-width: 769px) {
+  .account-get-pack-sooner-row .account-get-pack-sooner-btn {
+    margin-left: auto;
+  }
 }
 
 /* Remove Story Ideas + Get your pack sooner: same formatting, slightly more translucent */
