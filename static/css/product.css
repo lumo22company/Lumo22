@@ -722,6 +722,19 @@
 
 .dfd-section--dark .dfd-lead { color: var(--lum-text-muted); }
 
+/* Voice section copy: relax gutters on mobile so it isn't cramped */
+@media (max-width: 768px) {
+  .product-page-captions .dfd-section-inner {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  .product-page-captions .dfd-heading-voice,
+  .product-page-captions .dfd-voice-lead,
+  .product-page-captions .dfd-voice-body {
+    max-width: 100% !important;
+  }
+}
+
 /* Key features grid — rounded cards */
 .dfd-features-section .dfd-heading {
   margin-bottom: var(--dfd-space-lg);
