@@ -137,13 +137,18 @@
         {% set delivered_orders = (caption_orders|selectattr('status', 'equalto', 'delivered')|list)|sort(attribute='created_at', reverse=True) %}
         {% if delivered_orders %}
         <p class="account-section-desc">View or download your previous packs. Each pack is available as a PDF; if you added Story Ideas, you get a separate Stories PDF. Only delivered packs appear here — for current orders use Edit form or Manage subscription.</p>
+        <div class="account-history-filters" id="account-history-filters">
+          <label for="account-history-business-filter">Business</label>
+          <select id="account-history-business-filter">
+            <option value="">All packs</option>
+          </select>
+        </div>
         <div class="account-history-list">
           {% for o in delivered_orders %}
-          <div class="account-history-item" data-history-token="{{ o.token }}">
-            <div class="account-history-item-title-row">
-              {% set biz = (o.get('intake') or {}).get('business_name', '')|trim %}
-              {% set is_sub = (o.get('stripe_subscription_id') or '')|trim %}
-              {% set label = biz if biz else ('Subscription' if is_sub else 'One-off') %}
+          {% set biz = (o.get('intake') or {}).get('business_name', '')|trim %}
+          {% set is_sub = (o.get('stripe_subscription_id') or '')|trim %}
+          {% set label = biz if biz else ('Subscription' if is_sub else 'One-off') %}
+          <div class="account-history-item" data-history-token="{{ o.token }}" data-business="{{ biz }}">
               <span>{{ label }} — Pack {{ o.created_at[:10] if o.created_at else '—' }}</span>
               <span class="account-history-type account-history-type--{{ 'subscription' if is_sub else 'oneoff' }}">{{ 'Subscription' if is_sub else 'One-off' }}</span>
             </div>
@@ -1030,6 +1035,65 @@
         if (confirmBtn) confirmBtn.addEventListener('click', confirmDeletePack);
       })();
       window.showDeletePackModal = showDeletePackModal;
+
+      (function initHistoryFilters() {
+        var list = document.querySelector('.account-history-list');
+        if (!list) return;
+        var items = Array.prototype.slice.call(list.querySelectorAll('.account-history-item'));
+        if (!items.length) return;
+
+        // Business filter (only show if more than one named business)
+        var businesses = [];
+        items.forEach(function(item) {
+          var biz = (item.getAttribute('data-business') || '').trim();
+          if (biz && businesses.indexOf(biz) === -1) businesses.push(biz);
+        });
+        var filtersEl = document.getElementById('account-history-filters');
+        var selectEl = document.getElementById('account-history-business-filter');
+        if (filtersEl && selectEl && businesses.length > 1) {
+          filtersEl.style.display = 'flex';
+          businesses.sort().forEach(function(biz) {
+            var opt = document.createElement('option');
+            opt.value = biz;
+            opt.textContent = biz;
+            selectEl.appendChild(opt);
+          });
+          selectEl.addEventListener('change', function() {
+            var val = (selectEl.value || '').trim();
+            items.forEach(function(item) {
+              var biz = (item.getAttribute('data-business') || '').trim();
+              var show = !val || biz === val;
+              item.style.display = show ? '' : 'none';
+            });
+          });
+        }
+
+        // Show only most recent packs by default, with option to reveal all
+        var MAX_VISIBLE = 10;
+        if (items.length > MAX_VISIBLE) {
+          items.forEach(function(item, idx) {
+            if (idx >= MAX_VISIBLE) item.classList.add('account-history-item--hidden-extra');
+          });
+          var moreWrap = document.createElement('div');
+          moreWrap.className = 'account-history-more-wrap';
+          var moreBtn = document.createElement('button');
+          moreBtn.type = 'button';
+          moreBtn.className = 'account-history-more-btn';
+          moreBtn.textContent = 'View full history';
+          moreBtn.addEventListener('click', function() {
+            items.forEach(function(item) {
+              item.classList.remove('account-history-item--hidden-extra');
+            });
+            if (selectEl && typeof Event === 'function') {
+              var ev = new Event('change');
+              selectEl.dispatchEvent(ev);
+            }
+            if (moreWrap.parentNode) moreWrap.parentNode.removeChild(moreWrap);
+          });
+          moreWrap.appendChild(moreBtn);
+          if (list.parentNode) list.parentNode.appendChild(moreWrap);
+        }
+      })();
 
       var addStoriesPendingBtn = null;
       function showAddStoriesModal(btn) {

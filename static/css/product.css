@@ -2034,6 +2034,27 @@
   width: 100%;
   min-width: 0;
 }
+.account-history-filters {
+  display: none;
+  margin: 0 0 0.75rem;
+  align-items: center;
+  gap: 0.5rem;
+}
+.account-history-filters label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #ffffff;
+}
+.account-history-filters select {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.35rem 1.75rem 0.35rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: rgba(0, 0, 0, 0.6);
+  color: #ffffff;
+  min-width: 140px;
+}
 .account-history-item {
   display: flex;
   flex-direction: column;
@@ -2128,6 +2149,30 @@
 .account-history-item .account-history-delete:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.account-history-item--hidden-extra {
+  display: none;
+}
+.account-history-more-wrap {
+  margin-top: 0.5rem;
+}
+.account-history-more-btn {
+  appearance: none;
+  cursor: pointer;
+  font: inherit;
+  padding: 0.5rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: var(--dfd-radius-btn);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: transparent;
+  color: #ffffff;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.account-history-more-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.6);
 }
 
 /* Edit form list — dark background cards */
