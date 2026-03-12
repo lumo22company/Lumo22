@@ -16,12 +16,20 @@
   <nav class="lumo-nav" id="lumo-nav">
     <div class="lumo-nav-left">
       <a href="/" class="lumo-nav-logo">Lumo 22</a>
+    </div>
+    <button type="button" class="lumo-nav-toggle" id="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="lumo-nav-links" id="nav-links">
+      <a href="/" class="lumo-nav-link lumo-nav-link-home">Lumo 22</a>
       <a href="/captions" class="lumo-nav-link">Captions</a>
+      <a href="/account" class="lumo-nav-link lumo-nav-link-account">Account</a>
     </div>
   </nav>
 
-  <div class="account-layout">
-    <aside class="account-sidebar">
+  <div class="account-layout" id="account-layout">
+    <button type="button" class="account-sidebar-toggle" id="account-sidebar-toggle" aria-expanded="false" aria-label="Toggle account menu">Your account</button>
+    <aside class="account-sidebar" id="account-sidebar">
       <h1 class="account-sidebar-title">Your account</h1>
       <ul class="account-sidebar-nav">
         <li><a href="/account/information" class="{% if current_section == 'information' %}active{% endif %}">Account Information</a></li>
@@ -1367,6 +1375,28 @@
         sel.addEventListener('change', function() { changeSubscriptionPaymentMethod(sel); });
       });
 
+    })();
+  </script>
+  <script>
+    (function() {
+      var nav = document.getElementById('lumo-nav');
+      var navToggle = document.getElementById('nav-toggle');
+      if (nav && navToggle) {
+        navToggle.addEventListener('click', function() {
+          var isOpen = nav.classList.toggle('is-open');
+          navToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        });
+      }
+      var layout = document.getElementById('account-layout');
+      var sidebarToggle = document.getElementById('account-sidebar-toggle');
+      var sidebar = document.getElementById('account-sidebar');
+      if (layout && sidebarToggle && sidebar) {
+        sidebarToggle.addEventListener('click', function() {
+          var isOpen = layout.classList.toggle('account-sidebar-open');
+          sidebarToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+          sidebarToggle.textContent = isOpen ? 'Close menu' : 'Your account';
+        });
+      }
     })();
   </script>
 </body>
