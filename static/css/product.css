@@ -862,7 +862,7 @@
   align-items: center;
   justify-content: center;
   color: var(--lum-gold);
-  margin: 0 0 1rem 0.75rem;
+  margin: 0 0 1rem 0.5rem;
 }
 /* Light section: darker icons for visibility on white cards */
 .dfd-section--light .dfd-step-icon {
