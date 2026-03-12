@@ -2337,12 +2337,6 @@
     flex-direction: column;
     align-items: flex-start;
   }
-  .account-history-actions {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.35rem;
-  }
-
   .account-main .account-section-block {
     padding: 1.25rem 1rem 1.75rem;
   }
