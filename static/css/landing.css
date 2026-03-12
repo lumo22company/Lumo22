@@ -245,16 +245,14 @@ input[type="checkbox"] { accent-color: #fff200; }
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: #ffffff;
-  text-decoration: underline;
-  text-underline-offset: 0.2em;
-  text-decoration-color: rgba(255,255,255,0.5);
+  text-decoration: none;
   font-size: 0.7rem;
-  transition: color var(--duration-fast), text-decoration-color var(--duration-fast);
+  transition: color var(--duration-fast);
   min-height: 44px;
   display: inline-flex;
   align-items: center;
 }
-.lumo-nav-links a:hover { color: var(--lum-gold); text-decoration-color: var(--lum-gold); }
+.lumo-nav-links a:hover { color: var(--lum-gold); }
 
 /* Nav CTA: Dayos “Schedule a Demo” style — solid pill, hover lift (hover-loop up), 0.3s ease-in-out */
 .lumo-nav-cta {

@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v={{ asset_version }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/product.css') }}?v={{ asset_version }}">
 </head>
-<body class="lumo-landing product-page-captions account-page-wrap">
+<body class="lumo-landing account-page-wrap">
   {% include '_lumo_nav.html' %}
 
   <div class="account-layout" id="account-layout">
@@ -142,11 +142,15 @@
               <span class="account-history-type account-history-type--{{ 'subscription' if is_sub else 'oneoff' }}">{{ 'Subscription' if is_sub else 'One-off' }}</span>
             </div>
             <div class="account-history-actions">
-              <a href="/api/captions-download?t={{ o.token }}&inline=1" target="_blank" rel="noopener" class="account-btn-link account-btn-link--primary">View</a>
-              <a href="/api/captions-download?t={{ o.token }}" class="account-btn-link account-btn-link--secondary">Download</a>
+              <span class="account-history-actions-row account-history-actions-captions">
+                <a href="/api/captions-download?t={{ o.token }}&inline=1" target="_blank" rel="noopener" class="account-btn-link account-btn-link--primary">View captions</a>
+                <a href="/api/captions-download?t={{ o.token }}" class="account-btn-link account-btn-link--secondary">Download captions</a>
+              </span>
               {% if o.include_stories %}
-              <a href="/api/captions-download?t={{ o.token }}&type=stories&inline=1" target="_blank" rel="noopener" class="account-btn-link account-btn-link--primary">View Stories</a>
-              <a href="/api/captions-download?t={{ o.token }}&type=stories" class="account-btn-link account-btn-link--secondary">Download Stories</a>
+              <span class="account-history-actions-row account-history-actions-stories">
+                <a href="/api/captions-download?t={{ o.token }}&type=stories&inline=1" target="_blank" rel="noopener" class="account-btn-link account-btn-link--primary">View stories</a>
+                <a href="/api/captions-download?t={{ o.token }}&type=stories" class="account-btn-link account-btn-link--secondary">Download stories</a>
+              </span>
               {% endif %}
               <button type="button" class="account-btn-link account-history-delete" data-token="{{ o.token }}" data-is-subscription="{{ '1' if is_sub else '0' }}" onclick="showDeletePackModal(this)" aria-label="Delete pack from history">Delete</button>
             </div>
