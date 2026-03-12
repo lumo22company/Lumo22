@@ -2560,6 +2560,7 @@
   }
   .account-page-wrap .account-pause-block .account-settings-row,
   .account-page-wrap .account-pause-block .account-payment-method-row,
+  .account-page-wrap .account-pause-block .account-get-pack-sooner-row,
   .account-page-wrap .account-pause-manage-billing {
     flex-direction: column !important;
     align-items: flex-start !important;
@@ -2574,6 +2575,7 @@
   .account-page-wrap .account-pause-block .account-change-plan-btn,
   .account-page-wrap .account-pause-block .account-resume-btn,
   .account-page-wrap .account-pause-block .account-get-pack-sooner-btn,
+  .account-page-wrap .account-get-pack-sooner-row .account-get-pack-sooner-btn,
   .account-page-wrap .account-pause-manage-billing .account-billing-portal-link,
   .account-page-wrap .account-pause-manage-billing a.account-btn-swipe-dark {
     align-self: flex-start !important;
