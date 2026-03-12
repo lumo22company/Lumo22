@@ -2270,6 +2270,59 @@
   .account-main { padding: 1.5rem 1rem 3rem; }
 }
 
+/* Extra mobile refinements for captions product + account pages */
+@media (max-width: 600px) {
+  /* Captions hero: tighten spacing and prevent overflow */
+  .dfd-hero {
+    padding: 4rem 1.5rem 3.5rem;
+    min-height: auto;
+  }
+  .dfd-hero-title {
+    max-width: 100%;
+    font-size: clamp(2.6rem, 9vw, 3.4rem);
+  }
+  .dfd-hero-hook {
+    font-size: 1.25rem;
+    max-width: 100%;
+  }
+  .dfd-hero-bullets {
+    font-size: 0.95rem;
+    max-width: 100%;
+  }
+  .dfd-hero-cta .dfd-btn {
+    width: 100%;
+    text-align: center;
+  }
+
+  /* Example blocks: slightly tighter gap on small screens */
+  .captions-examples-grid {
+    gap: 1.5rem;
+  }
+
+  /* Account layout: avoid cramped rows on phones */
+  .account-settings-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .account-history-actions {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
+  }
+
+  .account-main .account-section-block {
+    padding: 1.25rem 1rem 1.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Modals: fit comfortably on narrow screens */
+  .account-delete-modal-box {
+    margin: 1.5rem 1rem;
+    width: auto;
+  }
+}
+
 .account-page-wrap .account-section {
   padding: var(--dfd-space-xl) var(--space-xl);
   width: 100%;

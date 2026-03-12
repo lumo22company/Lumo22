@@ -1272,6 +1272,26 @@ a.lumo-nav-login:hover::before {
   .chat-container { min-height: 360px; }
 }
 
+/* Extra-small screens: tighten nav and hero */
+@media (max-width: 480px) {
+  .lumo-nav {
+    padding: 0.5rem 1rem;
+  }
+  .lumo-nav-left {
+    gap: 0.75rem;
+  }
+  .lumo-nav-logo {
+    font-size: 0.9rem;
+  }
+  .hero .section-inner {
+    margin: 24px 16px;
+  }
+  .hero-wordmark-text {
+    font-size: clamp(2rem, 10vw, 3rem);
+    letter-spacing: 0.25em;
+  }
+}
+
 /* ——— Other pages: captions, digital_front_desk, etc. (unchanged) ——— */
 .lumo-landing h1, .lumo-landing h3 { font-family: var(--font-display); font-weight: 600; letter-spacing: -0.02em; }
 .lumo-landing h2 { font-family: var(--font-h2); font-weight: 700; letter-spacing: -0.02em; }
