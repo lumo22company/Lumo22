@@ -1360,6 +1360,15 @@ a.lumo-nav-login:hover::before {
     padding-bottom: 0.25rem !important;
     min-height: auto;
   }
+  /* Ensure homepage nav buttons visually match product page sizing */
+  .lumo-landing:not(.product-page-captions) .lumo-nav-auth .lumo-nav-login,
+  .lumo-landing:not(.product-page-captions) .lumo-nav-auth .lumo-nav-cta {
+    padding: 0.35rem 0.9rem !important;
+    min-width: 88px !important;
+    min-height: 36px;
+    font-size: 0.7rem !important;
+    border-radius: 12px !important;
+  }
   .lumo-nav.is-open .lumo-nav-links {
     display: flex;
   }
