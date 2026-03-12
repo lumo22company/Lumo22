@@ -12,8 +12,10 @@
     .auth-page .sub { color: var(--lum-text-muted); margin-bottom: 2rem; }
     .auth-page label { display: block; font-size: 0.9rem; font-weight: 500; margin-bottom: 0.5rem; }
     .auth-page input { width: 100%; padding: 0.75rem 1rem; background: var(--lum-surface-elevated); border: 1px solid var(--lum-border); border-radius: 8px; color: var(--lum-text); margin-bottom: 1.25rem; }
-    .auth-page .btn { display: inline-block; padding: 1rem 2rem; background: var(--lum-gold); color: #000; font-weight: 600; border: none; border-radius: 8px; cursor: pointer; width: 100%; }
-    .auth-page .btn:hover { opacity: 0.95; }
+    .auth-page .btn { display: inline-block; padding: 1rem 2rem; background: transparent; color: var(--lum-gold); font-weight: 600; border: 2px solid var(--lum-gold); border-radius: 8px; cursor: pointer; width: 100%; position: relative; overflow: hidden; transition: color 0.25s ease, border-color 0.25s ease; }
+    .auth-page .btn::before { content: ''; position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: var(--lum-gold); transform: scaleX(0); transform-origin: left center; transition: transform 0.35s ease-out; z-index: -1; }
+    .auth-page .btn:hover:not(:disabled) { color: #000; border-color: var(--lum-gold); }
+    .auth-page .btn:hover:not(:disabled)::before { transform: scaleX(1); }
     .auth-page .btn:disabled { opacity: 0.6; cursor: not-allowed; }
     .auth-page .msg { margin-top: 1rem; padding: 0.75rem; border-radius: 8px; font-size: 0.95rem; }
     .auth-page .msg.error { background: rgba(200,80,80,0.15); color: var(--lum-text); }
