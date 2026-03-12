@@ -858,9 +858,11 @@
 }
 
 .dfd-step-icon {
-  display: block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   color: var(--lum-gold);
-  margin-bottom: 0.75rem;
+  margin: 0 0 1rem 0.75rem;
 }
 /* Light section: darker icons for visibility on white cards */
 .dfd-section--light .dfd-step-icon {
