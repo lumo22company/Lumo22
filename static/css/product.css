@@ -2552,16 +2552,18 @@
     text-align: left;
   }
 
-  /* Manage subscription: left-align all content on mobile */
+  /* Manage subscription: left-align all content on mobile (override inline styles) */
   .account-page-wrap .account-section-block h2,
   .account-page-wrap .account-section-block .account-section-desc,
   .account-page-wrap .account-section-block ul {
     text-align: left;
   }
   .account-page-wrap .account-pause-block .account-settings-row,
+  .account-page-wrap .account-pause-block .account-payment-method-row,
   .account-page-wrap .account-pause-manage-billing {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
     text-align: left;
   }
   .account-page-wrap .account-pause-block .account-payment-method-select-wrap,
@@ -2571,8 +2573,10 @@
   .account-page-wrap .account-pause-block .account-remove-stories-btn,
   .account-page-wrap .account-pause-block .account-change-plan-btn,
   .account-page-wrap .account-pause-block .account-resume-btn,
-  .account-page-wrap .account-pause-block .account-get-pack-sooner-btn {
-    align-self: flex-start;
+  .account-page-wrap .account-pause-block .account-get-pack-sooner-btn,
+  .account-page-wrap .account-pause-manage-billing .account-billing-portal-link,
+  .account-page-wrap .account-pause-manage-billing a.account-btn-swipe-dark {
+    align-self: flex-start !important;
   }
   .account-page-wrap .account-pause-manage-billing .account-settings-desc {
     text-align: left;
