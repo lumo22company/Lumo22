@@ -1,9 +1,8 @@
-{# Shared nav — one Lumo 22 + Captions left; Account left when logged in; Login/Sign up right. #}
+{# Shared nav — Lumo 22 + Captions left; Account (yellow) or Login/Sign up right. #}
 <nav class="lumo-nav" id="lumo-nav">
   <div class="lumo-nav-left">
     <a href="/" class="lumo-nav-logo">Lumo 22</a>
     <a href="/captions" class="lumo-nav-link lumo-nav-link-captions">Captions</a>
-    {% if current_customer %}<a href="/account" class="lumo-nav-link lumo-nav-account">Account</a>{% endif %}
   </div>
   <button type="button" class="lumo-nav-toggle" id="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
     <span></span><span></span><span></span>
@@ -14,7 +13,9 @@
     {% if current_customer %}<a href="/account" class="lumo-nav-link lumo-nav-link-account">Account</a>{% endif %}
   </div>
   <div class="lumo-nav-auth">
-    {% if not current_customer %}
+    {% if current_customer %}
+    <a href="/account" class="lumo-nav-cta lumo-nav-account">Account</a>
+    {% else %}
     <a href="/login" class="lumo-nav-login">Log in</a>
     <a href="/signup" class="lumo-nav-cta lumo-nav-signup">Sign up</a>
     {% endif %}
