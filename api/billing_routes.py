@@ -428,3 +428,135 @@ def reduce_subscription():
         "ok": True,
         "message": "Your plan has been updated. Your new (lower) price will be reflected on your next invoice. Changes apply to your next pack. Packs already delivered will not change.",
     }), 200
+
+
+@billing_bp.route("/change-subscription-plan", methods=["POST"])
+def change_subscription_plan():
+    """
+    Change subscription plan: supports upgrades and downgrades for platforms and Story Ideas.
+    Body: { token, new_platforms (1–4), new_stories (bool) }.
+    - Uses same Stripe item update logic as reduce_subscription.
+    - Sends a plan-change confirmation email with old/new price.
+    """
+    try:
+        data = request.get_json() or {}
+        token = (data.get("token") or "").strip()
+        new_platforms = max(1, min(4, int(data.get("new_platforms") or 1)))
+        new_stories = bool(data.get("new_stories"))
+    except (TypeError, ValueError):
+        return jsonify({"ok": False, "error": "Invalid request"}), 400
+    if not token:
+        return jsonify({"ok": False, "error": "token required"}), 400
+
+    try:
+        from services.caption_order_service import CaptionOrderService
+        from config import Config
+        co_svc = CaptionOrderService()
+        order = co_svc.get_by_token(token)
+    except Exception:
+        return jsonify({"ok": False, "error": "Could not load order"}), 500
+    if not order:
+        return jsonify({"ok": False, "error": "Order not found"}), 404
+
+    subscription_id = (order.get("stripe_subscription_id") or "").strip()
+    if not subscription_id:
+        return jsonify({"ok": False, "error": "This order is not a subscription"}), 400
+    from api.stripe_utils import is_valid_stripe_subscription_id
+    if not is_valid_stripe_subscription_id(subscription_id):
+        return jsonify({"ok": False, "error": "Invalid subscription"}), 400
+
+    order_platforms = max(1, int(order.get("platforms_count", 1)))
+    order_has_stories = bool(order.get("include_stories"))
+    if new_platforms == order_platforms and new_stories == order_has_stories:
+        return jsonify({"ok": False, "error": "No change to plan"}), 400
+
+    stories_price_id = (getattr(Config, "STRIPE_CAPTIONS_STORIES_SUBSCRIPTION_PRICE_ID", None) or "").strip()
+    extra_platform_price_id = (getattr(Config, "STRIPE_CAPTIONS_EXTRA_PLATFORM_SUBSCRIPTION_PRICE_ID", None) or "").strip()
+    if not getattr(Config, "STRIPE_SECRET_KEY", None):
+        return jsonify({"ok": False, "error": "Billing not configured"}), 503
+
+    try:
+        import stripe
+        stripe.api_key = Config.STRIPE_SECRET_KEY
+        sub = stripe.Subscription.retrieve(subscription_id, expand=["items.data.price"])
+    except stripe.error.StripeError as e:
+        msg = getattr(e, "user_message", None) or str(e) or "Stripe error"
+        return jsonify({"ok": False, "error": msg}), 400
+
+    items_data = (sub.get("items") or {}).get("data") if hasattr(sub.get("items"), "get") else getattr(sub.get("items"), "data", None)
+    items_data = items_data or []
+    item_updates = []
+    for item in items_data:
+        si_id = item.get("id") if isinstance(item, dict) else getattr(item, "id", None)
+        if not si_id:
+            continue
+        price = item.get("price") if isinstance(item, dict) else getattr(item, "price", None)
+        price_id = price.get("id") if isinstance(price, dict) else getattr(price, "id", None) if price else None
+        qty = item.get("quantity", 1) if isinstance(item, dict) else getattr(item, "quantity", 1)
+        qty = int(qty) if qty else 1
+
+        if stories_price_id and price_id == stories_price_id:
+            if not new_stories:
+                item_updates.append({"id": si_id, "deleted": True})
+            else:
+                item_updates.append({"id": si_id, "quantity": 1})
+        elif extra_platform_price_id and price_id == extra_platform_price_id:
+            new_qty = max(0, new_platforms - 1)
+            if new_qty == 0:
+                item_updates.append({"id": si_id, "deleted": True})
+            else:
+                item_updates.append({"id": si_id, "quantity": new_qty})
+        else:
+            item_updates.append({"id": si_id, "quantity": qty})
+
+    try:
+        stripe.Subscription.modify(
+            subscription_id,
+            items=item_updates,
+            proration_behavior="create_prorations",
+        )
+    except stripe.error.StripeError as e:
+        msg = getattr(e, "user_message", None) or str(e) or "Stripe error"
+        return jsonify({"ok": False, "error": msg}), 400
+
+    co_svc.update(order["id"], {"platforms_count": new_platforms, "include_stories": new_stories})
+
+    customer_email = (order.get("customer_email") or "").strip()
+    if customer_email and "@" in customer_email:
+        try:
+            from services.notifications import NotificationService
+            notif = NotificationService()
+            change_bits = []
+            if new_platforms != order_platforms:
+                direction = "more" if new_platforms > order_platforms else "fewer"
+                change_bits.append(
+                    f"your subscription now includes {new_platforms} platform{'s' if new_platforms != 1 else ''} instead of {order_platforms}"
+                )
+            if not order_has_stories and new_stories:
+                change_bits.append("30 Days Story Ideas has been added to your subscription")
+            elif order_has_stories and not new_stories:
+                change_bits.append("Story Ideas has been removed from your subscription")
+            if not change_bits:
+                change_text = "your plan has been updated."
+            else:
+                change_text = "; ".join(change_bits) + "."
+            change_summary = f"What changed: {change_text}"
+            when_effective = "Changes apply to your next pack. Packs already delivered will not change."
+            currency = (order.get("currency") or "gbp").strip().lower()
+            old_sym, old_amt = _subscription_monthly_price(currency, order_platforms, order_has_stories)
+            new_sym, new_amt = _subscription_monthly_price(currency, new_platforms, new_stories)
+            notif.send_plan_change_confirmation_email(
+                customer_email,
+                change_summary=change_summary,
+                when_effective=when_effective,
+                account_url=_account_url(),
+                new_price_display=f"{new_sym}{new_amt}",
+                old_price_display=f"{old_sym}{old_amt}",
+            )
+        except Exception as e:
+            print(f"[billing] Plan change confirmation email failed: {e}")
+
+    return jsonify({
+        "ok": True,
+        "message": "Your plan has been updated. Changes apply to your next pack. Packs already delivered will not change.",
+    }), 200

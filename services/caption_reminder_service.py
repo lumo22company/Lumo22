@@ -114,7 +114,7 @@ def run_reminders() -> Dict[str, Any]:
 
 Your next 30 Days of Social Media Captions pack is coming soon. You can update your preferences (business details, voice, platforms) anytime before we generate it.
 
-Do you have an event, promotion or something else coming up? Update your form to tell us about it and we'll tailor your captions to fit.
+Do you have an event, promotion or something else coming up? Use your form to tell us about it and we'll tailor your captions to fit.
 
 Update my form: {intake_url}
 

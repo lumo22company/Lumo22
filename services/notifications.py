@@ -110,7 +110,7 @@ def _captions_reminder_email_html(intake_url: str, account_url: str) -> str:
     safe_account = html.escape(account_url, quote=True)
     content = f"""<p style="margin:0 0 16px;">Hi,</p>
 <p style="margin:0 0 16px;">Your next 30 Days of Social Media Captions pack is coming soon. You can update your preferences (business details, voice, platforms) anytime before we generate it.</p>
-<p style="margin:0 0 16px;">Do you have an event, promotion or something else coming up? Update your form to tell us about it and we'll tailor your captions to fit.</p>
+<p style="margin:0 0 16px;">Do you have an event, promotion or something else coming up? Use your form to tell us about it and we'll tailor your captions to fit.</p>
 <p style="margin:0 0 24px;"><a href="{safe_intake}" style="display:inline-block; padding:14px 28px; background:{BRAND_GOLD}; color:{BRAND_BLACK}; text-decoration:none; border-radius:10px; font-weight:600;">Update my form</a></p>
 <p style="margin:0 0 8px; font-size:14px; color:{BRAND_MUTED};">Or copy and paste this link into your browser:</p>
 <p style="margin:0 0 24px; font-size:13px; word-break:break-all; color:#333;">{safe_intake}</p>

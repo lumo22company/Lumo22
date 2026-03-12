@@ -430,6 +430,20 @@
           </div>
           <div class="account-settings-row" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid rgba(0,0,0,0.06);">
             <div>
+              <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Change plan</div>
+              <div class="account-settings-desc">Change platforms or Story Ideas for this subscription. Changes apply to your next pack.</div>
+            </div>
+            {% set _platforms = (o.get('platforms_count') or 1)|int %}
+            {% set _has_stories = o.get('include_stories') %}
+            <button type="button"
+                    class="account-billing-portal-link account-btn-swipe-light account-change-plan-btn"
+                    data-order-token="{{ o.get('token', '') }}"
+                    data-platforms="{{ _platforms }}"
+                    data-has-stories="{{ '1' if _has_stories else '0' }}"
+                    onclick="showChangePlanModal(this)">Change plan</button>
+          </div>
+          <div class="account-settings-row" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid rgba(0,0,0,0.06);">
+            <div>
               <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Pause subscription</div>
               <div class="account-settings-desc">{% if (o.get('subscription_pause') or {}).get('paused') %}Paused — resumes {{ (o.get('subscription_pause') or {}).get('resumes_at') or 'automatically' }}{% else %}Pause billing for 1 month (no charge, no pack){% endif %}</div>
             </div>
@@ -446,7 +460,14 @@
               <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Story Ideas</div>
               <div class="account-settings-desc">Add 30 Days Story Ideas to this subscription. Stories will be delivered with your <strong>next</strong> set of captions, not instantly.</div>
             </div>
-            <button type="button" class="account-billing-portal-link account-btn-swipe-light account-pause-btn account-add-stories-btn" data-subscription-id="{{ sub_id }}" onclick="showAddStoriesModal(this)">Add Story Ideas</button>
+            {% set _platforms = (o.get('platforms_count') or 1)|int %}
+            {% set _currency = (o.get('currency') or 'gbp')|lower %}
+            <button type="button"
+                    class="account-billing-portal-link account-btn-swipe-light account-pause-btn account-add-stories-btn"
+                    data-subscription-id="{{ sub_id }}"
+                    data-platforms="{{ _platforms }}"
+                    data-currency="{{ _currency }}"
+                    onclick="showAddStoriesModal(this)">Add Story Ideas</button>
           </div>
           {% else %}
           <div class="account-settings-row account-remove-stories-row">
@@ -539,7 +560,7 @@
       <div class="account-delete-modal-backdrop" onclick="closeAddStoriesModal()"></div>
       <div class="account-delete-modal-box">
         <h2 id="add-stories-modal-title" class="account-delete-modal-title">Add Story Ideas?</h2>
-        <p class="account-delete-modal-text">Stories will be included in your <strong>next</strong> pack, not instantly. The updated price will apply from your next invoice.</p>
+        <p id="add-stories-price-text" class="account-delete-modal-text">Stories will be included in your <strong>next</strong> pack, not instantly. The updated price will apply from your next invoice.</p>
         <div class="account-delete-modal-buttons">
           <button type="button" class="account-delete-modal-btn account-delete-modal-keep" onclick="closeAddStoriesModal()">Cancel</button>
           <button type="button" id="add-stories-modal-confirm" class="account-delete-modal-btn account-add-stories-confirm" onclick="confirmAddStories()">Confirm and add</button>
@@ -559,6 +580,34 @@
         <div class="account-delete-modal-buttons">
           <button type="button" class="account-delete-modal-btn account-delete-modal-keep" onclick="closeRemoveStoriesModal()">Cancel</button>
           <button type="button" id="remove-stories-modal-confirm" class="account-delete-modal-btn account-remove-stories-confirm" disabled>I have read and agree — accept new price</button>
+        </div>
+      </div>
+    </div>
+    <div id="change-plan-modal" class="account-delete-modal" role="dialog" aria-labelledby="change-plan-modal-title" aria-modal="true" hidden>
+      <div class="account-delete-modal-backdrop" onclick="closeChangePlanModal()"></div>
+      <div class="account-delete-modal-box remove-stories-modal-box" style="max-width: 520px;">
+        <h2 id="change-plan-modal-title" class="account-delete-modal-title">Change your plan</h2>
+        <p class="account-delete-modal-text">Adjust how many platforms you use and whether Story Ideas is included. Changes apply to your <strong>next</strong> pack, not packs already delivered.</p>
+        <div class="account-delete-modal-text" style="margin-bottom: 0.75rem;">
+          <label for="change-plan-platforms" style="display:block; font-weight:600; margin-bottom:0.25rem;">Number of platforms</label>
+          <select id="change-plan-platforms" style="width:100%; padding:0.5rem 0.75rem; border-radius:8px; border:1px solid rgba(0,0,0,0.2); font-size:0.95rem;">
+            <option value="1">1 platform</option>
+            <option value="2">2 platforms</option>
+            <option value="3">3 platforms</option>
+            <option value="4">4 platforms</option>
+          </select>
+        </div>
+        <div class="account-delete-modal-text" style="margin-bottom: 0.75rem;">
+          <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; font-size:0.95rem;">
+            <input type="checkbox" id="change-plan-stories" style="width:auto;">
+            <span>Include 30 Days Story Ideas</span>
+          </label>
+        </div>
+        <p id="change-plan-price" class="account-delete-modal-text" style="font-size:0.9rem; margin-bottom:0.5rem;"></p>
+        <p id="change-plan-error" class="account-delete-modal-text" style="display:none; font-size:0.9rem; color:#c00; margin-top:0.25rem;"></p>
+        <div class="account-delete-modal-buttons">
+          <button type="button" class="account-delete-modal-btn account-delete-modal-keep" onclick="closeChangePlanModal()">Cancel</button>
+          <button type="button" id="change-plan-confirm" class="account-delete-modal-btn account-add-stories-confirm" onclick="confirmChangePlan()">Confirm changes</button>
         </div>
       </div>
     </div>
@@ -602,6 +651,7 @@
   <script src="{{ url_for('static', filename='js/landing.js') }}?v={{ asset_version }}"></script>
   <script>
     (function() {
+      var CAPTIONS_PRICES = {{ captions_prices|tojson }};
       if (window.location.search.indexOf('login_token=') !== -1) {
         try { history.replaceState({}, '', window.location.pathname); } catch (e) {}
       }
@@ -793,6 +843,123 @@
       }
       window.resumeSubscription = resumeSubscription;
 
+      // Change plan modal (upgrade/downgrade platforms and Stories)
+      var changePlanState = {
+        token: null,
+        oldPlatforms: 1,
+        oldStories: false
+      };
+
+      window.showChangePlanModal = function(btn) {
+        var token = btn.getAttribute('data-order-token') || '';
+        if (!token) return;
+        var platforms = parseInt(btn.getAttribute('data-platforms') || '1', 10);
+        if (!platforms || platforms < 1) platforms = 1;
+        var hasStories = (btn.getAttribute('data-has-stories') || '0') === '1';
+        changePlanState.token = token;
+        changePlanState.oldPlatforms = platforms;
+        changePlanState.oldStories = hasStories;
+        var sel = document.getElementById('change-plan-platforms');
+        var cb = document.getElementById('change-plan-stories');
+        var errEl = document.getElementById('change-plan-error');
+        var priceEl = document.getElementById('change-plan-price');
+        if (sel) sel.value = String(platforms);
+        if (cb) cb.checked = !!hasStories;
+        if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+        if (priceEl && CAPTIONS_PRICES) {
+          var currency = (btn.getAttribute('data-currency') || 'gbp').toLowerCase();
+          var p = CAPTIONS_PRICES[currency] || CAPTIONS_PRICES.gbp;
+          var base = p.sub;
+          var extraPer = p.extra_sub;
+          var storiesPer = p.stories_sub;
+          var current = base + Math.max(0, platforms - 1) * extraPer + (hasStories ? storiesPer : 0);
+          var next = current;
+          priceEl.innerHTML = 'Current: <strong>' + (p.symbol || '£') + current + '/month</strong>. New: <strong>' + (p.symbol || '£') + next + '/month</strong>.';
+        }
+        var modal = document.getElementById('change-plan-modal');
+        if (modal) {
+          modal.removeAttribute('hidden');
+          modal.classList.add('account-delete-modal--open');
+        }
+      };
+
+      window.closeChangePlanModal = function() {
+        var modal = document.getElementById('change-plan-modal');
+        if (modal) {
+          modal.setAttribute('hidden', '');
+          modal.classList.remove('account-delete-modal--open');
+        }
+      };
+
+      window.confirmChangePlan = function() {
+        var sel = document.getElementById('change-plan-platforms');
+        var cb = document.getElementById('change-plan-stories');
+        var errEl = document.getElementById('change-plan-error');
+        if (!sel || !cb || !changePlanState.token) return;
+        var priceEl = document.getElementById('change-plan-price');
+        var newPlatforms = parseInt(sel.value || '1', 10);
+        if (!newPlatforms || newPlatforms < 1) newPlatforms = 1;
+        if (newPlatforms > 4) newPlatforms = 4;
+        var newStories = !!cb.checked;
+        if (newPlatforms === changePlanState.oldPlatforms && newStories === changePlanState.oldStories) {
+          if (errEl) {
+            errEl.textContent = 'No change — adjust platforms or Story Ideas before confirming.';
+            errEl.style.display = 'block';
+          }
+          return;
+        }
+        var btn = document.getElementById('change-plan-confirm');
+        if (btn) {
+          btn.disabled = true;
+          btn.textContent = 'Updating…';
+        }
+        if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+        if (priceEl && CAPTIONS_PRICES) {
+          var currency = (document.querySelector('.account-change-plan-btn[data-order-token=\"' + changePlanState.token + '\"]') || {}).getAttribute ? (document.querySelector('.account-change-plan-btn[data-order-token=\"' + changePlanState.token + '\"]').getAttribute('data-currency') || 'gbp').toLowerCase() : 'gbp';
+          var p = CAPTIONS_PRICES[currency] || CAPTIONS_PRICES.gbp;
+          var base = p.sub;
+          var extraPer = p.extra_sub;
+          var storiesPer = p.stories_sub;
+          var current = base + Math.max(0, changePlanState.oldPlatforms - 1) * extraPer + (changePlanState.oldStories ? storiesPer : 0);
+          var next = base + Math.max(0, newPlatforms - 1) * extraPer + (newStories ? storiesPer : 0);
+          priceEl.innerHTML = 'Current: <strong>' + (p.symbol || '£') + current + '/month</strong>. New: <strong>' + (p.symbol || '£') + next + '/month</strong>.';
+        }
+        fetch('/api/billing/change-subscription-plan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            token: changePlanState.token,
+            new_platforms: newPlatforms,
+            new_stories: newStories
+          })
+        })
+        .then(function(r) { return r.json().then(function(j){ return { status: r.status, json: j }; }); })
+        .then(function(res) {
+          if (res.status === 200 && res.json && res.json.ok) {
+            window.closeChangePlanModal();
+            window.location.reload();
+          } else {
+            if (errEl) {
+              errEl.textContent = (res.json && (res.json.error || res.json.message)) || 'Could not update your plan. Please try again or email hello@lumo22.com.';
+              errEl.style.display = 'block';
+            }
+          }
+        })
+        .catch(function() {
+          if (errEl) {
+            errEl.textContent = 'Could not update your plan. Please try again or email hello@lumo22.com.';
+            errEl.style.display = 'block';
+          }
+        })
+        .finally(function() {
+          if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Confirm changes';
+          }
+        });
+      };
+
       var deletePackPendingBtn = null;
       function showDeletePackModal(btn) {
         if (!btn) return;
@@ -861,6 +1028,19 @@
       function showAddStoriesModal(btn) {
         addStoriesPendingBtn = btn;
         var modal = document.getElementById('add-stories-modal');
+        var priceEl = document.getElementById('add-stories-price-text');
+        if (priceEl && CAPTIONS_PRICES) {
+          var platforms = parseInt(btn.getAttribute('data-platforms') || '1', 10);
+          if (!platforms || platforms < 1) platforms = 1;
+          var currency = (btn.getAttribute('data-currency') || 'gbp').toLowerCase();
+          var p = CAPTIONS_PRICES[currency] || CAPTIONS_PRICES.gbp;
+          var base = p.sub;
+          var extraPer = p.extra_sub;
+          var storiesPer = p.stories_sub;
+          var current = base + Math.max(0, platforms - 1) * extraPer;
+          var next = current + storiesPer;
+          priceEl.innerHTML = 'New price will be <strong>' + (p.symbol || '£') + next + '/month</strong> (was ' + (p.symbol || '£') + current + '/month). Stories will be included in your <strong>next</strong> pack, not instantly.';
+        }
         if (modal) {
           modal.removeAttribute('hidden');
           modal.classList.add('account-delete-modal--open');
