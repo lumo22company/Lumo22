@@ -1320,7 +1320,7 @@ a.lumo-nav-login:hover::before {
   .lumo-nav-links {
     display: none;
     position: absolute;
-    right: 1.25rem;
+    left: 1.25rem;
     top: 100%;
     margin-top: 0.5rem;
     padding: 0.75rem 1rem;
@@ -1329,8 +1329,8 @@ a.lumo-nav-login:hover::before {
     border: 1px solid rgba(255,255,255,0.15);
     flex-direction: column;
     gap: 0.25rem;
-    align-items: flex-end;
-    text-align: right;
+    align-items: flex-start;
+    text-align: left;
   }
   .lumo-nav-links a {
     min-height: 32px;
