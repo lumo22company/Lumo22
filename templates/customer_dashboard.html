@@ -28,7 +28,10 @@
   </nav>
 
   <div class="account-layout" id="account-layout">
-    <button type="button" class="account-sidebar-toggle" id="account-sidebar-toggle" aria-expanded="false" aria-label="Toggle account menu">Your account</button>
+    <button type="button" class="account-sidebar-toggle" id="account-sidebar-toggle" aria-expanded="false" aria-label="Toggle account menu">
+      <span class="account-sidebar-toggle-text">Your account</span>
+      <span class="account-sidebar-toggle-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
+    </button>
     <aside class="account-sidebar" id="account-sidebar">
       <h1 class="account-sidebar-title">Your account</h1>
       <ul class="account-sidebar-nav">
@@ -1394,7 +1397,8 @@
         sidebarToggle.addEventListener('click', function() {
           var isOpen = layout.classList.toggle('account-sidebar-open');
           sidebarToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-          sidebarToggle.textContent = isOpen ? 'Close menu' : 'Your account';
+          var textSpan = sidebarToggle.querySelector('.account-sidebar-toggle-text');
+          if (textSpan) textSpan.textContent = isOpen ? 'Close menu' : 'Your account';
         });
       }
     })();

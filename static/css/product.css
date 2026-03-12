@@ -2356,7 +2356,9 @@
     padding-right: 1rem;
   }
   .account-page-wrap .account-sidebar-toggle {
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     width: 100%;
     padding: 0.85rem 1rem;
     margin: 0 0 0.5rem;
@@ -2374,6 +2376,20 @@
   }
   .account-page-wrap .account-sidebar-toggle:hover {
     opacity: 0.95;
+  }
+  .account-page-wrap .account-sidebar-toggle-icon {
+    flex-shrink: 0;
+    margin-left: 0.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.25s ease;
+  }
+  .account-page-wrap .account-sidebar-toggle-icon svg {
+    display: block;
+  }
+  .account-page-wrap .account-layout.account-sidebar-open .account-sidebar-toggle .account-sidebar-toggle-icon {
+    transform: rotate(180deg);
   }
   .account-page-wrap .account-sidebar {
     display: none;
