@@ -1335,14 +1335,14 @@ a.lumo-nav-login:hover::before {
   }
   .lumo-nav-auth {
     margin-left: 0;
-    order: 1;
+    order: 2;
   }
   .lumo-nav-toggle {
-    order: 2;
+    order: 1;
   }
   .lumo-nav-auth .lumo-nav-login,
   .lumo-nav-auth .lumo-nav-cta {
-    padding: 0.35rem 0.7rem !important;
+    padding: 0.3rem 0.6rem !important;
     min-width: 72px !important;
     min-height: 36px;
     font-size: 0.65rem !important;
