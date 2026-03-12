@@ -12,20 +12,8 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v={{ asset_version }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/product.css') }}?v={{ asset_version }}">
 </head>
-<body class="lumo-landing account-page-wrap">
-  <nav class="lumo-nav" id="lumo-nav">
-    <div class="lumo-nav-left">
-      <a href="/" class="lumo-nav-logo">Lumo 22</a>
-    </div>
-    <button type="button" class="lumo-nav-toggle" id="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
-      <span></span><span></span><span></span>
-    </button>
-    <div class="lumo-nav-links" id="nav-links">
-      <a href="/" class="lumo-nav-link lumo-nav-link-home">Lumo 22</a>
-      <a href="/captions" class="lumo-nav-link">Captions</a>
-      <a href="/account" class="lumo-nav-link lumo-nav-link-account">Account</a>
-    </div>
-  </nav>
+<body class="lumo-landing product-page-captions account-page-wrap">
+  {% include '_lumo_nav.html' %}
 
   <div class="account-layout" id="account-layout">
     <button type="button" class="account-sidebar-toggle" id="account-sidebar-toggle" aria-expanded="false" aria-label="Toggle account menu">
@@ -1447,14 +1435,6 @@
   </script>
   <script>
     (function() {
-      var nav = document.getElementById('lumo-nav');
-      var navToggle = document.getElementById('nav-toggle');
-      if (nav && navToggle) {
-        navToggle.addEventListener('click', function() {
-          var isOpen = nav.classList.toggle('is-open');
-          navToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-        });
-      }
       var layout = document.getElementById('account-layout');
       var sidebarToggle = document.getElementById('account-sidebar-toggle');
       var sidebar = document.getElementById('account-sidebar');

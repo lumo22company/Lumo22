@@ -67,26 +67,7 @@
   </style>
 </head>
 <body class="lumo-landing product-page-captions">
-  <nav class="lumo-nav" id="lumo-nav">
-    <div class="lumo-nav-left">
-      <a href="/" class="lumo-nav-logo">Lumo 22</a>
-    </div>
-    <button type="button" class="lumo-nav-toggle" id="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
-      <span></span><span></span><span></span>
-    </button>
-    <div class="lumo-nav-links" id="nav-links">
-      <a href="/" class="lumo-nav-link lumo-nav-link-home">Lumo 22</a>
-      <a href="/captions" class="lumo-nav-link">Captions</a>
-    </div>
-    <div class="lumo-nav-auth">
-      {% if current_customer %}
-      <a href="/account" class="lumo-nav-cta lumo-nav-account">Account</a>
-      {% else %}
-      <a href="/login" class="lumo-nav-login">Log In</a>
-      <a href="/signup" class="lumo-nav-cta lumo-nav-signup">Sign up</a>
-      {% endif %}
-    </div>
-  </nav>
+  {% include '_lumo_nav.html' %}
 
   <main id="main-content">
   <!-- 1. HERO — full-width black, left-aligned -->

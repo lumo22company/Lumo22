@@ -2356,10 +2356,22 @@
   .account-main { padding: 1.5rem 1rem 3rem; }
 }
 
-/* Account page mobile: nav must sit above layout - use position:static on layout to avoid stacking context */
+/* Account page mobile: centered logo only (no burger), nav above layout */
 @media (max-width: 768px) {
   .account-page-wrap .lumo-nav {
     z-index: 99999;
+    justify-content: center;
+  }
+  .account-page-wrap .lumo-nav .lumo-nav-left {
+    display: flex;
+    flex: 1;
+    justify-content: center;
+    margin-left: 0;
+  }
+  .account-page-wrap .lumo-nav .lumo-nav-toggle,
+  .account-page-wrap .lumo-nav .lumo-nav-links,
+  .account-page-wrap .lumo-nav .lumo-nav-auth {
+    display: none !important;
   }
   .account-page-wrap .account-layout {
     position: static !important;

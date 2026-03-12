@@ -186,12 +186,16 @@ input[type="checkbox"] { accent-color: #fff200; }
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
   border-radius: 999px;
   border: 1px solid rgba(255,255,255,0.35);
   background: rgba(0,0,0,0.4);
   cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 .lumo-nav-toggle span {
   display: block;

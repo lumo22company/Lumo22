@@ -19,26 +19,7 @@
 </head>
 <body class="lumo-landing">
   <!-- deploy fingerprint: v={{ asset_version }} (change after redeploy if deploy uses new code) -->
-  <nav class="lumo-nav" id="lumo-nav">
-    <div class="lumo-nav-left">
-      <a href="/" class="lumo-nav-logo">Lumo 22</a>
-    </div>
-    <button type="button" class="lumo-nav-toggle" id="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
-      <span></span><span></span><span></span>
-    </button>
-    <div class="lumo-nav-links" id="nav-links">
-      <a href="/" class="lumo-nav-link lumo-nav-link-home">Lumo 22</a>
-      <a href="/captions" class="lumo-nav-link">Captions</a>
-    </div>
-    <div class="lumo-nav-auth">
-      {% if current_customer %}
-      <a href="/account" class="lumo-nav-cta lumo-nav-account">Account</a>
-      {% else %}
-      <a href="/login" class="lumo-nav-login">Log in</a>
-      <a href="/signup" class="lumo-nav-cta lumo-nav-signup">Sign up</a>
-      {% endif %}
-    </div>
-  </nav>
+  {% include '_lumo_nav.html' %}
 
   {% if inactivity_logout %}
   <p class="inactivity-notice" id="inactivity-notice" style="position: fixed; top: 70px; left: 50%; transform: translateX(-50%); padding: 0.75rem 1.25rem; background: var(--lum-gold); color: #000; font-size: 0.9rem; font-weight: 600; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.2); z-index: 100; margin: 0;">You were logged out due to inactivity.</p>
