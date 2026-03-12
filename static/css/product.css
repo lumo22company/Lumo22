@@ -2356,6 +2356,34 @@
   .account-main { padding: 1.5rem 1rem 3rem; }
 }
 
+/* Account page: ensure nav stays on top and layout doesn't block burger on mobile */
+@media (max-width: 768px) {
+  .account-page-wrap .lumo-nav {
+    z-index: 2147483647;
+  }
+  .account-page-wrap .lumo-nav-toggle {
+    position: relative;
+    z-index: 2147483647;
+  }
+  .account-page-wrap .account-layout {
+    z-index: 1;
+    pointer-events: none;
+  }
+  .account-page-wrap .account-layout > *,
+  .account-page-wrap .account-layout .account-main,
+  .account-page-wrap .account-layout .account-main *,
+  .account-page-wrap .account-layout .account-sidebar,
+  .account-page-wrap .account-layout .account-sidebar *,
+  .account-page-wrap .account-layout [id^="account-delete-modal"],
+  .account-page-wrap .account-layout [id^="get-pack-sooner"],
+  .account-page-wrap .account-layout [id^="add-stories-modal"],
+  .account-page-wrap .account-layout [id^="remove-stories-modal"],
+  .account-page-wrap .account-layout [id^="change-plan-modal"],
+  .account-page-wrap .account-layout [id^="delete-pack-modal"] {
+    pointer-events: auto;
+  }
+}
+
 /* Extra mobile refinements for captions product + account pages */
 @media (max-width: 600px) {
   /* Captions hero: tighten spacing and prevent overflow */
