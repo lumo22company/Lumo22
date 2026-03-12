@@ -722,11 +722,11 @@
 
 .dfd-section--dark .dfd-lead { color: var(--lum-text-muted); }
 
-/* Voice section copy: relax gutters on mobile so it isn't cramped */
+/* Voice section copy + how-it-works: relax gutters on mobile so it isn't cramped */
 @media (max-width: 768px) {
   .product-page-captions .dfd-section-inner {
-    padding-left: 1rem;
-    padding-right: 1rem;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
   }
   .product-page-captions .dfd-heading-voice,
   .product-page-captions .dfd-voice-lead,
@@ -857,12 +857,17 @@
   box-shadow: 0 6px 28px rgba(0, 0, 0, 0.35);
 }
 
+.dfd-step-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
 .dfd-step-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   color: var(--lum-gold);
-  margin: 0 0 1rem 0.5rem;
 }
 /* Light section: darker icons for visibility on white cards */
 .dfd-section--light .dfd-step-icon {
@@ -875,13 +880,13 @@
   justify-content: center;
   width: 40px;
   height: 40px;
+  flex-shrink: 0;
   font-family: var(--dfd-font-condensed);
   font-weight: 700;
   font-size: 1.25rem;
   color: #000;
   background: var(--lum-gold);
   border-radius: 10px;
-  margin-bottom: 1rem;
 }
 
 .dfd-how-cta {
