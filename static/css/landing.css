@@ -86,7 +86,7 @@ html.lenis body {
     max-width: none !important;
     width: 100% !important;
     margin: 0 !important;
-    padding: var(--space-md) 0.5rem !important;
+    padding: var(--space-md) 1rem !important;
     border-radius: 0 !important;
   }
   .intro .intro-body {
@@ -108,8 +108,8 @@ html.lenis body {
 
 @media (max-width: 480px) {
   .intro .section-inner {
-    padding-left: 0.25rem !important;
-    padding-right: 0.25rem !important;
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
   }
 }
 
