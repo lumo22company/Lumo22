@@ -1321,6 +1321,7 @@ a.lumo-nav-login:hover::before {
 @media (max-width: 768px) {
   .lumo-nav {
     padding: 0.75rem 1.25rem;
+    z-index: 9998;
   }
   .lumo-nav-left {
     display: none;
@@ -1382,6 +1383,7 @@ a.lumo-nav-login:hover::before {
   }
   .lumo-nav.is-open .lumo-nav-links {
     display: flex;
+    z-index: 10000;
   }
 
   .split .section-inner {
