@@ -2390,6 +2390,9 @@
     height: 36px;
     background: url('../images/logo.png') center / contain no-repeat;
   }
+  .account-page-wrap .lumo-nav .lumo-nav-link-captions {
+    display: none;
+  }
   .account-page-wrap .lumo-nav .lumo-nav-toggle,
   .account-page-wrap .lumo-nav .lumo-nav-links,
   .account-page-wrap .lumo-nav .lumo-nav-auth {
@@ -2545,7 +2548,33 @@
     gap: 0.5rem 0.75rem;
   }
   .account-page-wrap .account-history-item .account-history-delete {
-    width: 100%;
+    width: auto;
+    text-align: left;
+  }
+
+  /* Manage subscription: left-align all content on mobile */
+  .account-page-wrap .account-section-block h2,
+  .account-page-wrap .account-section-block .account-section-desc,
+  .account-page-wrap .account-section-block ul {
+    text-align: left;
+  }
+  .account-page-wrap .account-pause-block .account-settings-row,
+  .account-page-wrap .account-pause-manage-billing {
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+  }
+  .account-page-wrap .account-pause-block .account-payment-method-select-wrap,
+  .account-page-wrap .account-pause-block .account-toggle,
+  .account-page-wrap .account-pause-block .account-pause-btn,
+  .account-page-wrap .account-pause-block .account-add-stories-btn,
+  .account-page-wrap .account-pause-block .account-remove-stories-btn,
+  .account-page-wrap .account-pause-block .account-change-plan-btn,
+  .account-page-wrap .account-pause-block .account-resume-btn,
+  .account-page-wrap .account-pause-block .account-get-pack-sooner-btn {
+    align-self: flex-start;
+  }
+  .account-page-wrap .account-pause-manage-billing .account-settings-desc {
     text-align: left;
   }
 }
