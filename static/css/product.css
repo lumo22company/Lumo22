@@ -1599,6 +1599,7 @@
 
 .account-page-wrap .lumo-nav {
   background: #000;
+  z-index: 500;
 }
 /* Captions link: same font as landing page nav */
 .account-page-wrap .lumo-nav-links a {
