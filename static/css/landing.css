@@ -86,8 +86,11 @@ html.lenis body {
     max-width: none;
     width: 100%;
     margin: 0;
-    padding: var(--space-xl) 1.25rem;
+    padding: var(--space-lg) 1.25rem;
     border-radius: 0;
+  }
+  .intro .intro-bullets {
+    max-width: 100% !important;
   }
 }
 
