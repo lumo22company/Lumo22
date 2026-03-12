@@ -1355,6 +1355,11 @@ a.lumo-nav-login:hover::before {
     min-height: 36px;
     font-size: 0.65rem !important;
   }
+  .lumo-nav-auth .lumo-nav-login {
+    padding-top: 0.25rem !important;
+    padding-bottom: 0.25rem !important;
+    min-height: auto;
+  }
   .lumo-nav.is-open .lumo-nav-links {
     display: flex;
   }
