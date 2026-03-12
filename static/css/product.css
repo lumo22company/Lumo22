@@ -1604,6 +1604,9 @@
 .account-page-wrap .lumo-nav .lumo-nav-auth {
   display: none;
 }
+.account-page-wrap .lumo-nav .lumo-nav-account {
+  display: none;
+}
 /* Captions link: same font as landing page nav */
 .account-page-wrap .lumo-nav-links a {
   font-family: var(--font-body, 'Century Gothic', CenturyGothic, 'Apple Gothic', sans-serif);
