@@ -1971,13 +1971,13 @@
   white-space: nowrap;
 }
 .account-delete-modal-cancel-sub {
-  color: #f5e6a0;
+  color: var(--lum-gold, #fff200);
   background: transparent;
-  border-color: rgba(245,230,160,0.5);
+  border: 2px solid var(--lum-gold, #fff200);
 }
 .account-delete-modal-cancel-sub:hover {
-  background: rgba(245,230,160,0.15);
-  color: #fff;
+  background: var(--lum-gold, #fff200);
+  color: #000;
 }
 .account-delete-modal-keep {
   color: #fff;
@@ -2422,6 +2422,13 @@
     width: 100%;
     text-align: center;
     box-sizing: border-box;
+  }
+  .account-page-wrap .account-info-row--delete .account-info-actions {
+    text-align: right;
+  }
+  .account-page-wrap .account-info-row--delete .account-info-actions button {
+    width: auto;
+    display: inline-block;
   }
   .account-page-wrap .account-history-item {
     padding: 1rem;
