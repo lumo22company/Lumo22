@@ -150,6 +150,12 @@ input[type="checkbox"] { accent-color: #fff200; }
   align-items: center;
   gap: var(--space-xl);
 }
+.lumo-nav-auth {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-left: auto;
+}
 .lumo-nav-link-home {
   display: none;
 }
@@ -1310,6 +1316,7 @@ a.lumo-nav-login:hover::before {
     flex-direction: column;
     gap: 0.25rem;
     align-items: flex-end;
+    text-align: right;
   }
   .lumo-nav-links a {
     min-height: 32px;
@@ -1320,13 +1327,19 @@ a.lumo-nav-login:hover::before {
     display: inline-flex;
     font-weight: 600;
   }
-  .lumo-nav-cta {
-    background: transparent;
-    border: none;
-    padding: 0;
-    min-width: 0;
-    border-radius: 0;
-    color: #ffffff;
+  .lumo-nav-auth {
+    margin-left: 0;
+    order: 1;
+  }
+  .lumo-nav-toggle {
+    order: 2;
+  }
+  .lumo-nav-auth .lumo-nav-login,
+  .lumo-nav-auth .lumo-nav-cta {
+    padding: 0.35rem 0.7rem !important;
+    min-width: 72px !important;
+    min-height: 36px;
+    font-size: 0.65rem !important;
   }
   .lumo-nav.is-open .lumo-nav-links {
     display: flex;
