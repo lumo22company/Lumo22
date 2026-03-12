@@ -140,6 +140,26 @@ input[type="checkbox"] { accent-color: #fff200; }
   align-items: center;
   gap: var(--space-xl);
 }
+.lumo-nav-toggle {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.35);
+  background: rgba(0,0,0,0.4);
+  cursor: pointer;
+}
+.lumo-nav-toggle span {
+  display: block;
+  width: 18px;
+  height: 2px;
+  background: #ffffff;
+  border-radius: 999px;
+  margin: 2px 0;
+}
 .lumo-nav-logo {
   font-family: var(--font-body);
   font-size: 0.7rem;
@@ -1242,7 +1262,32 @@ a.lumo-nav-login:hover::before {
 
 /* ——— Responsive: hero full screen, canvas scales, panels stack, large tap targets ——— */
 @media (max-width: 768px) {
-  .lumo-nav-links { display: none; }
+  .lumo-nav {
+    padding: 0.75rem 1.25rem;
+  }
+  .lumo-nav-left {
+    gap: 0.75rem;
+  }
+  .lumo-nav-toggle {
+    display: inline-flex;
+  }
+  .lumo-nav-links {
+    display: none;
+    position: absolute;
+    right: 1.25rem;
+    top: 100%;
+    margin-top: 0.5rem;
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+    background: rgba(0,0,0,0.9);
+    border: 1px solid rgba(255,255,255,0.15);
+    flex-direction: column;
+    gap: 0.25rem;
+    align-items: flex-end;
+  }
+  .lumo-nav.is-open .lumo-nav-links {
+    display: flex;
+  }
 
   .split .section-inner {
     margin: 40px 16px;
@@ -1272,14 +1317,8 @@ a.lumo-nav-login:hover::before {
   .chat-container { min-height: 360px; }
 }
 
-/* Extra-small screens: tighten nav and hero */
+/* Extra-small screens: tighten hero */
 @media (max-width: 480px) {
-  .lumo-nav {
-    padding: 0.5rem 1rem;
-  }
-  .lumo-nav-left {
-    gap: 0.75rem;
-  }
   .lumo-nav-logo {
     font-size: 0.9rem;
   }

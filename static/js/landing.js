@@ -8,6 +8,7 @@
 
   var nav = document.getElementById('lumo-nav');
   var heroScroll = document.getElementById('hero-scroll');
+  var navToggle = document.getElementById('nav-toggle');
   var scrollHideThreshold = 80;
   var navSolidThreshold = 60;
 
@@ -47,6 +48,13 @@
       }
     });
     heroScroll.style.cursor = 'pointer';
+  }
+
+  if (nav && navToggle) {
+    navToggle.addEventListener('click', function () {
+      var isOpen = nav.classList.toggle('is-open');
+      navToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    });
   }
 
   var heroCta = document.querySelector('.hero-cta');

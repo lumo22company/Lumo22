@@ -22,9 +22,19 @@
   <nav class="lumo-nav" id="lumo-nav">
     <div class="lumo-nav-left">
       <a href="/" class="lumo-nav-logo">Lumo 22</a>
-      <a href="/captions" class="lumo-nav-link">Captions</a>
     </div>
-    {% if current_customer %}<a href="/account" class="lumo-nav-cta lumo-nav-account">Account</a>{% else %}<span style="display: inline-flex; align-items: center; gap: 0.75rem;"><a href="/login" class="lumo-nav-login">Log in</a><a href="/signup" class="lumo-nav-cta lumo-nav-signup">Sign up</a></span>{% endif %}
+    <button type="button" class="lumo-nav-toggle" id="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="lumo-nav-links" id="nav-links">
+      <a href="/captions" class="lumo-nav-link">Captions</a>
+      {% if current_customer %}
+      <a href="/account" class="lumo-nav-cta lumo-nav-account">Account</a>
+      {% else %}
+      <a href="/login" class="lumo-nav-login">Log in</a>
+      <a href="/signup" class="lumo-nav-cta lumo-nav-signup">Sign up</a>
+      {% endif %}
+    </div>
   </nav>
 
   {% if inactivity_logout %}
