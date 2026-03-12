@@ -1331,23 +1331,29 @@ a.lumo-nav-login:hover::before {
   }
   .lumo-nav-links {
     display: none;
-    position: absolute;
+    position: fixed;
     left: 1.25rem;
-    top: 100%;
-    margin-top: 0.5rem;
+    top: 56px;
+    margin-top: 0;
     padding: 0.75rem 1rem;
     border-radius: 12px;
-    background: rgba(0,0,0,0.9);
+    background: rgba(0,0,0,0.95);
     border: 1px solid rgba(255,255,255,0.15);
     flex-direction: column;
     gap: 0.25rem;
     align-items: flex-start;
     text-align: left;
+    z-index: 99999;
   }
   .lumo-nav-links a {
-    min-height: 32px;
+    min-height: 44px;
+    padding: 0.5rem 0;
+    display: flex;
+    align-items: center;
     text-decoration: none;
     text-underline-offset: 0;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
   }
   .lumo-nav-link-home {
     display: inline-flex;
@@ -1383,7 +1389,6 @@ a.lumo-nav-login:hover::before {
   }
   .lumo-nav.is-open .lumo-nav-links {
     display: flex;
-    z-index: 10000;
   }
 
   .split .section-inner {

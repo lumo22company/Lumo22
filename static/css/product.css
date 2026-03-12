@@ -1601,15 +1601,6 @@
   background: #000;
   z-index: 500;
 }
-@media (max-width: 768px) {
-  .account-page-wrap .lumo-nav {
-    z-index: 9999;
-  }
-  .account-page-wrap .lumo-nav.is-open .lumo-nav-links {
-    z-index: 10000;
-    position: absolute;
-  }
-}
 /* Captions link: same font as landing page nav */
 .account-page-wrap .lumo-nav-links a {
   font-family: var(--font-body, 'Century Gothic', CenturyGothic, 'Apple Gothic', sans-serif);
