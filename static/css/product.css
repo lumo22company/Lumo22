@@ -1601,6 +1601,9 @@
   background: #000;
   z-index: 500;
 }
+.account-page-wrap .lumo-nav .lumo-nav-auth {
+  display: none;
+}
 /* Captions link: same font as landing page nav */
 .account-page-wrap .lumo-nav-links a {
   font-family: var(--font-body, 'Century Gothic', CenturyGothic, 'Apple Gothic', sans-serif);
@@ -2108,6 +2111,9 @@
   margin-left: 0;
   margin-top: 0.25rem;
 }
+.account-history-actions-row {
+  display: contents;
+}
 .account-history-item .account-history-type--subscription {
   background: rgba(0,0,0,0.08);
   color: #333;
@@ -2502,7 +2508,11 @@
     box-sizing: border-box;
   }
   .account-page-wrap .account-info-row--delete .account-info-actions {
-    text-align: right;
+    align-items: flex-start;
+  }
+  .account-page-wrap .account-info-row--delete .account-info-actions form {
+    align-self: flex-start;
+    width: auto;
   }
   .account-page-wrap .account-info-row--delete .account-info-actions button {
     width: auto;
@@ -2515,6 +2525,20 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 0.25rem;
+  }
+  .account-page-wrap .account-history-actions {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .account-page-wrap .account-history-actions-row {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0.5rem 0.75rem;
+  }
+  .account-page-wrap .account-history-item .account-history-delete {
+    width: 100%;
+    text-align: left;
   }
 }
 

@@ -240,6 +240,11 @@ input[type="checkbox"] { accent-color: #fff200; }
 
 .lumo-nav-links { display: flex; gap: var(--space-xl); }
 .lumo-nav-links:empty { display: none; }
+/* Desktop: hide nav-links (only lumo-nav-left has Lumo 22 + Captions). Mobile: nav-links in burger. */
+@media (min-width: 769px) {
+  .lumo-nav-links { display: none; }
+  .lumo-nav-left { gap: var(--space-xl); }
+}
 .lumo-nav-links a {
   font-family: var(--font-body);
   letter-spacing: 0.2em;

@@ -1,7 +1,8 @@
-{# Shared nav — matches captions/landing where burger works. Used by landing, captions, account. #}
+{# Shared nav — one Lumo 22 + Captions left; burger shows both on mobile. #}
 <nav class="lumo-nav" id="lumo-nav">
   <div class="lumo-nav-left">
     <a href="/" class="lumo-nav-logo">Lumo 22</a>
+    <a href="/captions" class="lumo-nav-link lumo-nav-link-captions">Captions</a>
   </div>
   <button type="button" class="lumo-nav-toggle" id="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
     <span></span><span></span><span></span>
@@ -11,9 +12,7 @@
     <a href="/captions" class="lumo-nav-link">Captions</a>
   </div>
   <div class="lumo-nav-auth">
-    {% if current_customer %}
-    <a href="/account" class="lumo-nav-cta lumo-nav-account">Account</a>
-    {% else %}
+    {% if not current_customer %}
     <a href="/login" class="lumo-nav-login">Log in</a>
     <a href="/signup" class="lumo-nav-cta lumo-nav-signup">Sign up</a>
     {% endif %}
