@@ -81,6 +81,16 @@ html.lenis body {
   background: inherit;
 }
 
+@media (max-width: 768px) {
+  .intro .section-inner {
+    max-width: none;
+    width: 100%;
+    margin: 0;
+    padding: var(--space-xl) 1.25rem;
+    border-radius: 0;
+  }
+}
+
 /* Blocks: curved top edge where colour changes, rounded panel */
 .block .section-inner {
   margin: var(--panel-margin) auto;
