@@ -620,7 +620,7 @@ def _run_generation_and_deliver(order_id: str):
     order_service.set_generating(order_id)
     try:
         gen = CaptionGenerator()
-        print(f"[Captions] Calling OpenAI for order {order_id}")
+        print(f"[Captions] Calling AI (provider={Config.AI_PROVIDER}) for order {order_id}")
         captions_md = gen.generate(intake, previous_pack_themes=previous_pack_themes)
         from services.caption_pdf import build_caption_pdf, build_stories_pdf, get_logo_path
         logo_path = get_logo_path()

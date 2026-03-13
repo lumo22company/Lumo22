@@ -11,6 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Encode+Sans+Condensed:wght@400;500;600;700&family=Inter+Tight:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v={{ asset_version }}">
   <style>
+    .terms-page-body .lumo-nav { background: #000; border-bottom: 1px solid rgba(255,255,255,0.06); box-shadow: 0 4px 24px rgba(0,0,0,0.2); }
     .terms-page { padding: 6rem 1.5rem 4rem; max-width: 680px; margin: 0 auto; }
     .terms-page h1 { font-family: var(--font-display); font-size: 1.75rem; margin-bottom: 0.5rem; }
     .terms-page .updated { color: var(--lum-text-muted); font-size: 0.9rem; margin-bottom: 2rem; }
@@ -21,14 +22,8 @@
     .terms-page a:hover { text-decoration-color: currentColor; }
   </style>
 </head>
-<body class="lumo-landing">
-  <nav class="lumo-nav lumo-nav-scrolled">
-    <div class="lumo-nav-left">
-      <a href="/" class="lumo-nav-logo">Lumo 22</a>
-      <a href="/captions" class="lumo-nav-link">Captions</a>
-    </div>
-    <a href="/captions#pricing" class="lumo-nav-cta">View plans</a>
-  </nav>
+<body class="lumo-landing terms-page-body">
+  {% include '_lumo_nav.html' %}
 
   <main class="terms-page">
     <h1>Terms &amp; Conditions</h1>
@@ -37,5 +32,7 @@
   </main>
 
   {% include '_footer.html' %}
+
+  <script src="{{ url_for('static', filename='js/landing.js') }}?v={{ asset_version }}"></script>
 </body>
 </html>

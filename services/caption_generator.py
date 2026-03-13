@@ -1,10 +1,10 @@
 """
-Generate 30 Days of Social Media Captions using OpenAI.
+Generate 30 Days of Social Media Captions using AI (OpenAI or Anthropic Claude).
 Uses the product framework: Authority, Educational, Brand Personality, Soft Promotion, Engagement.
 """
 from typing import Dict, Any, Optional
-from openai import OpenAI
 from config import Config
+from services.ai_provider import chat_completion
 from datetime import datetime, timedelta
 import re
 
@@ -258,16 +258,19 @@ def _build_doc_header(intake: Dict[str, Any]) -> str:
 
 
 class CaptionGenerator:
-    """Generate 30 captions from intake using OpenAI. Uses 3 chunks to avoid timeouts and token limits."""
+    """Generate 30 captions from intake using AI. Uses 3 chunks to avoid timeouts and token limits."""
 
     CHUNKS = [(1, 10), (11, 20), (21, 30)]
     MAX_TOKENS_PER_CHUNK = 6000
 
     def __init__(self):
-        if not Config.OPENAI_API_KEY:
-            raise ValueError("OPENAI_API_KEY not configured")
-        self.client = OpenAI(api_key=Config.OPENAI_API_KEY)
-        self.model = Config.OPENAI_MODEL
+        provider = (Config.AI_PROVIDER or "openai").strip().lower()
+        if provider == "anthropic":
+            if not Config.ANTHROPIC_API_KEY:
+                raise ValueError("ANTHROPIC_API_KEY not configured (set AI_PROVIDER=anthropic)")
+        else:
+            if not Config.OPENAI_API_KEY:
+                raise ValueError("OPENAI_API_KEY not configured")
 
     def generate(self, intake: Dict[str, Any], previous_pack_themes: Optional[list] = None) -> str:
         """
@@ -281,18 +284,14 @@ class CaptionGenerator:
         parts = [header]
         for day_start, day_end in self.CHUNKS:
             user = _build_user_prompt(intake, day_start=day_start, day_end=day_end, previous_pack_themes=previous_pack_themes)
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": system},
-                    {"role": "user", "content": user},
-                ],
+            content = chat_completion(
+                system=system,
+                user=user,
                 temperature=0.6,
                 max_tokens=self.MAX_TOKENS_PER_CHUNK,
             )
-            content = (response.choices[0].message.content or "").strip()
             if not content:
-                raise RuntimeError(f"OpenAI returned empty content for days {day_start}-{day_end}")
+                raise RuntimeError(f"AI returned empty content for days {day_start}-{day_end}")
             parts.append(content)
         result = "\n".join(parts)
 
@@ -355,16 +354,12 @@ Output format — markdown only, one line per day with all three parts on that l
 
 Use the exact labels "Idea:", "Suggested wording:", and "Story hashtags:" on every line. Output the complete list only. No preamble."""
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": "You write concise, actionable social media content prompts with Idea, Suggested wording, and Story hashtags for each day."},
-                    {"role": "user", "content": prompt},
-                ],
+            content = chat_completion(
+                system="You write concise, actionable social media content prompts with Idea, Suggested wording, and Story hashtags for each day.",
+                user=prompt,
                 temperature=0.7,
                 max_tokens=3500,
             )
-            content = (response.choices[0].message.content or "").strip()
             return content if content else ""
         except Exception as e:
             print(f"[CaptionGenerator] Stories generation failed: {e}")
@@ -442,16 +437,12 @@ Output format — markdown only, one line per day with all three parts on that l
 Use the exact labels "Idea:", "Suggested wording:", and "Story hashtags:" on every line. Output the complete list only. No preamble."""
 
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": "You write concise, actionable social media content prompts that align with an existing captions plan. Each day must include Idea, Suggested wording, and Story hashtags."},
-                    {"role": "user", "content": prompt},
-                ],
+            content = chat_completion(
+                system="You write concise, actionable social media content prompts that align with an existing captions plan. Each day must include Idea, Suggested wording, and Story hashtags.",
+                user=prompt,
                 temperature=0.7,
                 max_tokens=3500,
             )
-            content = (response.choices[0].message.content or "").strip()
             return content if content else ""
         except Exception as e:
             print(f"[CaptionGenerator] Aligned stories generation failed: {e}")

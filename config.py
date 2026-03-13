@@ -38,9 +38,14 @@ class Config:
     SESSION_COOKIE_HTTPONLY = True
     PERMANENT_SESSION_LIFETIME = timedelta(hours=1)  # Inactivity logout: session expires after 1 hour of no requests
     
+    # AI Provider: "openai" or "anthropic". When anthropic, caption generation uses Claude.
+    AI_PROVIDER = (os.getenv('AI_PROVIDER') or 'openai').strip().lower()
     # OpenAI (sanitize key so no newline breaks the client)
     OPENAI_API_KEY = _sanitize_header_value(os.getenv('OPENAI_API_KEY', '') or '')
     OPENAI_MODEL = (os.getenv('OPENAI_MODEL') or 'gpt-4o-mini').strip()  # Using mini for cost efficiency
+    # Anthropic (for AI_PROVIDER=anthropic)
+    ANTHROPIC_API_KEY = _sanitize_header_value(os.getenv('ANTHROPIC_API_KEY', '') or '')
+    ANTHROPIC_MODEL = (os.getenv('ANTHROPIC_MODEL') or 'claude-haiku-4-5-20251001').strip()
     
     # Supabase (sanitize URL so httpx doesn't raise InvalidURL from env newlines)
     SUPABASE_URL = _sanitize_url(os.getenv('SUPABASE_URL', '') or '')
@@ -120,9 +125,6 @@ class Config:
     # Test endpoint: secret for /api/captions-deliver-test (triggers generation). If set, ?secret=XXX required. In production, set this.
     CAPTIONS_DELIVER_TEST_SECRET = _sanitize_header_value(os.getenv('CAPTIONS_DELIVER_TEST_SECRET', '').strip() or '')
 
-    # Site chat widget: key for the Lumo 22 marketing site's own chat bubble (demo + help). When set, widget appears and status endpoint returns valid.
-    SITE_CHAT_WIDGET_KEY = (os.getenv('SITE_CHAT_WIDGET_KEY', '').strip() or None)
-
     # Qualification Settings
     MIN_QUALIFICATION_SCORE = int(os.getenv('MIN_QUALIFICATION_SCORE', '60'))
     AUTO_BOOK_ENABLED = os.getenv('AUTO_BOOK_ENABLED', 'True').lower() == 'true'
@@ -132,8 +134,8 @@ class Config:
         """Validate that required configuration is present"""
         required = ['OPENAI_API_KEY', 'SUPABASE_URL', 'SUPABASE_KEY']
         missing = [key for key in required if not getattr(Config, key)]
-        
+
         if missing:
             raise ValueError(f"Missing required configuration: {', '.join(missing)}")
-        
+
         return True

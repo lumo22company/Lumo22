@@ -13,6 +13,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Encode+Sans+Condensed:wght@400;500;600;700&family=Inter+Tight:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v={{ asset_version }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/product.css') }}?v={{ asset_version }}">
   <style>
     .intake-page {
       padding: 2rem 1.5rem 4rem;
@@ -37,11 +38,25 @@
     .intake-page .form-section { margin-bottom: 2rem; }
     .intake-page .form-section h2 { font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; font-weight: 400; color: #1a1a1a; margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 0.05em; }
     .intake-page .btn-submit {
-      display: inline-block; padding: 1rem 2rem;
-      background: var(--lum-gold); color: #000;
-      text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1.15rem; border: none; cursor: pointer; font-family: var(--font-display);
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 10px 20px; min-height: 44px;
+      background: transparent; color: #1a1a1a;
+      text-decoration: none; border-radius: var(--radius-btn, 8px); font-weight: 600;
+      font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase;
+      border: 2px solid rgba(0,0,0,0.25); cursor: pointer;
+      font-family: var(--font-body); transition: color 0.25s ease-out, border-color 0.25s ease-out;
+      position: relative; overflow: hidden; z-index: 1;
     }
-    .intake-page .btn-submit:hover { opacity: 0.95; }
+    .intake-page .btn-submit::before {
+      content: ''; position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+      background-color: var(--lum-gold, #fff200); transform: scaleX(0); transform-origin: left center;
+      transition: transform 0.35s ease-out; z-index: -1;
+    }
+    .intake-page .btn-submit:hover { color: #000 !important; border-color: var(--lum-gold, #fff200) !important; }
+    .intake-page .btn-submit:hover::before { transform: scaleX(1); }
+    .intake-page .btn-submit.primary { background: var(--lum-gold); color: #000; border-color: var(--lum-gold); }
+    .intake-page .btn-submit.primary::before { display: none; }
+    .intake-page .btn-submit.primary:hover { background: #e6d900; border-color: #e6d900; color: #000; }
     .intake-page .back { margin-top: 2rem; }
     .intake-page .back a { color: #555; text-decoration: none; font-size: 0.95rem; }
     .intake-page .back a:hover { color: #000; }
@@ -58,8 +73,13 @@
     .intake-page .review-section p { margin: 0; font-size: 0.95rem; line-height: 1.5; color: #1a1a1a; white-space: pre-wrap; }
     .intake-page .review-section .empty { color: #666; font-style: italic; }
     .intake-page .review-actions { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1.5rem; }
-    .intake-page .btn-secondary { background: transparent; color: #333; border: 1px solid #999; font-size: 1.15rem; }
-    .intake-page .btn-secondary:hover { border-color: #666; color: #000; }
+    .intake-page .btn-secondary { background: transparent; color: #1a1a1a; border: 2px solid rgba(0,0,0,0.25); }
+    .intake-page .btn-submit.account-btn-swipe-light,
+    .intake-page .btn-secondary.account-btn-swipe-light {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 10px 20px; min-height: 44px;
+      border-radius: var(--radius-btn, 8px); cursor: pointer;
+    }
     .intake-page .help-trigger { display: inline-flex; align-items: center; justify-content: center; width: 1.1rem; height: 1.1rem; border-radius: 50%; background: #999; color: #fff; font-size: 0.7rem; font-weight: 600; cursor: help; margin-left: 0.4rem; vertical-align: middle; position: relative; }
     .intake-page .help-trigger:hover, .intake-page .help-trigger:focus { background: var(--lum-gold); color: #000; outline: none; }
     .intake-page .help-tooltip { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(100% + 0.5rem); width: min(280px, 90vw); padding: 1rem; background: #1a1a1a; color: #f5f5f2; font-family: var(--font-body, 'Century Gothic', CenturyGothic, 'Apple Gothic', sans-serif); font-size: 0.9rem; line-height: 1.5; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); border: 1px solid #333; opacity: 0; visibility: hidden; transition: opacity 0.2s, visibility 0.2s; z-index: 100; pointer-events: none; text-align: left; font-weight: 400; }
@@ -87,15 +107,11 @@
     .intake-page .btn-go-account { display: inline-block; margin-top: 0.5rem; padding: 0.6rem 1.25rem; background: #1a1a1a; color: var(--lum-gold, #c9a227); font-weight: 600; text-decoration: none; border-radius: 8px; border: none; font-size: 0.95rem; }
     .intake-page .btn-go-account:hover { background: #333; color: var(--lum-gold, #c9a227); }
     .intake-add-platform-note { color: var(--lum-text-muted, #666); }
+    .intake-page-body .lumo-nav { background: #000; border-bottom: 1px solid rgba(255,255,255,0.06); box-shadow: 0 4px 24px rgba(0,0,0,0.2); }
   </style>
 </head>
-<body class="lumo-landing" data-current-customer-email="{{ (current_customer.email or '')|lower if current_customer else '' }}" data-return-url="{{ return_url or '' }}">
-  <nav class="lumo-nav lumo-nav-scrolled">
-    <div class="lumo-nav-left">
-      <a href="/" class="lumo-nav-logo">Lumo 22</a>
-      <a href="/captions" class="lumo-nav-link">Captions</a>
-    </div>
-  </nav>
+<body class="lumo-landing intake-page-body" data-current-customer-email="{{ (current_customer.email or '')|lower if current_customer else '' }}" data-return-url="{{ return_url or '' }}">
+  {% include '_lumo_nav.html' %}
 
   <main class="intake-page">
     <!-- intake-form-version: 2025-02-v3 -->
@@ -229,14 +245,7 @@
         </div>
         <input type="hidden" id="platform" name="platform" value="{{ existing_intake.get('platform', '') or prefilled_platform }}">
         {% else %}
-        <label for="platform">Primary platform for these captions? <span style="color:#999;">(required)</span></label>
-        <select id="platform" name="platform" required>
-          <option value="">— Select one —</option>
-          <option value="Instagram & Facebook" {% if prefilled_primary == 'Instagram & Facebook' %}selected{% endif %}>Instagram &amp; Facebook</option>
-          <option value="LinkedIn" {% if prefilled_primary == 'LinkedIn' %}selected{% endif %}>LinkedIn</option>
-          <option value="TikTok" {% if prefilled_primary == 'TikTok' %}selected{% endif %}>TikTok</option>
-          <option value="Pinterest" {% if prefilled_primary == 'Pinterest' %}selected{% endif %}>Pinterest</option>
-        </select>
+        <input type="hidden" id="platform" name="platform" value="{{ existing_intake.get('platform', '') or prefilled_primary }}">
         {% endif %}
         {% if existing_intake and platforms_count < 4 %}
         <p class="intake-add-platform-wrap" style="margin: 0.75rem 0 0; font-size: 0.95rem;">
@@ -307,7 +316,7 @@
         <label for="caption_examples">Paste 1–3 example captions you like — from your own posts, competitors, or inspiration. We'll match this style, tone, and structure where relevant.</label>
         <textarea id="caption_examples" name="caption_examples" placeholder="Paste example captions here (optional)" style="min-height: 140px;">{{ existing_intake.get('caption_examples', '') }}</textarea>
       </div>
-      <button type="button" class="btn-submit" id="btn-review">{% if existing_intake %}Review changes{% else %}Next step{% endif %}</button>
+      <button type="button" class="btn-submit account-btn-swipe-light" id="btn-review">{% if existing_intake %}Review changes{% else %}Next step{% endif %}</button>
     </form>
 
     <div id="review-step" class="review-step">
@@ -315,8 +324,8 @@
       <p class="sub" style="margin-bottom: 1.5rem;">Review before sending. Click Edit to change anything.</p>
       <div id="review-content"></div>
       <div class="review-actions">
-        <button type="button" class="btn-submit btn-secondary" id="btn-edit">Edit</button>
-        <button type="button" class="btn-submit" id="btn-confirm">Send details</button>
+        <button type="button" class="btn-submit btn-secondary account-btn-swipe-light" id="btn-edit">Edit</button>
+        <button type="button" class="btn-submit account-btn-swipe-light" id="btn-confirm">Send details</button>
       </div>
     </div>
 
@@ -1135,6 +1144,7 @@
     })();
   </script>
   {% endif %}
+  <script src="{{ url_for('static', filename='js/landing.js') }}?v={{ asset_version }}"></script>
   {% include '_footer.html' %}
 </body>
 </html>
