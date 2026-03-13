@@ -104,8 +104,7 @@
     .intake-page label input[type="checkbox"] { flex-shrink: 0; vertical-align: middle; align-self: center; margin: 0; }
     .intake-add-platform-link { color: var(--lum-gold, #c9a227); font-weight: 600; text-decoration: none; }
     .intake-add-platform-link:hover { text-decoration: underline; }
-    .intake-page .btn-go-account { display: inline-block; margin-top: 0.5rem; padding: 0.6rem 1.25rem; background: #1a1a1a; color: var(--lum-gold, #c9a227); font-weight: 600; text-decoration: none; border-radius: 8px; border: none; font-size: 0.95rem; }
-    .intake-page .btn-go-account:hover { background: #333; color: var(--lum-gold, #c9a227); }
+    .intake-page .btn-go-account { margin-top: 0.5rem; display: inline-flex; align-items: center; justify-content: center; padding: 10px 20px; min-height: 44px; text-decoration: none; }
     .intake-add-platform-note { color: var(--lum-text-muted, #666); }
     .intake-page-body .lumo-nav { background: #000; border-bottom: 1px solid rgba(255,255,255,0.06); box-shadow: 0 4px 24px rgba(0,0,0,0.2); }
   </style>
@@ -123,11 +122,7 @@
     {% if not intake_token %}
     <p class="sub" style="margin-top: 1rem;">Use the link from your order email to complete the form. If you just purchased, check your inbox for a message from us with a personalised link.</p>
     <p class="sub" style="margin-top: 0.5rem;">Haven't bought yet? <a href="/captions" style="color: var(--lum-gold);">Get 30 Days Captions</a></p>
-    <p class="back" style="margin-bottom: 1rem;">
-      {% if current_customer %}<a href="/account/edit-form" class="intake-back-account">← Back to your account</a>
-      <span style="color: #999; margin: 0 0.5rem;">|</span>
-      {% endif %}<a href="/captions">← Back to form</a>
-    </p>
+    <p class="back" style="margin-bottom: 1rem;"><a href="/captions">← Back to form</a></p>
     {% else %}
     <div id="intake-success" style="display: none; margin: 2rem 0;">
       <div style="padding: 1.5rem; background: var(--lum-surface-elevated); border-radius: 8px; margin-bottom: 1rem;">
@@ -146,7 +141,7 @@
           </form>
         </div>
         <p id="ca-done" style="display:none; margin:0; color: #1a1a1a;"><span id="ca-done-msg">Check your email to verify your address — then you can log in.</span> <a href="/login" style="color: #1a1a1a; font-weight: 600; text-decoration: underline;">Log in</a></p>
-        <p id="ca-already-logged-in" style="display:none; margin:0; font-weight: 500;">You're logged in. <a href="/account" class="btn-go-account">Go to your account</a></p>
+        <p id="ca-already-logged-in" style="display:none; margin:0; font-weight: 500;">You're logged in. <a href="/account" class="btn-go-account account-btn-swipe-light">Go to your account</a></p>
         <p id="ca-already-has-account" style="display:none; margin:0; font-weight: 500;">You already have an account. <a href="/login" style="color: var(--lum-gold);">Log in</a></p>
       </div>
     </div>
@@ -338,9 +333,6 @@
     </div>
     {% endif %}
 
-    {% if current_customer %}
-    <p class="back" style="margin-bottom: 1rem;"><a href="/account/edit-form" class="intake-back-account">← Back to your account</a></p>
-    {% endif %}
     {% endif %}
   </main>
 
