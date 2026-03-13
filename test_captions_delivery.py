@@ -23,9 +23,15 @@ def main():
     from services.caption_generator import CaptionGenerator
     from services.notifications import NotificationService
 
-    if not Config.OPENAI_API_KEY:
-        print("ERROR: OPENAI_API_KEY not set in .env")
-        sys.exit(1)
+    provider = (getattr(Config, 'AI_PROVIDER', None) or 'openai').strip().lower()
+    if provider == 'anthropic':
+        if not Config.ANTHROPIC_API_KEY:
+            print("ERROR: ANTHROPIC_API_KEY not set (AI_PROVIDER=anthropic)")
+            sys.exit(1)
+    else:
+        if not Config.OPENAI_API_KEY:
+            print("ERROR: OPENAI_API_KEY not set in .env")
+            sys.exit(1)
     if not Config.SENDGRID_API_KEY:
         print("ERROR: SENDGRID_API_KEY not set in .env")
         sys.exit(1)
@@ -71,7 +77,7 @@ def main():
     try:
         gen = CaptionGenerator()
         captions_md = gen.generate(intake)
-        print("OpenAI generation OK, building PDF ...")
+        print("AI generation OK, building PDF ...")
         from services.caption_pdf import build_caption_pdf, get_logo_path
         try:
             pdf_bytes = build_caption_pdf(captions_md, logo_path=get_logo_path())

@@ -437,8 +437,8 @@
             </div>
             <div id="reminder-toggle-{{ o.get('id', '') }}" role="button" tabindex="0" class="account-toggle {% if not o.get('reminder_opt_out') %}on{% endif %}" aria-label="Toggle form reminders" data-order-id="{{ o.get('id', '') }}" onclick="toggleReminder(this)" onkeydown="if(event.key==='Enter'||event.key===' ') { event.preventDefault(); toggleReminder(this); }"></div>
           </div>
-          <div class="account-settings-row" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid rgba(0,0,0,0.06);">
-            <div>
+          <div class="account-settings-row account-add-stories-row">
+            <div class="account-add-stories-text">
               <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Change plan</div>
               <div class="account-settings-desc">Change platforms or Story Ideas for this subscription. Changes apply to your next pack.</div>
             </div>

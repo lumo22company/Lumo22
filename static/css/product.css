@@ -2917,7 +2917,9 @@
   min-width: 0;
 }
 .account-add-stories-row .account-add-stories-btn,
+.account-add-stories-row .account-change-plan-btn,
 .account-remove-stories-row .account-remove-stories-btn {
+  flex-shrink: 0;
   align-self: flex-start;
 }
 .account-page-wrap .account-remove-stories-btn {
