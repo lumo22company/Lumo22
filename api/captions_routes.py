@@ -695,6 +695,42 @@ def _run_generation_and_deliver(order_id: str):
         return (False, str(e))
 
 
+@captions_bp.route("/captions-delivery-status", methods=["GET"])
+def captions_delivery_status():
+    """
+    Diagnostic: check config needed for caption generation and delivery.
+    Returns JSON with status (no secrets). Use to debug why PDF emails aren't arriving.
+    """
+    from config import Config
+    provider = (getattr(Config, "AI_PROVIDER", None) or "openai").strip().lower()
+    ai_ok = False
+    ai_msg = ""
+    if provider == "anthropic":
+        key = (getattr(Config, "ANTHROPIC_API_KEY", None) or "").strip()
+        ai_ok = bool(key and len(key) > 20 and key.startswith("sk-ant"))
+        ai_msg = "ANTHROPIC_API_KEY: " + ("set" if ai_ok else "missing or invalid")
+    else:
+        key = (getattr(Config, "OPENAI_API_KEY", None) or "").strip()
+        ai_ok = bool(key and len(key) > 20 and key.startswith("sk-"))
+        ai_msg = "OPENAI_API_KEY: " + ("set" if ai_ok else "missing or invalid")
+    sg_key = (getattr(Config, "SENDGRID_API_KEY", None) or "").strip()
+    sg_ok = bool(sg_key and len(sg_key) > 20 and sg_key.startswith("SG."))
+    from_email = (getattr(Config, "FROM_EMAIL", None) or "").strip()
+    supabase_ok = bool(
+        (getattr(Config, "SUPABASE_URL", None) or "").strip()
+        and (getattr(Config, "SUPABASE_KEY", None) or "").strip()
+    )
+    return jsonify({
+        "ai_provider": provider,
+        "ai_ok": ai_ok,
+        "ai_msg": ai_msg,
+        "sendgrid_ok": sg_ok,
+        "from_email": from_email[:3] + "***" + from_email[-10:] if from_email and "@" in from_email else "(not set)",
+        "supabase_ok": supabase_ok,
+        "all_ok": ai_ok and sg_ok and bool(from_email) and supabase_ok,
+    }), 200
+
+
 @captions_bp.route("/captions-deliver-test", methods=["GET"])
 def captions_deliver_test():
     """
@@ -704,6 +740,7 @@ def captions_deliver_test():
     Options:
       ?t=TOKEN   — copy the full token from your form link (address bar: .../captions-intake?t=XXX)
       ?session_id=cs_xxx — or use the session_id from the thank-you page URL after payment
+      ?sync=1 — run synchronously and return actual result/error (may take 60–90s, can timeout)
       ?secret=XXX — required when CAPTIONS_DELIVER_TEST_SECRET is set in env
     Returns JSON: {"ok": true, "message": "..."} or {"ok": false, "error": "..."}.
     """
@@ -716,6 +753,7 @@ def captions_deliver_test():
             return jsonify({"ok": False, "error": "Missing or invalid ?secret="}), 403
     token = (request.args.get("t") or request.args.get("token") or "").strip()
     session_id = (request.args.get("session_id") or "").strip()
+    sync_mode = request.args.get("sync", "").strip().lower() in ("1", "true", "yes")
     if not token and not session_id:
         return jsonify({
             "ok": False,
@@ -737,8 +775,16 @@ def captions_deliver_test():
         order_id = order["id"]
         if not order.get("intake"):
             return jsonify({"ok": False, "error": "Please submit the form first."}), 200
+        if sync_mode:
+            ok, err = _run_generation_and_deliver(order_id)
+            if ok:
+                return jsonify({
+                    "ok": True,
+                    "message": "Delivery completed. Check your email (and spam).",
+                }), 200
+            return jsonify({"ok": False, "error": err or "Delivery failed"}), 200
         thread = threading.Thread(target=_run_generation_and_deliver, args=(order_id,))
-        thread.daemon = True
+        thread.daemon = False
         thread.start()
         return jsonify({
             "ok": True,
@@ -927,7 +973,7 @@ def captions_intake_submit():
                 "customer_has_account": customer_has_account,
             }), 200
         thread = threading.Thread(target=_run_generation_and_deliver, args=(order_id,))
-        thread.daemon = True
+        thread.daemon = False
         thread.start()
         is_subscription = bool(order.get("stripe_subscription_id"))
         customer_email = (order.get("customer_email") or "").strip().lower()
@@ -1329,7 +1375,7 @@ def captions_get_pack_sooner():
         )
         # Stripe creates and pays invoice. On success, trigger generation.
         thread = threading.Thread(target=_run_generation_and_deliver, args=(order_id,))
-        thread.daemon = True
+        thread.daemon = False
         thread.start()
         return jsonify({
             "ok": True,
@@ -1394,7 +1440,7 @@ def _run_scheduled_deliveries():
         if not order_id:
             continue
         thread = threading.Thread(target=_run_generation_and_deliver, args=(order_id,))
-        thread.daemon = True
+        thread.daemon = False
         thread.start()
         order_service.update(order_id, {"scheduled_delivery_at": None})
         triggered += 1

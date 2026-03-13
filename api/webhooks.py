@@ -334,7 +334,7 @@ def stripe_webhook():
             order_id = order["id"]
             print(f"[Stripe webhook] invoice.paid: triggering generation for order {order_id} (subscription renewal)")
             thread = threading.Thread(target=_run_generation_and_deliver, args=(order_id,))
-            thread.daemon = True
+            thread.daemon = False
             thread.start()
             return jsonify({"received": True}), 200
 

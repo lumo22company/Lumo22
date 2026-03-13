@@ -13,14 +13,14 @@ After you submit the intake form, a background job generates your captions with 
 **What you should see:**
 
 - `[Captions] Starting generation for order ...` — Intake was saved and the job started.
-- `[Captions] Calling OpenAI for order ...` — OpenAI request is running.
+- `[Captions] Calling AI (provider=anthropic) for order ...` — AI request is running.
 - `[Captions] Sending delivery email to ...` — About to send the email.
 - `[Captions] Delivery email sent for order ...` — Email was sent. Check inbox and spam.
 
 **If you see an error:**
 
-- `[Captions] Generation or delivery failed for order ...: OPENAI_API_KEY not configured`  
-  → Set **OPENAI_API_KEY** in Railway Variables (from [OpenAI API keys](https://platform.openai.com/api-keys)). Redeploy.
+- `ANTHROPIC_API_KEY not configured` — Set **ANTHROPIC_API_KEY** in Railway (from console.anthropic.com). Redeploy.
+- `OPENAI_API_KEY not configured` — Set **OPENAI_API_KEY** in Railway (from platform.openai.com). Redeploy.
 - `[Captions] Generation or delivery failed ...: Invalid header value` or similar  
   → **OPENAI_API_KEY** or **SENDGRID_API_KEY** may have a newline in Railway. Edit the variable, delete the value, paste it again with no line break, save, redeploy.
 - `[Captions] Delivery email FAILED`  
@@ -40,7 +40,9 @@ The delivery email comes from **FROM_EMAIL** (e.g. hello@lumo22.com). Check spam
 
 For caption generation and delivery you need:
 
-- **OPENAI_API_KEY** — From OpenAI. No spaces or newlines.
+- **AI_PROVIDER** — `anthropic` or `openai`
+- **ANTHROPIC_API_KEY** — When AI_PROVIDER=anthropic. From console.anthropic.com. No spaces or newlines.
+- **OPENAI_API_KEY** — When AI_PROVIDER=openai. From OpenAI. No spaces or newlines.
 - **SENDGRID_API_KEY** — From SendGrid. No spaces or newlines.
 - **FROM_EMAIL** — Verified sender in SendGrid (e.g. hello@lumo22.com).
 - **SUPABASE_URL** and **SUPABASE_KEY** — So the order and intake are stored and the job can run.
@@ -49,14 +51,13 @@ Redeploy after changing any variable.
 
 ---
 
-## 4. See the error in your browser (after you’ve submitted the form once)
+## 4. Check config: https://www.lumo22.com/api/captions-delivery-status — then see the error (after you’ve submitted the form once)
 
 After you’ve submitted the intake form at least once, open this URL in your browser (replace `YOUR_TOKEN` with the token from your intake link):
 
-**https://lumo-22-production.up.railway.app/api/captions-deliver-test?t=YOUR_TOKEN**
+**https://www.lumo22.com/api/captions-deliver-test?t=YOUR_TOKEN&sync=1**
 
-To get YOUR_TOKEN: open the intake link from your order email. It looks like  
-`https://.../captions-intake?t=abc123xyz...` — the part after `t=` is your token. Copy it and put it in the URL above after `t=`.
+To get YOUR_TOKEN: open the intake link from your order email (e.g. `.../captions-intake?t=abc123xyz...`). The part after `t=` is your token.
 
 This runs generation + delivery **synchronously** and returns JSON:
 
@@ -65,7 +66,7 @@ This runs generation + delivery **synchronously** and returns JSON:
 
 ---
 
-## 5. Run a quick test (same flow as real order)
+## 6. Run a quick test (same flow as real order)
 
 From your project folder:
 
@@ -77,4 +78,4 @@ Then open the intake link from that email, fill the form, and submit. Check Rail
 
 ---
 
-**Summary:** The usual causes are missing **OPENAI_API_KEY** on Railway, or a newline in **OPENAI_API_KEY** / **SENDGRID_API_KEY**. Fix the variable(s), redeploy, then submit the intake again and watch the logs for `[Captions]`.
+**Summary:** The usual causes are missing **ANTHROPIC_API_KEY** (when AI_PROVIDER=anthropic) or **OPENAI_API_KEY** on Railway, or a newline in an API key. Fix the variable(s), redeploy, then submit the intake again and watch the logs for `[Captions]`.
