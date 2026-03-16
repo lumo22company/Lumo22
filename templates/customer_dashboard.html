@@ -556,7 +556,7 @@
       <div class="account-delete-modal-backdrop" onclick="closeGetPackSoonerConfirmModal()"></div>
       <div class="account-delete-modal-box remove-stories-modal-box" style="max-width: 520px;">
         <h2 id="get-pack-sooner-confirm-title" class="account-delete-modal-title">Confirm and get your pack</h2>
-        <p class="account-delete-modal-text">You'll be charged <strong id="get-pack-sooner-confirm-amount"></strong> now. Your next billing date will be 30 days from today. Your pack will be emailed to you within a few minutes.</p>
+        <p class="account-delete-modal-text change-plan-price-line">You'll be charged <strong id="get-pack-sooner-confirm-amount"></strong> now. Your next billing date will be 30 days from today. Your pack will be emailed to you within a few minutes.</p>
         <p class="account-delete-modal-text" style="font-size: 0.85rem; margin-bottom: 0.75rem;">By confirming you agree to be charged now.</p>
         <div class="account-delete-modal-buttons">
           <button type="button" class="account-delete-modal-btn account-delete-modal-keep" onclick="closeGetPackSoonerConfirmModal()">Cancel</button>
@@ -582,7 +582,7 @@
       <div class="account-delete-modal-backdrop" onclick="closeAddStoriesModal()"></div>
       <div class="account-delete-modal-box">
         <h2 id="add-stories-modal-title" class="account-delete-modal-title">Add Story Ideas?</h2>
-        <p id="add-stories-price-text" class="account-delete-modal-text">Stories will be included in your <strong>next</strong> pack, not instantly. The updated price will apply from your next invoice.</p>
+        <p id="add-stories-price-text" class="account-delete-modal-text change-plan-price-line">Stories will be included in your <strong>next</strong> pack, not instantly. The updated price will apply from your next invoice.</p>
         <div class="account-delete-modal-buttons">
           <button type="button" class="account-delete-modal-btn account-delete-modal-keep" onclick="closeAddStoriesModal()">Cancel</button>
           <button type="button" id="add-stories-modal-confirm" class="account-delete-modal-btn account-add-stories-confirm" onclick="confirmAddStories()">Confirm and add</button>
@@ -593,7 +593,7 @@
       <div class="account-delete-modal-backdrop" onclick="closeRemoveStoriesModal()"></div>
       <div class="account-delete-modal-box remove-stories-modal-box" style="max-width: 520px;">
         <h2 id="remove-stories-modal-title" class="account-delete-modal-title">Remove Story Ideas?</h2>
-        <p id="remove-stories-price-text" class="account-delete-modal-text">Your new price will be <strong id="remove-stories-new-price-display"></strong>/month. You'll save £17/month. You must read and accept the Terms &amp; Conditions below to confirm.</p>
+        <p id="remove-stories-price-text" class="account-delete-modal-text change-plan-price-line">Your new price will be <strong id="remove-stories-new-price-display"></strong>/month. You'll save £17/month. You must read and accept the Terms &amp; Conditions below to confirm.</p>
         <p class="account-delete-modal-text" style="font-size: 0.85rem; margin-bottom: 0.75rem;">Please scroll to the bottom to continue.</p>
         <div id="remove-stories-terms-body" class="remove-stories-terms-body" style="max-height: 200px; overflow-y: auto; padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.85rem; line-height: 1.5;">
           {% include '_terms_content.html' %}
@@ -625,7 +625,7 @@
             <span>Include 30 Days Story Ideas</span>
           </label>
         </div>
-        <p id="change-plan-price" class="account-delete-modal-text" style="font-size:0.9rem; margin-bottom:0.5rem;"></p>
+        <p id="change-plan-price" class="account-delete-modal-text change-plan-price-line" style="font-size:0.9rem; margin-bottom:0.5rem;"></p>
         <p id="change-plan-error" class="account-delete-modal-text" style="display:none; font-size:0.9rem; color:#c00; margin-top:0.25rem;"></p>
         <div class="account-delete-modal-buttons">
           <button type="button" class="account-delete-modal-btn account-delete-modal-keep" onclick="closeChangePlanModal()">Cancel</button>

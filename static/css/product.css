@@ -1922,6 +1922,10 @@
   line-height: 1.5;
   margin: 0 0 1rem;
 }
+.change-plan-price-line {
+  color: var(--lum-gold, #fff200);
+  font-weight: 600;
+}
 .account-delete-modal-type-wrap {
   margin-bottom: 1.25rem;
 }
@@ -1977,7 +1981,7 @@
   font-size: 0.85rem;
   font-weight: 600;
   border-radius: var(--dfd-radius);
-  transition: background 0.2s, color 0.2s, border-color 0.2s;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.18s ease, box-shadow 0.18s ease;
   text-decoration: none;
   border: 1px solid transparent;
   white-space: nowrap;
@@ -2001,21 +2005,48 @@
   border-color: rgba(255, 255, 255, 0.5);
 }
 .account-delete-modal-confirm {
-  color: #fff;
-  background: #b00;
-  border-color: #900;
+  color: #000;
+  background: var(--lum-gold, #fff200);
+  border-color: rgba(0, 0, 0, 0.25);
 }
 .account-delete-modal-confirm:hover {
-  background: #900;
-  color: #fff;
+  background: #e6d900;
+  color: #000;
+  border-color: rgba(0, 0, 0, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.35);
 }
 .account-delete-modal-confirm:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 .account-delete-modal-confirm:disabled:hover {
-  background: #b00;
-  color: #fff;
+  background: var(--lum-gold, #fff200);
+  color: #000;
+  transform: none;
+  box-shadow: none;
+}
+.account-add-stories-confirm,
+.account-remove-stories-confirm {
+  color: #000;
+  background: var(--lum-gold, #fff200);
+  border-color: rgba(0, 0, 0, 0.25);
+}
+.account-add-stories-confirm:hover,
+.account-remove-stories-confirm:hover {
+  background: #e6d900;
+  color: #000;
+  border-color: rgba(0, 0, 0, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.35);
+}
+.account-remove-stories-confirm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.account-remove-stories-confirm:disabled:hover {
+  transform: none;
+  box-shadow: none;
 }
 .account-delete-modal-box .remove-stories-terms-body {
   color: rgba(255, 255, 255, 0.9);
@@ -2039,6 +2070,8 @@
   background: #e6d900;
   color: #000;
   border-color: #e6d900;
+  transform: translateY(-1px);
+  box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.35);
 }
 
 /* History: view / download */
@@ -3206,12 +3239,11 @@
   color: #000;
   border-color: rgba(0, 0, 0, 0.8);
 }
-#get-pack-sooner-modal .account-delete-modal-buttons .account-delete-modal-btn:hover,
-#get-pack-sooner-confirm-modal .account-delete-modal-buttons .account-delete-modal-btn:hover {
-  filter: brightness(1.05);
-  box-shadow: 0 0.25rem 0.9rem rgba(0, 0, 0, 0.35);
+#get-pack-sooner-modal .account-delete-modal-buttons .account-delete-modal-btn:not(.account-delete-modal-keep):hover,
+#get-pack-sooner-confirm-modal .account-delete-modal-buttons .account-delete-modal-btn:not(.account-delete-modal-keep):hover {
+  background: #e6d900;
   transform: translateY(-1px);
-  transition: filter 0.18s ease-out, box-shadow 0.18s ease-out, transform 0.18s ease-out;
+  box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.35);
 }
 #get-pack-sooner-modal .account-delete-modal-buttons .account-delete-modal-btn.account-delete-modal-keep,
 #get-pack-sooner-confirm-modal .account-delete-modal-buttons .account-delete-modal-btn.account-delete-modal-keep {
