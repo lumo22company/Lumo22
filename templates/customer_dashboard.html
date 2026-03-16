@@ -582,7 +582,7 @@
       <div class="account-delete-modal-backdrop" onclick="closeAddStoriesModal()"></div>
       <div class="account-delete-modal-box">
         <h2 id="add-stories-modal-title" class="account-delete-modal-title">Add Story Ideas?</h2>
-        <p id="add-stories-price-text" class="account-delete-modal-text change-plan-price-line">Stories will be included in your <strong>next</strong> pack, not instantly. The updated price will apply from your next invoice.</p>
+        <p id="add-stories-price-text" class="account-delete-modal-text">Stories will be included in your <strong>next</strong> pack, not instantly. The updated price will apply from your next invoice.</p>
         <div class="account-delete-modal-buttons">
           <button type="button" class="account-delete-modal-btn account-delete-modal-keep" onclick="closeAddStoriesModal()">Cancel</button>
           <button type="button" id="add-stories-modal-confirm" class="account-delete-modal-btn account-add-stories-confirm" onclick="confirmAddStories()">Confirm and add</button>
@@ -1181,7 +1181,7 @@
           var storiesPer = p.stories_sub;
           var current = base + Math.max(0, platforms - 1) * extraPer;
           var next = current + storiesPer;
-          priceEl.innerHTML = 'New price will be <strong>' + (p.symbol || '£') + next + '/month</strong> (was ' + (p.symbol || '£') + current + '/month). Stories will be included in your <strong>next</strong> pack, not instantly.';
+          priceEl.innerHTML = '<span class="change-plan-price-line">New price will be <strong>' + (p.symbol || '£') + next + '/month</strong> (was ' + (p.symbol || '£') + current + '/month).</span> Stories will be included in your <strong>next</strong> pack, not instantly.';
         }
         if (modal) {
           modal.removeAttribute('hidden');
