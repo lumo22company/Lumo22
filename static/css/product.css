@@ -1896,8 +1896,6 @@
   position: absolute;
   inset: 0;
   background: rgba(0, 0, 0, 0.45);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
   cursor: pointer;
 }
 .account-delete-modal-box {
