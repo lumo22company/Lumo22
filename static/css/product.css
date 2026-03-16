@@ -2609,12 +2609,6 @@
   .account-page-wrap .account-pause-block .account-resume-btn,
   .account-page-wrap .account-pause-block .account-get-pack-sooner-btn,
   .account-page-wrap .account-get-pack-sooner-row .account-get-pack-sooner-btn {
-    align-self: center !important;
-    margin-left: 0 !important;
-  }
-  .account-page-wrap .account-pause-block .account-payment-method-select-wrap,
-  .account-page-wrap .account-pause-block .account-toggle,
-  .account-page-wrap .account-pause-block .account-pause-btn {
     align-self: flex-start !important;
     margin-left: 0 !important;
   }
