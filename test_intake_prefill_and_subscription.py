@@ -53,10 +53,14 @@ def test_prefill_from_copy_from():
                 return order_b
             return None
 
-    with app.test_client() as client:
-        with patch("services.caption_order_service.CaptionOrderService", FakeService):
+    def fake_get_current_customer():
+        return {"id": "cust-same", "email": "same@example.com"}
 
-            # Request intake for NEW order B with copy_from=order A
+    with app.test_client() as client:
+        with patch("services.caption_order_service.CaptionOrderService", FakeService), \
+             patch("api.auth_routes.get_current_customer", side_effect=fake_get_current_customer), \
+             patch("app.get_current_customer", side_effect=fake_get_current_customer):
+            # Subscription orders require login; patch so intake sees matching customer
             r = client.get("/captions-intake?t=token-b&copy_from=token-a")
 
     if r.status_code != 200:
@@ -107,9 +111,13 @@ def test_prefill_rejects_different_customer():
         def get_by_token(self, tok):
             return order_a if tok == "token-a" else (order_b if tok == "token-b" else None)
 
-    with app.test_client() as client:
-        with patch("services.caption_order_service.CaptionOrderService", FakeService):
+    def fake_get_current_customer_bob():
+        return {"id": "cust-bob", "email": "bob@example.com"}
 
+    with app.test_client() as client:
+        with patch("services.caption_order_service.CaptionOrderService", FakeService), \
+             patch("api.auth_routes.get_current_customer", side_effect=fake_get_current_customer_bob), \
+             patch("app.get_current_customer", side_effect=fake_get_current_customer_bob):
             r = client.get("/captions-intake?t=token-b&copy_from=token-a")
 
     if r.status_code != 200:
