@@ -1895,15 +1895,15 @@
 .account-delete-modal-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(0, 0, 0, 0.32);
   cursor: pointer;
 }
 .account-delete-modal-box {
   position: relative;
-  background: rgba(0, 0, 0, 0.35);
-  -webkit-backdrop-filter: blur(24px);
-  backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.22);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--dfd-radius);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.06);
   padding: 1.75rem;
@@ -3250,6 +3250,11 @@
   background: transparent;
   color: #fff;
   border-color: rgba(255, 255, 255, 0.4);
+}
+#get-pack-sooner-modal .account-delete-modal-buttons .account-delete-modal-btn.account-delete-modal-keep:hover,
+#get-pack-sooner-confirm-modal .account-delete-modal-buttons .account-delete-modal-btn.account-delete-modal-keep:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.5);
 }
 #get-pack-sooner-update-link.account-delete-modal-btn {
   border-color: transparent !important;
