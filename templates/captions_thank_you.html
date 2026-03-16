@@ -24,7 +24,7 @@
     @keyframes thankyou-spin { to { transform: rotate(360deg); } }
   </style>
 </head>
-<body class="lumo-landing">
+<body class="lumo-landing" data-current-customer="{{ 'true' if current_customer else 'false' }}">
   <nav class="lumo-nav lumo-nav-scrolled">
     <div class="lumo-nav-left">
       <a href="/" class="lumo-nav-logo">Lumo 22</a>
@@ -47,6 +47,21 @@
         <div class="thankyou-cta-row" style="display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1.5rem;">
           <a href="#" id="intake-link" class="thankyou-cta-swipe thankyou-cta">Fill out form now</a>
           <a href="{% if current_customer %}/account{% else %}/{% endif %}" id="later-link" class="thankyou-cta-swipe">I'll do it later</a>
+        </div>
+        <div id="thankyou-create-account" style="display: none; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.15);">
+          <h2 style="font-size: 1.15rem; margin: 0 0 0.5rem;">Create your account</h2>
+          <p style="font-size: 0.95rem; color: var(--lum-text-muted); margin: 0 0 1rem; line-height: 1.5;">Set a password so you can log in and manage your subscription. We'll send a verification link to your email to confirm your address.</p>
+          <div id="signup-form-wrap" style="max-width: 320px;">
+            <label for="signup-email" style="display:block; font-size: 0.9rem; margin-bottom: 0.25rem;">Email</label>
+            <input type="email" id="signup-email" readonly style="width: 100%; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.06); color: inherit; font-size: 1rem; margin-bottom: 0.75rem;" placeholder="your@email.com">
+            <label for="signup-password" style="display:block; font-size: 0.9rem; margin-bottom: 0.25rem;">Password</label>
+            <input type="password" id="signup-password" style="width: 100%; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.08); color: inherit; font-size: 1rem; margin-bottom: 0.75rem;" placeholder="Choose a password">
+            <label for="signup-confirm" style="display:block; font-size: 0.9rem; margin-bottom: 0.25rem;">Confirm password</label>
+            <input type="password" id="signup-confirm" style="width: 100%; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.08); color: inherit; font-size: 1rem; margin-bottom: 0.5rem;" placeholder="Confirm password">
+            <p id="signup-error" style="display: none; font-size: 0.9rem; color: #f99; margin-bottom: 0.5rem;"></p>
+            <button type="button" id="signup-btn" class="lumo-btn-primary btn-cta-account-style" style="padding: 0.6rem 1.25rem;">Create account</button>
+          </div>
+          <p id="signup-success" style="display: none; margin: 1rem 0 0; font-size: 0.95rem; color: #8c8;">Check your email to verify your account—then you can log in and manage your subscription.</p>
         </div>
       </div>
       <p id="thankyou-no-session" style="display: none;">Check your email for a link to the short form. After you submit, we'll create your 30 captions and deliver by email.</p>
@@ -121,19 +136,34 @@
         messageEl.style.display = 'none';
         var emailFallback = document.getElementById('thankyou-email-fallback');
         if (emailFallback) emailFallback.style.display = 'none';
+        var isLoggedIn = (document.body.getAttribute('data-current-customer') || '').toLowerCase() === 'true';
         var prefilledNote = isPrefilledFromOneoff
-          ? ' <strong>Your form is prefilled</strong> with your answers from your one-off pack—you can review or edit and submit. '
+          ? ' <strong>Your form is prefilled</strong> from your one-off pack—create your account below, then log in to review or edit it in your account. '
           : ' ';
-        var accountLine = isSubscription
-          ? 'On the form you can also create an account to access your captions and manage your subscription in one place.'
-          : 'On the form you can also create an account to access your captions in one place.';
+        var accountLine = isSubscription && !isLoggedIn
+          ? 'Create your account below (set a password) so you can log in and manage your subscription. We\'ll send a verification link to your email.'
+          : (isSubscription ? 'You can manage your subscription from your account.' : 'On the form you can also create an account to access your captions in one place.');
         var emailText = customerEmail
-          ? 'Thank you. We\'ve emailed you your form at <strong>' + escapeHtml(customerEmail) + '</strong>—fill it in to get started.' + prefilledNote + 'Your captions are usually ready within 15 minutes. ' + accountLine
-          : 'Thank you. We\'ve emailed you your form—fill it in to get started.' + prefilledNote + 'Your captions are usually ready within 15 minutes. ' + accountLine;
+          ? 'Thank you. We\'ve emailed you at <strong>' + escapeHtml(customerEmail) + '</strong>.' + (isPrefilledFromOneoff ? ' Your form is already filled from your one-off pack; you can edit it anytime in your account.' : ' Fill in the short form to get started.') + prefilledNote + (isPrefilledFromOneoff ? '' : 'Your captions are usually ready within 15 minutes. ') + accountLine
+          : 'Thank you. We\'ve emailed you.' + (isPrefilledFromOneoff ? ' Your form is prefilled from your one-off pack; you can edit it anytime in your account.' : ' Fill in the form to get started.') + prefilledNote + (isPrefilledFromOneoff ? '' : 'Your captions are usually ready within 15 minutes. ') + accountLine;
         emailMsgEl.innerHTML = emailText;
         intakeLinkEl.href = url;
-        intakeLinkEl.textContent = 'Fill out form now';
+        intakeLinkEl.textContent = isPrefilledFromOneoff ? 'Review your form' : 'Fill out form now';
         formLinkEl.style.display = 'block';
+        var createAccountEl = document.getElementById('thankyou-create-account');
+        if (createAccountEl) {
+          if (isSubscription && !isLoggedIn && customerEmail) {
+            createAccountEl.style.display = 'block';
+            var signupEmail = document.getElementById('signup-email');
+            if (signupEmail) signupEmail.value = customerEmail;
+            var signupSuccess = document.getElementById('signup-success');
+            if (signupSuccess) signupSuccess.style.display = 'none';
+            var signupError = document.getElementById('signup-error');
+            if (signupError) { signupError.style.display = 'none'; signupError.textContent = ''; }
+          } else {
+            createAccountEl.style.display = 'none';
+          }
+        }
       }
 
       function escapeHtml(s) {
@@ -224,6 +254,58 @@
       }, 20000);
       // Keep polling up to 35s; if link arrives after fallback, showIntake hides fallback and shows buttons
       setTimeout(function() { clearInterval(interval); }, 35000);
+
+      var signupBtn = document.getElementById('signup-btn');
+      if (signupBtn) {
+        signupBtn.addEventListener('click', function() {
+          var emailEl = document.getElementById('signup-email');
+          var pwEl = document.getElementById('signup-password');
+          var confirmEl = document.getElementById('signup-confirm');
+          var errEl = document.getElementById('signup-error');
+          var successEl = document.getElementById('signup-success');
+          var email = (emailEl && emailEl.value || '').trim().toLowerCase();
+          var password = (pwEl && pwEl.value || '').trim();
+          var confirm = (confirmEl && confirmEl.value || '').trim();
+          if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+          if (!email || email.indexOf('@') === -1) {
+            if (errEl) { errEl.textContent = 'Please enter a valid email.'; errEl.style.display = 'block'; }
+            return;
+          }
+          if (!password) {
+            if (errEl) { errEl.textContent = 'Please choose a password.'; errEl.style.display = 'block'; }
+            return;
+          }
+          if (password !== confirm) {
+            if (errEl) { errEl.textContent = 'Passwords do not match.'; errEl.style.display = 'block'; }
+            return;
+          }
+          signupBtn.disabled = true;
+          signupBtn.textContent = 'Creating…';
+          fetch('/api/auth/signup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email, password: password })
+          })
+          .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+          .then(function(res) {
+            if (res.ok && res.data && res.data.ok) {
+              if (successEl) successEl.style.display = 'block';
+              var formWrap = document.getElementById('signup-form-wrap');
+              if (formWrap) formWrap.style.display = 'none';
+              if (errEl) errEl.style.display = 'none';
+            } else {
+              if (errEl) { errEl.textContent = (res.data && res.data.error) || 'Something went wrong. Please try again.'; errEl.style.display = 'block'; }
+              signupBtn.disabled = false;
+              signupBtn.textContent = 'Create account';
+            }
+          })
+          .catch(function() {
+            if (errEl) { errEl.textContent = 'Something went wrong. Please try again.'; errEl.style.display = 'block'; }
+            signupBtn.disabled = false;
+            signupBtn.textContent = 'Create account';
+          });
+        });
+      }
     })();
   </script>
 </body>

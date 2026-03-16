@@ -6,7 +6,7 @@ import base64
 import re
 from typing import Dict, Any, Optional
 from supabase import create_client, Client
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import uuid
 import secrets
 from config import Config
@@ -308,3 +308,51 @@ class CaptionOrderService:
     def set_reminder_sent(self, order_id: str, period_end_ts: str) -> bool:
         """Record that we sent a reminder for this billing period."""
         return self.update(order_id, {"reminder_sent_period_end": period_end_ts})
+
+    def get_one_off_orders_for_upgrade_reminder(self, days_before_end: int = 5) -> list:
+        """
+        One-off orders that are in the upgrade-reminder window: delivered_at + (30 - days_before_end) days
+        is within the last 24 hours. E.g. days_before_end=5 => 25 days after delivery; 3 => 27 days.
+        Excludes orders that already had the reminder sent or opted out.
+        """
+        # One-off = no stripe_subscription_id; must be delivered with delivered_at set
+        result = self.client.table(self.table).select(
+            "id, token, customer_email, delivered_at, platforms_count, selected_platforms, include_stories, currency, intake, upgrade_reminder_sent_at, upgrade_reminder_opt_out"
+        ).is_("stripe_subscription_id", "null").eq("status", "delivered").not_.is_("delivered_at", "null").execute()
+        rows = result.data or []
+        now = datetime.now(timezone.utc)
+        days_after_delivery = 30 - days_before_end  # 25 or 27
+        # Send when delivered_at is in [now - 26d, now - 25d] so we send once "25 days after delivery"
+        window_end = now - timedelta(days=days_after_delivery)
+        window_start = now - timedelta(days=days_after_delivery + 1)
+        out = []
+        for o in rows:
+            if o.get("upgrade_reminder_sent_at") or o.get("upgrade_reminder_opt_out"):
+                continue
+            raw = o.get("delivered_at")
+            if not raw:
+                continue
+            try:
+                if isinstance(raw, str):
+                    delivered_dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+                else:
+                    delivered_dt = raw
+                if delivered_dt.tzinfo is None:
+                    delivered_dt = delivered_dt.replace(tzinfo=timezone.utc)
+            except Exception:
+                continue
+            if window_start <= delivered_dt <= window_end:
+                out.append(o)
+        return out
+
+    def set_upgrade_reminder_sent(self, order_id: str) -> bool:
+        """Record that we sent the one-off upgrade reminder for this order."""
+        now_iso = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+        return self.update(order_id, {"upgrade_reminder_sent_at": now_iso})
+
+    def set_upgrade_reminder_opt_out_by_token(self, token: str) -> bool:
+        """Opt out of one-off upgrade reminders (unsubscribe). Returns True if order was found and updated."""
+        order = self.get_by_token(token)
+        if not order:
+            return False
+        return self.update(order["id"], {"upgrade_reminder_opt_out": True})

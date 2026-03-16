@@ -40,8 +40,9 @@
 
     <form id="signup-form">
       <input type="hidden" id="referral_code" name="referral_code" value="">
+      <input type="hidden" id="next_url" value="{{ next_url|default('', true)|e }}">
       <label for="email">Email</label>
-      <input type="email" id="email" name="email" required autocomplete="email" placeholder="you@example.com">
+      <input type="email" id="email" name="email" required autocomplete="email" placeholder="you@example.com" value="{{ prefilled_email|default('', true)|e }}">
 
       <label for="password">Password <span style="font-weight:400;color:var(--lum-text-muted);">(min 10 characters, include 1 number)</span></label>
       <input type="password" id="password" name="password" required minlength="10" autocomplete="new-password" placeholder="At least 10 characters, 1 number">
@@ -51,9 +52,10 @@
 
       <button type="submit" class="btn" id="btn">Create account</button>
       <div id="msg" class="msg" style="display: none;"></div>
+      <div id="msg-continue" class="msg success" style="display: none; margin-top: 1rem;"></div>
     </form>
 
-    <p class="link">Already have an account? <a href="/login">Log in</a></p>
+    <p class="link">Already have an account? <a href="/login{% if next_url %}?next={{ next_url|urlencode }}{% if prefilled_email %}&amp;email={{ prefilled_email|urlencode }}{% endif %}{% elif prefilled_email %}?email={{ prefilled_email|urlencode }}{% endif %}">Log in</a></p>
     <p class="link"><a href="/">← Back to Lumo 22</a></p>
   </main>
 
@@ -87,14 +89,18 @@
         btn.textContent = 'Creating…';
 
         var ref = (new URLSearchParams(window.location.search).get('ref') || document.getElementById('referral_code').value || '').trim();
+        var nextInput = document.getElementById('next_url');
+        var nextVal = (nextInput && nextInput.value) ? nextInput.value.trim() : '';
+        var payload = {
+          email: document.getElementById('email').value.trim().toLowerCase(),
+          password: pw,
+          referral_code: ref || undefined
+        };
+        if (nextVal && nextVal !== '/account') payload.next = nextVal;
         fetch('/api/auth/signup', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: document.getElementById('email').value.trim().toLowerCase(),
-            password: pw,
-            referral_code: ref || undefined
-          })
+          body: JSON.stringify(payload)
         })
         .then(function(r) { return r.json(); })
         .then(function(data) {
@@ -102,6 +108,12 @@
             msg.className = 'msg success';
             msg.textContent = data.message || 'Check your email to verify your address — then you can log in.';
             msg.style.display = 'block';
+            var continueEl = document.getElementById('msg-continue');
+            if (continueEl && nextVal && nextVal.indexOf('captions-checkout') !== -1) {
+              var loginNext = encodeURIComponent(nextVal);
+              continueEl.innerHTML = 'When you\'ve verified, <a href="/login?next=' + loginNext + '" style="color:inherit;font-weight:600;">log in to complete your upgrade</a>.';
+              continueEl.style.display = 'block';
+            }
             btn.disabled = false;
             btn.textContent = 'Create account';
           } else {

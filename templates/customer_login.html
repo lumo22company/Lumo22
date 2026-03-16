@@ -54,7 +54,7 @@
         <form id="login-form" action="/login" method="post">
           <input type="hidden" name="next" value="{{ next_url|default(request.args.get('next', '/account')) }}">
           <label for="email">Email</label>
-          <input type="email" id="email" name="email" required autocomplete="email" placeholder="you@example.com" value="{{ request.form.get('email', '') }}">
+          <input type="email" id="email" name="email" required autocomplete="email" placeholder="you@example.com" value="{{ request.form.get('email', '') or prefilled_email|default('', true) }}">
 
           <label for="password">Password</label>
           <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="••••••••">
@@ -72,7 +72,7 @@
           <p><button type="button" id="resend-verify-btn" style="background:none;border:none;padding:0;color:var(--lum-gold);cursor:pointer;font-size:0.9rem;font-family:inherit;">Resend verification email</button></p>
           {% endif %}
           <p><a href="/forgot-password">Forgot password?</a></p>
-          <p class="auth-muted">Don't have an account? <a href="/signup" class="auth-signup-link">Sign up</a></p>
+          <p class="auth-muted">Don't have an account? <a href="/signup{% if (next_url and next_url != '/account') or prefilled_email %}?{% if next_url and next_url != '/account' %}next={{ next_url|urlencode }}{% if prefilled_email %}&amp;{% endif %}{% endif %}{% if prefilled_email %}email={{ prefilled_email|urlencode }}{% endif %}{% endif %}" class="auth-signup-link">Sign up</a></p>
           <p class="auth-muted"><a href="/">← Back to Lumo 22</a></p>
         </div>
       </div>

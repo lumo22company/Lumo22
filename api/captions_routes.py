@@ -4,7 +4,8 @@ API routes for 30 Days Captions: checkout (redirect to intake after payment), in
 Subscription (£79/mo) vs one-off (£97): same intake form and delivery flow; subscription uses Stripe
 mode=subscription and is detected in webhook so we create order and send intake email on first payment.
 """
-from flask import Blueprint, request, jsonify, redirect, Response
+from flask import Blueprint, request, jsonify, redirect, Response, url_for
+from urllib.parse import quote
 from config import Config
 
 captions_bp = Blueprint("captions", __name__, url_prefix="/api")
@@ -227,7 +228,24 @@ def captions_checkout_subscription():
     Create a Stripe Checkout Session for Captions subscription.
     Query: ?platforms=N (1–4), ?selected=..., ?stories=1, ?currency=gbp|usd|eur.
     Extra platforms and Stories use add-on prices or price_data for USD/EUR.
+    All subscription checkouts (new and upgrade from one-off) require login before payment.
     """
+    from api.auth_routes import get_current_customer
+    copy_from = (request.args.get("copy_from") or "").strip()
+    customer = get_current_customer()
+    if not customer:
+        from urllib.parse import quote
+        next_url = request.url
+        login_url = url_for("customer_login_page") + "?next=" + quote(next_url, safe="")
+        if copy_from:
+            try:
+                from services.caption_order_service import CaptionOrderService
+                order = CaptionOrderService().get_by_token(copy_from)
+                if order and (order.get("customer_email") or "").strip():
+                    login_url += "&email=" + quote((order.get("customer_email") or "").strip(), safe="")
+            except Exception:
+                pass
+        return redirect(login_url)
     import stripe
     currency = _parse_currency(request)
     price_id = _get_sub_price_id(currency)
@@ -283,7 +301,6 @@ def captions_checkout_subscription():
     metadata = {"product": "captions_subscription", "platforms": str(platforms), "include_stories": "1" if stories else "0"}
     if selected:
         metadata["selected_platforms"] = selected
-    copy_from = (request.args.get("copy_from") or "").strip()
     if copy_from:
         metadata["copy_from"] = copy_from
     referral_coupon = _get_referral_coupon_id()
@@ -296,6 +313,8 @@ def captions_checkout_subscription():
     }
     if referral_coupon:
         create_params["discounts"] = [{"coupon": referral_coupon}]
+    if customer and (customer.get("email") or "").strip():
+        create_params["customer_email"] = (customer.get("email") or "").strip()
     try:
         session = stripe.checkout.Session.create(**create_params)
         return redirect(session.url, code=302)
@@ -401,13 +420,14 @@ def _build_intake_url(order: dict) -> str:
 
 
 def _send_intake_email_for_order(order: dict) -> None:
-    """Send receipt email then intake form link email for an order (used by webhook and by API fallback)."""
+    """Send receipt email then intake or subscription-welcome email (used by webhook and by API fallback)."""
     customer_email = (order.get("customer_email") or "").strip()
     if not customer_email or "@" not in customer_email:
         return
     intake_url = _build_intake_url(order)
     if not intake_url:
         return
+    upgraded_from_oneoff = bool((order.get("upgraded_from_token") or "").strip())
     try:
         from services.notifications import NotificationService
         notif = NotificationService()
@@ -415,13 +435,20 @@ def _send_intake_email_for_order(order: dict) -> None:
             notif.send_order_receipt_email(customer_email, order=order)
         except Exception as e:
             print(f"[captions-intake-link] Receipt email failed (non-fatal): {e!r}")
-        ok = notif.send_intake_link_email(customer_email, intake_url, order)
-        if ok:
-            print(f"[captions-intake-link] Sent intake email to {customer_email}")
+        if upgraded_from_oneoff:
+            ok = notif.send_subscription_welcome_prefilled_email(customer_email, intake_url)
+            if ok:
+                print(f"[captions-intake-link] Sent subscription welcome (prefilled) email to {customer_email}")
+            else:
+                print(f"[captions-intake-link] Subscription welcome email NOT sent to {customer_email}")
         else:
-            print(f"[captions-intake-link] Intake email NOT sent (send_email returned False) to {customer_email}")
+            ok = notif.send_intake_link_email(customer_email, intake_url, order)
+            if ok:
+                print(f"[captions-intake-link] Sent intake email to {customer_email}")
+            else:
+                print(f"[captions-intake-link] Intake email NOT sent (send_email returned False) to {customer_email}")
     except Exception as e:
-        print(f"[captions-intake-link] Failed to send intake email: {e!r}")
+        print(f"[captions-intake-link] Failed to send email: {e!r}")
 
 
 @captions_bp.route("/captions-intake-link", methods=["GET"])
@@ -885,9 +912,8 @@ def captions_intake_submit():
         base = (Config.BASE_URL or request.url_root or "").strip().rstrip("/")
         if base and not base.startswith("http"):
             base = "https://" + base
-        order_currency = (order.get("currency") or "gbp").strip().lower()
-        currency_q = f"&currency={order_currency}" if order_currency in ("usd", "eur") else ""
-        upgrade_url = f"{base}/captions?stories=1{currency_q}" if base else f"/captions?stories=1{currency_q}"
+        return_url = quote(f"{base}/captions-intake?t={token}") if base else ""
+        upgrade_url = f"{base}/captions-upgrade?token={quote(token)}&stories=1" + (f"&return_url={return_url}" if return_url else "") if base else f"/captions-upgrade?token={quote(token)}&stories=1"
         return jsonify({
             "error": "To include Story Ideas you need to add the add-on. Please confirm and accept the new price. Note: Story Ideas added later are delivered with your next caption pack, not instantly.",
             "upgrade_required": True,
@@ -939,9 +965,8 @@ def captions_intake_submit():
                 base = (Config.BASE_URL or request.url_root or "").strip().rstrip("/")
                 if base and not base.startswith("http"):
                     base = "https://" + base
-                order_currency = (order.get("currency") or "gbp").strip().lower()
-                currency_q = f"&currency={order_currency}" if order_currency in ("usd", "eur") else ""
-                upgrade_url = f"{base}/captions?platforms={len(platform_parts)}{currency_q}" if base else f"/captions?platforms={len(platform_parts)}{currency_q}"
+                return_url = quote(f"{base}/captions-intake?t={token}") if base else ""
+                upgrade_url = f"{base}/captions-upgrade?token={quote(token)}&platforms={len(platform_parts)}" + (f"&return_url={return_url}" if return_url else "") if base else f"/captions-upgrade?token={quote(token)}&platforms={len(platform_parts)}"
                 return jsonify({
                     "error": f"You selected {len(platform_parts)} platforms but your order includes {order_platforms_count}. To get more platforms, please confirm and accept the new price. Extra platforms are delivered with your next caption pack, not instantly.",
                     "upgrade_required": True,
@@ -1019,9 +1044,8 @@ def captions_intake_submit():
                 base = (Config.BASE_URL or request.url_root or "").strip().rstrip("/")
                 if base and not base.startswith("http"):
                     base = "https://" + base
-                order_currency = (order.get("currency") or "gbp").strip().lower()
-                currency_q = f"&currency={order_currency}" if order_currency in ("usd", "eur") else ""
-                upgrade_url = f"{base}/captions?platforms={len(platform_parts)}{currency_q}" if base else f"/captions?platforms={len(platform_parts)}{currency_q}"
+                return_url = quote(f"{base}/captions-intake?t={token}") if base else ""
+                upgrade_url = f"{base}/captions-upgrade?token={quote(token)}&platforms={len(platform_parts)}" + (f"&return_url={return_url}" if return_url else "") if base else f"/captions-upgrade?token={quote(token)}&platforms={len(platform_parts)}"
                 return jsonify({
                     "error": f"You selected {len(platform_parts)} platforms but your order includes {order_platforms_count}. To get more platforms, please confirm and accept the new price. Extra platforms are delivered with your next caption pack, not instantly.",
                     "upgrade_required": True,
@@ -1464,6 +1488,39 @@ def _run_scheduled_deliveries():
         order_service.update(order_id, {"scheduled_delivery_at": None})
         triggered += 1
     return {"scheduled_deliveries_triggered": triggered}
+
+
+@captions_bp.route("/captions-upgrade-reminder-unsubscribe", methods=["GET"])
+def captions_upgrade_reminder_unsubscribe():
+    """
+    One-off upgrade reminder opt-out. Query: t=TOKEN (order token from the reminder email).
+    Sets upgrade_reminder_opt_out on the order and shows a confirmation page.
+    """
+    token = (request.args.get("t") or "").strip()
+    if not token:
+        return _plain_page("Unsubscribe", "Missing link. Use the unsubscribe link from your upgrade reminder email."), 400
+    try:
+        from services.caption_order_service import CaptionOrderService
+        order_service = CaptionOrderService()
+        ok = order_service.set_upgrade_reminder_opt_out_by_token(token)
+        if not ok:
+            return _plain_page("Unsubscribe", "We couldn't find that link. You may have already unsubscribed."), 404
+        return _plain_page(
+            "Unsubscribed",
+            "You're unsubscribed from upgrade reminders. We won't email you again about upgrading this one-off pack to a subscription.",
+        ), 200
+    except Exception as e:
+        return _plain_page("Error", "Something went wrong. Please try again or contact us."), 500
+
+
+def _plain_page(title: str, body: str, status: int = 200):
+    """Return a simple HTML page with title and body."""
+    from flask import Response
+    import html as html_module
+    safe_title = html_module.escape(title or "")
+    safe_body = html_module.escape(body or "").replace("\n", "<br>")
+    html = f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{safe_title} | Lumo 22</title></head><body style="font-family: sans-serif; max-width: 560px; margin: 4rem auto; padding: 1rem; line-height: 1.6;"><h1 style="font-size: 1.25rem;">{safe_title}</h1><p>{safe_body}</p><p><a href="/captions" style="color: #c9a227;">Back to 30 Days Captions</a></p></body></html>"""
+    return Response(html, status=status, mimetype="text/html")
 
 
 @captions_bp.route("/captions-send-reminders", methods=["GET"])

@@ -1873,7 +1873,7 @@
   border-color: #b00;
 }
 
-/* Delete account modal */
+/* Account modals — dark liquid glass (all modals) */
 .account-delete-modal {
   position: fixed;
   inset: 0;
@@ -1884,7 +1884,7 @@
   padding: 1rem;
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.2s ease, visibility 0.2s ease;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
 }
 .account-delete-modal[hidden] { display: none; }
 .account-delete-modal.account-delete-modal--open {
@@ -1895,17 +1895,19 @@
 .account-delete-modal-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0, 0, 0, 0.45);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
   cursor: pointer;
 }
 .account-delete-modal-box {
   position: relative;
-  background: rgba(0, 0, 0, 0.65);
-  -webkit-backdrop-filter: blur(20px);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.35);
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: var(--dfd-radius);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.06);
   padding: 1.75rem;
   max-width: 420px;
   width: 100%;
@@ -1917,7 +1919,7 @@
   color: #fff;
 }
 .account-delete-modal-text {
-  color: rgba(255, 255, 255, 0.95);
+  color: rgba(255, 255, 255, 0.92);
   font-size: 0.95rem;
   line-height: 1.5;
   margin: 0 0 1rem;
@@ -3199,21 +3201,6 @@
   }
 }
 
-/* Remove Story Ideas + Get your pack sooner: same formatting, slightly more translucent */
-#remove-stories-modal .account-delete-modal-box,
-#get-pack-sooner-modal .account-delete-modal-box,
-#get-pack-sooner-confirm-modal .account-delete-modal-box {
-  background: rgba(0, 0, 0, 0.48);
-  -webkit-backdrop-filter: blur(24px);
-  backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
-}
-#remove-stories-modal .account-delete-modal-backdrop,
-#get-pack-sooner-modal .account-delete-modal-backdrop,
-#get-pack-sooner-confirm-modal .account-delete-modal-backdrop {
-  background: rgba(0, 0, 0, 0.38);
-}
 /* Get your pack sooner: yellow primary buttons (match Add Story Ideas) */
 #get-pack-sooner-modal .account-delete-modal-buttons .account-delete-modal-btn,
 #get-pack-sooner-confirm-modal .account-delete-modal-buttons .account-delete-modal-btn {

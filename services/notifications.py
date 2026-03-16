@@ -228,6 +228,31 @@ def _get_login_url() -> str:
     return f"{base}/login"
 
 
+def _get_signup_url() -> str:
+    """Base URL for customer signup (used in emails)."""
+    base = (Config.BASE_URL or "").strip().rstrip("/")
+    if not base or not base.startswith("http"):
+        base = "https://www.lumo22.com"
+    return f"{base}/signup"
+
+
+def _subscription_welcome_prefilled_email_html(login_url: str, intake_url: str) -> str:
+    """Branded HTML for subscription welcome when upgraded from one-off. They already have an account; log in to access prefilled form."""
+    import html
+    login_url = (login_url or "").strip() or _get_login_url()
+    intake_url = (intake_url or "").strip()
+    safe_login = html.escape(login_url, quote=True)
+    safe_intake = html.escape(intake_url, quote=True) if intake_url and intake_url.startswith("http") else ""
+    content = f"""<p style="margin:0 0 16px;">Hi,</p>
+<p style="margin:0 0 16px;">You're subscribed to 30 Days of Social Media Captions. Your form is already filled from your one-off pack—log in to your account to review or edit it whenever you like.</p>
+<p style="margin:0 0 24px;"><a href="{safe_login}" style="display:inline-block; padding:14px 28px; background:{BRAND_GOLD}; color:{BRAND_BLACK}; text-decoration:none; border-radius:10px; font-weight:600;">Log in to your account</a></p>
+<p style="margin:0 0 12px;">Open your form (prefilled); you can edit it anytime in your account:</p>
+<p style="margin:0 0 24px;"><a href="{safe_intake}" style="display:inline-block; padding:12px 24px; background:#f0f0f0; color:{BRAND_BLACK}; text-decoration:none; border-radius:10px; font-weight:600;">Open your form</a></p>
+<p style="margin:0 0 16px;">If you have any questions, just reply to this email.</p>
+<p style="margin:0;">— Lumo 22</p>"""
+    return _email_wrapper(content)
+
+
 def _intake_link_email_html(intake_url: str, order_summary: Optional[str] = None, is_subscription: bool = False) -> str:
     """Build branded HTML for captions intake link email — PDF aesthetic, explicit body so it always shows."""
     import html
@@ -274,6 +299,28 @@ def _captions_intake_reminder_email_html(intake_url: str) -> str:
 <p style="margin:0 0 16px;">This takes about 5–10 minutes. Once it's done, we'll generate your captions and email your pack.</p>
 <p style="margin:0;">— Lumo 22</p>"""
     return _email_wrapper(content)
+
+
+def _one_off_upgrade_reminder_email_html(upgrade_url: str, unsubscribe_url: str, business_name: Optional[str] = None) -> str:
+    """Branded HTML for one-off → subscription upgrade reminder (a few days before day 30)."""
+    import html
+    upgrade_url = (upgrade_url or "").strip()
+    unsubscribe_url = (unsubscribe_url or "").strip()
+    safe_upgrade = html.escape(upgrade_url, quote=True) if upgrade_url and upgrade_url.startswith("http") else ""
+    safe_unsub = html.escape(unsubscribe_url, quote=True) if unsubscribe_url and unsubscribe_url.startswith("http") else ""
+    intro = "Your 30 days of captions are almost up."
+    if business_name:
+        intro = f"Your 30 days of captions for {html.escape(business_name)} are almost up."
+    content = f"""<p style="margin:0 0 16px;">Hi,</p>
+<p style="margin:0 0 16px;">{intro} Want a new pack every month? Upgrade to a subscription and your next pack will be delivered 30 days after your current one—continuous content, no overlap.</p>
+<p style="margin:0 0 12px;">You'll need to log in or create an account first; then you can complete the upgrade. Your form answers will be prefilled so checkout is quick—you can edit your form anytime in your account after you subscribe.</p>
+<p style="margin:0 0 24px;"><a href="{safe_upgrade}" style="display:inline-block; padding:14px 28px; background:{BRAND_GOLD}; color:{BRAND_BLACK}; text-decoration:none; border-radius:10px; font-weight:600;">Upgrade to subscription</a></p>
+<p style="margin:0 0 8px; font-size:14px; color:{BRAND_MUTED};">Or copy and paste this link into your browser:</p>
+<p style="margin:0 0 24px; font-size:13px; word-break:break-all; color:#333;">{html.escape(upgrade_url or '')}</p>
+<p style="margin:0 0 24px; font-size:13px; color:{BRAND_MUTED};"><a href="{safe_unsub}" style="color:{BRAND_MUTED}; text-decoration:underline;">Unsubscribe from upgrade reminders</a></p>
+<p style="margin:0;">— Lumo 22</p>"""
+    return _email_wrapper(content)
+
 
 def _welcome_and_verify_email_html(verify_url: str) -> str:
     """Build branded HTML for welcome + email verification — single email after signup."""
@@ -630,6 +677,58 @@ If you didn't request this, you can ignore this email. Your email address will s
         account_line = "On the form you can also create an account to access your captions and manage your subscription in one place." if is_sub else "On the form you can also create an account to access your captions in one place."
         body += "\n\nOnce you submit, we'll generate your 30 captions and send them to you by email within a few minutes.\n\n" + account_line + "\n\nIf you have any questions, just reply to this email.\n\nLumo 22"
         html_body = _intake_link_email_html(intake_url, order_summary, is_subscription=is_sub)
+        return self.send_email(to_email, subject, body, html_body=html_body)
+
+    def send_subscription_welcome_prefilled_email(
+        self, to_email: str, intake_url: str
+    ) -> bool:
+        """Send welcome email when customer upgraded from one-off to subscription. They already have an account (required before payment). Form is prefilled."""
+        if not to_email or "@" not in str(to_email):
+            return False
+        subject = "You're subscribed — 30 Days Captions"
+        login_url = _get_login_url()
+        body = """Hi,
+
+You're subscribed to 30 Days of Social Media Captions. Your form is already filled from your one-off pack—log in to your account to review or edit it whenever you like.
+
+Log in to your account: """ + login_url + """
+
+Open your form (prefilled); you can edit it anytime in your account: """ + (intake_url or "") + """
+
+If you have any questions, just reply to this email.
+
+— Lumo 22
+"""
+        html_body = _subscription_welcome_prefilled_email_html(login_url, intake_url)
+        return self.send_email(to_email, subject, body, html_body=html_body)
+
+    def send_one_off_upgrade_reminder_email(
+        self,
+        to_email: str,
+        upgrade_url: str,
+        unsubscribe_url: str,
+        business_name: Optional[str] = None,
+    ) -> bool:
+        """Send one-off → subscription upgrade reminder (a few days before day 30). Includes opt-out link."""
+        if not upgrade_url or not str(upgrade_url).strip().startswith("http"):
+            return False
+        subject = "Your 30 days of captions — upgrade to a subscription?"
+        intro = "Your 30 days of captions are almost up."
+        if business_name:
+            intro = f"Your 30 days of captions for {business_name} are almost up."
+        body = f"""Hi,
+
+{intro} Want a new pack every month? Upgrade to a subscription and your next pack will be delivered 30 days after your current one—continuous content, no overlap.
+
+You'll need to log in or create an account first; then you can complete the upgrade. Your form answers will be prefilled so checkout is quick—you can edit your form anytime in your account after you subscribe.
+
+{upgrade_url}
+
+Unsubscribe from upgrade reminders: {unsubscribe_url}
+
+— Lumo 22
+"""
+        html_body = _one_off_upgrade_reminder_email_html(upgrade_url, unsubscribe_url, business_name)
         return self.send_email(to_email, subject, body, html_body=html_body)
 
     def send_email(

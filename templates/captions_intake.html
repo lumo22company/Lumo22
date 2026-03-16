@@ -111,6 +111,18 @@
     .intake-page .btn-go-account:hover { text-decoration: none !important; }
     .intake-add-platform-note { color: var(--lum-text-muted, #666); }
     .intake-page-body .lumo-nav { background: #000; border-bottom: 1px solid rgba(255,255,255,0.06); box-shadow: 0 4px 24px rgba(0,0,0,0.2); }
+    .intake-edit-preferences-modal { position: fixed; inset: 0; z-index: 1000; display: none; align-items: center; justify-content: center; padding: 1rem; box-sizing: border-box; }
+    .intake-edit-preferences-modal.show { display: flex; }
+    .intake-edit-preferences-modal .modal-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.5); cursor: pointer; }
+    .intake-edit-preferences-modal .modal-box { position: relative; max-width: 440px; width: 100%; padding: 1.5rem; background: var(--bg-light, #f8f8f8); border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.2); border: 1px solid #ddd; }
+    .intake-edit-preferences-modal .modal-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.35rem; font-weight: 400; letter-spacing: 0.05em; text-transform: uppercase; margin: 0 0 0.75rem; color: #000; }
+    .intake-edit-preferences-modal .modal-text { font-size: 0.95rem; line-height: 1.5; color: #333; margin: 0 0 1rem; }
+    .intake-edit-preferences-modal .modal-actions { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1rem; }
+    .intake-edit-preferences-modal .modal-actions button { width: 100%; padding: 10px 20px; min-height: 44px; border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer; font-family: inherit; border: 2px solid rgba(0,0,0,0.2); background: transparent; color: #1a1a1a; }
+    .intake-edit-preferences-modal .modal-actions button.account-btn-swipe-light { text-align: center; }
+    .intake-edit-preferences-modal .modal-actions button.modal-cancel { margin-top: 0.25rem; }
+    .intake-edit-preferences-modal .modal-error { font-size: 0.9rem; color: #c00; margin-top: 0.75rem; display: none; }
+    .intake-edit-preferences-modal .modal-error.show { display: block; }
   </style>
 </head>
 <body class="lumo-landing intake-page-body" data-current-customer-email="{{ (current_customer.email or '')|lower if current_customer else '' }}" data-return-url="{{ return_url or '' }}">
@@ -246,15 +258,10 @@
         {% else %}
         <input type="hidden" id="platform" name="platform" value="{{ existing_intake.get('platform', '') or prefilled_primary }}">
         {% endif %}
-        {% if existing_intake and platforms_count < 4 %}
-        <p class="intake-add-platform-wrap field-helper" style="margin: 0.75rem 0 0; font-size: 0.95rem;">Add another platform — go to checkout to confirm and pay. Extra platforms are delivered with your <strong>next</strong> PDF pack, not instantly.</p>
-        {% endif %}
         {% if existing_intake %}
         <p class="intake-change-platform-note field-helper" style="margin: 0.5rem 0 0; font-size: 0.9rem; color: #1a1a1a;">To change which platforms or reduce the number (or remove Story Ideas), update above and submit. You'll be asked to accept the new price. Changes apply to your next pack.</p>
-        {% endif %}
-        {% if existing_intake and platforms_count < 4 %}
-        <p class="intake-add-platform-btn-wrap" style="margin: 1rem 0 0;">
-          <a href="/captions?platforms={{ platforms_count + 1 }}{% if order_currency and order_currency != 'gbp' %}&amp;currency={{ order_currency }}{% endif %}" class="btn account-btn-swipe-light intake-add-platform-link" style="display: inline-block; text-decoration: none;">Add another platform ({{ intake_add_platform_text|default('+£29 one-off / +£19/mo') }})</a>
+        <p class="intake-edit-preferences-wrap" style="margin: 1rem 0 0;">
+          <button type="button" class="btn account-btn-swipe-light intake-edit-preferences-btn" id="btn-edit-preferences" aria-controls="intake-edit-preferences-modal" aria-haspopup="dialog">Edit preferences</button>
         </p>
         {% endif %}
 
@@ -331,11 +338,109 @@
       </div>
     </div>
 
+    {% if existing_intake and intake_token %}
+    <div id="intake-edit-preferences-modal" class="intake-edit-preferences-modal" role="dialog" aria-labelledby="intake-edit-preferences-modal-title" aria-modal="true" data-order-token="{{ intake_token }}" hidden>
+      <div class="modal-backdrop" id="intake-edit-preferences-backdrop"></div>
+      <div class="modal-box">
+        <h2 id="intake-edit-preferences-modal-title" class="modal-title">Edit platform / stories selection</h2>
+        <p class="modal-text">Add platforms or Story Ideas to your subscription. Changes apply to your <strong>next</strong> pack.</p>
+        <div class="modal-actions">
+          {% if platforms_count < 4 %}
+          <button type="button" class="account-btn-swipe-light" id="modal-add-platform" data-new-platforms="{{ platforms_count + 1 }}" data-new-stories="{{ 'true' if stories_paid else 'false' }}">Add another platform ({{ intake_add_platform_text|default('+£19/mo') }})</button>
+          {% endif %}
+          {% if not stories_paid %}
+          <button type="button" class="account-btn-swipe-light" id="modal-add-stories" data-new-platforms="{{ platforms_count }}" data-new-stories="true">Add Story Ideas ({{ intake_add_stories_text|default('+£17/mo') }})</button>
+          {% endif %}
+          {% if platforms_count >= 4 and stories_paid %}
+          <p class="modal-text" style="margin: 0; font-size: 0.9rem; color: #555;">You have the maximum platforms and Story Ideas. To reduce platforms or remove Story Ideas, update your selection above and submit the form.</p>
+          {% else %}
+          <p class="modal-text" style="margin: 0.5rem 0 0; font-size: 0.9rem; color: #555;">To reduce platforms or remove Story Ideas, update your selection above and submit the form. You'll be asked to accept the new price.</p>
+          {% endif %}
+          <p id="intake-edit-preferences-error" class="modal-error"></p>
+          <button type="button" class="modal-cancel" id="intake-edit-preferences-cancel">Cancel</button>
+        </div>
+      </div>
+    </div>
+    <script>
+    (function() {
+      var btn = document.getElementById('btn-edit-preferences');
+      var modal = document.getElementById('intake-edit-preferences-modal');
+      if (!btn || !modal) return;
+      var token = modal.getAttribute('data-order-token');
+      var errEl = document.getElementById('intake-edit-preferences-error');
+      var addPlatformBtn = document.getElementById('modal-add-platform');
+      var addStoriesBtn = document.getElementById('modal-add-stories');
+
+      function openModal() {
+        modal.removeAttribute('hidden');
+        modal.classList.add('show');
+        if (errEl) { errEl.textContent = ''; errEl.classList.remove('show'); }
+      }
+      function closeModal() {
+        modal.classList.remove('show');
+        modal.setAttribute('hidden', '');
+      }
+
+      btn.addEventListener('click', openModal);
+      document.getElementById('intake-edit-preferences-backdrop').addEventListener('click', closeModal);
+      document.getElementById('intake-edit-preferences-cancel').addEventListener('click', closeModal);
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && modal.classList.contains('show')) { closeModal(); e.preventDefault(); }
+      });
+
+      function confirmAdd(platforms, stories) {
+        var btns = [addPlatformBtn, addStoriesBtn];
+        btns.forEach(function(b) { if (b) b.disabled = true; });
+        if (errEl) { errEl.textContent = ''; errEl.classList.remove('show'); }
+        fetch('/api/billing/change-subscription-plan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: token, new_platforms: platforms, new_stories: stories === true || stories === 'true' })
+        })
+        .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+        .then(function(res) {
+          if (res.ok && res.data && res.data.ok) {
+            closeModal();
+            window.location.reload();
+            return;
+          }
+          if (errEl) {
+            errEl.textContent = (res.data && res.data.error) || 'Something went wrong. Please try again.';
+            errEl.classList.add('show');
+          }
+          btns.forEach(function(b) { if (b) b.disabled = false; });
+        })
+        .catch(function() {
+          if (errEl) {
+            errEl.textContent = 'Something went wrong. Please try again.';
+            errEl.classList.add('show');
+          }
+          btns.forEach(function(b) { if (b) b.disabled = false; });
+        });
+      }
+
+      if (addPlatformBtn) {
+        addPlatformBtn.addEventListener('click', function() {
+          var p = parseInt(addPlatformBtn.getAttribute('data-new-platforms'), 10) || 2;
+          var s = addPlatformBtn.getAttribute('data-new-stories') === 'true';
+          confirmAdd(p, s);
+        });
+      }
+      if (addStoriesBtn) {
+        addStoriesBtn.addEventListener('click', function() {
+          var p = parseInt(addStoriesBtn.getAttribute('data-new-platforms'), 10) || 1;
+          confirmAdd(p, true);
+        });
+      }
+    })();
+    </script>
+    {% endif %}
+
     {% if subscribe_url %}
     {% set _intake_biz = (existing_intake.get('business_name', '') or '')|trim %}
     <div class="intake-subscribe-cta" style="margin: 2rem 0 1.5rem; padding: 1.25rem 1rem; background: rgba(0,0,0,0.06); border-radius: 8px; border: 1px solid rgba(201,162,39,0.35); font-size: 0.95rem; color: #1a1a1a;">
       <p style="margin: 0 0 0.75rem; font-weight: 600;">Want a new pack every month?{% if _intake_biz %} <span style="font-weight: 400; color: #555;">({{ _intake_biz }})</span>{% endif %}</p>
-      <p style="margin: 0 0 1rem;">Upgrade to a subscription and your answers from this intake form will be pre-filled on the checkout page. Your first subscription pack arrives 30 days after this one-off pack, so you get continuous content with no overlap.</p>
+      <p style="margin: 0 0 1rem;">Upgrade to a subscription and your answers from this intake form will be pre-filled on the checkout page. Your first subscription pack arrives 30 days after this one-off pack, so you get continuous content with no overlap. You can edit your form anytime in your account after you subscribe.</p>
       <a href="{{ subscribe_url }}" class="btn-submit" style="display: inline-block; text-decoration: none; text-align: center;">Upgrade to subscription{% if _intake_biz %} — {{ _intake_biz }}{% else %} — use this form’s answers{% endif %}</a>
     </div>
     {% endif %}

@@ -2,10 +2,14 @@
 Pre-pack reminder service for 30 Days Captions subscriptions.
 Sends email ~5 days before each billing period ends, inviting customers to update intake.
 Opt-out by default (reminder_opt_out=false means reminders are ON).
+
+Also sends one-off upgrade reminders: a few days before "day 30" (e.g. 25 or 27 days after
+delivery), email one-off customers to offer subscription upgrade.
 """
 import re
 from datetime import datetime, timezone
 from typing import List, Dict, Any
+from urllib.parse import urlencode, quote
 from config import Config
 from services.caption_order_service import CaptionOrderService
 from services.notifications import NotificationService
@@ -23,6 +27,27 @@ def _safe_base_url() -> str:
     if base and base.startswith("http"):
         return base
     return INTAKE_BASE
+
+
+def _build_one_off_upgrade_url(order: Dict[str, Any]) -> str:
+    """Build subscription checkout URL with copy_from and order options (same as account subscribe_options)."""
+    base = _safe_base_url()
+    token = (order.get("token") or "").strip()
+    if not token:
+        return ""
+    platforms_count = max(1, int(order.get("platforms_count", 1)))
+    selected_platforms = (order.get("selected_platforms") or "").strip() or ""
+    stories_paid = bool(order.get("include_stories"))
+    currency = (order.get("currency") or "gbp").strip().lower()
+    if currency not in ("gbp", "usd", "eur"):
+        currency = "gbp"
+    params = {"copy_from": token, "platforms": platforms_count}
+    if selected_platforms:
+        params["selected"] = selected_platforms
+    if stories_paid:
+        params["stories"] = "1"
+    params["currency"] = currency
+    return f"{base}/captions-checkout-subscription?{urlencode(params)}"
 
 
 def _should_send_reminder(order: Dict[str, Any], period_end_ts: int) -> bool:
@@ -210,4 +235,44 @@ Lumo 22
     except Exception as e:
         errors.append(f"awaiting_intake_reminders: {e}")
 
-    return {"sent": sent, "skipped": skipped, "errors": errors}
+    # One-off upgrade reminders: 25 or 27 days after delivery (configurable)
+    one_off_upgrade_sent = 0
+    try:
+        days_before = getattr(Config, "ONE_OFF_UPGRADE_REMINDER_DAYS_BEFORE", 5)
+        one_off_orders = order_service.get_one_off_orders_for_upgrade_reminder(days_before_end=days_before)
+        base = _safe_base_url()
+        notif = NotificationService()
+        for order in one_off_orders:
+            email = (order.get("customer_email") or "").strip()
+            token = (order.get("token") or "").strip()
+            if not email or "@" not in email or not token:
+                skipped += 1
+                continue
+            if email.lower() in deleted_emails:
+                skipped += 1
+                continue
+            upgrade_url = _build_one_off_upgrade_url(order)
+            if not upgrade_url:
+                errors.append(f"Order {order.get('id')}: could not build upgrade URL")
+                skipped += 1
+                continue
+            unsubscribe_url = f"{base}/api/captions-upgrade-reminder-unsubscribe?t={quote(token)}"
+            intake = order.get("intake") or {}
+            business_name = (intake.get("business_name") or "").strip() or None
+            ok = notif.send_one_off_upgrade_reminder_email(
+                to_email=email,
+                upgrade_url=upgrade_url,
+                unsubscribe_url=unsubscribe_url,
+                business_name=business_name,
+            )
+            if ok:
+                order_service.set_upgrade_reminder_sent(order["id"])
+                one_off_upgrade_sent += 1
+                sent += 1
+            else:
+                errors.append(f"Order {order.get('id')}: one-off upgrade email send failed")
+                skipped += 1
+    except Exception as e:
+        errors.append(f"one_off_upgrade_reminders: {e}")
+
+    return {"sent": sent, "skipped": skipped, "errors": errors, "one_off_upgrade_sent": one_off_upgrade_sent}

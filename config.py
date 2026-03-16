@@ -1,5 +1,5 @@
 """
-Configuration management for the lead capture and booking system.
+Configuration management for Lumo 22 (Captions product).
 Loads environment variables and provides configuration access.
 """
 import os
@@ -120,19 +120,18 @@ class Config:
     # Digital Front Desk inbound (auto-reply). Domain for unique addresses, e.g. inbound.lumo22.com. MX must point to SendGrid.
     INBOUND_EMAIL_DOMAIN = (os.getenv('INBOUND_EMAIL_DOMAIN', '').strip() or 'inbound.lumo22.com').lower()
 
+    # One-off upgrade reminder: days before "day 30" to send (3 or 5). Pack "finishes" 30 days after delivery; we send at 27 or 25 days after delivery.
+    ONE_OFF_UPGRADE_REMINDER_DAYS_BEFORE = max(1, min(14, int(os.getenv('ONE_OFF_UPGRADE_REMINDER_DAYS_BEFORE', '5'))))
+
     # Cron job auth: shared secret for /api/captions-send-reminders (Railway cron). Generate with: openssl rand -hex 32
     CRON_SECRET = _sanitize_header_value(os.getenv('CRON_SECRET', '').strip() or '')
     # Test endpoint: secret for /api/captions-deliver-test (triggers generation). If set, ?secret=XXX required. In production, set this.
     CAPTIONS_DELIVER_TEST_SECRET = _sanitize_header_value(os.getenv('CAPTIONS_DELIVER_TEST_SECRET', '').strip() or '')
 
-    # Qualification Settings
-    MIN_QUALIFICATION_SCORE = int(os.getenv('MIN_QUALIFICATION_SCORE', '60'))
-    AUTO_BOOK_ENABLED = os.getenv('AUTO_BOOK_ENABLED', 'True').lower() == 'true'
-    
     @staticmethod
     def validate():
-        """Validate that required configuration is present"""
-        required = ['OPENAI_API_KEY', 'SUPABASE_URL', 'SUPABASE_KEY']
+        """Validate that required configuration is present (Captions: Supabase)."""
+        required = ['SUPABASE_URL', 'SUPABASE_KEY']
         missing = [key for key in required if not getattr(Config, key)]
 
         if missing:

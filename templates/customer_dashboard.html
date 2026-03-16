@@ -207,7 +207,7 @@
       {% if current_section == 'upgrade' and one_off_orders %}
       <section class="account-section-block account-upgrade-section">
         <h2>Upgrade to subscription</h2>
-        <p class="account-section-desc">Choose which one-off pack to base your subscription on, adjust platforms and Story Ideas, then upgrade. Your form will be prefilled from your selected pack.</p>
+        <p class="account-section-desc">Choose which one-off pack to base your subscription on, adjust platforms and Story Ideas, then upgrade. Your form will be prefilled from your selected pack; you can edit it anytime in your account (Edit form) after you subscribe.</p>
         <div class="account-upgrade-form" style="max-width: 480px;">
           <div style="margin-bottom: 1.25rem;">
             <label class="account-settings-label" style="display: block; font-size: 0.95rem; font-weight: 600; color: #fff; margin-bottom: 0.5rem;">Base subscription on</label>
@@ -460,7 +460,7 @@
             <span class="account-pause-badge" style="font-size: 0.85rem; font-weight: 500; color: #555; padding: 0.35rem 0.75rem; background: rgba(0,0,0,0.06); border-radius: 12px; margin-right: 0.5rem;">Paused</span>
             <button type="button" class="account-billing-portal-link account-btn-swipe-light account-resume-btn" data-order-id="{{ o.get('id', '') }}" onclick="resumeSubscription(this)">Resume subscription</button>
             {% else %}
-            <button type="button" class="account-billing-portal-link account-btn-swipe-light account-pause-btn" data-order-id="{{ o.get('id', '') }}" onclick="pauseSubscription(this)">Pause for 1 month</button>
+            <button type="button" class="account-billing-portal-link account-btn-swipe-light account-pause-btn" data-order-id="{{ o.get('id', '') }}" onclick="showPauseModal(this)">Pause for 1 month</button>
             {% endif %}
           </div>
           {% if not o.get('include_stories') %}
@@ -563,6 +563,19 @@
           <button type="button" id="get-pack-sooner-confirm-modal-btn" class="account-delete-modal-btn account-add-stories-confirm">Confirm and get my pack</button>
         </div>
         <p id="get-pack-sooner-confirm-error" style="display: none; margin-top: 0.75rem; color: #c00; font-size: 0.9rem;"></p>
+      </div>
+    </div>
+    <div id="pause-subscription-modal" class="account-delete-modal pause-subscription-modal" role="dialog" aria-labelledby="pause-subscription-modal-title" aria-modal="true" hidden>
+      <div class="account-delete-modal-backdrop" onclick="closePauseModal()"></div>
+      <div class="account-delete-modal-box remove-stories-modal-box" style="max-width: 520px;">
+        <h2 id="pause-subscription-modal-title" class="account-delete-modal-title">Pause subscription for 1 month?</h2>
+        <p class="account-delete-modal-text">You won't be charged and you won't receive a pack this month. Your subscription will resume automatically.</p>
+        <p class="account-delete-modal-text" style="font-weight: 600;">Your subscription will resume on <strong id="pause-resume-date"></strong>.</p>
+        <div class="account-delete-modal-buttons">
+          <button type="button" class="account-delete-modal-btn account-delete-modal-keep" onclick="closePauseModal()">Cancel</button>
+          <button type="button" id="pause-subscription-confirm-btn" class="account-delete-modal-btn account-add-stories-confirm">Pause for 1 month</button>
+        </div>
+        <p id="pause-subscription-error" style="display: none; margin-top: 0.75rem; color: #c00; font-size: 0.9rem;"></p>
       </div>
     </div>
     <div id="add-stories-modal" class="account-delete-modal add-stories-modal" role="dialog" aria-labelledby="add-stories-modal-title" aria-modal="true" hidden>
@@ -794,11 +807,48 @@
         } catch (e) {}
       }
 
-      function pauseSubscription(btn) {
+      function formatResumeDate() {
+        var d = new Date();
+        d.setUTCDate(d.getUTCDate() + 30);
+        var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        var day = d.getUTCDate();
+        var month = months[d.getUTCMonth()];
+        var year = d.getUTCFullYear();
+        return day + ' ' + month + ' ' + year;
+      }
+      var _pauseModalOrderId = null;
+      function showPauseModal(btn) {
         var orderId = btn.getAttribute('data-order-id');
         if (!orderId) return;
-        btn.disabled = true;
-        btn.textContent = 'Pausing…';
+        _pauseModalOrderId = orderId;
+        var resumeEl = document.getElementById('pause-resume-date');
+        if (resumeEl) resumeEl.textContent = formatResumeDate();
+        var errEl = document.getElementById('pause-subscription-error');
+        if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+        var modal = document.getElementById('pause-subscription-modal');
+        if (modal) {
+          modal.removeAttribute('hidden');
+          modal.classList.add('account-delete-modal--open');
+        }
+      }
+      function closePauseModal() {
+        _pauseModalOrderId = null;
+        var modal = document.getElementById('pause-subscription-modal');
+        if (modal) {
+          modal.setAttribute('hidden', '');
+          modal.classList.remove('account-delete-modal--open');
+        }
+      }
+      function pauseSubscription(btn) {
+        var orderId = (btn && btn.getAttribute('data-order-id')) || _pauseModalOrderId;
+        if (!orderId) return;
+        var confirmBtn = document.getElementById('pause-subscription-confirm-btn');
+        if (confirmBtn) {
+          confirmBtn.disabled = true;
+          confirmBtn.textContent = 'Pausing…';
+        }
+        var errEl = document.getElementById('pause-subscription-error');
+        if (errEl) errEl.style.display = 'none';
         fetch('/api/captions/pause-subscription', {
           credentials: 'same-origin',
           method: 'POST',
@@ -810,18 +860,23 @@
           if (data.ok) {
             window.location.reload();
           } else {
-            alert(data.error || 'Could not pause subscription');
-            btn.disabled = false;
-            btn.textContent = 'Pause for 1 month';
+            if (errEl) { errEl.textContent = data.error || 'Could not pause subscription'; errEl.style.display = 'block'; }
+            if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Pause for 1 month'; }
           }
         })
         .catch(function() {
-          alert('Something went wrong — try again.');
-          btn.disabled = false;
-          btn.textContent = 'Pause for 1 month';
+          if (errEl) { errEl.textContent = 'Something went wrong — try again.'; errEl.style.display = 'block'; }
+          if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Pause for 1 month'; }
         });
       }
       window.pauseSubscription = pauseSubscription;
+      window.showPauseModal = showPauseModal;
+      window.closePauseModal = closePauseModal;
+      (function initPauseModalConfirm() {
+        var confirmBtn = document.getElementById('pause-subscription-confirm-btn');
+        var backdrop = document.querySelector('#pause-subscription-modal .account-delete-modal-backdrop');
+        if (confirmBtn) confirmBtn.addEventListener('click', function() { pauseSubscription(null); });
+      })();
 
       function resumeSubscription(btn) {
         var orderId = btn.getAttribute('data-order-id');
@@ -1342,6 +1397,7 @@
       })();
       window.showGetPackSoonerModal = showGetPackSoonerModal;
       window.closeGetPackSoonerModal = closeGetPackSoonerModal;
+      window.closeGetPackSoonerConfirmModal = closeGetPackSoonerConfirmModal;
 
       function toggleEmailChangeForm() {
         var form = document.getElementById('account-change-email-form');

@@ -38,14 +38,31 @@ def _base_url():
     return base
 
 
+def _is_safe_next(next_val):
+    """Allow path-only or same-origin URL for redirect after verify (e.g. checkout URL)."""
+    if not next_val or not isinstance(next_val, str):
+        return False
+    next_val = next_val.strip()
+    if next_val.startswith("/") and "//" not in next_val[:2]:
+        return True
+    if next_val.startswith(("http://", "https://")):
+        base = (Config.BASE_URL or "").strip() or "https://www.lumo22.com"
+        if not base.startswith("http"):
+            base = "https://" + base
+        return next_val.startswith(base.rstrip("/") + "/") or next_val.startswith(base.rstrip("/"))
+    return False
+
+
 @auth_bp.route("/signup", methods=["POST"])
 def signup():
     """Create account: email + password. Sends verification email; user must verify before login."""
     try:
+        from urllib.parse import quote
         data = request.get_json() or {}
         email = (data.get("email") or "").strip().lower()
         password = (data.get("password") or "").strip()
         referral_code = (data.get("referral_code") or data.get("ref") or "").strip() or None
+        next_url = (data.get("next") or "").strip() or None
 
         if not email or "@" not in email:
             return jsonify({"ok": False, "error": "Valid email required"}), 400
@@ -60,6 +77,8 @@ def signup():
         token = svc.set_email_verification_token(str(customer["id"]))
         if token:
             verify_url = _base_url().rstrip("/") + "/verify-email?token=" + token
+            if next_url and _is_safe_next(next_url):
+                verify_url += "&next=" + quote(next_url, safe="")
             notif = NotificationService()
             notif.send_welcome_and_verification_email(email, verify_url)
 

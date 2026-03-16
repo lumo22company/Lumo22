@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add to your subscription | Lumo 22</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Encode+Sans+Condensed:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v={{ asset_version }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/product.css') }}?v={{ asset_version }}">
+  <style>
+    .upgrade-page { padding: 2rem 1.5rem 4rem; max-width: 480px; margin: 6rem auto 4rem; background: var(--bg-light, #f8f8f8); color: #1a1a1a; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+    .upgrade-page h1 { font-family: 'Bebas Neue', sans-serif; font-size: 1.75rem; font-weight: 400; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 0.5rem; color: #000; }
+    .upgrade-page .summary { font-size: 1rem; line-height: 1.5; margin-bottom: 1.25rem; color: #333; }
+    .upgrade-page .price { font-size: 1.25rem; font-weight: 600; color: var(--lum-gold, #c9a227); margin-bottom: 1.5rem; }
+    .upgrade-page .btn-confirm { display: inline-block; padding: 12px 24px; font-size: 0.95rem; font-weight: 600; text-decoration: none; border-radius: 8px; cursor: pointer; border: none; font-family: inherit; }
+    .upgrade-page .back { margin-top: 1.25rem; }
+    .upgrade-page .back a { color: #666; text-decoration: none; font-size: 0.9rem; }
+    .upgrade-page .back a:hover { text-decoration: underline; }
+    .upgrade-page .error { color: #c00; font-size: 0.9rem; margin-top: 0.5rem; display: none; }
+  </style>
+</head>
+<body class="lumo-landing">
+  <nav class="lumo-nav lumo-nav-scrolled">
+    <div class="lumo-nav-left">
+      <a href="/" class="lumo-nav-logo">Lumo 22</a>
+      <a href="/captions" class="lumo-nav-link">Captions</a>
+    </div>
+    <a href="/account" class="lumo-nav-cta lumo-nav-account">Account</a>
+  </nav>
+
+  <section class="upgrade-page">
+    <h1>Add to your subscription</h1>
+    {% if upgrade_type == 'platforms' %}
+    <p class="summary">Add {{ extra_platforms }} extra platform{% if extra_platforms > 1 %}s{% endif %} to your 30 Days Captions subscription. Extra platforms are delivered with your <strong>next</strong> pack, not instantly.</p>
+    {% elif upgrade_type == 'stories' %}
+    <p class="summary">Add 30 Days Story Ideas to your subscription. Story prompts are delivered with your <strong>next</strong> pack, not instantly.</p>
+    {% else %}
+    <p class="summary">Add {{ extra_platforms }} extra platform{% if extra_platforms > 1 %}s{% endif %} and 30 Days Story Ideas to your subscription. They’re delivered with your <strong>next</strong> pack, not instantly.</p>
+    {% endif %}
+    <p class="price">{{ price_symbol }}{{ new_monthly }} / month</p>
+    <p>
+      <button type="button" id="btn-confirm" class="btn-confirm account-btn-swipe-light">Confirm and add to subscription</button>
+    </p>
+    <p id="upgrade-error" class="error"></p>
+    <p class="back"><a href="{{ return_url }}">← Back to your form</a></p>
+  </section>
+
+  <script>
+(function() {
+  var btn = document.getElementById('btn-confirm');
+  var errEl = document.getElementById('upgrade-error');
+  var orderToken = '{{ order_token }}';
+  var newPlatforms = {{ new_platforms }};
+  var newStories = {{ 'true' if new_stories else 'false' }};
+  var returnUrl = '{{ return_url }}';
+
+  btn.addEventListener('click', function() {
+    btn.disabled = true;
+    btn.textContent = 'Updating…';
+    errEl.style.display = 'none';
+    fetch('/api/billing/change-subscription-plan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        token: orderToken,
+        new_platforms: newPlatforms,
+        new_stories: newStories
+      })
+    })
+    .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+    .then(function(res) {
+      if (res.ok && res.data.ok) {
+        window.location.href = returnUrl;
+        return;
+      }
+      errEl.textContent = (res.data && res.data.error) || 'Something went wrong. Please try again.';
+      errEl.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Confirm and add to subscription';
+    })
+    .catch(function() {
+      errEl.textContent = 'Something went wrong. Please try again.';
+      errEl.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Confirm and add to subscription';
+    });
+  });
+})();
+  </script>
+</body>
+</html>

@@ -212,25 +212,46 @@ def _handle_captions_payment(session):
             notif.send_order_receipt_email(customer_email, order=order, session=session)
         except Exception as receipt_err:
             print(f"[Stripe webhook] Receipt email failed (non-fatal): {receipt_err}")
-        print(f"[Stripe webhook] Sending intake email to {customer_email}")
-        ok = False
-        try:
-            ok = notif.send_intake_link_email(customer_email, intake_url, order)
-        except Exception as send_err:
-            # Retry with hardcoded URL so env/hidden chars or SendGrid validation can't cause 500
-            print(f"[Stripe webhook] Send failed ({send_err}), retrying with hardcoded fallback URL")
-            fallback_url = f"https://lumo-22-production.up.railway.app/captions-intake?t={safe_token}"
-            if copy_from:
-                fallback_url += f"&copy_from={copy_from}"
+        upgraded_from_oneoff = bool((order.get("upgraded_from_token") or copy_from or "").strip())
+        if upgraded_from_oneoff:
+            # They already filled the intake for their one-off; send welcome + create account, not intake form email
+            print(f"[Stripe webhook] Sending subscription welcome (prefilled) email to {customer_email}")
+            ok = False
             try:
-                ok = notif.send_intake_link_email(customer_email, fallback_url, order)
-            except Exception as fallback_err:
-                print(f"[Stripe webhook] Fallback send also failed: {fallback_err}")
-                raise
-        if not ok:
-            print(f"[Stripe webhook] intake-link email FAILED to send to {customer_email}")
+                ok = notif.send_subscription_welcome_prefilled_email(customer_email, intake_url)
+            except Exception as send_err:
+                print(f"[Stripe webhook] Send failed ({send_err}), retrying with hardcoded fallback URL")
+                fallback_url = f"https://lumo-22-production.up.railway.app/captions-intake?t={safe_token}"
+                if copy_from:
+                    fallback_url += f"&copy_from={copy_from}"
+                try:
+                    ok = notif.send_subscription_welcome_prefilled_email(customer_email, fallback_url)
+                except Exception as fallback_err:
+                    print(f"[Stripe webhook] Fallback send also failed: {fallback_err}")
+                    raise
+            if not ok:
+                print(f"[Stripe webhook] subscription-welcome email FAILED to send to {customer_email}")
+            else:
+                print(f"[Stripe webhook] subscription-welcome email sent to {customer_email}")
         else:
-            print(f"[Stripe webhook] intake-link email sent to {customer_email}")
+            print(f"[Stripe webhook] Sending intake email to {customer_email}")
+            ok = False
+            try:
+                ok = notif.send_intake_link_email(customer_email, intake_url, order)
+            except Exception as send_err:
+                print(f"[Stripe webhook] Send failed ({send_err}), retrying with hardcoded fallback URL")
+                fallback_url = f"https://lumo-22-production.up.railway.app/captions-intake?t={safe_token}"
+                if copy_from:
+                    fallback_url += f"&copy_from={copy_from}"
+                try:
+                    ok = notif.send_intake_link_email(customer_email, fallback_url, order)
+                except Exception as fallback_err:
+                    print(f"[Stripe webhook] Fallback send also failed: {fallback_err}")
+                    raise
+            if not ok:
+                print(f"[Stripe webhook] intake-link email FAILED to send to {customer_email}")
+            else:
+                print(f"[Stripe webhook] intake-link email sent to {customer_email}")
 
     # Referrer reward: if the purchaser was referred (has account with referred_by_customer_id), give referrer one credit.
     try:

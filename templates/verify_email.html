@@ -32,7 +32,11 @@
       <h1>Email verified</h1>
       <p>Your email has been verified. You can now log in to your account.</p>
       <div class="back-links">
+        {% if next_url and next_url != '/account' %}
+        <a href="/login?next={{ next_url|urlencode }}">Log in to complete your upgrade</a>
+        {% else %}
         <a href="/login">Log in</a>
+        {% endif %}
         <span>·</span>
         <a href="/captions">View Caption Plans</a>
         <span>·</span>

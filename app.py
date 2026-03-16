@@ -1,5 +1,5 @@
 """
-Main Flask application for AI-powered lead capture and booking system.
+Main Flask application for Lumo 22 (30 Days Captions).
 """
 import os
 import time
@@ -33,9 +33,8 @@ def _consume_login_token(token: str):
     if not data or data.get("expires", 0) < time.time():
         return None
     return data
-from api.routes import api_bp, init_services
+from api.routes import api_bp
 from api.webhooks import webhook_bp
-from api.outreach_routes import outreach_bp, init_outreach_services
 from api.captions_routes import captions_bp
 from api.auth_routes import auth_bp, get_current_customer
 from api.billing_routes import billing_bp
@@ -111,7 +110,6 @@ def inject_asset_version():
 # Register blueprints
 app.register_blueprint(api_bp)
 app.register_blueprint(webhook_bp)
-app.register_blueprint(outreach_bp)
 app.register_blueprint(captions_bp)
 app.register_blueprint(auth_bp)
 app.register_blueprint(billing_bp)
@@ -418,8 +416,21 @@ def captions_checkout_page():
 @app.route('/captions-checkout-subscription')
 def captions_checkout_subscription_page():
     """Pre-checkout page for Captions subscription: agree to T&Cs then continue to Stripe. Supports GBP, USD, EUR.
-    Accepts copy_from=TOKEN to pass through to Stripe metadata for one-off → subscription flow."""
+    Accepts copy_from=TOKEN to pass through to Stripe metadata for one-off → subscription flow.
+    All subscription checkouts (new and upgrade from one-off) require login before payment."""
     from urllib.parse import urlencode, quote
+    copy_from = (request.args.get("copy_from") or "").strip()
+    if not get_current_customer():
+        login_url = url_for("customer_login_page") + "?next=" + quote(request.full_path or "/captions-checkout-subscription", safe="")
+        if copy_from:
+            try:
+                from services.caption_order_service import CaptionOrderService
+                order = CaptionOrderService().get_by_token(copy_from)
+                if order and (order.get("customer_email") or "").strip():
+                    login_url += "&email=" + quote((order.get("customer_email") or "").strip(), safe="")
+            except Exception:
+                pass
+        return redirect(login_url)
     platforms = _parse_platforms_from_request()
     selected = (request.args.get("selected") or request.args.get("selected_platforms") or "").strip()
     stories = request.args.get("stories", "").strip().lower() in ("1", "true", "yes", "on")
@@ -437,7 +448,6 @@ def captions_checkout_subscription_page():
     ref = (request.args.get("ref") or "").strip()
     if ref:
         params["ref"] = ref
-    copy_from = (request.args.get("copy_from") or "").strip()
     if copy_from:
         params["copy_from"] = copy_from
     q = urlencode(params)
@@ -469,6 +479,7 @@ def captions_checkout_subscription_page():
         back_to_captions_url=back_to_captions_url,
         is_upgrade_from_oneoff=bool(copy_from),
     )
+
 
 @app.route('/privacy')
 def privacy_page():
@@ -533,10 +544,90 @@ def customer_login_required(f):
     return decorated
 
 
+@app.route('/captions-upgrade')
+@customer_login_required
+def captions_upgrade_page():
+    """Dedicated upgrade page: add platforms or Story Ideas to an existing subscription. Requires login.
+    Query: token (required), platforms (target count 1–4), stories (0|1), return_url (optional)."""
+    token = (request.args.get("token") or "").strip()
+    return_url = (request.args.get("return_url") or "").strip()
+    if not token:
+        return redirect(url_for("account_page"))
+    try:
+        from services.caption_order_service import CaptionOrderService
+        from api.billing_routes import _subscription_monthly_price
+        svc = CaptionOrderService()
+        order = svc.get_by_token(token)
+    except Exception:
+        return redirect(url_for("account_page"))
+    if not order:
+        return redirect(url_for("account_page"))
+    sub_id = (order.get("stripe_subscription_id") or "").strip()
+    if not sub_id:
+        return redirect(url_for("captions_page"))
+    customer = get_current_customer()
+    order_email = (order.get("customer_email") or "").strip().lower()
+    if not customer or (customer.get("email") or "").strip().lower() != order_email:
+        return redirect(url_for("account_page"))
+    current_platforms = max(1, int(order.get("platforms_count", 1)))
+    current_stories = bool(order.get("include_stories"))
+    currency = (order.get("currency") or "gbp").strip().lower()
+    if currency not in ("gbp", "usd", "eur"):
+        currency = "gbp"
+    platforms_param = request.args.get("platforms", "").strip()
+    stories_param = (request.args.get("stories") or "").strip().lower() in ("1", "true", "yes", "on")
+    new_platforms = current_platforms
+    new_stories = current_stories
+    if platforms_param:
+        try:
+            new_platforms = max(1, min(4, int(platforms_param)))
+        except (TypeError, ValueError):
+            pass
+    if stories_param:
+        new_stories = True
+    is_platform_upgrade = new_platforms > current_platforms
+    is_stories_upgrade = new_stories and not current_stories
+    if not is_platform_upgrade and not is_stories_upgrade:
+        if return_url and return_url.startswith("/"):
+            return redirect(return_url)
+        intake_url = url_for("captions_intake_page", t=token)
+        return redirect(intake_url)
+    try:
+        _, new_total = _subscription_monthly_price(currency, new_platforms, new_stories)
+        _, old_total = _subscription_monthly_price(currency, current_platforms, current_stories)
+    except Exception:
+        new_total = 79 + (new_platforms - 1) * 19 + (17 if new_stories else 0)
+        old_total = 79 + (current_platforms - 1) * 19 + (17 if current_stories else 0)
+    symbols = {"gbp": "£", "usd": "$", "eur": "€"}
+    symbol = symbols.get(currency, "£")
+    if not return_url or not return_url.startswith("/"):
+        return_url = url_for("captions_intake_page", t=token)
+    upgrade_type = "platforms" if is_platform_upgrade else "stories"
+    if is_platform_upgrade and is_stories_upgrade:
+        upgrade_type = "both"
+    extra_platforms = new_platforms - current_platforms
+    return render_template(
+        "captions_upgrade.html",
+        order_token=token,
+        new_platforms=new_platforms,
+        new_stories=new_stories,
+        current_platforms=current_platforms,
+        current_stories=current_stories,
+        extra_platforms=extra_platforms,
+        add_stories=is_stories_upgrade,
+        price_symbol=symbol,
+        new_monthly=new_total,
+        return_url=return_url,
+        upgrade_type=upgrade_type,
+    )
+
+
 @app.route('/signup')
 def customer_signup_page():
-    """Signup for Lumo 22 customers (Captions)."""
-    return render_template('customer_signup.html')
+    """Signup for Lumo 22 customers (Captions). Accepts next= and email= for upgrade flow."""
+    next_url = request.args.get('next', '').strip() or None
+    prefilled_email = (request.args.get('email') or '').strip() or None
+    return render_template('customer_signup.html', next_url=next_url, prefilled_email=prefilled_email)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -570,7 +661,9 @@ def customer_login_page():
             return render_template('login_success.html', next_url=redirect_url)
         except Exception:
             return render_template('customer_login.html', login_error='Something went wrong. Please try again.', next_url=next_url)
-    return render_template('customer_login.html')
+    next_url = request.args.get('next', '/account')
+    prefilled_email = (request.args.get('email') or '').strip() or None
+    return render_template('customer_login.html', next_url=next_url, prefilled_email=prefilled_email)
 
 
 @app.route('/forgot-password')
@@ -588,21 +681,28 @@ def reset_password_page():
 
 @app.route('/verify-email')
 def verify_email_page():
-    """Verify email: token from signup welcome email. Marks email verified and redirects to login."""
+    """Verify email: token from signup welcome email. Marks email verified; next= preserved for upgrade flow.
+    On success with next=, redirect to login?next= so user goes straight to login then checkout."""
+    from urllib.parse import quote
     token = request.args.get('token', '').strip()
+    next_url = request.args.get('next', '').strip() or None
+    if next_url and not _is_safe_redirect_url(next_url):
+        next_url = None
     if not token:
-        return render_template('verify_email.html', success=False, error="No verification link found. Please request a new one.")
+        return render_template('verify_email.html', success=False, error="No verification link found. Please request a new one.", next_url=next_url)
     try:
         from services.customer_auth_service import CustomerAuthService
         svc = CustomerAuthService()
         ok, customer, err = svc.confirm_email_verification(token)
         if not ok:
-            return render_template('verify_email.html', success=False, error=err)
-        return render_template('verify_email.html', success=True)
+            return render_template('verify_email.html', success=False, error=err, next_url=next_url)
+        if next_url and next_url != '/account':
+            return redirect(url_for("customer_login_page") + "?next=" + quote(next_url, safe=""))
+        return render_template('verify_email.html', success=True, next_url=next_url)
     except Exception as e:
         import logging
         logging.exception("verify_email failed: %s", e)
-        return render_template('verify_email.html', success=False, error="Something went wrong. Please try again or contact hello@lumo22.com.")
+        return render_template('verify_email.html', success=False, error="Something went wrong. Please try again or contact hello@lumo22.com.", next_url=next_url)
 
 
 @app.route('/change-email-confirm')
@@ -827,12 +927,6 @@ def webhook_test():
     """Test page for webhook integrations"""
     return render_template('webhook.html')
 
-@app.route('/outreach')
-def outreach_dashboard():
-    """Outreach dashboard for managing prospects"""
-    return render_template('outreach_dashboard.html')
-
-
 @app.route('/activate')
 def activate_page():
     """DFD shelved — redirect to Captions."""
@@ -888,14 +982,6 @@ def catch_all_exception(error):
     return jsonify(payload), 500
 
 if __name__ == '__main__':
-    # Initialize services
-    try:
-        init_services()
-        init_outreach_services()
-        print("Services initialized successfully")
-    except Exception as e:
-        print(f"Warning: Some services may not be available: {e}")
-    
     # Validate configuration
     try:
         Config.validate()
