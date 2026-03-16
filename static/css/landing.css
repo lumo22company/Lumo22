@@ -1394,6 +1394,12 @@ a.lumo-nav-login:hover::before {
     font-size: 0.7rem !important;
     border-radius: 12px !important;
   }
+  /* Account button on mobile: dark text on hover/focus/active (yellow fill remains) */
+  .lumo-nav-auth .lumo-nav-cta.lumo-nav-account:hover,
+  .lumo-nav-auth .lumo-nav-cta.lumo-nav-account:focus,
+  .lumo-nav-auth .lumo-nav-cta.lumo-nav-account:active {
+    color: #000 !important;
+  }
   .lumo-nav.is-open .lumo-nav-links {
     display: flex;
   }

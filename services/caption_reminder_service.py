@@ -108,6 +108,9 @@ def run_reminders() -> Dict[str, Any]:
                 continue
 
             intake_url = f"{base}/captions-intake?t={token}"
+            # Subscribers must log in first; link goes to login with next=intake so after login they land on the form
+            from urllib.parse import quote
+            login_url = f"{base}/login?next={quote(intake_url, safe='')}"
             account_url = f"{base}/account"
             subject = "Update your form before your next pack"
             body = f"""Hi,
@@ -116,11 +119,11 @@ Your next 30 Days of Social Media Captions pack is coming soon. You can update y
 
 Do you have an event, promotion or something else coming up? Use your form to tell us about it and we'll tailor your captions to fit.
 
-Update my form: {intake_url}
+Log in to update your form: {login_url}
 
-Or copy and paste this link into your browser:
+Or copy and paste this link into your browser. You'll need to log in to your Lumo 22 account first; then you'll be taken to your form.
 
-{intake_url}
+{login_url}
 
 This takes about 2 minutes. If you don't change anything, we'll use your existing details.
 
@@ -129,7 +132,7 @@ You can turn these reminders off in your account: {account_url}
 Lumo 22
 """
             from services.notifications import _captions_reminder_email_html
-            html_body = _captions_reminder_email_html(intake_url, account_url)
+            html_body = _captions_reminder_email_html(login_url, account_url)
             ok = notif.send_email(email, subject, body, html_body=html_body)
             if ok:
                 # Store period end as ISO for TIMESTAMPTZ (Postgres)

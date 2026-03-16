@@ -37,7 +37,8 @@
     .intake-page input::placeholder, .intake-page textarea::placeholder { color: #666; }
     .intake-page .form-section { margin-bottom: 2rem; }
     .intake-page .form-section h2 { font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; font-weight: 400; color: #1a1a1a; margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 0.05em; }
-    .intake-page .btn-submit {
+    /* Base for buttons that are NOT account-style (e.g. Upgrade to subscription link) */
+    .intake-page .btn-submit:not(.account-btn-swipe-light) {
       display: inline-flex; align-items: center; justify-content: center;
       padding: 10px 20px; min-height: 44px;
       background: transparent; color: #1a1a1a;
@@ -47,13 +48,13 @@
       font-family: var(--font-body); transition: color 0.25s ease-out, border-color 0.25s ease-out;
       position: relative; overflow: hidden; z-index: 1;
     }
-    .intake-page .btn-submit::before {
+    .intake-page .btn-submit:not(.account-btn-swipe-light)::before {
       content: ''; position: absolute; left: 0; top: 0; width: 100%; height: 100%;
       background-color: var(--lum-gold, #fff200); transform: scaleX(0); transform-origin: left center;
       transition: transform 0.35s ease-out; z-index: -1;
     }
-    .intake-page .btn-submit:hover { color: #000 !important; border-color: var(--lum-gold, #fff200) !important; }
-    .intake-page .btn-submit:hover::before { transform: scaleX(1); }
+    .intake-page .btn-submit:not(.account-btn-swipe-light):hover { color: #000 !important; border-color: var(--lum-gold, #fff200) !important; }
+    .intake-page .btn-submit:not(.account-btn-swipe-light):hover::before { transform: scaleX(1); }
     .intake-page .btn-submit.primary { background: var(--lum-gold); color: #000; border-color: var(--lum-gold); }
     .intake-page .btn-submit.primary::before { display: none; }
     .intake-page .btn-submit.primary:hover { background: #e6d900; border-color: #e6d900; color: #000; }
@@ -74,11 +75,13 @@
     .intake-page .review-section .empty { color: #666; font-style: italic; }
     .intake-page .review-actions { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1.5rem; }
     .intake-page .btn-secondary { background: transparent; color: #1a1a1a; border: 2px solid rgba(0,0,0,0.25); }
+    /* Next Step, Edit, Send details: match account page (Change email) — font and yellow swipe from product.css .account-btn-swipe-light */
     .intake-page .btn-submit.account-btn-swipe-light,
     .intake-page .btn-secondary.account-btn-swipe-light {
       display: inline-flex; align-items: center; justify-content: center;
       padding: 10px 20px; min-height: 44px;
       border-radius: var(--radius-btn, 8px); cursor: pointer;
+      font: inherit;
     }
     .intake-page .help-trigger { display: inline-flex; align-items: center; justify-content: center; width: 1.1rem; height: 1.1rem; border-radius: 50%; background: #999; color: #fff; font-size: 0.7rem; font-weight: 600; cursor: help; margin-left: 0.4rem; vertical-align: middle; position: relative; }
     .intake-page .help-trigger:hover, .intake-page .help-trigger:focus { background: var(--lum-gold); color: #000; outline: none; }
@@ -245,7 +248,7 @@
         {% endif %}
         {% if existing_intake and platforms_count < 4 %}
         <p class="intake-add-platform-wrap" style="margin: 0.75rem 0 0; font-size: 0.95rem;">
-          <a href="/captions?platforms={{ platforms_count + 1 }}" class="intake-add-platform-link">Add another platform (+£29 one-off / +£19/mo)</a>
+          <a href="/captions?platforms={{ platforms_count + 1 }}{% if order_currency and order_currency != 'gbp' %}&amp;currency={{ order_currency }}{% endif %}" class="intake-add-platform-link">Add another platform ({{ intake_add_platform_text|default('+£29 one-off / +£19/mo') }})</a>
           <span class="intake-add-platform-note" style="color: #1a1a1a;"> — go to checkout to confirm and pay. Extra platforms are delivered with your <strong>next</strong> PDF pack, not instantly.</span>
         </p>
         {% endif %}
@@ -258,7 +261,7 @@
           <p class="field-helper" style="margin: 0 0 0.5rem; font-weight: 600;">{% if stories_paid %}30 Days Story Ideas included with your order.{% else %}Using Instagram &amp; Facebook? Add Story Ideas—optionally align each day's Story to your feed caption (same theme, same day) or leave unaligned so they're different.{% endif %}</p>
           <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; margin-bottom: 0.25rem;">
             <input type="checkbox" id="include_stories" name="include_stories" {% if existing_intake.get('include_stories') or stories_paid %}checked{% endif %} {% if stories_paid %}disabled{% endif %} style="width: auto;">
-            <span>{% if stories_paid %}30 Stories included (already paid){% else %}Add 30 Stories prompts (+£29 one-off / +£17/mo){% endif %}</span>
+            <span>{% if stories_paid %}30 Stories included (already paid){% else %}Add 30 Stories prompts ({{ intake_add_stories_text|default('+£29 one-off / +£17/mo') }}){% endif %}</span>
           </label>
           <p class="field-helper" style="margin: 0.5rem 0 0;">One-line prompts for Instagram/Facebook Stories each day. Check the box below to align each Story to that day's caption—or leave unchecked so Stories and captions are different on the same day.</p>
           <p class="field-helper intake-stories-disclaimer" style="margin: 0.5rem 0 0; font-size: 0.85rem; color: var(--lum-text-muted);">If you add Story Ideas later (e.g. from Manage subscription in your account), they’ll be delivered with your <strong>next</strong> pack, not instantly.</p>

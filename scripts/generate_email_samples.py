@@ -47,9 +47,11 @@ def main():
     samples.append(("delivery_stories.html", "Delivery email (with Stories)", _captions_delivery_email_html(has_stories=True, has_subscription=False)))
     samples.append(("delivery_subscription.html", "Delivery email (subscription - with delete note)", _captions_delivery_email_html(has_stories=False, has_subscription=True)))
 
-    # 3. Caption reminder
+    # 3. Caption reminder (subscribers log in first, then redirect to form)
+    from urllib.parse import quote
     account_url = "https://www.lumo22.com/account"
-    samples.append(("reminder.html", "Pre-pack reminder", _captions_reminder_email_html(intake_url, account_url)))
+    login_url = "https://www.lumo22.com/login?next=" + quote(intake_url, safe="")
+    samples.append(("reminder.html", "Pre-pack reminder", _captions_reminder_email_html(login_url, account_url)))
 
     # 4. Password reset
     samples.append(("password_reset.html", "Password reset", _password_reset_email_html("https://www.lumo22.com/reset-password?token=sample-token")))

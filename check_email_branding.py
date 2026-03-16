@@ -79,7 +79,7 @@ def main():
     check("Intake link", _intake_link_email_html("https://example.com/intake?t=token"))
     check("Captions delivery (no stories)", _captions_delivery_email_html(False))
     check("Captions delivery (with stories)", _captions_delivery_email_html(True))
-    check("Captions reminder", _captions_reminder_email_html("https://example.com/intake", "https://example.com/account"))
+    check("Captions reminder", _captions_reminder_email_html("https://example.com/login?next=https%3A%2F%2Fexample.com%2Fcaptions-intake%3Ft%3Dx", "https://example.com/account"))
 
     # 3. Generic wrapper (used for plain-body emails)
     plain = "Hi,\n\nTest body.\n\n— Lumo 22"

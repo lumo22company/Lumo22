@@ -97,23 +97,24 @@ def _captions_delivery_email_html(has_stories: bool, has_subscription: bool = Fa
     return _email_wrapper(content)
 
 
-def _captions_reminder_email_html(intake_url: str, account_url: str) -> str:
-    """Build explicit HTML for the captions intake reminder email so the body always shows."""
+def _captions_reminder_email_html(login_url: str, account_url: str) -> str:
+    """Build explicit HTML for the captions intake reminder email. Subscribers must log in first; link goes to login then redirects to form."""
     import html
-    intake_url = (intake_url or "").strip()
+    login_url = (login_url or "").strip()
     account_url = (account_url or "").strip()
-    if not intake_url or not intake_url.startswith("http"):
-        intake_url = ""
+    if not login_url or not login_url.startswith("http"):
+        login_url = ""
     if not account_url or not account_url.startswith("http"):
         account_url = ""
-    safe_intake = html.escape(intake_url, quote=True)
+    safe_login = html.escape(login_url, quote=True)
     safe_account = html.escape(account_url, quote=True)
     content = f"""<p style="margin:0 0 16px;">Hi,</p>
 <p style="margin:0 0 16px;">Your next 30 Days of Social Media Captions pack is coming soon. You can update your preferences (business details, voice, platforms) anytime before we generate it.</p>
 <p style="margin:0 0 16px;">Do you have an event, promotion or something else coming up? Use your form to tell us about it and we'll tailor your captions to fit.</p>
-<p style="margin:0 0 24px;"><a href="{safe_intake}" style="display:inline-block; padding:14px 28px; background:{BRAND_GOLD}; color:{BRAND_BLACK}; text-decoration:none; border-radius:10px; font-weight:600;">Update my form</a></p>
+<p style="margin:0 0 12px; font-size:14px; color:{BRAND_MUTED};"><strong style="color:{BRAND_TEXT};">You'll need to log in to your account first</strong>, then you'll be taken to your form.</p>
+<p style="margin:0 0 24px;"><a href="{safe_login}" style="display:inline-block; padding:14px 28px; background:{BRAND_GOLD}; color:{BRAND_BLACK}; text-decoration:none; border-radius:10px; font-weight:600;">Log in to update your form</a></p>
 <p style="margin:0 0 8px; font-size:14px; color:{BRAND_MUTED};">Or copy and paste this link into your browser:</p>
-<p style="margin:0 0 24px; font-size:13px; word-break:break-all; color:#333;">{safe_intake}</p>
+<p style="margin:0 0 24px; font-size:13px; word-break:break-all; color:#333;">{safe_login}</p>
 <p style="margin:0 0 16px;">This takes about 2 minutes. If you don't change anything, we'll use your existing details.</p>
 <p style="margin:0 0 16px;">You can turn these reminders off in your <a href="{safe_account}" style="color:{BRAND_BLACK}; text-decoration:none; border-bottom:1px solid {BRAND_BLACK};">account</a>.</p>
 <p style="margin:0;">— Lumo 22</p>"""
@@ -219,6 +220,14 @@ def _order_receipt_email_html(order_summary: Optional[str] = None, amount_paid: 
     return _email_wrapper(content)
 
 
+def _get_login_url() -> str:
+    """Base URL for customer login (used in emails)."""
+    base = (Config.BASE_URL or "").strip().rstrip("/")
+    if not base or not base.startswith("http"):
+        base = "https://www.lumo22.com"
+    return f"{base}/login"
+
+
 def _intake_link_email_html(intake_url: str, order_summary: Optional[str] = None, is_subscription: bool = False) -> str:
     """Build branded HTML for captions intake link email — PDF aesthetic, explicit body so it always shows."""
     import html
@@ -226,6 +235,8 @@ def _intake_link_email_html(intake_url: str, order_summary: Optional[str] = None
     if not intake_url or not intake_url.startswith("http"):
         intake_url = ""
     safe_url = html.escape(intake_url, quote=True)
+    login_url = _get_login_url()
+    safe_login = html.escape(login_url, quote=True)
     summary_block = ""
     if order_summary and order_summary.strip():
         summary_escaped = html.escape(order_summary.strip()).replace("\n", "<br>\n")
@@ -234,7 +245,8 @@ def _intake_link_email_html(intake_url: str, order_summary: Optional[str] = None
     account_line = "On the form you can also create an account to access your captions and manage your subscription in one place." if is_subscription else "On the form you can also create an account to access your captions in one place."
     content = f"""<p style="margin:0 0 16px;">Hi,</p>
 <p style="margin:0 0 16px;">Thanks for your order. Your 30 Days of Social Media Captions will be tailored to your business and voice.</p>
-{summary_block}<p style="margin:0 0 12px;">Please complete this short form so we can create your captions. It takes about 2 minutes:</p>
+{summary_block}<p style="margin:0 0 12px;">Please complete this short form so we can create your captions. It takes about 2 minutes.</p>
+<p style="margin:0 0 12px; font-size:14px; color:{BRAND_MUTED};"><strong style="color:{BRAND_TEXT};">For security:</strong> If you already have a Lumo 22 account, <a href="{safe_login}" style="color:{BRAND_BLACK}; text-decoration:none; border-bottom:1px solid {BRAND_BLACK};">log in first</a>, then use the button below to open your form.</p>
 <p style="margin:0 0 24px;"><a href="{safe_url}" style="display:inline-block; padding:14px 28px; background:{BRAND_GOLD}; color:{BRAND_BLACK}; text-decoration:none; border-radius:10px; font-weight:600;">Complete the form</a></p>
 <p style="margin:0 0 8px; font-size:14px; color:{BRAND_MUTED};">Or copy and paste this link into your browser:</p>
 <p style="margin:0 0 24px; font-size:13px; word-break:break-all; color:#333;">{safe_url}</p>
@@ -609,7 +621,10 @@ If you didn't request this, you can ignore this email. Your email address will s
         body = "Hi,\n\nThanks for your order. Your 30 Days of Social Media Captions will be tailored to your business and voice.\n\n"
         if order_summary:
             body += "Order confirmation — here's what you ordered:\n" + order_summary + "\n\n"
-        body += "Please complete this short form so we can create your captions. It takes about 2 minutes:\n\n"
+        body += "Please complete this short form so we can create your captions. It takes about 2 minutes.\n\n"
+        base = (Config.BASE_URL or "").strip().rstrip("/")
+        login_url = f"{base}/login" if base and base.startswith("http") else "https://www.lumo22.com/login"
+        body += "For security: If you already have a Lumo 22 account, log in first (" + login_url + "), then use the link below to open your form.\n\n"
         body += intake_url
         is_sub = bool(order and (order.get("stripe_subscription_id") or "").strip())
         account_line = "On the form you can also create an account to access your captions and manage your subscription in one place." if is_sub else "On the form you can also create an account to access your captions in one place."

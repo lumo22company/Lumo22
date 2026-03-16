@@ -232,11 +232,34 @@ def captions_page():
     r.headers['Pragma'] = 'no-cache'
     return r
 
+def _is_safe_redirect_url(url: str) -> bool:
+    """True if url is a same-origin URL or a path (e.g. /captions-intake?t=...)."""
+    if not url or not isinstance(url, str):
+        return False
+    url = url.strip()
+    if url.startswith('/') and '//' not in url[:2]:
+        return True
+    if not url.startswith(('http://', 'https://')):
+        return False
+    base = (Config.BASE_URL or '').strip()
+    if not base or not base.startswith('http'):
+        return False
+    from urllib.parse import urlparse
+    try:
+        next_parsed = urlparse(url)
+        base_parsed = urlparse(base if base.startswith('http') else 'https://' + base)
+        return next_parsed.netloc == base_parsed.netloc
+    except Exception:
+        return False
+
+
 @app.route('/captions-intake')
 def captions_intake_page():
     """Intake form for 30 Days Captions (sent to client after payment). Token in ?t= links form to order.
+    Subscription orders require login; one-off and no-token access unchanged.
     Supports copy_from=TOKEN to pre-fill from another order (e.g. one-off → subscription)."""
     from datetime import datetime
+    from api.auth_routes import get_current_customer
     token = request.args.get('t', '').strip()
     copy_from = request.args.get('copy_from', '').strip()
     existing_intake = {}
@@ -244,6 +267,7 @@ def captions_intake_page():
     selected_platforms = ""
     stories_paid = False
     is_oneoff = False
+    order = None
     if token:
         try:
             from services.caption_order_service import CaptionOrderService
@@ -269,6 +293,15 @@ def captions_intake_page():
                                 existing_intake = src_order.get("intake") or {}
         except Exception:
             pass
+    # Subscription orders: require login and session email must match order
+    if order and (order.get("stripe_subscription_id") or "").strip():
+        from urllib.parse import quote
+        customer = get_current_customer()
+        order_email = (order.get("customer_email") or "").strip().lower()
+        if not customer:
+            return redirect(url_for('customer_login_page') + '?next=' + quote(request.url, safe=''))
+        if (customer.get("email") or "").strip().lower() != order_email:
+            return redirect(url_for('account_page'))
     return_url = request.args.get("return_url", "").strip()
     # Prefill platform from order (chosen at checkout) when they haven't saved intake yet
     prefilled_platform = (existing_intake.get("platform") or "").strip() if existing_intake else ""
@@ -294,6 +327,16 @@ def captions_intake_page():
         prefilled_primary = "Instagram & Facebook"
     now = datetime.utcnow()
     subscribe_url = None
+    order_currency = "gbp"
+    intake_add_platform_text = "+£29 one-off / +£19/mo"
+    intake_add_stories_text = "+£29 one-off / +£17/mo"
+    if order:
+        order_currency = (order.get("currency") or "gbp").strip().lower()
+        if order_currency not in ("gbp", "usd", "eur"):
+            order_currency = "gbp"
+        p = CAPTIONS_DISPLAY_PRICES.get(order_currency, CAPTIONS_DISPLAY_PRICES["gbp"])
+        intake_add_platform_text = "+{symbol}{extra_oneoff} one-off / +{symbol}{extra_sub}/mo".format(symbol=p["symbol"], extra_oneoff=p["extra_oneoff"], extra_sub=p["extra_sub"])
+        intake_add_stories_text = "+{symbol}{stories_oneoff} one-off / +{symbol}{stories_sub}/mo".format(symbol=p["symbol"], stories_oneoff=p["stories_oneoff"], stories_sub=p["stories_sub"])
     if token and is_oneoff:
         from urllib.parse import urlencode
         sub_params = {"copy_from": token, "platforms": platforms_count}
@@ -301,11 +344,10 @@ def captions_intake_page():
             sub_params["selected"] = selected_platforms
         if stories_paid:
             sub_params["stories"] = "1"
-        currency = (order.get("currency") or "gbp").strip().lower()
-        if currency in ("gbp", "usd", "eur"):
-            sub_params["currency"] = currency
+        if order_currency in ("gbp", "usd", "eur"):
+            sub_params["currency"] = order_currency
         subscribe_url = "/captions-checkout-subscription?" + urlencode(sub_params)
-    r = make_response(render_template('captions_intake.html', intake_token=token, existing_intake=existing_intake, platforms_count=platforms_count, prefilled_platform=prefilled_platform, prefilled_primary=prefilled_primary, stories_paid=stories_paid, is_oneoff=is_oneoff, selected_platforms=selected_platforms, subscribe_url=subscribe_url, now=now, return_url=return_url))
+    r = make_response(render_template('captions_intake.html', intake_token=token, existing_intake=existing_intake, platforms_count=platforms_count, prefilled_platform=prefilled_platform, prefilled_primary=prefilled_primary, stories_paid=stories_paid, is_oneoff=is_oneoff, selected_platforms=selected_platforms, subscribe_url=subscribe_url, now=now, return_url=return_url, order_currency=order_currency, intake_add_platform_text=intake_add_platform_text, intake_add_stories_text=intake_add_stories_text))
     r.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     r.headers['Pragma'] = 'no-cache'
     return r
@@ -521,7 +563,11 @@ def customer_login_page():
             # One-time token so account page can set session even if cookie from this response does not persist
             login_token = _create_login_token(customer['id'], customer['email'])
             account_url = url_for('account_page') + '?login_token=' + login_token
-            return render_template('login_success.html', next_url=account_url)
+            # Redirect to requested next URL if safe (same origin or path), else account
+            redirect_url = account_url
+            if next_url and next_url != '/account' and _is_safe_redirect_url(next_url):
+                redirect_url = next_url if next_url.startswith(('http://', 'https://')) else (request.url_root.rstrip('/') + next_url)
+            return render_template('login_success.html', next_url=redirect_url)
         except Exception:
             return render_template('customer_login.html', login_error='Something went wrong. Please try again.', next_url=next_url)
     return render_template('customer_login.html')

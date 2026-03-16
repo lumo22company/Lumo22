@@ -601,6 +601,13 @@ def _run_generation_and_deliver(order_id: str):
     if not row:
         print(f"[Captions] Order {order_id} not found, skipping")
         return (False, "Order not found")
+    status = (row.get("status") or "").strip()
+    if status == "delivered":
+        print(f"[Captions] Order {order_id} already delivered, skipping duplicate")
+        return (True, None)
+    if status == "generating":
+        print(f"[Captions] Order {order_id} already generating, skipping duplicate")
+        return (True, None)
     intake = row.get("intake") or {}
     customer_email = (row.get("customer_email") or "").strip()
     if not customer_email:
@@ -878,7 +885,9 @@ def captions_intake_submit():
         base = (Config.BASE_URL or request.url_root or "").strip().rstrip("/")
         if base and not base.startswith("http"):
             base = "https://" + base
-        upgrade_url = f"{base}/captions?stories=1" if base else "/captions?stories=1"
+        order_currency = (order.get("currency") or "gbp").strip().lower()
+        currency_q = f"&currency={order_currency}" if order_currency in ("usd", "eur") else ""
+        upgrade_url = f"{base}/captions?stories=1{currency_q}" if base else f"/captions?stories=1{currency_q}"
         return jsonify({
             "error": "To include Story Ideas you need to add the add-on. Please confirm and accept the new price. Note: Story Ideas added later are delivered with your next caption pack, not instantly.",
             "upgrade_required": True,
@@ -901,16 +910,22 @@ def captions_intake_submit():
     if subscription_id and (downgrade_platforms or downgrade_stories):
         new_platforms = form_platforms_count
         new_stories = form_wants_stories
-        prices = {"gbp": {"symbol": "£", "sub": 79, "extra_sub": 19, "stories_sub": 17}}
-        p = prices.get("gbp", prices["gbp"])
-        new_total = p["sub"] + (new_platforms - 1) * p["extra_sub"] + (p["stories_sub"] if new_stories else 0)
+        order_currency = (order.get("currency") or "gbp").strip().lower()
+        if order_currency not in ("gbp", "usd", "eur"):
+            order_currency = "gbp"
+        try:
+            from api.billing_routes import _subscription_monthly_price
+            new_sym, new_total = _subscription_monthly_price(order_currency, new_platforms, new_stories)
+        except Exception:
+            new_sym = "£"
+            new_total = 79 + (new_platforms - 1) * 19 + (17 if new_stories else 0)
         return jsonify({
             "error": "You're reducing your plan. Please accept the new price before we save your changes. Your next invoice will reflect the lower amount.",
             "downgrade_required": True,
             "new_platforms": new_platforms,
             "new_stories": new_stories,
             "new_price": new_total,
-            "new_price_symbol": p["symbol"],
+            "new_price_symbol": new_sym,
         }), 400
 
     order_id = order["id"]
@@ -924,7 +939,9 @@ def captions_intake_submit():
                 base = (Config.BASE_URL or request.url_root or "").strip().rstrip("/")
                 if base and not base.startswith("http"):
                     base = "https://" + base
-                upgrade_url = f"{base}/captions?platforms={len(platform_parts)}" if base else f"/captions?platforms={len(platform_parts)}"
+                order_currency = (order.get("currency") or "gbp").strip().lower()
+                currency_q = f"&currency={order_currency}" if order_currency in ("usd", "eur") else ""
+                upgrade_url = f"{base}/captions?platforms={len(platform_parts)}{currency_q}" if base else f"/captions?platforms={len(platform_parts)}{currency_q}"
                 return jsonify({
                     "error": f"You selected {len(platform_parts)} platforms but your order includes {order_platforms_count}. To get more platforms, please confirm and accept the new price. Extra platforms are delivered with your next caption pack, not instantly.",
                     "upgrade_required": True,
@@ -1002,7 +1019,9 @@ def captions_intake_submit():
                 base = (Config.BASE_URL or request.url_root or "").strip().rstrip("/")
                 if base and not base.startswith("http"):
                     base = "https://" + base
-                upgrade_url = f"{base}/captions?platforms={len(platform_parts)}" if base else f"/captions?platforms={len(platform_parts)}"
+                order_currency = (order.get("currency") or "gbp").strip().lower()
+                currency_q = f"&currency={order_currency}" if order_currency in ("usd", "eur") else ""
+                upgrade_url = f"{base}/captions?platforms={len(platform_parts)}{currency_q}" if base else f"/captions?platforms={len(platform_parts)}{currency_q}"
                 return jsonify({
                     "error": f"You selected {len(platform_parts)} platforms but your order includes {order_platforms_count}. To get more platforms, please confirm and accept the new price. Extra platforms are delivered with your next caption pack, not instantly.",
                     "upgrade_required": True,

@@ -64,7 +64,7 @@ def main():
         check(f"Captions delivery (stories={has_stories}, sub={has_sub})", html)
 
     # 4. Pre-pack reminder
-    html = _captions_reminder_email_html(f"{base}/captions-intake?t=x", f"{base}/account")
+    html = _captions_reminder_email_html(f"{base}/login?next=" + __import__("urllib.parse").quote(f"{base}/captions-intake?t=x", safe=""), f"{base}/account")
     check("Pre-pack reminder", html)
 
     # 5. Intake reminder (awaiting_intake)
