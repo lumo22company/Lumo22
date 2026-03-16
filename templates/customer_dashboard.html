@@ -911,8 +911,28 @@
       var changePlanState = {
         token: null,
         oldPlatforms: 1,
-        oldStories: false
+        oldStories: false,
+        currency: 'gbp'
       };
+
+      function updateChangePlanPrice() {
+        var priceEl = document.getElementById('change-plan-price');
+        if (!priceEl || !CAPTIONS_PRICES || !changePlanState.token) return;
+        var sel = document.getElementById('change-plan-platforms');
+        var cb = document.getElementById('change-plan-stories');
+        var newPlatforms = parseInt(sel && sel.value ? sel.value : '1', 10);
+        if (!newPlatforms || newPlatforms < 1) newPlatforms = 1;
+        if (newPlatforms > 4) newPlatforms = 4;
+        var newStories = !!(cb && cb.checked);
+        var currency = (changePlanState.currency || 'gbp').toLowerCase();
+        var p = CAPTIONS_PRICES[currency] || CAPTIONS_PRICES.gbp;
+        var base = p.sub;
+        var extraPer = p.extra_sub;
+        var storiesPer = p.stories_sub;
+        var current = base + Math.max(0, changePlanState.oldPlatforms - 1) * extraPer + (changePlanState.oldStories ? storiesPer : 0);
+        var next = base + Math.max(0, newPlatforms - 1) * extraPer + (newStories ? storiesPer : 0);
+        priceEl.innerHTML = 'Current: <strong>' + (p.symbol || '£') + current + '/month</strong>. New: <strong>' + (p.symbol || '£') + next + '/month</strong>.';
+      }
 
       window.showChangePlanModal = function(btn) {
         var token = btn.getAttribute('data-order-token') || '';
@@ -923,6 +943,7 @@
         changePlanState.token = token;
         changePlanState.oldPlatforms = platforms;
         changePlanState.oldStories = hasStories;
+        changePlanState.currency = (btn.getAttribute('data-currency') || 'gbp').toLowerCase();
         var sel = document.getElementById('change-plan-platforms');
         var cb = document.getElementById('change-plan-stories');
         var errEl = document.getElementById('change-plan-error');
@@ -930,16 +951,7 @@
         if (sel) sel.value = String(platforms);
         if (cb) cb.checked = !!hasStories;
         if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
-        if (priceEl && CAPTIONS_PRICES) {
-          var currency = (btn.getAttribute('data-currency') || 'gbp').toLowerCase();
-          var p = CAPTIONS_PRICES[currency] || CAPTIONS_PRICES.gbp;
-          var base = p.sub;
-          var extraPer = p.extra_sub;
-          var storiesPer = p.stories_sub;
-          var current = base + Math.max(0, platforms - 1) * extraPer + (hasStories ? storiesPer : 0);
-          var next = current;
-          priceEl.innerHTML = 'Current: <strong>' + (p.symbol || '£') + current + '/month</strong>. New: <strong>' + (p.symbol || '£') + next + '/month</strong>.';
-        }
+        updateChangePlanPrice();
         var modal = document.getElementById('change-plan-modal');
         if (modal) {
           modal.removeAttribute('hidden');
@@ -954,6 +966,13 @@
           modal.classList.remove('account-delete-modal--open');
         }
       };
+
+      (function() {
+        var sel = document.getElementById('change-plan-platforms');
+        var cb = document.getElementById('change-plan-stories');
+        if (sel) sel.addEventListener('change', updateChangePlanPrice);
+        if (cb) cb.addEventListener('change', updateChangePlanPrice);
+      })();
 
       window.confirmChangePlan = function() {
         var sel = document.getElementById('change-plan-platforms');
