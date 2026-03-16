@@ -2609,6 +2609,12 @@
   .account-page-wrap .account-pause-block .account-resume-btn,
   .account-page-wrap .account-pause-block .account-get-pack-sooner-btn,
   .account-page-wrap .account-get-pack-sooner-row .account-get-pack-sooner-btn {
+    align-self: center !important;
+    margin-left: 0 !important;
+  }
+  .account-page-wrap .account-pause-block .account-payment-method-select-wrap,
+  .account-page-wrap .account-pause-block .account-toggle,
+  .account-page-wrap .account-pause-block .account-pause-btn {
     align-self: flex-start !important;
     margin-left: 0 !important;
   }
@@ -2941,7 +2947,15 @@
 }
 .account-add-stories-row,
 .account-remove-stories-row {
-  align-items: flex-start;
+  align-items: center;
+}
+/* Same border and spacing as other rows in Manage subscription */
+.account-page-wrap .account-pause-block .account-add-stories-row,
+.account-page-wrap .account-pause-block .account-remove-stories-row {
+  padding: 1rem 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+.account-page-wrap .account-pause-block > div:last-child {
   border-bottom: none;
 }
 .account-add-stories-row .account-add-stories-text,
@@ -2953,7 +2967,7 @@
 .account-add-stories-row .account-change-plan-btn,
 .account-remove-stories-row .account-remove-stories-btn {
   flex-shrink: 0;
-  align-self: flex-start;
+  align-self: center;
 }
 .account-page-wrap .account-remove-stories-btn {
   flex-shrink: 0;
