@@ -3232,12 +3232,12 @@
   }
 }
 
-/* Get your pack sooner: yellow primary buttons (match Add Story Ideas) */
+/* Get your pack sooner: yellow primary buttons (match Add Story Ideas), no black outline */
 #get-pack-sooner-modal .account-delete-modal-buttons .account-delete-modal-btn,
 #get-pack-sooner-confirm-modal .account-delete-modal-buttons .account-delete-modal-btn {
   background: var(--lum-gold, #fff200);
   color: #000;
-  border-color: rgba(0, 0, 0, 0.8);
+  border-color: transparent;
 }
 #get-pack-sooner-modal .account-delete-modal-buttons .account-delete-modal-btn:not(.account-delete-modal-keep):hover,
 #get-pack-sooner-confirm-modal .account-delete-modal-buttons .account-delete-modal-btn:not(.account-delete-modal-keep):hover {
