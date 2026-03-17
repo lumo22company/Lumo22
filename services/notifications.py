@@ -253,6 +253,31 @@ def _subscription_welcome_prefilled_email_html(login_url: str, intake_url: str) 
     return _email_wrapper(content)
 
 
+def _subscription_upgrade_confirmation_email_html(
+    login_url: str, intake_url: str, first_charge_date: Optional[str] = None
+) -> str:
+    """Branded HTML for upgrade confirmation when trial (no charge today). Charge when first pack is ready."""
+    import html
+    login_url = (login_url or "").strip() or _get_login_url()
+    intake_url = (intake_url or "").strip()
+    safe_login = html.escape(login_url, quote=True)
+    safe_intake = html.escape(intake_url, quote=True) if intake_url and intake_url.startswith("http") else ""
+    charge_p = ""
+    if first_charge_date:
+        charge_p = f'<p style="margin:0 0 16px;">You won\'t be charged today. We\'ll charge your card when your first subscription pack is ready (on {html.escape(first_charge_date)}).</p>'
+    else:
+        charge_p = '<p style="margin:0 0 16px;">You won\'t be charged today. We\'ll charge your card when your first subscription pack is ready (about 30 days after your one-off pack).</p>'
+    content = f"""<p style="margin:0 0 16px;">Hi,</p>
+<p style="margin:0 0 16px;">You're set up for your 30 Days Captions subscription. Your form is already filled from your one-off pack—log in to your account to review or edit it whenever you like.</p>
+{charge_p}
+<p style="margin:0 0 24px;"><a href="{safe_login}" style="display:inline-block; padding:14px 28px; background:{BRAND_GOLD}; color:{BRAND_BLACK}; text-decoration:none; border-radius:10px; font-weight:600;">Log in to your account</a></p>
+<p style="margin:0 0 12px;">Open your form (prefilled); you can edit it anytime in your account:</p>
+<p style="margin:0 0 24px;"><a href="{safe_intake}" style="display:inline-block; padding:12px 24px; background:#f0f0f0; color:{BRAND_BLACK}; text-decoration:none; border-radius:10px; font-weight:600;">Open your form</a></p>
+<p style="margin:0 0 16px;">If you have any questions, just reply to this email.</p>
+<p style="margin:0;">— Lumo 22</p>"""
+    return _email_wrapper(content)
+
+
 def _intake_link_email_html(intake_url: str, order_summary: Optional[str] = None, is_subscription: bool = False) -> str:
     """Build branded HTML for captions intake link email — PDF aesthetic, explicit body so it always shows."""
     import html
@@ -682,7 +707,7 @@ If you didn't request this, you can ignore this email. Your email address will s
     def send_subscription_welcome_prefilled_email(
         self, to_email: str, intake_url: str
     ) -> bool:
-        """Send welcome email when customer upgraded from one-off to subscription. They already have an account (required before payment). Form is prefilled."""
+        """Send welcome email when customer upgraded from one-off to subscription (and was charged at checkout, e.g. get pack now). Form is prefilled."""
         if not to_email or "@" not in str(to_email):
             return False
         subject = "You're subscribed — 30 Days Captions"
@@ -700,6 +725,34 @@ If you have any questions, just reply to this email.
 — Lumo 22
 """
         html_body = _subscription_welcome_prefilled_email_html(login_url, intake_url)
+        return self.send_email(to_email, subject, body, html_body=html_body)
+
+    def send_subscription_upgrade_confirmation_email(
+        self, to_email: str, intake_url: str, first_charge_date: Optional[str] = None
+    ) -> bool:
+        """Confirmation when customer upgraded from one-off to subscription with trial (no charge today). You'll be charged when first pack is ready."""
+        if not to_email or "@" not in str(to_email):
+            return False
+        subject = "You're set up — 30 Days Captions subscription"
+        login_url = _get_login_url()
+        charge_line = ""
+        if first_charge_date:
+            charge_line = "\nYou won't be charged today. We'll charge your card when your first subscription pack is ready (on " + first_charge_date + ").\n"
+        else:
+            charge_line = "\nYou won't be charged today. We'll charge your card when your first subscription pack is ready (about 30 days after your one-off pack).\n"
+        body = """Hi,
+
+You're set up for your 30 Days Captions subscription. Your form is already filled from your one-off pack—log in to your account to review or edit it whenever you like.
+""" + charge_line + """
+Log in to your account: """ + login_url + """
+
+Open your form (prefilled); you can edit it anytime in your account: """ + (intake_url or "") + """
+
+If you have any questions, just reply to this email.
+
+— Lumo 22
+"""
+        html_body = _subscription_upgrade_confirmation_email_html(login_url, intake_url, first_charge_date)
         return self.send_email(to_email, subject, body, html_body=html_body)
 
     def send_one_off_upgrade_reminder_email(

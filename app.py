@@ -465,6 +465,21 @@ def captions_checkout_subscription_page():
     else:
         add_stories_url = None
     add_platforms_url = ("/captions" + captions_prefill) if platforms < 4 else None
+    first_charge_date_str = None
+    if copy_from:
+        try:
+            from services.caption_order_service import CaptionOrderService
+            from datetime import datetime, timedelta, timezone
+            one_off = CaptionOrderService().get_by_token(copy_from)
+            if one_off:
+                raw = one_off.get("delivered_at") or one_off.get("updated_at") or one_off.get("created_at")
+                if raw:
+                    dt = datetime.fromisoformat(raw.replace("Z", "+00:00")) if isinstance(raw, str) else raw
+                    if getattr(dt, "tzinfo", None) is None:
+                        dt = dt.replace(tzinfo=timezone.utc)
+                    first_charge_date_str = (dt + timedelta(days=30)).strftime("%d %B %Y")
+        except Exception:
+            pass
     return render_template(
         'captions_checkout_subscription.html',
         platforms=platforms,
@@ -478,6 +493,7 @@ def captions_checkout_subscription_page():
         add_platforms_url=add_platforms_url,
         back_to_captions_url=back_to_captions_url,
         is_upgrade_from_oneoff=bool(copy_from),
+        first_charge_date=first_charge_date_str,
     )
 
 

@@ -172,6 +172,10 @@ input[type="checkbox"] { accent-color: #fff200; }
   align-items: center;
   gap: var(--space-xl);
 }
+/* CTA as direct child (e.g. login/signup pages) — keep on the right */
+.lumo-nav > a.lumo-nav-cta {
+  margin-left: auto;
+}
 .lumo-nav-auth {
   display: flex;
   align-items: center;

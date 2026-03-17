@@ -101,7 +101,16 @@
 
 ---
 
-## 10. Legal & old products
+## 10. Upgrade from one-off (subscription)
+
+*(Need a one-off order and upgrade link with `copy_from=TOKEN`, or use upgrade reminder email.)*
+
+- [ ] **Charge on delivery:** Open subscription checkout (do **not** check “Get your first pack now”). Copy says “You won’t be charged today” and shows charge date. Complete checkout → thank-you; **only** “You’re set up — 30 Days Captions subscription” email (no “payment received” receipt).
+- [ ] **Get your first pack now:** Open subscription checkout, check “Get your first pack now”. Copy says “You’ll be charged today”. Complete checkout → receipt email + “You’re subscribed” welcome; pack email arrives shortly after.
+
+---
+
+## 11. Legal & old products
 
 - [ ] **/terms** — Terms & Conditions, “Last updated” visible
 - [ ] **/privacy** — Privacy Policy, “Last updated” visible

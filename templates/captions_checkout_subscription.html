@@ -46,7 +46,16 @@
       {% endif %}
       {% if is_upgrade_from_oneoff|default(false) %}
       <p style="font-size: 0.9rem; color: #fff; margin: 1.5rem 0 1rem; padding: 0.75rem 1rem; background: #000; border-radius: 8px; border: 2px solid #fff;">Upgrading from one-off? Your first subscription pack will be delivered <strong>30 days after your one-off pack</strong>, so you get continuous content with no overlap. <strong>Your form will be prefilled</strong> with your answers from your one-off pack—even if you add more platforms or Story Ideas here. You can edit your form anytime in your account.</p>
-      <p style="font-size: 0.9rem; color: var(--lum-text-muted); margin: 0 0 1rem;">You'll be charged <strong>{{ currency_symbol|default('£') }}{{ total_sub|default(79) }}/month</strong> for the selection above. By continuing you confirm this amount and your selection.</p>
+      <p style="font-size: 0.9rem; color: var(--lum-text-muted); margin: 0 0 0.5rem;">You won't be charged today. You'll be charged <strong>{{ currency_symbol|default('£') }}{{ total_sub|default(79) }}/month</strong> when your first subscription pack is ready{% if first_charge_date %} (on {{ first_charge_date }}){% endif %}. By continuing you agree to this.</p>
+      <div id="get-pack-now-option" style="margin: 1rem 0 1rem; padding: 1rem; background: rgba(255,242,0,0.08); border: 1px solid rgba(255,242,0,0.35); border-radius: 8px;">
+        <label style="display: flex; align-items: flex-start; gap: 0.75rem; cursor: pointer;">
+          <input type="checkbox" id="get-pack-now-checkbox" name="get_pack_now" value="1" style="margin-top: 0.2rem;">
+          <span style="color: #fff;">
+            <strong>Get your first pack now</strong> — you'll be charged today and we'll send your first pack right away. Your next billing date will be 30 days from today.<br>
+            <span style="font-size: 0.9rem; color: var(--lum-text-muted);">Your next billing date is 30 days from today.</span>
+          </span>
+        </label>
+      </div>
       {% endif %}
       <p class="price-note">New 30-day caption pack each month. Renews monthly until you cancel. Cancel anytime from your Stripe customer portal. You’ll complete a short form after payment; your captions are ready within 15 minutes.</p>
 
@@ -58,7 +67,7 @@
         {% if platforms_invalid|default(false) %}
         <a href="/captions#pricing" class="lumo-btn-primary btn-cta-account-style">Back to select platforms</a>
         {% else %}
-        <a href="{{ api_url|default('/api/captions-checkout-subscription?platforms=1') }}" id="btn-continue" class="lumo-btn-primary js-terms-checkout btn-cta-account-style">Next step — read &amp; accept terms</a>
+        <a href="{{ api_url|default('/api/captions-checkout-subscription?platforms=1') }}" id="btn-continue" class="lumo-btn-primary js-terms-checkout btn-cta-account-style" data-api-url="{{ api_url|default('/api/captions-checkout-subscription?platforms=1') }}">Next step — read &amp; accept terms</a>
         {% endif %}
       </div>
     </div>
@@ -67,6 +76,22 @@
   {% include '_footer.html' %}
   {% if not platforms_invalid|default(false) %}
   {% include '_terms_modal.html' %}
+  {% endif %}
+  {% if is_upgrade_from_oneoff|default(false) and api_url %}
+  <script>
+    (function() {
+      var btn = document.getElementById('btn-continue');
+      var checkbox = document.getElementById('get-pack-now-checkbox');
+      if (!btn || !checkbox) return;
+      var apiUrl = (btn.getAttribute('data-api-url') || '').replace(/&?get_pack_now=1/, '');
+      function updateLink() {
+        btn.href = checkbox.checked
+          ? apiUrl + (apiUrl.indexOf('?') !== -1 ? '&' : '?') + 'get_pack_now=1'
+          : apiUrl;
+      }
+      checkbox.addEventListener('change', updateLink);
+    })();
+  </script>
   {% endif %}
 </body>
 </html>

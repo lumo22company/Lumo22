@@ -96,7 +96,6 @@ _CURRENCY_ADDON_AMOUNTS = {
     "eur": {"extra_oneoff": 3200, "extra_sub": 2200, "stories_oneoff": 3200, "stories_sub": 1900},
 }
 
-
 def _get_base_price_id(currency: str) -> str:
     """Return Stripe Price ID for captions one-off in the given currency. Raises if not configured."""
     if currency == "gbp":
@@ -226,12 +225,12 @@ def captions_checkout():
 def captions_checkout_subscription():
     """
     Create a Stripe Checkout Session for Captions subscription.
-    Query: ?platforms=N (1–4), ?selected=..., ?stories=1, ?currency=gbp|usd|eur.
-    Extra platforms and Stories use add-on prices or price_data for USD/EUR.
-    All subscription checkouts (new and upgrade from one-off) require login before payment.
+    Query: ?platforms=N (1–4), ?selected=..., ?stories=1, ?currency=gbp|usd|eur, ?get_pack_now=1 (upgrade only).
+    When get_pack_now=1 and copy_from=TOKEN: one-time payment for first month + immediate pack; subscription created with trial so next pack in 30 days.
     """
     from api.auth_routes import get_current_customer
     copy_from = (request.args.get("copy_from") or "").strip()
+    get_pack_now = request.args.get("get_pack_now", "").strip().lower() in ("1", "true", "yes", "on")
     customer = get_current_customer()
     if not customer:
         from urllib.parse import quote
@@ -255,14 +254,46 @@ def captions_checkout_subscription():
     platforms = _parse_platforms(request)
     selected = _parse_selected_platforms(request)
     stories = _parse_stories(request)
+    base = _base_url_for_redirect()
+    success_url = f"{base}/captions-thank-you?session_id={{CHECKOUT_SESSION_ID}}"
+    cancel_url = f"{base}/captions"
+    metadata = {"product": "captions_subscription", "platforms": str(platforms), "include_stories": "1" if stories else "0"}
+    if selected:
+        metadata["selected_platforms"] = selected
+    if copy_from:
+        metadata["copy_from"] = copy_from
+    if get_pack_now:
+        metadata["get_pack_now"] = "1"
+
+    # Upgraders (copy_from) without get_pack_now: charge on first pack delivery date (trial until 30 days after one-off delivery)
+    subscription_data = None
+    if copy_from and not get_pack_now:
+        from datetime import datetime, timedelta, timezone
+        try:
+            from services.caption_order_service import CaptionOrderService
+            one_off = CaptionOrderService().get_by_token(copy_from)
+            if one_off:
+                delivered_at_raw = one_off.get("delivered_at") or one_off.get("updated_at") or one_off.get("created_at")
+                if delivered_at_raw:
+                    if isinstance(delivered_at_raw, str):
+                        dt = datetime.fromisoformat(delivered_at_raw.replace("Z", "+00:00"))
+                    else:
+                        dt = delivered_at_raw
+                    if dt.tzinfo is None:
+                        dt = dt.replace(tzinfo=timezone.utc)
+                    trial_end_dt = dt + timedelta(days=30)
+                    subscription_data = {"trial_end": int(trial_end_dt.timestamp())}
+        except Exception as e:
+            print(f"[captions_checkout_subscription] trial_end from one-off failed: {e}")
+        if not subscription_data:
+            # Fallback: trial 30 days from now
+            subscription_data = {"trial_end": int((datetime.now(timezone.utc) + timedelta(days=30)).timestamp())}
+
     extra_sub_id = (getattr(Config, "STRIPE_CAPTIONS_EXTRA_PLATFORM_SUBSCRIPTION_PRICE_ID", None) or "").strip()
     stories_sub_id = (getattr(Config, "STRIPE_CAPTIONS_STORIES_SUBSCRIPTION_PRICE_ID", None) or "").strip()
     amounts = _CURRENCY_ADDON_AMOUNTS.get(currency, _CURRENCY_ADDON_AMOUNTS["gbp"])
     if platforms > 1 and currency == "gbp" and not extra_sub_id:
         return redirect(f"{request.host_url.rstrip('/')}/captions?error=extra_platform_not_configured", code=302)
-    base = _base_url_for_redirect()
-    success_url = f"{base}/captions-thank-you?session_id={{CHECKOUT_SESSION_ID}}"
-    cancel_url = f"{base}/captions"
     line_items = [{"price": price_id, "quantity": 1}]
     if platforms > 1:
         addon_qty = platforms - 1
@@ -298,11 +329,6 @@ def captions_checkout_subscription():
                 },
                 "quantity": 1,
             })
-    metadata = {"product": "captions_subscription", "platforms": str(platforms), "include_stories": "1" if stories else "0"}
-    if selected:
-        metadata["selected_platforms"] = selected
-    if copy_from:
-        metadata["copy_from"] = copy_from
     referral_coupon = _get_referral_coupon_id()
     create_params = {
         "mode": "subscription",
@@ -311,6 +337,8 @@ def captions_checkout_subscription():
         "cancel_url": cancel_url,
         "metadata": metadata,
     }
+    if subscription_data:
+        create_params["subscription_data"] = subscription_data
     if referral_coupon:
         create_params["discounts"] = [{"coupon": referral_coupon}]
     if customer and (customer.get("email") or "").strip():
