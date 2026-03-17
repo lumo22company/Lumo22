@@ -3225,10 +3225,15 @@
   padding-left: 0.75rem;
 }
 
-/* Upgrade "Edit form" (Do you need to update your form?): yellow font + outline, swipe hover */
+/* Upgrade "Edit form" (Do you need to update your form?): yellow font + outline, swipe hover, centred text */
 #upgrade-edit-form-first-wrap .account-billing-portal-link.account-btn-swipe-light {
   color: var(--lum-gold, #fff200) !important;
   border-color: var(--lum-gold, #fff200) !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1.25rem !important;
+  text-align: center;
 }
 #upgrade-edit-form-first-wrap .account-billing-portal-link.account-btn-swipe-light:hover {
   color: #000 !important;
