@@ -648,16 +648,18 @@
     {% set has_active_subscription = (caption_orders or [])|selectattr('stripe_subscription_id')|list|length > 0 %}
     <div id="account-delete-modal" class="account-delete-modal" role="dialog" aria-labelledby="account-delete-modal-title" aria-modal="true" hidden>
       <div class="account-delete-modal-backdrop"></div>
-      <div class="account-delete-modal-box">
-        <h2 id="account-delete-modal-title" class="account-delete-modal-title">Delete account?</h2>
-        <p class="account-delete-modal-text">Are you sure you want to delete your account? All your information and past PDFs will be deleted.</p>
-        {% if has_active_subscription %}
-        <p class="account-delete-modal-text" style="background: rgba(200, 80, 80, 0.25); border: 1px solid rgba(200, 80, 80, 0.7); border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1rem; color: #fff;"><strong>You have an active subscription.</strong> Deleting your account does not cancel it — you will continue to be charged. Cancel your subscription first via Manage subscription → Manage billing, then delete your account if you still wish to.</p>
-        {% endif %}
-        <div class="account-delete-modal-type-wrap">
-          <label for="account-delete-type-input" class="account-delete-modal-type-label">Type DELETE to confirm</label>
-          <input type="text" id="account-delete-type-input" class="account-delete-modal-type-input" placeholder="DELETE" autocomplete="off" aria-describedby="account-delete-type-hint">
-          <span id="account-delete-type-hint" class="account-delete-modal-type-hint">The confirm button will enable when you type DELETE.</span>
+      <div class="account-delete-modal-box account-delete-modal-box--with-scroll">
+        <div class="account-delete-modal-body">
+          <h2 id="account-delete-modal-title" class="account-delete-modal-title">Delete account?</h2>
+          <p class="account-delete-modal-text">Are you sure you want to delete your account? All your information and past PDFs will be deleted.</p>
+          {% if has_active_subscription %}
+          <p class="account-delete-modal-text" style="background: rgba(200, 80, 80, 0.25); border: 1px solid rgba(200, 80, 80, 0.7); border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1rem; color: #fff;"><strong>You have an active subscription.</strong> Deleting your account does not cancel it — you will continue to be charged. Cancel your subscription first via Manage subscription → Manage billing, then delete your account if you still wish to.</p>
+          {% endif %}
+          <div class="account-delete-modal-type-wrap">
+            <label for="account-delete-type-input" class="account-delete-modal-type-label">Type DELETE to confirm</label>
+            <input type="text" id="account-delete-type-input" class="account-delete-modal-type-input" placeholder="DELETE" autocomplete="off" aria-describedby="account-delete-type-hint">
+            <span id="account-delete-type-hint" class="account-delete-modal-type-hint">The confirm button will enable when you type DELETE.</span>
+          </div>
         </div>
         <div class="account-delete-modal-buttons">
           <a href="/account/pause" class="account-delete-modal-btn account-delete-modal-cancel-sub">Cancel subscription instead</a>

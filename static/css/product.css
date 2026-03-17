@@ -1909,6 +1909,26 @@
   padding: 1.75rem;
   max-width: 420px;
   width: 100%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+/* Delete account modal: scrollable body, buttons pinned inside box */
+.account-delete-modal-box--with-scroll {
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  overflow: hidden;
+}
+.account-delete-modal-box--with-scroll .account-delete-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  margin-bottom: 0.5rem;
+}
+.account-delete-modal-box--with-scroll .account-delete-modal-buttons {
+  flex: 0 0 auto;
 }
 .account-delete-modal-title {
   font-family: var(--font-display, 'Bebas Neue', sans-serif);
