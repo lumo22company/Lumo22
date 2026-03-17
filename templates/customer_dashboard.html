@@ -223,9 +223,9 @@
             <label for="upgrade-platforms" class="account-settings-label" style="display: block; font-size: 0.95rem; font-weight: 600; color: #fff; margin-bottom: 0.5rem;">Number of platforms</label>
             <select id="upgrade-platforms" class="account-upgrade-select" style="width: 100%; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.08); color: #fff; font-size: 1rem;">
               <option value="1">1 platform</option>
-              <option value="2">2 platforms</option>
-              <option value="3">3 platforms</option>
-              <option value="4">4 platforms</option>
+              <option value="2">2 platforms — +£19/mo</option>
+              <option value="3">3 platforms — +£38/mo</option>
+              <option value="4">4 platforms — +£57/mo</option>
             </select>
           </div>
           <div style="margin-bottom: 1.25rem;" id="upgrade-which-wrap">
@@ -243,6 +243,12 @@
             </label>
           </div>
           <div style="margin-bottom: 1.25rem;">
+            <label class="account-upgrade-cb-label" style="display: inline-flex; align-items: flex-start; gap: 0.5rem; cursor: pointer; font-size: 0.95rem; color: #fff; font-weight: 600;">
+              <input type="checkbox" id="upgrade-get-pack-today-cb" class="upgrade-get-pack-today-cb" style="margin-top: 0.2rem;"> Get my first pack today
+            </label>
+            <p style="font-size: 0.85rem; color: rgba(255,255,255,0.8); margin: 0.35rem 0 0 1.75rem; line-height: 1.4;">You'll be charged at checkout and we'll send your first subscription pack right away. Leave unchecked to be charged when your first pack is ready (30 days after your one-off).</p>
+          </div>
+          <div style="margin-bottom: 1.25rem;">
             <label class="account-settings-label" style="display: block; font-size: 0.95rem; font-weight: 600; color: #fff; margin-bottom: 0.5rem;">Currency</label>
             <div style="display: flex; gap: 0.5rem;">
               <button type="button" class="account-upgrade-currency-btn" data-currency="gbp" style="padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.08); color: #fff; cursor: pointer; font-size: 0.95rem;">£ GBP</button>
@@ -251,7 +257,7 @@
             </div>
           </div>
           <p class="account-upgrade-price" style="font-size: 1.1rem; font-weight: 600; color: var(--lum-gold); margin-bottom: 1rem;"><span id="upgrade-price-display">£79</span> <span>/month</span></p>
-          <p style="font-size: 0.9rem; color: rgba(255,255,255,0.8); margin-bottom: 1rem;">Your first subscription pack will be delivered 30 days after your one-off pack—continuous content, no overlap.</p>
+          <p id="upgrade-first-pack-copy" style="font-size: 0.9rem; color: rgba(255,255,255,0.8); margin-bottom: 1rem;">Your first subscription pack will be delivered 30 days after your one-off pack—continuous content, no overlap.</p>
           <a href="#" id="upgrade-checkout-btn" class="lumo-btn-primary btn-cta-account-style js-terms-checkout" data-checkout-url="">Upgrade to subscription</a>
         </div>
       </section>
@@ -264,6 +270,8 @@
         var whichWrap = document.getElementById('upgrade-which-wrap');
         var storiesWrap = document.getElementById('upgrade-stories-wrap');
         var storiesCb = document.getElementById('upgrade-stories-cb');
+        var getPackTodayCb = document.getElementById('upgrade-get-pack-today-cb');
+        var firstPackCopyEl = document.getElementById('upgrade-first-pack-copy');
         var storiesPriceEl = document.getElementById('upgrade-stories-price');
         var priceDisplay = document.getElementById('upgrade-price-display');
         var checkoutBtn = document.getElementById('upgrade-checkout-btn');
@@ -303,21 +311,38 @@
           storiesWrap.style.display = hasInstaFb() ? 'block' : 'none';
           if (!hasInstaFb()) storiesCb.checked = false;
         }
+        function updateUpgradePlatformLabels() {
+          var p = prices[currency] || prices.gbp;
+          if (!platformsSelect || !platformsSelect.options) return;
+          var opts = platformsSelect.options;
+          if (opts[0]) opts[0].textContent = '1 platform';
+          if (opts[1]) opts[1].textContent = '2 platforms — +' + p.symbol + p.extra_sub + '/mo';
+          if (opts[2]) opts[2].textContent = '3 platforms — +' + p.symbol + (2 * p.extra_sub) + '/mo';
+          if (opts[3]) opts[3].textContent = '4 platforms — +' + p.symbol + (3 * p.extra_sub) + '/mo';
+        }
         function updatePrice() {
           var p = prices[currency] || prices.gbp;
           var n = parseInt(platformsSelect.value, 10) || 1;
           var stories = storiesCb && storiesCb.checked;
           var total = p.sub + (n - 1) * p.extra_sub + (stories ? p.stories_sub : 0);
+          updateUpgradePlatformLabels();
           if (storiesPriceEl) storiesPriceEl.textContent = p.symbol + p.stories_sub;
           if (priceDisplay) priceDisplay.textContent = p.symbol + total;
           var selected = getSelected();
           var copyFrom = prefillSelect ? prefillSelect.value : '';
+          var getPackToday = !!(getPackTodayCb && getPackTodayCb.checked);
           var q = 'copy_from=' + encodeURIComponent(copyFrom) + '&platforms=' + n + '&currency=' + currency;
           if (selected) q += '&selected=' + encodeURIComponent(selected);
           if (stories) q += '&stories=1';
+          if (getPackToday) q += '&get_pack_now=1';
           if (checkoutBtn) {
             checkoutBtn.href = '/api/captions-checkout-subscription?' + q;
             checkoutBtn.dataset.checkoutUrl = '/api/captions-checkout-subscription?' + q;
+          }
+          if (firstPackCopyEl) {
+            firstPackCopyEl.textContent = getPackToday
+              ? 'You\'ll be charged at checkout and we\'ll send your first pack right away. Your next billing date will be 30 days from today.'
+              : 'Your first subscription pack will be delivered 30 days after your one-off pack—continuous content, no overlap.';
           }
         }
         function validate() {
@@ -342,6 +367,7 @@
           });
         });
         if (storiesCb) storiesCb.addEventListener('change', updatePrice);
+        if (getPackTodayCb) getPackTodayCb.addEventListener('change', updatePrice);
         currencyBtns.forEach(function(b) {
           b.addEventListener('click', function() {
             currency = this.dataset.currency || 'gbp';
@@ -614,9 +640,9 @@
           <label for="change-plan-platforms" style="display:block; font-weight:600; margin-bottom:0.25rem;">Number of platforms</label>
           <select id="change-plan-platforms" style="width:100%; padding:0.5rem 0.75rem; border-radius:8px; border:1px solid rgba(0,0,0,0.2); font-size:0.95rem;">
             <option value="1">1 platform</option>
-            <option value="2">2 platforms</option>
-            <option value="3">3 platforms</option>
-            <option value="4">4 platforms</option>
+            <option value="2">2 platforms — +£19/mo</option>
+            <option value="3">3 platforms — +£38/mo</option>
+            <option value="4">4 platforms — +£57/mo</option>
           </select>
         </div>
         <div class="account-delete-modal-text" style="margin-bottom: 0.75rem;">
@@ -919,15 +945,23 @@
 
       function updateChangePlanPrice() {
         var priceEl = document.getElementById('change-plan-price');
-        if (!priceEl || !CAPTIONS_PRICES || !changePlanState.token) return;
+        if (!CAPTIONS_PRICES || !changePlanState.token) return;
         var sel = document.getElementById('change-plan-platforms');
         var cb = document.getElementById('change-plan-stories');
+        var currency = (changePlanState.currency || 'gbp').toLowerCase();
+        var p = CAPTIONS_PRICES[currency] || CAPTIONS_PRICES.gbp;
+        if (sel && sel.options) {
+          var opts = sel.options;
+          if (opts[0]) opts[0].textContent = '1 platform';
+          if (opts[1]) opts[1].textContent = '2 platforms — +' + (p.symbol || '£') + p.extra_sub + '/mo';
+          if (opts[2]) opts[2].textContent = '3 platforms — +' + (p.symbol || '£') + (2 * p.extra_sub) + '/mo';
+          if (opts[3]) opts[3].textContent = '4 platforms — +' + (p.symbol || '£') + (3 * p.extra_sub) + '/mo';
+        }
+        if (!priceEl) return;
         var newPlatforms = parseInt(sel && sel.value ? sel.value : '1', 10);
         if (!newPlatforms || newPlatforms < 1) newPlatforms = 1;
         if (newPlatforms > 4) newPlatforms = 4;
         var newStories = !!(cb && cb.checked);
-        var currency = (changePlanState.currency || 'gbp').toLowerCase();
-        var p = CAPTIONS_PRICES[currency] || CAPTIONS_PRICES.gbp;
         var base = p.sub;
         var extraPer = p.extra_sub;
         var storiesPer = p.stories_sub;
