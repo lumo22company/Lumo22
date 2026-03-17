@@ -4,11 +4,11 @@ Test scenarios for one-off → subscription upgrade flows (charge on delivery vs
 Run: python3 test_upgrade_flows.py
 
 Covers:
-1. Trial logic: subscription_data.trial_end set when copy_from and not get_pack_now
-2. No trial when get_pack_now
+1. Deferred charge: subscription_data.billing_cycle_anchor + proration_behavior when copy_from and not get_pack_now (no “days free”)
+2. No deferred charge when get_pack_now
 3. invoice.paid: copy intake from one-off when order has no intake (upgrader)
 4. No "trial" in user-facing copy
-5. Emails: trial upgrader gets upgrade confirmation (not receipt); get_pack_now gets receipt + welcome prefilled
+5. Emails: upgrader (no charge today) gets upgrade confirmation (not receipt); get_pack_now gets receipt + welcome prefilled
 """
 
 import os
@@ -30,17 +30,14 @@ def test_no_trial_in_templates():
     print("OK: No 'trial' in any template.")
 
 
-def test_trial_end_only_when_upgrader_no_get_pack_now():
-    """Subscription checkout only adds trial_end when copy_from and not get_pack_now."""
-    from api.captions_routes import _parse_currency, _parse_platforms, _parse_stories
-    from config import Config
-    # We can't easily invoke the route with copy_from; we check the logic exists
-    # by ensuring the module has the trial_end block (code review).
+def test_billing_anchor_only_when_upgrader_no_get_pack_now():
+    """Subscription checkout only uses billing_cycle_anchor (no trial) when copy_from and not get_pack_now."""
     import api.captions_routes as m
     src = open(m.__file__, "r").read()
-    assert "subscription_data" in src and "trial_end" in src
+    assert "subscription_data" in src and "billing_cycle_anchor" in src
+    assert "proration_behavior" in src
     assert "copy_from and not get_pack_now" in src
-    print("OK: Trial only for upgrader without get_pack_now.")
+    print("OK: Billing anchor only for upgrader without get_pack_now.")
 
 
 def test_invoice_paid_copies_intake():
@@ -71,7 +68,7 @@ def test_webhook_skips_receipt_for_trial():
 
 def run_all():
     test_no_trial_in_templates()
-    test_trial_end_only_when_upgrader_no_get_pack_now()
+    test_billing_anchor_only_when_upgrader_no_get_pack_now()
     test_invoice_paid_copies_intake()
     test_upgrade_confirmation_email_exists()
     test_webhook_skips_receipt_for_trial()

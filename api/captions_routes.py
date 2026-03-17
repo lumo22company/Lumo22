@@ -96,6 +96,13 @@ _CURRENCY_ADDON_AMOUNTS = {
     "eur": {"extra_oneoff": 3200, "extra_sub": 2200, "stories_oneoff": 3200, "stories_sub": 1900},
 }
 
+# Display prices (symbol + sub amounts) for Stripe custom_text — must match app.CAPTIONS_DISPLAY_PRICES
+_DISPLAY_PRICES = {
+    "gbp": {"symbol": "£", "sub": 79, "extra_sub": 19, "stories_sub": 17},
+    "usd": {"symbol": "$", "sub": 99, "extra_sub": 24, "stories_sub": 21},
+    "eur": {"symbol": "€", "sub": 89, "extra_sub": 22, "stories_sub": 19},
+}
+
 def _get_base_price_id(currency: str) -> str:
     """Return Stripe Price ID for captions one-off in the given currency. Raises if not configured."""
     if currency == "gbp":
@@ -265,7 +272,7 @@ def captions_checkout_subscription():
     if get_pack_now:
         metadata["get_pack_now"] = "1"
 
-    # Upgraders (copy_from) without get_pack_now: charge on first pack delivery date (trial until 30 days after one-off delivery)
+    # Upgraders (copy_from) without get_pack_now: first charge on first pack date (billing_cycle_anchor), no “X days free” trial wording
     subscription_data = None
     if copy_from and not get_pack_now:
         from datetime import datetime, timedelta, timezone
@@ -281,13 +288,20 @@ def captions_checkout_subscription():
                         dt = delivered_at_raw
                     if dt.tzinfo is None:
                         dt = dt.replace(tzinfo=timezone.utc)
-                    trial_end_dt = dt + timedelta(days=30)
-                    subscription_data = {"trial_end": int(trial_end_dt.timestamp())}
+                    anchor_dt = dt + timedelta(days=30)
+                    subscription_data = {
+                        "billing_cycle_anchor": int(anchor_dt.timestamp()),
+                        "proration_behavior": "none",
+                    }
         except Exception as e:
-            print(f"[captions_checkout_subscription] trial_end from one-off failed: {e}")
+            print(f"[captions_checkout_subscription] billing_cycle_anchor from one-off failed: {e}")
         if not subscription_data:
-            # Fallback: trial 30 days from now
-            subscription_data = {"trial_end": int((datetime.now(timezone.utc) + timedelta(days=30)).timestamp())}
+            # Fallback: first charge 30 days from now
+            anchor_dt = datetime.now(timezone.utc) + timedelta(days=30)
+            subscription_data = {
+                "billing_cycle_anchor": int(anchor_dt.timestamp()),
+                "proration_behavior": "none",
+            }
 
     extra_sub_id = (getattr(Config, "STRIPE_CAPTIONS_EXTRA_PLATFORM_SUBSCRIPTION_PRICE_ID", None) or "").strip()
     stories_sub_id = (getattr(Config, "STRIPE_CAPTIONS_STORIES_SUBSCRIPTION_PRICE_ID", None) or "").strip()
@@ -339,6 +353,23 @@ def captions_checkout_subscription():
     }
     if subscription_data:
         create_params["subscription_data"] = subscription_data
+        # Clear charge-date wording near submit button (no “days free” with billing_cycle_anchor)
+        anchor_ts = subscription_data.get("billing_cycle_anchor")
+        if anchor_ts:
+            from datetime import datetime, timezone
+            try:
+                first_charge_dt = datetime.fromtimestamp(anchor_ts, tz=timezone.utc)
+                first_charge_str = first_charge_dt.strftime("%d %B %Y")
+                prices = _DISPLAY_PRICES.get(currency, _DISPLAY_PRICES["gbp"])
+                total = prices["sub"] + (platforms - 1) * prices["extra_sub"] + (prices["stories_sub"] if stories else 0)
+                symbol = prices["symbol"]
+                create_params["custom_text"] = {
+                    "submit": {
+                        "message": f"You will be charged {symbol}{total} every 30 days starting on {first_charge_str}."
+                    }
+                }
+            except Exception as e:
+                print(f"[captions_checkout_subscription] custom_text for billing anchor: {e}")
     if referral_coupon:
         create_params["discounts"] = [{"coupon": referral_coupon}]
     if customer and (customer.get("email") or "").strip():
