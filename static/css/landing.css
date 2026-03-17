@@ -312,9 +312,10 @@ input[type="checkbox"] { accent-color: #fff200; }
   transform: none;
 }
 
-/* Account and Sign up: yellow font and outline, same swipe on hover — match View options (dfd-btn-hero-cta) */
+/* Account, Sign up, Log in: yellow outline and font, slide animation on hover */
 .lumo-nav-cta.lumo-nav-account,
-.lumo-nav-cta.lumo-nav-signup {
+.lumo-nav-cta.lumo-nav-signup,
+.lumo-nav-cta.lumo-nav-login {
   padding: 0.45rem 0.9rem !important;
   min-width: 88px !important;
   font-size: 0.7rem !important;
@@ -325,11 +326,33 @@ input[type="checkbox"] { accent-color: #fff200; }
   background: transparent !important;
   color: var(--lum-gold, #fff200) !important;
   border: 2px solid var(--lum-gold, #fff200) !important;
+  transition: color 0.3s ease-out, border-color 0.25s ease-out !important;
+}
+.lumo-nav-cta.lumo-nav-account::before,
+.lumo-nav-cta.lumo-nav-signup::before,
+.lumo-nav-cta.lumo-nav-login::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--lum-gold, #fff200);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.35s ease-out;
+  z-index: -1;
 }
 .lumo-nav-cta.lumo-nav-account:hover,
-.lumo-nav-cta.lumo-nav-signup:hover {
+.lumo-nav-cta.lumo-nav-signup:hover,
+.lumo-nav-cta.lumo-nav-login:hover {
   color: #000 !important;
   border-color: var(--lum-gold, #fff200) !important;
+}
+.lumo-nav-cta.lumo-nav-account:hover::before,
+.lumo-nav-cta.lumo-nav-signup:hover::before,
+.lumo-nav-cta.lumo-nav-login:hover::before {
+  transform: scaleX(1);
 }
 
 /* Log in button: match View options (dfd-btn-hero-cta) — yellow outline, swipe on hover */
@@ -385,43 +408,6 @@ a.lumo-nav-login:hover {
 a.lumo-nav-login:hover::before {
   transform: scaleX(1);
 }
-/* Override lumo-nav-cta when Log in has both classes (checkout, forgot password, etc.) — match View options */
-.lumo-nav-cta.lumo-nav-login {
-  padding: 0.45rem 0.9rem !important;
-  min-width: 88px !important;
-  font-size: 0.7rem !important;
-  font-weight: 600 !important;
-  letter-spacing: 0.2em !important;
-  text-transform: uppercase;
-  border: 2px solid #fff200 !important;
-  background: transparent !important;
-  background-color: transparent !important;
-  color: var(--lum-gold, #fff200) !important;
-  border-radius: 12px !important;
-}
-.lumo-nav-cta.lumo-nav-login::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  background-color: var(--lum-gold, #fff200);
-  transform: scaleX(0);
-  transform-origin: left center;
-  transition: transform 0.35s ease-out;
-  z-index: -1;
-}
-.lumo-nav-cta.lumo-nav-login:hover {
-  background: transparent !important;
-  background-color: transparent !important;
-  color: #000 !important;
-  border-color: #fff200 !important;
-}
-.lumo-nav-cta.lumo-nav-login:hover::before {
-  transform: scaleX(1);
-}
-
 /* ——— SECTION 1: Hero — x.ai aesthetic: minimal, black, off-white wordmark, volumetric mist. ——— */
 .hero {
   position: relative;
