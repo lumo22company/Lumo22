@@ -301,6 +301,7 @@ def captions_intake_page():
         if (customer.get("email") or "").strip().lower() != order_email:
             return redirect(url_for('account_page'))
     return_url = request.args.get("return_url", "").strip()
+    is_upgrade_flow = bool(return_url and "/account/upgrade" in return_url)
     # Upgrade flow: if they unchecked Story Ideas on the upgrade page, intake form should reflect that (no "included", align unchecked)
     if is_oneoff and request.args.get("upgrade_stories") == "0":
         stories_paid = False
@@ -348,7 +349,7 @@ def captions_intake_page():
         if order_currency in ("gbp", "usd", "eur"):
             sub_params["currency"] = order_currency
         subscribe_url = "/captions-checkout-subscription?" + urlencode(sub_params)
-    r = make_response(render_template('captions_intake.html', intake_token=token, existing_intake=existing_intake, platforms_count=platforms_count, prefilled_platform=prefilled_platform, prefilled_primary=prefilled_primary, stories_paid=stories_paid, is_oneoff=is_oneoff, selected_platforms=selected_platforms, subscribe_url=subscribe_url, now=now, return_url=return_url, order_currency=order_currency, intake_add_platform_text=intake_add_platform_text, intake_add_stories_text=intake_add_stories_text))
+    r = make_response(render_template('captions_intake.html', intake_token=token, existing_intake=existing_intake, platforms_count=platforms_count, prefilled_platform=prefilled_platform, prefilled_primary=prefilled_primary, stories_paid=stories_paid, is_oneoff=is_oneoff, selected_platforms=selected_platforms, subscribe_url=subscribe_url, now=now, return_url=return_url, order_currency=order_currency, intake_add_platform_text=intake_add_platform_text, intake_add_stories_text=intake_add_stories_text, is_upgrade_flow=is_upgrade_flow))
     r.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     r.headers['Pragma'] = 'no-cache'
     return r

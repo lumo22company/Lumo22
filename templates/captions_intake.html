@@ -436,7 +436,7 @@
     </script>
     {% endif %}
 
-    {% if subscribe_url %}
+    {% if subscribe_url and not is_upgrade_flow %}
     {% set _intake_biz = (existing_intake.get('business_name', '') or '')|trim %}
     <div class="intake-subscribe-cta" style="margin: 2rem 0 1.5rem; padding: 1.25rem 1rem; background: rgba(0,0,0,0.06); border-radius: 8px; border: 1px solid rgba(201,162,39,0.35); font-size: 0.95rem; color: #1a1a1a;">
       <p style="margin: 0 0 0.75rem; font-weight: 600;">Want a new pack every month?{% if _intake_biz %} <span style="font-weight: 400; color: #555;">({{ _intake_biz }})</span>{% endif %}</p>
