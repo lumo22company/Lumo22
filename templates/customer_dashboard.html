@@ -247,6 +247,11 @@
               <input type="checkbox" id="upgrade-get-pack-today-cb" class="upgrade-get-pack-today-cb" style="margin-top: 0.2rem;"> Get my first pack today
             </label>
             <p style="font-size: 0.85rem; color: rgba(255,255,255,0.8); margin: 0.35rem 0 0 1.75rem; line-height: 1.4;">You'll be charged at checkout and we'll send your first subscription pack right away. Leave unchecked to be charged when your first pack is ready (30 days after your one-off).</p>
+            <div id="upgrade-edit-form-first-wrap" style="display: none; margin-top: 1rem; margin-left: 1.75rem; padding: 0.75rem 1rem; background: rgba(255,255,255,0.06); border-radius: 8px; border: 1px solid rgba(255,255,255,0.15);">
+              <p style="font-size: 0.95rem; font-weight: 600; color: #fff; margin: 0 0 0.35rem;">Do you need to update your form?</p>
+              <p style="font-size: 0.9rem; color: rgba(255,255,255,0.9); margin: 0 0 0.5rem;">Edit your details or tell us about an event coming up—we'll use this for your first pack. After you submit, you'll come back here to complete checkout.</p>
+              <a href="#" id="upgrade-edit-form-first-link" class="account-billing-portal-link account-btn-swipe-light" style="display: inline-block; padding: 0.5rem 0.9rem; font-size: 0.85rem;">Edit form</a>
+            </div>
           </div>
           <div style="margin-bottom: 1.25rem;">
             <label class="account-settings-label" style="display: block; font-size: 0.95rem; font-weight: 600; color: #fff; margin-bottom: 0.5rem;">Currency</label>
@@ -271,6 +276,8 @@
         var storiesWrap = document.getElementById('upgrade-stories-wrap');
         var storiesCb = document.getElementById('upgrade-stories-cb');
         var getPackTodayCb = document.getElementById('upgrade-get-pack-today-cb');
+        var editFormFirstWrap = document.getElementById('upgrade-edit-form-first-wrap');
+        var editFormFirstLink = document.getElementById('upgrade-edit-form-first-link');
         var firstPackCopyEl = document.getElementById('upgrade-first-pack-copy');
         var storiesPriceEl = document.getElementById('upgrade-stories-price');
         var priceDisplay = document.getElementById('upgrade-price-display');
@@ -338,6 +345,14 @@
           if (checkoutBtn) {
             checkoutBtn.href = '/api/captions-checkout-subscription?' + q;
             checkoutBtn.dataset.checkoutUrl = '/api/captions-checkout-subscription?' + q;
+          }
+          if (editFormFirstWrap) {
+            if (getPackToday && copyFrom) {
+              editFormFirstWrap.style.display = 'block';
+              if (editFormFirstLink) editFormFirstLink.href = '/captions-intake?t=' + encodeURIComponent(copyFrom) + '&return_url=' + encodeURIComponent('/account/upgrade');
+            } else {
+              editFormFirstWrap.style.display = 'none';
+            }
           }
           if (firstPackCopyEl) {
             firstPackCopyEl.textContent = getPackToday

@@ -66,6 +66,21 @@ def test_webhook_skips_receipt_for_trial():
     print("OK: Receipt skipped for trial upgrade.")
 
 
+def test_get_pack_today_edit_form_first_ui():
+    """Option A: When 'Get my first pack today' is selected, 'Edit form first' block exists and link uses return_url."""
+    path = os.path.join(os.path.dirname(__file__), "templates", "customer_dashboard.html")
+    with open(path, "r", encoding="utf-8") as f:
+        html = f.read()
+    assert "upgrade-edit-form-first-wrap" in html
+    assert "upgrade-edit-form-first-link" in html
+    assert "Do you need to update your form" in html or "edit your form" in html.lower()
+    assert "return_url" in html
+    assert "/account/upgrade" in html
+    assert "captions-intake?t=" in html or "'/captions-intake?t='" in html
+    assert "getPackToday" in html and "copyFrom" in html
+    print("OK: Get my pack today + Edit form first UI and return_url link present.")
+
+
 def run_all():
     test_no_trial_in_templates()
     test_billing_anchor_only_when_upgrader_no_get_pack_now()
