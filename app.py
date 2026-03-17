@@ -301,6 +301,9 @@ def captions_intake_page():
         if (customer.get("email") or "").strip().lower() != order_email:
             return redirect(url_for('account_page'))
     return_url = request.args.get("return_url", "").strip()
+    # Upgrade flow: if they unchecked Story Ideas on the upgrade page, intake form should reflect that (no "included", align unchecked)
+    if is_oneoff and request.args.get("upgrade_stories") == "0":
+        stories_paid = False
     # Prefill platform from order (chosen at checkout) when they haven't saved intake yet
     prefilled_platform = (existing_intake.get("platform") or "").strip() if existing_intake else ""
     if not prefilled_platform and selected_platforms:
