@@ -768,10 +768,12 @@ a.lumo-nav-login:hover::before {
   transition: color 0.3s ease-in-out, background-color 0.3s ease-in-out, border-color 0.3s ease-in-out, transform 0.3s ease-in-out;
 }
 
+.split-cta:hover,
 .split-panel:hover .split-cta {
-  background: #000000;
-  color: #ffffff;
-  border-color: #000000;
+  background: #000000 !important;
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  border-color: #000000 !important;
   transform: translateY(-1px);
 }
 
