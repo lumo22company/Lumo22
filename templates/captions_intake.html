@@ -258,7 +258,7 @@
         {% else %}
         <input type="hidden" id="platform" name="platform" value="{{ existing_intake.get('platform', '') or prefilled_primary }}">
         {% endif %}
-        {% if existing_intake %}
+        {% if existing_intake and not is_oneoff %}
         <p class="intake-change-platform-note field-helper" style="margin: 0.5rem 0 0; font-size: 0.9rem; color: #1a1a1a;">To change which platforms or reduce the number (or remove Story Ideas), update above and submit. You'll be asked to accept the new price. Changes apply to your next pack.</p>
         <p class="intake-edit-preferences-wrap" style="margin: 1rem 0 0;">
           <button type="button" class="btn account-btn-swipe-light intake-edit-preferences-btn" id="btn-edit-preferences" aria-controls="intake-edit-preferences-modal" aria-haspopup="dialog">Edit preferences</button>
