@@ -67,7 +67,7 @@ def test_webhook_skips_receipt_for_trial():
 
 
 def test_get_pack_today_edit_form_first_ui():
-    """Option A: When 'Get my first pack today' is selected, 'Edit form first' block exists and link uses return_url."""
+    """Option A: When 'Get my first subscription pack today' is selected, 'Edit form first' block exists and link uses return_url."""
     path = os.path.join(os.path.dirname(__file__), "templates", "customer_dashboard.html")
     with open(path, "r", encoding="utf-8") as f:
         html = f.read()
