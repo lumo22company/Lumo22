@@ -3225,6 +3225,19 @@
   padding-left: 0.75rem;
 }
 
+/* Upgrade "Edit form" (Do you need to update your form?): yellow font + outline, swipe hover */
+#upgrade-edit-form-first-wrap .account-billing-portal-link.account-btn-swipe-light {
+  color: var(--lum-gold, #fff200) !important;
+  border-color: var(--lum-gold, #fff200) !important;
+}
+#upgrade-edit-form-first-wrap .account-billing-portal-link.account-btn-swipe-light:hover {
+  color: #000 !important;
+  border-color: var(--lum-gold, #fff200) !important;
+}
+#upgrade-edit-form-first-wrap .account-billing-portal-link.account-btn-swipe-light::before {
+  background-color: var(--lum-gold, #fff200);
+}
+
 /* Captions page dropdown: more space for native arrow */
 .product-page-captions #captions-platforms {
   padding: 0.6rem 1.5rem 0.6rem 0.75rem !important;
