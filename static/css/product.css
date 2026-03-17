@@ -1929,6 +1929,13 @@
 }
 .account-delete-modal-box--with-scroll .account-delete-modal-buttons {
   flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+/* Confirm button on its own line so it fits modal width */
+#account-delete-modal .account-delete-modal-buttons .account-delete-modal-confirm {
+  flex-basis: 100%;
+  width: 100%;
 }
 .account-delete-modal-title {
   font-family: var(--font-display, 'Bebas Neue', sans-serif);
