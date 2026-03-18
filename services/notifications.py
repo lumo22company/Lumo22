@@ -215,7 +215,7 @@ def _order_receipt_email_html(order_summary: Optional[str] = None, amount_paid: 
     content = f"""<p style="margin:0 0 16px;">Hi,</p>
 <p style="margin:0 0 16px;">Thanks for your order. We've received your payment for 30 Days of Social Media Captions.</p>
 {receipt_block}<p style="margin:0 0 16px;">You'll receive an email soon with a link to complete your short intake form (about 2 minutes). Once you submit, we'll generate your captions and send them to you by email within a few minutes.</p>
-<p style="margin:0 0 16px;">If you don't see the intake email, check your spam folder or reply to this email and we'll help.</p>
+<p style="margin:0 0 16px;">If you don't see the intake email, check your spam folder.</p>
 <p style="margin:0;">— Lumo 22</p>"""
     return _email_wrapper(content)
 
@@ -675,7 +675,7 @@ If you didn't request this, you can ignore this email. Your email address will s
             "You'll receive an email soon with a link to complete your short intake form (about 2 minutes). "
             "Once you submit, we'll generate your captions and send them to you by email within a few minutes.",
             "",
-            "If you don't see the intake email, check your spam folder or reply to this email and we'll help.",
+            "If you don't see the intake email, check your spam folder.",
             "",
             "— Lumo 22",
         ])

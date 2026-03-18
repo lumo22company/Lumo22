@@ -15,7 +15,7 @@ Sent right after Stripe checkout, before the intake link. Wording:
 >
 > You'll receive an email soon with a link to complete your short intake form (about 2 minutes). Once you submit, we'll generate your captions and send them to you by email within a few minutes.
 >
-> If you don't see the intake email, check your spam folder or reply to this email and we'll help.
+> If you don't see the intake email, check your spam folder.
 >
 > — Lumo 22
 
