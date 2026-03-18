@@ -782,10 +782,14 @@ def _run_generation_and_deliver(order_id: str):
         print(f"[Captions] Delivery email sent for order {order_id} to {customer_email}")
         return (True, None)
     except Exception as e:
-        print(f"[Captions] Generation or delivery failed for order {order_id}: {e}")
+        err_msg = str(e)
+        print(f"[Captions] DELIVERY_FAILED order_id={order_id} error={err_msg}")
         traceback.print_exc()
-        order_service.set_failed(order_id)
-        return (False, str(e))
+        try:
+            order_service.set_failed(order_id)
+        except Exception as set_err:
+            print(f"[Captions] set_failed also failed: {set_err}")
+        return (False, err_msg)
 
 
 @captions_bp.route("/captions-delivery-status", methods=["GET"])

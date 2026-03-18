@@ -57,9 +57,11 @@ class CaptionOrderService:
         curr = (currency or "gbp").strip().lower()
         if curr not in ("gbp", "usd", "eur"):
             curr = "gbp"
+        # Normalize email to lowercase so account dashboard (get_by_customer_email) finds the order
+        customer_email_normalized = (customer_email or "").strip().lower()
         row = {
             "token": token,
-            "customer_email": customer_email,
+            "customer_email": customer_email_normalized,
             "status": "awaiting_intake",
             "stripe_session_id": stripe_session_id,
             "stripe_customer_id": (stripe_customer_id or "").strip() or None,
@@ -73,7 +75,7 @@ class CaptionOrderService:
         result = self.client.table(self.table).insert(row).execute()
         if not result.data:
             raise RuntimeError("Failed to create caption order")
-        self.remove_from_deleted_blocklist(customer_email)
+        self.remove_from_deleted_blocklist(customer_email_normalized)
         return result.data[0]
 
     def get_by_token(self, token: str) -> Optional[Dict[str, Any]]:
