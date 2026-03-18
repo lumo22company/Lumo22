@@ -712,13 +712,14 @@ def _run_generation_and_deliver(order_id: str):
 
     order_service.set_generating(order_id)
     try:
+        pack_start_date = datetime.utcnow().strftime("%Y-%m-%d")
         gen = CaptionGenerator()
-        print(f"[Captions] Calling AI (provider={Config.AI_PROVIDER}) for order {order_id}")
-        captions_md = gen.generate(intake, previous_pack_themes=previous_pack_themes)
+        print(f"[Captions] Calling AI (provider={Config.AI_PROVIDER}) for order {order_id} (Day 1 = {pack_start_date})")
+        captions_md = gen.generate(intake, previous_pack_themes=previous_pack_themes, pack_start_date=pack_start_date)
         from services.caption_pdf import build_caption_pdf, build_stories_pdf, get_logo_path
         logo_path = get_logo_path()
         try:
-            pdf_bytes = build_caption_pdf(captions_md, logo_path=logo_path)
+            pdf_bytes = build_caption_pdf(captions_md, logo_path=logo_path, pack_start_date=pack_start_date)
             filename = "30_Days_Captions.pdf"
             mime_type = "application/pdf"
             file_content_bytes = pdf_bytes

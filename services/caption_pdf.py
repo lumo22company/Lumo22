@@ -131,6 +131,19 @@ def _escape_and_breaks(s: str) -> str:
     return _escape(s or "").replace("\n", "<br/>")
 
 
+def _strip_surrounding_quotes(s: str) -> str:
+    """Remove one layer of surrounding double or single quotes so Suggested wording is not shown in quotes."""
+    if not s or not isinstance(s, str):
+        return (s or "").strip()
+    s = s.strip()
+    if len(s) >= 2:
+        if (s[0] == '"' and s[-1] == '"') or (s[0] == "'" and s[-1] == "'"):
+            return s[1:-1].strip()
+        if (s.startswith("“") and s.endswith("”")) or (s.startswith("‘") and s.endswith("’")):
+            return s[1:-1].strip()
+    return s
+
+
 def _strip_label(s: str, label: str, *, also: Optional[List[str]] = None) -> str:
     """Remove leading 'Label:' or '**Label:** ' from text to avoid duplication when we already show the label."""
     if not s:
@@ -435,6 +448,8 @@ def _make_stories_doc_flowables(cover: Dict, days: List, normal_style, heading_s
                         suggested = rest
                 else:
                     suggested = rest
+                # Suggested wording should not be wrapped in quotes in the PDF
+                suggested = _strip_surrounding_quotes(suggested)
             elif hash_idx != -1:
                 base_prompt = prompt[:hash_idx].strip()
                 hashtags = prompt[hash_idx + len(hash_marker):].strip()
@@ -589,23 +604,37 @@ def build_stories_pdf(captions_md: str, logo_path: Optional[str] = None) -> Opti
     return buffer2.getvalue()
 
 
-def build_caption_pdf(captions_md: str, logo_path: Optional[str] = None) -> bytes:
-    """Build PDF using same format as 30_Days_Social_Media_Captions_FEBRUARY_2026.pdf (table_vertical). Stories are excluded — use build_stories_pdf separately."""
+def build_caption_pdf(captions_md: str, logo_path: Optional[str] = None, pack_start_date: Optional[str] = None) -> bytes:
+    """Build PDF using same format as 30_Days_Social_Media_Captions_FEBRUARY_2026.pdf (table_vertical).
+    pack_start_date: YYYY-MM-DD so each day heading can show the real date (e.g. Day 1 — Mon 18 Mar 2025)."""
     cover, days = _parse_markdown_to_structure(captions_md)
     if not days and "## Day" in captions_md:
         cover, days = _parse_legacy_to_structure(captions_md, cover)
-    # Stories go in a separate PDF
-    data = _cover_and_days_to_dict(cover, days)
+    data = _cover_and_days_to_dict(cover, days, pack_start_date=pack_start_date)
     return build_caption_pdf_from_dict(data, logo_path=logo_path or get_logo_path())
 
 
-def _cover_and_days_to_dict(cover: Dict, days: List) -> Dict[str, Any]:
-    """Convert parsed (cover, days) to dict format for build_caption_pdf_from_dict."""
+def _date_for_day(pack_start_date: Optional[str], day_num: int) -> str:
+    """Return calendar date string for day_num (1–30), e.g. 'Mon 18 Mar 2025'. Empty if no pack_start_date."""
+    if not pack_start_date or day_num < 1 or day_num > 30:
+        return ""
+    try:
+        from datetime import datetime, timedelta
+        start = datetime.strptime(pack_start_date.strip()[:10], "%Y-%m-%d")
+        d = start + timedelta(days=day_num - 1)
+        return d.strftime("%a %d %b %Y")
+    except ValueError:
+        return ""
+
+
+def _cover_and_days_to_dict(cover: Dict, days: List, pack_start_date: Optional[str] = None) -> Dict[str, Any]:
+    """Convert parsed (cover, days) to dict format for build_caption_pdf_from_dict. Optionally add date_str per day."""
     days_data = []
     for day_heading, caption_list in days:
         m = re.match(r"day\s+(\d+)\s*[—\-:\s]+(.+)", day_heading.strip(), re.I)
         day_num = int(m.group(1)) if m else len(days_data) + 1
         theme = (m.group(2) if m else "").strip()
+        date_str = _date_for_day(pack_start_date, day_num)
         posts = []
         for cap in caption_list:
             caption_text = (cap.get("body", "") or cap.get("hook", "")).strip()
@@ -614,7 +643,7 @@ def _cover_and_days_to_dict(cover: Dict, days: List) -> Dict[str, Any]:
                 "caption": caption_text,
                 "hashtags": cap.get("hashtags", ""),
             })
-        days_data.append({"day": day_num, "theme": theme, "posts": posts})
+        days_data.append({"day": day_num, "theme": theme, "date_str": date_str, "posts": posts})
     return {
         "month_year": cover.get("month_year", ""),
         "business": cover.get("business", ""),
@@ -748,7 +777,11 @@ def build_caption_pdf_from_dict(data: Dict[str, Any], logo_path: Optional[str] =
     }
     days = []
     for d in data.get("days", []):
-        day_heading = f"Day {d.get('day', 0)} — {d.get('theme', '')}"
+        date_str = (d.get("date_str") or "").strip()
+        if date_str:
+            day_heading = f"Day {d.get('day', 0)} — {date_str} — {d.get('theme', '')}"
+        else:
+            day_heading = f"Day {d.get('day', 0)} — {d.get('theme', '')}"
         posts = []
         for p in d.get("posts", []):
             caption = p.get("caption", "")

@@ -2,11 +2,78 @@
 Generate 30 Days of Social Media Captions using AI (OpenAI or Anthropic Claude).
 Uses the product framework: Authority, Educational, Brand Personality, Soft Promotion, Engagement.
 """
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Tuple
 from config import Config
 from services.ai_provider import chat_completion
 from datetime import datetime, timedelta
 import re
+
+# Month names for parsing key date from intake (e.g. "30th March", "March 30")
+_MONTH_NAMES = "january|february|march|april|may|june|july|august|september|october|november|december"
+_MONTH_NUM = {m: i for i, m in enumerate(_MONTH_NAMES.split("|"), 1)}
+
+
+def _normalize_intake_case(s: str, sentence_case: bool = False) -> str:
+    """
+    Normalize ALL CAPS intake text so PDFs and captions use sentence/title case, not shouting.
+    Short phrases (e.g. business name, voice words) -> title case. Longer (e.g. offer, key date) -> sentence case.
+    """
+    if not s or not isinstance(s, str):
+        return (s or "").strip()
+    s = s.strip()
+    if not s:
+        return s
+    letters = [c for c in s if c.isalpha()]
+    if not letters:
+        return s
+    upper_ratio = sum(1 for c in letters if c.isupper()) / len(letters)
+    if upper_ratio < 0.8:
+        return s
+    if sentence_case:
+        return s[0].upper() + s[1:].lower()
+    return s.title()
+
+
+def _parse_key_date_from_text(text: str, pack_start_date: str) -> Optional[int]:
+    """
+    Parse a date from key-date text (e.g. "FREE CAKES FOR KIDS ON 30TH MARCH", "30 March", "March 30").
+    Returns the 1-based day number (1–30) if the date falls within the 30-day pack, else None.
+    """
+    if not text or not pack_start_date:
+        return None
+    try:
+        start = datetime.strptime(pack_start_date.strip()[:10], "%Y-%m-%d")
+    except ValueError:
+        return None
+    text_lower = text.strip().lower()
+    # Patterns: "30th march", "30 march", "march 30", "30/03", "30-03"
+    day_num = None
+    month_num = None
+    year = start.year
+    # (?:st|nd|rd|th)? day then month name
+    m = re.search(r"(\d{1,2})(?:st|nd|rd|th)?\s*(" + _MONTH_NAMES + r")(?:\s+(\d{4}))?", text_lower)
+    if m:
+        day_num = int(m.group(1))
+        month_num = _MONTH_NUM.get(m.group(2))
+        if m.group(3):
+            year = int(m.group(3))
+    if day_num is None or month_num is None:
+        m = re.search(r"(" + _MONTH_NAMES + r")\s*(\d{1,2})(?:st|nd|rd|th)?(?:\s+(\d{4}))?", text_lower)
+        if m:
+            month_num = _MONTH_NUM.get(m.group(1))
+            day_num = int(m.group(2))
+            if m.group(3):
+                year = int(m.group(3))
+    if day_num is None or month_num is None:
+        return None
+    try:
+        event_date = datetime(year, month_num, day_num)
+    except ValueError:
+        return None
+    delta = (event_date.date() - start.date()).days
+    if 0 <= delta < 30:
+        return delta + 1  # 1-based day number
+    return None
 
 
 def _build_date_context(pack_start_date: str) -> Optional[str]:
@@ -84,6 +151,8 @@ Output format: You must respond with a single markdown document. Structure:
 4. Section "---" then "CAPTIONS" then "---"
 5. For each day (1–30): "## Day N — [Category]" then for each platform (see below) repeat: "**Platform:** [exact platform label]" then "**Caption:** [first line of caption]" then a blank line then the full caption text (ready to copy-paste). If HASHTAGS_REQUESTED is true, then a blank line then "**Hashtags:** [MIN–MAX hashtags for this caption, comma-separated or space-separated]". Then "---" only after all platforms for that day are done. If HASHTAGS_REQUESTED is false, do NOT include any **Hashtags:** line.
 
+CRITICAL — Completeness: Every day (1–30) must have exactly one caption block per platform. Never leave a **Caption:** or **Hashtags:** line empty. Every platform for every day must have a full, copy-paste-ready caption (2–6 short paragraphs, or 1–3 lines for TikTok). If HASHTAGS_REQUESTED is true, every caption must include a **Hashtags:** line with at least MIN and at most MAX hashtags. If you are generating only a range of days (e.g. 11–20), every day in that range must still have every platform complete. Do not output placeholder text or skip any day/platform.
+
 Multi-platform (captions for every platform every day): When the client has more than one platform (e.g. Instagram & Facebook, LinkedIn, Pinterest), you must write one caption for EACH platform on EACH day. So for each day 1–30: first "## Day N — [Category]", then one full caption block (Platform, hook, caption, Hashtags if requested) for platform A, then the same for platform B, then platform C, etc. Each day therefore contains as many captions as there are platforms — all for that same day. "Instagram & Facebook" counts as one platform: use that label and write one caption that works for both. Rotate through the five categories across the 30 days so the mix is balanced (roughly 6 days per category). Do not duplicate the same caption across platforms; tailor each to the platform (e.g. LinkedIn more professional, TikTok shorter, Pinterest keyword-rich).
 
 TikTok: When TikTok is one of the client's platforms, for days assigned to TikTok write shorter, punchier captions (1–3 short lines; hook in the first line; clear CTA). Use fewer hashtags and TikTok-appropriate tag style for those days.
@@ -118,10 +187,13 @@ def _build_user_prompt(
     day_start: int = 1,
     day_end: int = 30,
     previous_pack_themes: Optional[list] = None,
+    pack_start_date: Optional[str] = None,
 ) -> str:
-    """Build user prompt. If day_start/day_end are not 1–30, generate full doc; else generate only that range."""
+    """Build user prompt. If day_start/day_end are not 1–30, generate full doc; else generate only that range.
+    pack_start_date: YYYY-MM-DD so Day 1 = this date; used for date context and key-date alignment."""
     from datetime import datetime
-    month_year = datetime.utcnow().strftime("%B %Y")
+    start_str = (pack_start_date or "").strip() or datetime.utcnow().strftime("%Y-%m-%d")
+    month_year = datetime.strptime(start_str[:10], "%Y-%m-%d").strftime("%B %Y")
     include_hashtags = intake.get("include_hashtags", True)
     if isinstance(include_hashtags, str) and include_hashtags.lower() in ("false", "0", "no", "off"):
         include_hashtags = False
@@ -138,22 +210,33 @@ def _build_user_prompt(
     if 1 <= day_start <= day_end <= 30 and (day_start != 1 or day_end != 30):
         range_note = f"\n\nGenerate ONLY days {day_start} to {day_end} (inclusive). Output only those day sections (## Day N — ... through ## Day {day_end} — ...). No title, no intake summary — just the day blocks.\n"
 
+    # Normalize ALL CAPS intake so PDFs and captions use sentence/title case
+    n = _normalize_intake_case
+    business_name = n(intake.get("business_name") or "", sentence_case=False) or "Not specified"
+    business_type = n(intake.get("business_type") or "", sentence_case=False)
+    offer_one_line = n(intake.get("offer_one_line") or "", sentence_case=True)
+    audience = n(intake.get("audience") or "", sentence_case=False) or "Not specified"
+    consumer_age = n(intake.get("consumer_age_range") or "", sentence_case=False) or "Not specified"
+    audience_cares = n(intake.get("audience_cares") or "", sentence_case=True)
+    platform_habits = n(intake.get("platform_habits") or "", sentence_case=True) or "None"
+    goal = n(intake.get("goal") or "", sentence_case=False)
+
     parts = [
         f"Generate the full 30-day caption document for this client. Current month/year: {month_year}.",
         f"HASHTAGS_REQUESTED: {str(include_hashtags).lower()}",
         f"HASHTAG_MIN: {hashtag_min}",
         f"HASHTAG_MAX: {hashtag_max}",
         "",
-        "INTAKE:",
-        f"- Business name: {intake.get('business_name', '') or 'Not specified'}",
-        f"- Business type: {intake.get('business_type', '')}",
-        f"- What they offer (one sentence): {intake.get('offer_one_line', '')}",
-        f"- Primary audience: {intake.get('audience', '')}",
-        f"- Consumer age range (if applicable): {intake.get('consumer_age_range', '') or 'Not specified'}",
-        f"- What audience cares about: {intake.get('audience_cares', '')}",
+        "INTAKE (use these normalized forms in captions—do not repeat ALL CAPS):",
+        f"- Business name: {business_name}",
+        f"- Business type: {business_type}",
+        f"- What they offer (one sentence): {offer_one_line}",
+        f"- Primary audience: {audience}",
+        f"- Consumer age range (if applicable): {consumer_age}",
+        f"- What audience cares about: {audience_cares}",
         f"- Platform(s): {platform_raw or 'Not specified'}",
-        f"- Platform habits: {intake.get('platform_habits', '') or 'None'}",
-        f"- Goal for the month: {intake.get('goal', '')}",
+        f"- Platform habits: {platform_habits}",
+        f"- Goal for the month: {goal}",
         f"- Caption language: {intake.get('caption_language', 'English (UK)')}",
     ]
     if len(platform_list) > 1:
@@ -174,8 +257,10 @@ def _build_user_prompt(
             examples,
         ])
 
-    # Launch/event: pass description (with dates) to AI for phasing
-    launch_desc = (intake.get("launch_event_description") or "").strip()
+    # Launch/event: pass description (normalized case) and explicitly map key date to day number
+    launch_desc_raw = (intake.get("launch_event_description") or "").strip()
+    launch_desc = _normalize_intake_case(launch_desc_raw, sentence_case=True) if launch_desc_raw else ""
+    key_date_day = _parse_key_date_from_text(launch_desc_raw or launch_desc, start_str) if (launch_desc_raw or launch_desc) else None
     if launch_desc:
         parts.extend([
             "",
@@ -184,9 +269,14 @@ def _build_user_prompt(
             "",
             "Phase content by the dates above: BEFORE = anticipation, teasers; ON/DURING = announce, promote; AFTER = thank-you, feedback. Support multiple events if listed.",
         ])
+        if key_date_day is not None:
+            parts.extend([
+                "",
+                f"IMPORTANT — The client's key date above falls on Day {key_date_day}. Write pre-launch/anticipation content for days 1 to {key_date_day - 1}, launch-day/announcement content for Day {key_date_day}, and post-launch/thank-you content for days {key_date_day + 1} to 30. Do not put launch-day tone on the wrong day.",
+            ])
 
-    # Always pass date context: assume Day 1 = today (generation day) so captions are date-aware
-    date_context = _build_date_context(datetime.utcnow().strftime("%Y-%m-%d"))
+    # Date context: Day 1 = pack_start_date so captions are date-aware and key date aligns
+    date_context = _build_date_context(start_str)
     if date_context:
         parts.extend([
             "",
@@ -228,25 +318,35 @@ def _build_user_prompt(
     return "\n".join(parts) + range_note
 
 
-def _build_doc_header(intake: Dict[str, Any]) -> str:
-    """Build title, subtitle, and intake summary so we can prepend to chunked output."""
+def _build_doc_header(intake: Dict[str, Any], pack_start_date: Optional[str] = None) -> str:
+    """Build title, subtitle, and intake summary so we can prepend to chunked output. Uses normalized case (no ALL CAPS)."""
     from datetime import datetime
-    month_year = datetime.utcnow().strftime("%B %Y")
-    business = (intake.get("business_name") or "").strip() or "Client"
+    n = _normalize_intake_case
+    start_str = (pack_start_date or "").strip() or datetime.utcnow().strftime("%Y-%m-%d")
+    try:
+        month_year = datetime.strptime(start_str[:10], "%Y-%m-%d").strftime("%B %Y")
+    except ValueError:
+        month_year = datetime.utcnow().strftime("%B %Y")
+    business = n((intake.get("business_name") or "").strip(), sentence_case=False) or "Client"
+    audience = n(intake.get("audience") or "", sentence_case=False) or "Not specified"
+    voice = n((intake.get("voice_words") or intake.get("voice_avoid") or "").strip(), sentence_case=False) or "Not specified"
+    goal = n(intake.get("goal") or "", sentence_case=False) or "Not specified"
+    launch_desc = (intake.get("launch_event_description") or "").strip()
+    if launch_desc:
+        launch_desc = n(launch_desc, sentence_case=True)
     lines = [
         "# 30 Days of Social Media Captions",
         f"{business} | {month_year}",
         "---",
         "INTAKE SUMMARY",
         "---",
-        f"- Business: {intake.get('business_name', '') or 'Not specified'}",
-        f"- Audience: {intake.get('audience', '') or 'Not specified'}",
-        f"- Voice: {intake.get('voice_words', '') or intake.get('voice_avoid', '') or 'Not specified'}",
+        f"- Business: {business}",
+        f"- Audience: {audience}",
+        f"- Voice: {voice}",
         f"- Language: {intake.get('caption_language', 'English (UK)')}",
         f"- Platform(s): {(intake.get('platform') or '').strip() or 'Not specified'}",
-        f"- Goal: {intake.get('goal', '') or 'Not specified'}",
+        f"- Goal: {goal}",
     ]
-    launch_desc = (intake.get("launch_event_description") or "").strip()
     if launch_desc:
         lines.append(f"- Key date: {launch_desc}")
     lines.extend([
@@ -255,6 +355,18 @@ def _build_doc_header(intake: Dict[str, Any]) -> str:
         "---",
     ])
     return "\n".join(lines) + "\n"
+
+
+def _chunk_has_empty_blocks(content: str, include_hashtags: bool) -> bool:
+    """Return True if markdown has empty **Caption:** or **Hashtags:** lines (indicates incomplete AI output)."""
+    if not content or "**Caption:**" not in content:
+        return True
+    # Empty Caption: "**Caption:**" followed by optional spaces and newline (no real text)
+    if re.search(r"\*\*Caption:\*\*\s*\n", content, re.IGNORECASE):
+        return True
+    if include_hashtags and re.search(r"\*\*Hashtags?:\*\*\s*\n", content, re.IGNORECASE):
+        return True
+    return False
 
 
 class CaptionGenerator:
@@ -272,18 +384,23 @@ class CaptionGenerator:
             if not Config.OPENAI_API_KEY:
                 raise ValueError("OPENAI_API_KEY not configured")
 
-    def generate(self, intake: Dict[str, Any], previous_pack_themes: Optional[list] = None) -> str:
+    def generate(self, intake: Dict[str, Any], previous_pack_themes: Optional[list] = None, pack_start_date: Optional[str] = None) -> str:
         """
         Generate full 30-day caption document as markdown in 3 API calls (days 1–10, 11–20, 21–30).
         If include_stories and platform has Instagram & Facebook, appends 30 Story prompts.
-        previous_pack_themes: for subscriptions, list of previous packs' day categories (each a list of 30 or dict with day_categories) so this month can vary.
+        previous_pack_themes: for subscriptions, list of previous packs' day categories.
+        pack_start_date: YYYY-MM-DD so Day 1 = this date (default: today UTC). Ensures key-date phasing aligns.
         Raises on API error.
         """
+        start_str = (pack_start_date or "").strip() or datetime.utcnow().strftime("%Y-%m-%d")
+        include_hashtags = intake.get("include_hashtags", True)
+        if isinstance(include_hashtags, str) and include_hashtags.lower() in ("false", "0", "no", "off"):
+            include_hashtags = False
         system = _build_system_prompt(intake)
-        header = _build_doc_header(intake)
+        header = _build_doc_header(intake, pack_start_date=start_str)
         parts = [header]
         for day_start, day_end in self.CHUNKS:
-            user = _build_user_prompt(intake, day_start=day_start, day_end=day_end, previous_pack_themes=previous_pack_themes)
+            user = _build_user_prompt(intake, day_start=day_start, day_end=day_end, previous_pack_themes=previous_pack_themes, pack_start_date=start_str)
             content = chat_completion(
                 system=system,
                 user=user,
@@ -292,6 +409,19 @@ class CaptionGenerator:
             )
             if not content:
                 raise RuntimeError(f"AI returned empty content for days {day_start}-{day_end}")
+            # Retry once if chunk has empty Caption/Hashtags blocks (incomplete output)
+            if _chunk_has_empty_blocks(content, include_hashtags):
+                retry_user = user + "\n\nIMPORTANT: Your previous response had empty Caption or Hashtags lines. You must fill every **Caption:** and every **Hashtags:** (when requested) with real, copy-paste-ready content for every platform for every day in this range. No exceptions."
+                content = chat_completion(
+                    system=system,
+                    user=retry_user,
+                    temperature=0.5,
+                    max_tokens=self.MAX_TOKENS_PER_CHUNK,
+                )
+                if not content:
+                    raise RuntimeError(f"AI returned empty content on retry for days {day_start}-{day_end}")
+                if _chunk_has_empty_blocks(content, include_hashtags):
+                    raise RuntimeError(f"AI still returned incomplete content for days {day_start}-{day_end} (empty Caption or Hashtags). Please try again.")
             parts.append(content)
         result = "\n".join(parts)
 
@@ -340,19 +470,19 @@ INTAKE:
 {date_block}
 {variety_note}
 
-For each day provide: (1) Idea — a short description of the Story concept (5–15 words). (2) Suggested wording: — one sentence or short suggestion for what to say or show. (3) Story hashtags: — 3–5 relevant hashtags. Mix types: behind-the-scenes, tips, questions, polls, product highlights, testimonials, process reveals, day-in-the-life. Variety is key.
+For each day provide: (1) Idea — a short description of the Story concept (5–15 words). (2) Suggested wording: — one sentence or short suggestion for what to say or show (do not wrap in quotation marks). (3) Story hashtags: — 3–5 relevant hashtags. Mix types: behind-the-scenes, tips, questions, polls, product highlights, testimonials, process reveals, day-in-the-life. Variety is key.
 
 Output format — markdown only, one line per day with all three parts on that line:
 ---
 ## 30 Story Ideas | {business} | {month_year}
 
-**Day 1:** Idea: [short idea]. Suggested wording: [suggestion]. Story hashtags: #tag1 #tag2 #tag3
-**Day 2:** Idea: [short idea]. Suggested wording: [suggestion]. Story hashtags: #tag1 #tag2 #tag3
+**Day 1:** Idea: [short idea]. Suggested wording: [suggestion, no quotes]. Story hashtags: #tag1 #tag2 #tag3
+**Day 2:** Idea: [short idea]. Suggested wording: [suggestion, no quotes]. Story hashtags: #tag1 #tag2 #tag3
 ...
-**Day 30:** Idea: [short idea]. Suggested wording: [suggestion]. Story hashtags: #tag1 #tag2 #tag3
+**Day 30:** Idea: [short idea]. Suggested wording: [suggestion, no quotes]. Story hashtags: #tag1 #tag2 #tag3
 ---
 
-Use the exact labels "Idea:", "Suggested wording:", and "Story hashtags:" on every line. Output the complete list only. No preamble."""
+Use the exact labels "Idea:", "Suggested wording:", and "Story hashtags:" on every line. Do not put quotation marks around the Suggested wording content. Output the complete list only. No preamble."""
         try:
             content = chat_completion(
                 system="You write concise, actionable social media content prompts with Idea, Suggested wording, and Story hashtags for each day.",
@@ -422,19 +552,19 @@ Here is the theme or focus for each day's main caption:
 
 For each Day N, write a Story prompt that explicitly supports and reinforces that day's caption. Think of it as the visibility layer between posts: behind-the-scenes, polls, quick proof, or micro-examples that keep the message active.
 
-For each day provide: (1) Idea: — short description of the Story concept (5–15 words). (2) Suggested wording: — one sentence or short suggestion for what to say or show. (3) Story hashtags: — 3–5 relevant hashtags. Mix types; variety is key, but always tied to that day's caption theme.
+For each day provide: (1) Idea: — short description of the Story concept (5–15 words). (2) Suggested wording: — one sentence or short suggestion for what to say or show (do not wrap in quotation marks). (3) Story hashtags: — 3–5 relevant hashtags. Mix types; variety is key, but always tied to that day's caption theme.
 
 Output format — markdown only, one line per day with all three parts on that line:
 ---
 ## 30 Story Ideas | {business} | {month_year}
 
-**Day 1:** Idea: [short idea]. Suggested wording: [suggestion]. Story hashtags: #tag1 #tag2 #tag3
-**Day 2:** Idea: [short idea]. Suggested wording: [suggestion]. Story hashtags: #tag1 #tag2 #tag3
+**Day 1:** Idea: [short idea]. Suggested wording: [suggestion, no quotes]. Story hashtags: #tag1 #tag2 #tag3
+**Day 2:** Idea: [short idea]. Suggested wording: [suggestion, no quotes]. Story hashtags: #tag1 #tag2 #tag3
 ...
-**Day 30:** Idea: [short idea]. Suggested wording: [suggestion]. Story hashtags: #tag1 #tag2 #tag3
+**Day 30:** Idea: [short idea]. Suggested wording: [suggestion, no quotes]. Story hashtags: #tag1 #tag2 #tag3
 ---
 
-Use the exact labels "Idea:", "Suggested wording:", and "Story hashtags:" on every line. Output the complete list only. No preamble."""
+Use the exact labels "Idea:", "Suggested wording:", and "Story hashtags:" on every line. Do not put quotation marks around the Suggested wording content. Output the complete list only. No preamble."""
 
         try:
             content = chat_completion(
