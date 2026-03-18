@@ -6,7 +6,8 @@
 
 **What we changed:**
 - New orders now store `customer_email` in **lowercase**, so they always match the account.
-- For **existing** orders (e.g. a test one-off created before this fix), run this once in Supabase SQL Editor:
+- The account History page shows "Showing orders for: [email]" so you can confirm which address we use to look up orders.
+- For **existing** orders (e.g. a test one-off created before this fix), run the one-time SQL in **DO_THIS_NOW.md** (section "Order shows in email but NOT on My Account") in Supabase SQL Editor. Or run this once in Supabase SQL Editor:
 
 ```sql
 -- Normalize existing customer_email to lowercase (run once)

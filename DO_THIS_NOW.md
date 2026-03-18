@@ -1,5 +1,32 @@
 # Captions not on account / PDF never sent — do this
 
+---
+
+## Order shows in email but NOT on My Account (fix link only)
+
+If the customer received the PDF and/or receipt but **My Account → History** is empty, orders are matched by **email**. Often the order was stored with different casing (e.g. `Skoverment@gmail.com`) than the account (`skoverment@gmail.com`).
+
+**Do this once in Supabase (SQL Editor):**
+
+1. Open your Supabase project → **SQL Editor** → New query.
+2. Paste and run:
+
+```sql
+-- Normalize caption_orders.customer_email to lowercase so account page finds them
+UPDATE caption_orders
+SET customer_email = LOWER(TRIM(customer_email))
+WHERE customer_email IS NOT NULL
+  AND customer_email != LOWER(TRIM(customer_email));
+```
+
+3. Ask the customer to **refresh** the account/history page (and log in with the same email they used at checkout).
+
+After this, all existing orders will match the account lookup. New orders already save email in lowercase.
+
+---
+
+## Captions/PDF never received — run fix-and-retry
+
 Follow these steps **in order**.
 
 ---

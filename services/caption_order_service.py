@@ -104,7 +104,7 @@ class CaptionOrderService:
         data = result.data or []
         # If no match, try case-insensitive (e.g. order stored as "Skoverment@gmail.com")
         if not data:
-            result = self.client.table(self.table).select("*").ilike("customer_email", e).order("created_at", desc=True).execute()
+            result = self.client.table(self.table).select("*").ilike("customer_email", e.lower()).order("created_at", desc=True).execute()
             data = result.data or []
             # Normalize stored email to lowercase so next time eq matches
             for o in data:
