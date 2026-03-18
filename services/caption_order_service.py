@@ -93,12 +93,26 @@ class CaptionOrderService:
         return None
 
     def get_by_customer_email(self, email: str) -> list:
-        """Get all caption orders for a customer email."""
+        """Get all caption orders for a customer email (case-insensitive so account always finds orders)."""
         if not email or "@" not in email:
             return []
-        e = email.strip().lower()
-        result = self.client.table(self.table).select("*").eq("customer_email", e).order("created_at", desc=True).execute()
-        return result.data or []
+        e = (email or "").strip()
+        if not e:
+            return []
+        # Exact match first (normalized lowercase)
+        result = self.client.table(self.table).select("*").eq("customer_email", e.lower()).order("created_at", desc=True).execute()
+        data = result.data or []
+        # If no match, try case-insensitive (e.g. order stored as "Skoverment@gmail.com")
+        if not data:
+            result = self.client.table(self.table).select("*").ilike("customer_email", e).order("created_at", desc=True).execute()
+            data = result.data or []
+            # Normalize stored email to lowercase so next time eq matches
+            for o in data:
+                oid = o.get("id")
+                current = (o.get("customer_email") or "").strip()
+                if oid and current and current != current.lower():
+                    self.update(str(oid), {"customer_email": current.lower()})
+        return data
 
     def get_by_customer_email_including_stripe_customer(self, email: str) -> list:
         """Get all caption orders for this customer: by email, and any orders with the same Stripe customer ID.
