@@ -99,6 +99,7 @@
     .platform-btn:hover:not(:disabled) { border-color: #888; }
     .platform-btn.selected { background: var(--lum-gold, #c9a227); border-color: var(--lum-gold, #c9a227); color: #000; }
     .platform-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.platform-btn.selected:disabled { opacity: 1; }
     .intake-checkbox-label { display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 400; font-size: 0.95rem; line-height: 1.4; }
     .intake-checkbox-label input { width: auto; min-width: 1.1rem; min-height: 1.1rem; margin: 0; flex-shrink: 0; vertical-align: middle; align-self: center; }
     .intake-checkbox-label input:disabled { cursor: not-allowed; opacity: 0.5; }
@@ -247,8 +248,8 @@
       <div class="form-section">
         <h2>Platform</h2>
         {% if platforms_count > 1 %}
-        <p class="field-helper" style="margin-bottom: 0.5rem;">Select up to {{ platforms_count }} platforms (included in your order). You cannot exceed the number you paid for.</p>
-        <div class="intake-checkbox-group" role="group" aria-label="Platforms" id="platform-btn-group" data-max-platforms="{{ platforms_count }}">
+        <p class="field-helper" style="margin-bottom: 0.5rem;">Platforms included in your order (fixed for this pack — cannot be changed here).</p>
+        <div class="intake-checkbox-group" role="group" aria-label="Platforms" id="platform-btn-group" data-max-platforms="{{ platforms_count }}" data-platforms-locked="true">
           <button type="button" class="platform-btn" data-platform="Instagram & Facebook">Instagram &amp; Facebook</button>
           <button type="button" class="platform-btn" data-platform="LinkedIn">LinkedIn</button>
           <button type="button" class="platform-btn" data-platform="TikTok">TikTok</button>
@@ -786,27 +787,34 @@
         if (p === 'Instagram' || p === 'Facebook') return 'Instagram & Facebook';
         return p;
       }
+      var locked = group.getAttribute('data-platforms-locked') === 'true';
       function render() {
         btns.forEach(function(btn) {
           var val = btn.getAttribute('data-platform');
           var isSel = selected.indexOf(val) !== -1;
           btn.classList.toggle('selected', isSel);
-          btn.disabled = !isSel && selected.length >= maxPlatforms;
+          if (locked) {
+            btn.disabled = true;
+          } else {
+            btn.disabled = !isSel && selected.length >= maxPlatforms;
+          }
         });
         if (platformEl) platformEl.value = selected.join(', ');
       }
-      btns.forEach(function(btn) {
-        btn.addEventListener('click', function() {
-          var val = btn.getAttribute('data-platform');
-          var idx = selected.indexOf(val);
-          if (idx !== -1) {
-            selected.splice(idx, 1);
-          } else if (selected.length < maxPlatforms) {
-            selected.push(val);
-          }
-          render();
+      if (!locked) {
+        btns.forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var val = btn.getAttribute('data-platform');
+            var idx = selected.indexOf(val);
+            if (idx !== -1) {
+              selected.splice(idx, 1);
+            } else if (selected.length < maxPlatforms) {
+              selected.push(val);
+            }
+            render();
+          });
         });
-      });
+      }
       var initialVal = (platformEl && platformEl.value || '').trim();
       if (initialVal) {
         var parts = initialVal.split(',').map(function(s) { return norm(s.trim()); }).filter(Boolean);
