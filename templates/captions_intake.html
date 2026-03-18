@@ -37,13 +37,13 @@
     .intake-page input::placeholder, .intake-page textarea::placeholder { color: #666; }
     .intake-page .form-section { margin-bottom: 2rem; }
     .intake-page .form-section h2 { font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; font-weight: 400; color: #1a1a1a; margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 0.05em; }
-    /* Base for buttons that are NOT account-style (e.g. Upgrade to subscription link) */
+    /* Base for buttons that are NOT account-style (e.g. Upgrade to subscription link) — readable size */
     .intake-page .btn-submit:not(.account-btn-swipe-light) {
       display: inline-flex; align-items: center; justify-content: center;
-      padding: 10px 20px; min-height: 44px;
+      padding: 12px 24px; min-height: 48px;
       background: transparent; color: #1a1a1a;
       text-decoration: none; border-radius: var(--radius-btn, 8px); font-weight: 600;
-      font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase;
+      font-size: 1rem; letter-spacing: 0.02em; text-transform: none;
       border: 2px solid rgba(0,0,0,0.25); cursor: pointer;
       font-family: var(--font-body); transition: color 0.25s ease-out, border-color 0.25s ease-out;
       position: relative; overflow: hidden; z-index: 1;
@@ -75,13 +75,34 @@
     .intake-page .review-section .empty { color: #666; font-style: italic; }
     .intake-page .review-actions { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1.5rem; }
     .intake-page .btn-secondary { background: transparent; color: #1a1a1a; border: 2px solid rgba(0,0,0,0.25); }
-    /* Next Step, Edit, Send details: match account page (Change email) — font and yellow swipe from product.css .account-btn-swipe-light */
+    /* Next Step, Edit, Send details: readable size and touch-friendly; yellow swipe from product.css .account-btn-swipe-light */
     .intake-page .btn-submit.account-btn-swipe-light,
     .intake-page .btn-secondary.account-btn-swipe-light {
       display: inline-flex; align-items: center; justify-content: center;
-      padding: 10px 20px; min-height: 44px;
+      padding: 12px 24px; min-height: 48px;
       border-radius: var(--radius-btn, 8px); cursor: pointer;
-      font: inherit;
+      font-size: 1rem !important; font-weight: 600 !important;
+      letter-spacing: 0.02em; text-transform: none !important;
+    }
+    /* All intake CTA buttons: readable font */
+    .intake-page .btn-submit { font-size: 1rem !important; font-weight: 600 !important; letter-spacing: 0.02em; }
+    .intake-page .btn-submit:not(.account-btn-swipe-light) { padding: 12px 24px; min-height: 48px; }
+    /* Create-account success box: Your account, Log in, Sign up — same readable button style */
+    .intake-page #create-account-box a.account-btn-swipe-light {
+      display: inline-flex !important; align-items: center; justify-content: center;
+      padding: 12px 24px !important; min-height: 48px !important;
+      font-size: 1rem !important; font-weight: 600 !important;
+      letter-spacing: 0.02em; text-transform: none !important;
+      border: 2px solid rgba(0,0,0,0.25); border-radius: var(--radius-btn, 8px);
+      text-decoration: none !important;
+    }
+    .intake-page #create-account-box .btn-submit#ca-btn { padding: 12px 24px; min-height: 48px; font-size: 1rem; font-weight: 600; }
+    /* Edit preferences button */
+    .intake-page .intake-edit-preferences-btn { padding: 12px 24px; min-height: 48px; font-size: 1rem !important; font-weight: 600 !important; text-transform: none !important; letter-spacing: 0.02em; }
+    /* Modal: Add platform / Add Story Ideas / Cancel — readable */
+    .intake-edit-preferences-modal .modal-actions button {
+      padding: 12px 20px; min-height: 48px; font-size: 1rem !important; font-weight: 600 !important;
+      letter-spacing: 0.02em; text-transform: none !important;
     }
     .intake-page .help-trigger { display: inline-flex; align-items: center; justify-content: center; width: 1.1rem; height: 1.1rem; border-radius: 50%; background: #999; color: #fff; font-size: 0.7rem; font-weight: 600; cursor: help; margin-left: 0.4rem; vertical-align: middle; position: relative; }
     .intake-page .help-trigger:hover, .intake-page .help-trigger:focus { background: var(--lum-gold); color: #000; outline: none; }
