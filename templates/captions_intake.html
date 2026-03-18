@@ -156,10 +156,11 @@
             <input type="password" id="ca-password" required minlength="10" style="width:100%; padding:0.5rem 0.75rem; margin-bottom:0.75rem; border-radius:6px; border:1px solid var(--lum-border);" placeholder="At least 10 characters, 1 number">
             <button type="submit" class="btn-submit" id="ca-btn">Create account</button>
           </form>
+          <p id="ca-signup-wrap" style="display: none; margin: 0.75rem 0 0; font-size: 0.9rem; color: var(--lum-text-muted);">Prefer to sign up on a separate page? <a id="ca-signup-link" href="#" class="account-btn-swipe-light" style="display: inline-block; margin-top: 0.25rem; padding: 0.4rem 0.9rem; font-size: 0.9rem;">Sign up</a> (your email will be prefilled).</p>
         </div>
         <p id="ca-done" style="display:none; margin:0; color: #1a1a1a;"><span id="ca-done-msg">Check your email to verify your address — then you can log in.</span> <a href="/login" style="color: #1a1a1a; font-weight: 600; text-decoration: underline;">Log in</a></p>
-        <p id="ca-already-logged-in" style="display:none; margin:0; font-weight: 500;">You're logged in. <a href="/account" class="btn-go-account account-btn-swipe-light">Go to your account</a></p>
-        <p id="ca-already-has-account" style="display:none; margin:0; font-weight: 500;">You already have an account. <a href="/login" style="color: var(--lum-gold);">Log in</a></p>
+        <p id="ca-already-logged-in" style="display:none; margin:0; font-weight: 500;">You're logged in. <a href="/account" class="btn-go-account account-btn-swipe-light">Your account</a></p>
+        <p id="ca-already-has-account" style="display:none; margin:0; font-weight: 500;">You already have an account. <a href="/login" id="ca-login-link" class="account-btn-swipe-light" style="display: inline-block; padding: 0.4rem 0.9rem; font-size: 0.9rem;">Log in</a></p>
       </div>
     </div>
     <div id="intake-error" style="display: none; margin: 2rem 0; padding: 1.5rem; background: rgba(200,80,80,0.15); border-radius: 8px; color: #1a1a1a;"></div>
@@ -680,12 +681,18 @@
             if (caDone) caDone.style.display = 'none';
             if (caAlreadyLoggedIn) caAlreadyLoggedIn.style.display = 'none';
             if (caAlreadyHasAccount) caAlreadyHasAccount.style.display = 'none';
+            var caLoginLink = document.getElementById('ca-login-link');
+            var caSignupWrap = document.getElementById('ca-signup-wrap');
+            var caSignupLink = document.getElementById('ca-signup-link');
+            if (caLoginLink && custEmail) { caLoginLink.href = '/login?email=' + encodeURIComponent(custEmail); }
+            if (caSignupLink && custEmail) { caSignupLink.href = '/signup?email=' + encodeURIComponent(custEmail); }
             if (isLoggedInAndMatches) {
               if (caAlreadyLoggedIn) caAlreadyLoggedIn.style.display = 'block';
             } else if (hasAccount) {
               if (caAlreadyHasAccount) caAlreadyHasAccount.style.display = 'block';
             } else {
               if (caCreateState) caCreateState.style.display = 'block';
+              if (caSignupWrap && custEmail) { caSignupWrap.style.display = 'block'; }
             }
           } else {
             var errEl = document.getElementById('intake-error');
