@@ -490,17 +490,19 @@ def _send_intake_email_for_order(order: dict) -> None:
     try:
         from services.notifications import NotificationService
         notif = NotificationService()
-        try:
-            notif.send_order_receipt_email(customer_email, order=order)
-        except Exception as e:
-            print(f"[captions-intake-link] Receipt email failed (non-fatal): {e!r}")
         if upgraded_from_oneoff:
+            # Upgrade-from-one-off: prefilled form already exists, so we must not send the standard receipt copy
+            # that says "complete your short intake form".
             ok = notif.send_subscription_welcome_prefilled_email(customer_email, intake_url)
             if ok:
                 print(f"[captions-intake-link] Sent subscription welcome (prefilled) email to {customer_email}")
             else:
                 print(f"[captions-intake-link] Subscription welcome email NOT sent to {customer_email}")
         else:
+            try:
+                notif.send_order_receipt_email(customer_email, order=order)
+            except Exception as e:
+                print(f"[captions-intake-link] Receipt email failed (non-fatal): {e!r}")
             ok = notif.send_intake_link_email(customer_email, intake_url, order)
             if ok:
                 print(f"[captions-intake-link] Sent intake email to {customer_email}")

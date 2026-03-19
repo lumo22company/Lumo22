@@ -211,7 +211,9 @@ def _handle_captions_payment(session):
         amount_total = session.get("amount_total") if isinstance(session, dict) else getattr(session, "amount_total", None)
         upgraded_from_oneoff = bool((order.get("upgraded_from_token") or copy_from or "").strip())
         is_trial_upgrade = upgraded_from_oneoff and (amount_total is None or (isinstance(amount_total, (int, float)) and int(amount_total) == 0))
-        if not is_trial_upgrade:
+        # For upgrades from one-off -> subscription we send a dedicated "prefilled form" email.
+        # The standard receipt copy would incorrectly say "complete your short intake form" even though it was already filled/edited.
+        if (not upgraded_from_oneoff) and (not is_trial_upgrade):
             try:
                 notif.send_order_receipt_email(customer_email, order=order, session=session)
             except Exception as receipt_err:
