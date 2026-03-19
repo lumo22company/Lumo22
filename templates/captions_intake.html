@@ -75,17 +75,17 @@
     .intake-page .review-section .empty { color: #666; font-style: italic; }
     .intake-page .review-actions { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1.5rem; }
     .intake-page .btn-secondary { background: transparent; color: #1a1a1a; border: 2px solid rgba(0,0,0,0.25); }
-    /* Next Step, Edit, Send details: readable size and touch-friendly; yellow swipe from product.css .account-btn-swipe-light */
+    /* Next Step, Edit, Send details: same font size as account / Log in buttons; yellow swipe from product.css .account-btn-swipe-light */
     .intake-page .btn-submit.account-btn-swipe-light,
     .intake-page .btn-secondary.account-btn-swipe-light {
       display: inline-flex; align-items: center; justify-content: center;
       padding: 12px 24px; min-height: 48px;
       border-radius: var(--radius-btn, 8px); cursor: pointer;
-      font-size: 1rem !important; font-weight: 600 !important;
-      letter-spacing: 0.02em; text-transform: none !important;
+      font-size: 0.7rem !important; font-weight: 600 !important;
+      letter-spacing: 0.2em !important; text-transform: uppercase !important;
     }
-    /* All intake CTA buttons: readable font */
-    .intake-page .btn-submit { font-size: 1rem !important; font-weight: 600 !important; letter-spacing: 0.02em; }
+    /* All intake CTA buttons (non-swipe): readable font */
+    .intake-page .btn-submit:not(.account-btn-swipe-light) { font-size: 1rem !important; font-weight: 600 !important; letter-spacing: 0.02em; }
     .intake-page .btn-submit:not(.account-btn-swipe-light) { padding: 12px 24px; min-height: 48px; }
     /* Create-account success box: Your account, Log in, Sign up — same readable button style */
     .intake-page #create-account-box a.account-btn-swipe-light {
@@ -348,7 +348,7 @@
         <label for="caption_examples">Paste 1–3 example captions you like — from your own posts, competitors, or inspiration. We'll match this style, tone, and structure where relevant.</label>
         <textarea id="caption_examples" name="caption_examples" placeholder="Paste example captions here (optional)" style="min-height: 140px;">{{ existing_intake.get('caption_examples', '') }}</textarea>
       </div>
-      <button type="button" class="btn-submit account-btn-swipe-light" id="btn-review">{% if existing_intake %}REVIEW CHANGES{% else %}Next step{% endif %}</button>
+      <button type="button" class="btn-submit account-btn-swipe-light" id="btn-review">{% if existing_intake %}REVIEW CHANGES{% else %}NEXT STEP{% endif %}</button>
     </form>
 
     <div id="review-step" class="review-step">
