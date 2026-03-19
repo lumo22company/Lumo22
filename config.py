@@ -137,8 +137,93 @@ class Config:
         return (secret and secret != default_secret) or env == 'production'
 
     @staticmethod
+    def validate_ai_provider_env():
+        """
+        Fail fast on common Railway/host mistakes: API key pasted into AI_PROVIDER.
+        Called on app import (Gunicorn/Railway), not only when running `python app.py`.
+
+        AI_PROVIDER must be exactly 'anthropic' or 'openai' (case-insensitive), or unset (defaults to openai).
+        In production, the matching API key must be set.
+        """
+        raw = (os.getenv("AI_PROVIDER") or "").strip()
+        if raw:
+            lowered = raw.lower()
+            if lowered not in ("anthropic", "openai"):
+                hint = ""
+                if raw.startswith("sk-ant") or (
+                    raw.startswith("sk-") and len(raw) > 20
+                ):
+                    hint = (
+                        " This value looks like an API key. Set AI_PROVIDER to the word anthropic or openai only, "
+                        "and put the secret in ANTHROPIC_API_KEY or OPENAI_API_KEY."
+                    )
+                preview = raw[:28] + ("…" if len(raw) > 28 else "")
+                raise ValueError(
+                    f"Invalid AI_PROVIDER (got {preview!r}). "
+                    f"Must be exactly 'anthropic' or 'openai', not a secret key.{hint}"
+                )
+
+        effective = (raw or "openai").strip().lower()
+        if Config.is_production():
+            if effective == "anthropic":
+                if not (Config.ANTHROPIC_API_KEY or "").strip():
+                    raise ValueError(
+                        "Production: ANTHROPIC_API_KEY is required when AI_PROVIDER=anthropic."
+                    )
+            else:
+                if not (Config.OPENAI_API_KEY or "").strip():
+                    raise ValueError(
+                        "Production: OPENAI_API_KEY is required when AI_PROVIDER is openai or unset (default). "
+                        "If you use Anthropic only, set AI_PROVIDER=anthropic and ANTHROPIC_API_KEY."
+                    )
+
+    @staticmethod
+    def validate_ai_vendor_optional():
+        """
+        Optional Railway sanity variable: AI_VENDOR=anthropic|openai (plain text, not secret).
+        If set, must match the effective provider from AI_PROVIDER (or default openai when unset).
+        Logs WARNING only — does not exit (AI_PROVIDER validation already ran).
+        """
+        import sys
+
+        v = (os.getenv("AI_VENDOR") or "").strip().lower()
+        if not v:
+            return
+        if v not in ("anthropic", "openai"):
+            print(
+                f"[Config] WARNING: AI_VENDOR={v!r} must be 'anthropic' or 'openai' if set; ignoring.",
+                file=sys.stderr,
+            )
+            return
+        raw_ap = (os.getenv("AI_PROVIDER") or "").strip()
+        effective = (raw_ap or "openai").strip().lower()
+        if v != effective:
+            print(
+                f"[Config] WARNING: AI_VENDOR={v!r} does not match effective AI provider {effective!r} "
+                f"(from AI_PROVIDER). In Railway, the variable list often masks values — use Edit to confirm AI_PROVIDER.",
+                file=sys.stderr,
+            )
+
+    @staticmethod
+    def log_ai_provider_summary():
+        """One startup line for deploy logs: effective provider and which keys are set (never prints secrets)."""
+        raw_ap = (os.getenv("AI_PROVIDER") or "").strip()
+        effective = (raw_ap or "openai").strip().lower()
+        v = (os.getenv("AI_VENDOR") or "").strip()
+        has_ant = bool((os.getenv("ANTHROPIC_API_KEY") or "").strip())
+        has_oai = bool((os.getenv("OPENAI_API_KEY") or "").strip())
+        ap_note = repr(raw_ap) if raw_ap else "(unset — defaults to openai)"
+        vendor_note = repr(v) if v else "(optional, not set)"
+        print(
+            f"[Config] AI summary: AI_PROVIDER={ap_note} → effective={effective!r} | "
+            f"AI_VENDOR={vendor_note} | ANTHROPIC_API_KEY set={has_ant} | OPENAI_API_KEY set={has_oai}",
+            flush=True,
+        )
+
+    @staticmethod
     def validate():
         """Validate that required configuration is present. Stricter in production."""
+        Config.validate_ai_provider_env()
         required = ['SUPABASE_URL', 'SUPABASE_KEY']
         missing = [key for key in required if not getattr(Config, key)]
         if missing:

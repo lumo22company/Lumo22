@@ -224,6 +224,7 @@
     <div class="product-section-inner">
       <h2 class="product-section-title" data-reveal>Choose your plan</h2>
       <p class="product-section-desc" data-reveal>One-off pack or monthly subscription. Same form and delivery. Cancel anytime on subscription. <a href="#refer-a-friend" style="color: var(--lum-gold); text-decoration: none;">Refer a friend</a> — they get 10% off their first purchase, you get 10% off your next month.</p>
+      <p id="pricing-outcome-copy" class="product-section-desc" data-reveal style="margin-top: 0.4rem; color: var(--lum-text);">Most clients use this to save hours each month and keep posting consistently with 30 post-ready captions (plus optional Story Ideas).</p>
       {% if currencies_available|default([])|length > 1 %}
       <div class="captions-currency-wrap" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 1rem;">
         <span style="font-size: 0.9rem; color: var(--lum-text-muted);">Show prices in</span>
@@ -272,6 +273,7 @@
           <span class="product-badge-recommended">Recommended</span>
           <h3 style="margin-bottom: 0.5rem;">Subscription</h3>
           <p class="lumo-pricing-subtitle" style="color: var(--lum-text-muted); font-size: 0.95rem; margin-bottom: 1rem;">New 30-day pack each month</p>
+          <p id="pricing-sub-bestfor" style="margin: -0.35rem 0 0.85rem; font-size: 0.86rem; color: var(--lum-gold);">Best for: staying visible every month without planning from scratch</p>
           <div class="lumo-offer-price" id="captions-sub-price" style="margin: 1rem 0;">£79 <span>/month</span></div>
           <p class="lumo-pricing-save" id="captions-sub-save">Save £18 vs one-off</p>
           <ul class="lumo-offer-includes" style="margin: 1rem 0;">
@@ -288,6 +290,7 @@
         <div class="lumo-pricing-card glass-card">
           <h3 style="margin-bottom: 0.5rem;">One-off</h3>
           <p class="lumo-pricing-subtitle" style="color: var(--lum-text-muted); font-size: 0.95rem; margin-bottom: 1rem;">Single 30-day pack</p>
+          <p id="pricing-oneoff-bestfor" style="margin: -0.35rem 0 0.85rem; font-size: 0.86rem; color: var(--lum-gold);">Best for: a one-time content reset or testing the service first</p>
           <div class="lumo-offer-price" id="captions-oneoff-price" style="margin: 1rem 0;">£97 <span>one-time</span></div>
           <ul class="lumo-offer-includes" style="margin: 1rem 0;">
             <li>30 captions, one delivery (feed posts & Reels)</li>
@@ -307,6 +310,7 @@
           </div>
         </div>
       </div>
+      <p id="pricing-anchor-copy" data-reveal style="margin: 1.1rem auto 0; max-width: 760px; text-align: center; font-size: 0.9rem; color: var(--lum-text-muted);">Compared with typical freelancer or agency retainers, this gives you a lower-cost monthly content system you can start quickly and cancel anytime.</p>
     </div>
   </section>
 
@@ -398,6 +402,51 @@
       window.addEventListener('scroll', check, { passive: true });
       window.addEventListener('load', check);
     }
+  })();
+  (function() {
+    // Pricing copy A/B test: sticky 50/50 bucket per visitor.
+    var variants = {
+      A: {
+        outcome: "Most clients use this to save hours each month and keep posting consistently with 30 post-ready captions (plus optional Story Ideas).",
+        subBestFor: "Best for: staying visible every month without planning from scratch",
+        oneoffBestFor: "Best for: a one-time content reset or testing the service first",
+        anchor: "Compared with typical freelancer or agency retainers, this gives you a lower-cost monthly content system you can start quickly and cancel anytime."
+      },
+      B: {
+        outcome: "Built to remove your monthly content bottleneck: one short form, then 30 ready-to-post captions (plus optional Story Ideas).",
+        subBestFor: "Best for: teams who want content done monthly with less decision fatigue",
+        oneoffBestFor: "Best for: proving fit before committing to monthly delivery",
+        anchor: "Most businesses pay far more for custom monthly content support. This keeps pricing simpler and lower while staying tailored to your voice."
+      }
+    };
+
+    function pickVariant() {
+      var key = "captions_pricing_copy_variant";
+      try {
+        var fromUrl = (new URLSearchParams(window.location.search)).get("pv");
+        if (fromUrl && (fromUrl.toUpperCase() === "A" || fromUrl.toUpperCase() === "B")) {
+          localStorage.setItem(key, fromUrl.toUpperCase());
+          return fromUrl.toUpperCase();
+        }
+        var saved = localStorage.getItem(key);
+        if (saved === "A" || saved === "B") return saved;
+        var assigned = Math.random() < 0.5 ? "A" : "B";
+        localStorage.setItem(key, assigned);
+        return assigned;
+      } catch (e) {
+        return "A";
+      }
+    }
+
+    var v = variants[pickVariant()] || variants.A;
+    var outcome = document.getElementById("pricing-outcome-copy");
+    var subBestFor = document.getElementById("pricing-sub-bestfor");
+    var oneoffBestFor = document.getElementById("pricing-oneoff-bestfor");
+    var anchor = document.getElementById("pricing-anchor-copy");
+    if (outcome) outcome.textContent = v.outcome;
+    if (subBestFor) subBestFor.textContent = v.subBestFor;
+    if (oneoffBestFor) oneoffBestFor.textContent = v.oneoffBestFor;
+    if (anchor) anchor.textContent = v.anchor;
   })();
   (function() {
     var CAPTIONS_PRICES = {{ captions_prices|tojson }};

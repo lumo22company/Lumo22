@@ -465,20 +465,36 @@ class CaptionGenerator:
         has_ig_fb = "instagram" in platform_raw or "facebook" in platform_raw
         if include_stories and has_ig_fb:
             if align_stories:
-                stories_md = self._generate_stories_aligned(intake, result, is_subscription_variety=bool(previous_pack_themes))
+                stories_md = self._generate_stories_aligned(
+                    intake,
+                    result,
+                    is_subscription_variety=bool(previous_pack_themes),
+                    pack_start_date=start_str,
+                )
             else:
-                stories_md = self._generate_stories(intake, is_subscription_variety=bool(previous_pack_themes))
+                stories_md = self._generate_stories(
+                    intake,
+                    is_subscription_variety=bool(previous_pack_themes),
+                    pack_start_date=start_str,
+                )
             if stories_md:
                 result = result + "\n\n" + stories_md
         return result
 
-    def _generate_stories(self, intake: Dict[str, Any], is_subscription_variety: bool = False) -> str:
+    def _generate_stories(
+        self,
+        intake: Dict[str, Any],
+        is_subscription_variety: bool = False,
+        pack_start_date: Optional[str] = None,
+    ) -> str:
         """Generate 30 one-line Story prompts for Instagram/Facebook."""
         lang = (intake.get("caption_language") or "English (UK)").strip()
         lang_instruction = LANGUAGE_INSTRUCTIONS.get(lang, LANGUAGE_INSTRUCTIONS["English (UK)"])
-        business = (intake.get("business_name") or "").strip() or "Client"
+        n = _normalize_intake_case
+        business = n((intake.get("business_name") or "").strip(), sentence_case=False) or "Client"
         month_year = datetime.utcnow().strftime("%B %Y")
-        date_context = _build_date_context(datetime.utcnow().strftime("%Y-%m-%d"))
+        start_str = (pack_start_date or "").strip() or datetime.utcnow().strftime("%Y-%m-%d")
+        date_context = _build_date_context(start_str)
         date_block = ""
         if date_context:
             date_block = f"""
@@ -491,6 +507,11 @@ You may reference the actual day/date where it helps (e.g. Monday tip, weekend p
         variety_note = ""
         if is_subscription_variety:
             variety_note = "\n\nThis client receives packs monthly; vary story types and angles (polls, BTS, tips, testimonials, etc.) so this month feels fresh and not repetitive with previous packs.\n"
+        brand_rule = f"""
+CRITICAL — Use ONLY this business name when naming the brand in Idea or Suggested wording: "{business}".
+Do not invent, substitute, or use example/tagline business names from training (e.g. do not replace the real name with a slogan or another company). You may use "we" / "us" / "our" where natural; if the business name appears, it must be exactly "{business}".
+Ground every suggestion in their intake (offer, audience, goal)—not generic industries from examples."""
+
         prompt = f"""Generate 30 Story prompts for Instagram/Facebook Stories. One per day (Day 1–30). Each day must have exactly three parts: Idea, Suggested wording, Story hashtags.
 
 {lang_instruction}
@@ -502,6 +523,7 @@ INTAKE:
 - Goal: {intake.get('goal', '')}
 {date_block}
 {variety_note}
+{brand_rule}
 
 For each day provide: (1) Idea — a short description of the Story concept (5–15 words). (2) Suggested wording: — one sentence or short suggestion for what to say or show (do not wrap in quotation marks). (3) Story hashtags: — 3–5 relevant hashtags. Mix types: behind-the-scenes, tips, questions, polls, product highlights, testimonials, process reveals, day-in-the-life. Variety is key.
 
@@ -518,7 +540,10 @@ Output format — markdown only, one line per day with all three parts on that l
 Use the exact labels "Idea:", "Suggested wording:", and "Story hashtags:" on every line. Do not put quotation marks around the Suggested wording content. Output the complete list only. No preamble."""
         try:
             content = chat_completion(
-                system="You write concise, actionable social media content prompts with Idea, Suggested wording, and Story hashtags for each day.",
+                system=(
+                    "You write concise Story prompts (Idea, Suggested wording, Story hashtags). "
+                    "Always respect INTAKE exactly: use only the client's real business name and offer—never fictional or example brands."
+                ),
                 user=prompt,
                 temperature=0.7,
                 max_tokens=3500,
@@ -528,7 +553,13 @@ Use the exact labels "Idea:", "Suggested wording:", and "Story hashtags:" on eve
             print(f"[CaptionGenerator] Stories generation failed: {e}")
             return ""
 
-    def _generate_stories_aligned(self, intake: Dict[str, Any], captions_md: str, is_subscription_variety: bool = False) -> str:
+    def _generate_stories_aligned(
+        self,
+        intake: Dict[str, Any],
+        captions_md: str,
+        is_subscription_variety: bool = False,
+        pack_start_date: Optional[str] = None,
+    ) -> str:
         """Generate 30 Story prompts with explicit day-by-day alignment to captions."""
         # Extract "## Day N — ..." headings to summarise each day's caption.
         day_summaries: Dict[int, str] = {}
@@ -552,9 +583,11 @@ Use the exact labels "Idea:", "Suggested wording:", and "Story hashtags:" on eve
 
         lang = (intake.get("caption_language") or "English (UK)").strip()
         lang_instruction = LANGUAGE_INSTRUCTIONS.get(lang, LANGUAGE_INSTRUCTIONS["English (UK)"])
-        business = (intake.get("business_name") or "").strip() or "Client"
+        n = _normalize_intake_case
+        business = n((intake.get("business_name") or "").strip(), sentence_case=False) or "Client"
         month_year = datetime.utcnow().strftime("%B %Y")
-        date_context = _build_date_context(datetime.utcnow().strftime("%Y-%m-%d"))
+        start_str = (pack_start_date or "").strip() or datetime.utcnow().strftime("%Y-%m-%d")
+        date_context = _build_date_context(start_str)
         date_block = ""
         if date_context:
             date_block = f"""
@@ -568,6 +601,11 @@ You may reference the actual day/date where it helps. Use only when natural.
         if is_subscription_variety:
             variety_note = "\n\nThis client receives packs monthly; vary story types and angles (polls, BTS, tips, testimonials, etc.) so this month feels fresh and not repetitive with previous packs.\n"
 
+        brand_rule = f"""
+CRITICAL — Use ONLY this business name when naming the brand in Idea or Suggested wording: "{business}".
+Do not invent, substitute, or use example/tagline business names from training. If the business name appears, it must be exactly "{business}".
+Ground every suggestion in their intake and that day's caption theme—not generic industries from examples."""
+
         prompt = f"""Generate 30 Story prompts for Instagram/Facebook Stories. One per day (Day 1–30). Each day must have exactly three parts: Idea, Suggested wording, Story hashtags.
 
 {lang_instruction}
@@ -579,6 +617,7 @@ INTAKE:
 - Goal: {intake.get('goal', '')}
 {date_block}
 {variety_note}
+{brand_rule}
 
 Here is the theme or focus for each day's main caption:
 {summaries_block}
@@ -601,7 +640,10 @@ Use the exact labels "Idea:", "Suggested wording:", and "Story hashtags:" on eve
 
         try:
             content = chat_completion(
-                system="You write concise, actionable social media content prompts that align with an existing captions plan. Each day must include Idea, Suggested wording, and Story hashtags.",
+                system=(
+                    "You write concise Story prompts aligned with an existing captions plan. "
+                    "Each day: Idea, Suggested wording, Story hashtags. Use only the client's real business name from INTAKE—never fictional brands."
+                ),
                 user=prompt,
                 temperature=0.7,
                 max_tokens=3500,

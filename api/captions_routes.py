@@ -409,7 +409,10 @@ def captions_webhook_test():
     Run the same steps as the Stripe webhook handler (create order + send intake email).
     Open in browser to see the REAL error on Railway: https://lumo-22-production.up.railway.app/api/captions-webhook-test
     Returns JSON: {"ok": true} or {"ok": false, "error": "the actual error message"}.
+    Disabled in production — unauthenticated GET could create real orders and send real email (spam / abuse).
     """
+    if Config.is_production():
+        return jsonify({"ok": False, "error": "Not available."}), 404
     test_email = request.args.get("email", "test@example.com").strip() or "test@example.com"
     session = {
         "id": "cs_test_diagnostic",
@@ -734,7 +737,9 @@ def _run_generation_and_deliver(order_id: str):
             file_content = captions_md
         extra_attachments = []
         if intake.get("include_stories"):
-            stories_pdf = build_stories_pdf(captions_md, logo_path=logo_path)
+            stories_pdf = build_stories_pdf(
+                captions_md, logo_path=logo_path, pack_start_date=pack_start_date
+            )
             if stories_pdf:
                 extra_attachments.append({
                     "filename": "30_Days_Story_Ideas.pdf",
@@ -847,6 +852,12 @@ def captions_deliver_test():
     import threading
     from config import Config
     test_secret = (Config.CAPTIONS_DELIVER_TEST_SECRET or "").strip()
+    # In production, always require a shared secret so token/session_id alone cannot trigger AI spend.
+    if Config.is_production() and not test_secret:
+        return jsonify({
+            "ok": False,
+            "error": "Set CAPTIONS_DELIVER_TEST_SECRET in environment to use this endpoint in production.",
+        }), 403
     if test_secret:
         provided = (request.args.get("secret") or "").strip()
         if not provided or provided != test_secret:
@@ -1200,7 +1211,9 @@ def captions_download():
             try:
                 from services.caption_pdf import build_stories_pdf, get_logo_path
                 logo_path = get_logo_path()
-                pdf_bytes = build_stories_pdf(captions_md, logo_path=logo_path)
+                pdf_bytes = build_stories_pdf(
+                    captions_md, logo_path=logo_path, pack_start_date=pack_start_for_pdf
+                )
             except Exception as e:
                 return jsonify({"error": "Could not build Stories PDF: {}".format(str(e))}), 500
         if not pdf_bytes:
@@ -1217,7 +1230,9 @@ def captions_download():
     try:
         from services.caption_pdf import build_caption_pdf, get_logo_path
         logo_path = get_logo_path()
-        pdf_bytes = build_caption_pdf(captions_md, logo_path=logo_path)
+        pdf_bytes = build_caption_pdf(
+            captions_md, logo_path=logo_path, pack_start_date=pack_start_for_pdf
+        )
     except Exception as e:
         return jsonify({"error": "Could not build PDF: {}".format(str(e))}), 500
     filename = f"{name_label}_Captions_{date_str}.pdf"

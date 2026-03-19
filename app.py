@@ -114,6 +114,19 @@ app.register_blueprint(captions_bp)
 app.register_blueprint(auth_bp)
 app.register_blueprint(billing_bp)
 
+# Fail fast on mis-set AI_PROVIDER (e.g. API key in Railway variable) and enforce prod API keys.
+# Runs under Gunicorn/Railway, not only `python app.py`.
+try:
+    Config.validate_ai_provider_env()
+except ValueError as _ai_cfg_err:
+    import sys
+    print(f"[Config] {_ai_cfg_err}", file=sys.stderr)
+    raise SystemExit(1) from _ai_cfg_err
+
+# Optional AI_VENDOR=anthropic|openai (plain text) to double-check Railway; startup log for deploy visibility
+Config.validate_ai_vendor_optional()
+Config.log_ai_provider_summary()
+
 # Captions pre-pack reminder: run daily at 9am UTC (no separate cron service needed)
 def _start_captions_reminder_scheduler():
     # Only start in production (avoids apscheduler import in dev, no need locally)

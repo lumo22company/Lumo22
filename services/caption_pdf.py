@@ -360,25 +360,33 @@ def _story_idea_type_label(idea_text: str) -> str:
 
 
 def _parse_stories_cover_from_md(md: str, captions_cover: Dict) -> Dict:
-    """Extract business and month_year from Stories header; merge with captions cover for full metadata."""
+    """Merge Stories section header with captions cover. Business name always comes from INTAKE SUMMARY
+    (captions_cover)—never from the AI's '## 30 Story Ideas | …' line, which can hallucinate a wrong brand."""
     cover = dict(captions_cover)
     cover["title"] = "30 Days of Story Ideas"
-    # Stories section may have "## 30 Story Ideas | Business | Month Year"
+    # Stories section may have "## 30 Story Ideas | Business | Month Year" — use month_year only if present
     for line in md.split("\n"):
         s = line.strip()
         if "## 30 Story Ideas" in s or "## 30 story ideas" in s.lower():
             if "|" in s:
                 parts = [p.strip() for p in s.split("|")]
-                if len(parts) >= 2:
-                    cover["business"] = parts[1].strip()
                 if len(parts) >= 3:
                     cover["month_year"] = parts[2].strip()
             break
     return cover
 
 
-def _make_stories_doc_flowables(cover: Dict, days: List, normal_style, heading_style, tight_style, logo_path: Optional[str] = None) -> list:
-    """Story Ideas PDF: same layout as captions — black day headers, content in white boxes. Each day = one idea."""
+def _make_stories_doc_flowables(
+    cover: Dict,
+    days: List,
+    normal_style,
+    heading_style,
+    tight_style,
+    logo_path: Optional[str] = None,
+    pack_start_date: Optional[str] = None,
+) -> list:
+    """Story Ideas PDF: same layout as captions — black day headers, content in white boxes. Each day = one idea.
+    pack_start_date: YYYY-MM-DD so headers match captions (e.g. Day 1 — Mon 18 Mar 2025 — Behind the scenes)."""
     from reportlab.platypus import Paragraph, Spacer, Table, TableStyle, KeepTogether
     from reportlab.lib import colors
     from reportlab.lib.units import mm
@@ -409,7 +417,18 @@ def _make_stories_doc_flowables(cover: Dict, days: List, normal_style, heading_s
                 base_prompt = prompt[:hash_idx].strip()
 
         type_label = _story_idea_type_label(base_prompt)
-        header_text = f"{day_heading} — {type_label}"
+        day_num_for_date = None
+        m_day = re.match(r"^Day\s+(\d+)\s*$", (day_heading or "").strip(), re.I)
+        if m_day:
+            try:
+                day_num_for_date = int(m_day.group(1))
+            except ValueError:
+                day_num_for_date = None
+        date_str = _date_for_day(pack_start_date, day_num_for_date) if day_num_for_date else ""
+        if date_str:
+            header_text = f"{day_heading} — {date_str} — {type_label}"
+        else:
+            header_text = f"{day_heading} — {type_label}"
         day_para = Paragraph(f'<font color="#ffffff">{_escape(header_text.upper())}</font>', day_hdr_style)
         hdr_data = [[day_para, ""]]
         hdr_t = Table(hdr_data, colWidths=[25 * mm, 155 * mm])
@@ -538,8 +557,13 @@ def _build_stories_header_flowables(cover: Dict, logo_path: Optional[str]) -> li
     return [tbl]
 
 
-def build_stories_pdf(captions_md: str, logo_path: Optional[str] = None) -> Optional[bytes]:
-    """Build a separate PDF for 30 Days of Story Ideas, matching the captions design. Returns None if no stories in md."""
+def build_stories_pdf(
+    captions_md: str,
+    logo_path: Optional[str] = None,
+    pack_start_date: Optional[str] = None,
+) -> Optional[bytes]:
+    """Build a separate PDF for 30 Days of Story Ideas, matching the captions design. Returns None if no stories in md.
+    pack_start_date: YYYY-MM-DD — same as captions PDF so each day header shows the calendar date."""
     stories_days = _parse_stories_section(captions_md)
     if not stories_days:
         return None
@@ -571,7 +595,9 @@ def build_stories_pdf(captions_md: str, logo_path: Optional[str] = None) -> Opti
     tight = ParagraphStyle("Tight", parent=normal, spaceAfter=1)
 
     logo_path = logo_path or get_logo_path()
-    story_flowables = _make_stories_doc_flowables(cover, stories_days, normal, heading, tight, logo_path)
+    story_flowables = _make_stories_doc_flowables(
+        cover, stories_days, normal, heading, tight, logo_path, pack_start_date=pack_start_date
+    )
     doc.build(story_flowables)
     try:
         from pypdf import PdfReader
@@ -599,7 +625,9 @@ def build_stories_pdf(captions_md: str, logo_path: Optional[str] = None) -> Opti
             canvas.restoreState()
         return _draw
 
-    story_flowables2 = _make_stories_doc_flowables(cover, stories_days, normal, heading, tight, logo_path)
+    story_flowables2 = _make_stories_doc_flowables(
+        cover, stories_days, normal, heading, tight, logo_path, pack_start_date=pack_start_date
+    )
     doc2.build(story_flowables2, onFirstPage=make_footer(n_total), onLaterPages=make_footer(n_total))
     return buffer2.getvalue()
 

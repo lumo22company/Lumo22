@@ -852,6 +852,8 @@ Unsubscribe from upgrade reminders: {unsubscribe_url}
         html_content: Optional[str] = None,
     ) -> tuple:
         """Send email with one or more attachments. Returns (True, None) on success, (False, error_message) on failure.
+        Attachments appear in the email in this order: primary (filename/file_content*) first, then each
+        extra_attachments entry in list order (SendGrid prepends internally; we reverse so this order is preserved).
         extra_attachments: optional list of {"filename": str, "content": bytes, "mime_type": str} for additional files.
         html_content: optional explicit HTML body; if not set, body is converted via _branded_html_email."""
         to_email = _sanitize_email_value(to_email or "")
@@ -908,7 +910,9 @@ Unsubscribe from upgrade reminders: {unsubscribe_url}
                     file_type=FileType(mt),
                 )
                 attachment_list.append(att)
-            message.attachment = attachment_list
+            # SendGrid Mail.add_attachment prepends (insert index 0), so assigning [A, B] yields [B, A] in the API payload.
+            # Reverse so logical order (primary first, then extra_attachments in order) is preserved in the sent email.
+            message.attachment = list(reversed(attachment_list))
             response = self.sendgrid_client.send(message)
             ok = response.status_code in [200, 201, 202]
             if ok:

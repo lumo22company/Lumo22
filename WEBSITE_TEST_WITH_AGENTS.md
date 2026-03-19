@@ -24,6 +24,21 @@ Use the Cursor rules from [agency-agents](https://github.com/msitarzewski/agency
 | **@ux-researcher** | User testing, behaviour, research. Use for UX and flow analysis. |
 | **@api-tester** | API validation, integration testing. Use if you want to test backend/API behaviour. |
 
+### Privacy & security (from [agency-agents](https://github.com/msitarzewski/agency-agents))
+
+Add these rule files to `.cursor/rules/` (copy from the repo paths below, using Cursor’s rule format — see the agency README), then `@` them in Chat:
+
+| Agent / rule file (in repo) | Use for |
+|-----------------------------|---------|
+| **Security Engineer** — `engineering/engineering-security-engineer.md` | Threat model, OWASP-style code review, auth/session/secrets, headers, injection/XSS/CSRF surfaces, webhook hardening. |
+| **Threat Detection Engineer** — `engineering/engineering-threat-detection-engineer.md` | Logging, anomaly patterns, abuse/detection angle on public endpoints and cron. |
+| **Compliance Auditor** — `specialized/compliance-auditor.md` | Privacy policy vs actual data collection, retention, lawful basis wording (assistive only — not legal advice). |
+| **@reality-checker** + **@api-tester** | Already useful for `SECRET_KEY`, security headers, and API/auth behaviour (see `AGENT_TEST_RUN.md`). |
+
+**Important:** Agency agents are **assistive reviews**, not a penetration test, SOC 2 audit, or legal sign-off. Combine with tools (e.g. `pip-audit` / Dependabot, optional OWASP ZAP on staging) and professional review for high-stakes deployments.
+
+**Lumo-focused runbook:** See **`PRIVACY_SECURITY_AGENT_RUN.md`** for copy-paste prompts and app-specific checklist items (Supabase, Stripe webhooks, intake PII, sessions).
+
 ---
 
 ## 3. Suggested workflow for a full website test + analysis
@@ -82,10 +97,13 @@ To get one consolidated analysis:
 2. Run **Step B** (Evidence Collector) and add a “Test plan & evidence” section.
 3. Run **Step C** (Accessibility Auditor) and add an “Accessibility” section.
 4. Optionally run **Step D** and add “Front-end” and “UX” sections.
+5. Optionally run **Privacy & security** (see §2 above and `PRIVACY_SECURITY_AGENT_RUN.md`) and add a “Security & privacy” section.
 
 You can then say in a final message:
 
 *"Combine the outputs from the Reality Checker, Evidence Collector, and Accessibility Auditor into one WEBSITE_TEST_ANALYSIS.md with sections: Executive summary, Production readiness, Test plan & evidence, Accessibility, and Recommended next steps."*
+
+(Add **Security & privacy** to that list if you ran those agents.)
 
 ---
 
@@ -100,5 +118,6 @@ You can then say in a final message:
 ## 6. Reference
 
 - Manual checklist: `MANUAL_TEST_CHECKLIST.md`
-- Agent rules: `.cursor/rules/*.mdc`
+- Privacy & security agent prompts + Lumo checklist: `PRIVACY_SECURITY_AGENT_RUN.md`
+- Agent rules: `.cursor/rules/*.mdc` (install agents from the agency repo into this folder)
 - Agency repo: https://github.com/msitarzewski/agency-agents
