@@ -290,7 +290,7 @@
 
         <label for="platform_habits" style="margin-top: 1.25rem; display: block;">Any platform-specific habits?</label>
         <input type="text" id="platform_habits" name="platform_habits" placeholder="e.g. shorter on Instagram, longer on LinkedIn (optional)" value="{{ existing_intake.get('platform_habits', '') }}">
-        <div id="stories-addon-wrap" class="intake-other-wrap" style="margin-top: 1rem; padding: 1rem; background: rgba(255,255,255,0.5); border-radius: 8px; border: 1px solid #ddd; {% if not stories_paid %}display: none;{% endif %}">
+        <div id="stories-addon-wrap" class="intake-other-wrap" data-stories-paid="{{ 'true' if stories_paid else 'false' }}" style="margin-top: 1rem; padding: 1rem; background: rgba(255,255,255,0.5); border-radius: 8px; border: 1px solid #ddd; {% if not stories_paid %}display: none;{% endif %}">
           <p class="field-helper" style="margin: 0 0 0.5rem; font-weight: 600;">{% if stories_paid %}30 Days Story Ideas included with your order.{% else %}Using Instagram &amp; Facebook? Add Story Ideas—optionally align each day's Story to your feed caption (same theme, same day) or leave unaligned so they're different.{% endif %}</p>
           <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; margin-bottom: 0.25rem;">
             <input type="checkbox" id="include_stories" name="include_stories" {% if stories_paid or (not is_upgrade_flow and existing_intake.get('include_stories')) %}checked{% endif %} {% if stories_paid %}disabled{% endif %} style="width: auto;">
@@ -857,13 +857,9 @@
       function toggleStories() {
         var wrap = document.getElementById('stories-addon-wrap');
         if (!wrap) return;
-        var cb = document.getElementById('include_stories');
-        var storiesPaid = cb && cb.disabled;
-        if (storiesPaid) { wrap.style.display = 'block'; return; }
-        var platformVal = (platformEl && platformEl.value || '').trim();
-        var hasIGFB = platformVal.toLowerCase().indexOf('instagram') !== -1 || platformVal.toLowerCase().indexOf('facebook') !== -1;
-        wrap.style.display = hasIGFB ? 'block' : 'none';
-        if (!hasIGFB && cb) cb.checked = false;
+        var storiesPaidOnPreviousPage = wrap.getAttribute('data-stories-paid') === 'true';
+        if (!storiesPaidOnPreviousPage) { wrap.style.display = 'none'; return; }
+        wrap.style.display = 'block';
       }
       toggleStories();
       btns.forEach(function(btn) { btn.addEventListener('click', toggleStories); });
@@ -876,16 +872,10 @@
       var wrap = document.getElementById('stories-addon-wrap');
       var platformSelect = document.getElementById('platform');
       if (!wrap || !platformSelect || platformSelect.tagName !== 'SELECT') return;
-      function hasInstagramFacebook(val) {
-        var s = (val || '').toLowerCase();
-        return s.indexOf('instagram') !== -1 || s.indexOf('facebook') !== -1;
-      }
       function toggleStories() {
-        var cb = document.getElementById('include_stories');
-        if (cb && cb.disabled) { wrap.style.display = 'block'; return; }
-        var hasIGFB = hasInstagramFacebook(platformSelect.value);
-        wrap.style.display = hasIGFB ? 'block' : 'none';
-        if (!hasIGFB && cb) cb.checked = false;
+        var storiesPaidOnPreviousPage = wrap.getAttribute('data-stories-paid') === 'true';
+        if (!storiesPaidOnPreviousPage) { wrap.style.display = 'none'; return; }
+        wrap.style.display = 'block';
       }
       platformSelect.addEventListener('change', toggleStories);
       toggleStories();
