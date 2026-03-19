@@ -212,7 +212,7 @@
         <div class="account-upgrade-form" style="max-width: 480px;">
           <div style="margin-bottom: 1.25rem;">
             <label class="account-settings-label" style="display: block; font-size: 0.95rem; font-weight: 600; color: #fff; margin-bottom: 0.5rem;">Base subscription on</label>
-            <select id="upgrade-prefill-select" class="account-upgrade-select" style="width: 100%; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: #ffffff; color: #1a1a1a; font-size: 1rem;">
+            <select id="upgrade-prefill-select" class="account-upgrade-select account-upgrade-select--styled" style="width: 100%; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); color: #1a1a1a; font-size: 1rem;">
               {% for o in one_off_orders %}
               {% set biz = (o.get('intake') or {}).get('business_name', '')|trim %}
               {% set label = (biz|title) if biz else (o.created_at[:10] if o.created_at else 'Pack') %}
@@ -222,7 +222,7 @@
             </div>
           <div style="margin-bottom: 1.25rem;">
             <label for="upgrade-platforms" class="account-settings-label" style="display: block; font-size: 0.95rem; font-weight: 600; color: #fff; margin-bottom: 0.5rem;">Number of platforms</label>
-            <select id="upgrade-platforms" class="account-upgrade-select" style="width: 100%; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: #ffffff; color: #1a1a1a; font-size: 1rem;">
+            <select id="upgrade-platforms" class="account-upgrade-select account-upgrade-select--styled" style="width: 100%; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); color: #1a1a1a; font-size: 1rem;">
               <option value="1">1 platform</option>
               <option value="2">2 platforms — +£19/mo</option>
               <option value="3">3 platforms — +£38/mo</option>
