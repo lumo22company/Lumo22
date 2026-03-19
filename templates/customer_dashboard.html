@@ -296,6 +296,17 @@
           for (var i = 0; i < cbs.length; i++) arr.push(cbs[i].value);
           return arr.length ? arr.join(', ') : null;
         }
+        /** Story Ideas only apply to Instagram & Facebook; hide row and uncheck when IG&FB not selected. */
+        function syncUpgradeStoriesAddon(prefillIncludeStories) {
+          if (!storiesWrap || !storiesCb) return;
+          var igfb = hasInstaFb();
+          storiesWrap.style.display = igfb ? 'block' : 'none';
+          if (!igfb) {
+            storiesCb.checked = false;
+          } else if (typeof prefillIncludeStories === 'boolean') {
+            storiesCb.checked = prefillIncludeStories;
+          }
+        }
         function syncFromPrefill() {
           if (!prefillSelect) return;
           var opt = prefillSelect.options[prefillSelect.selectedIndex];
@@ -309,15 +320,13 @@
               if (cb.value === v) cb.checked = true;
             });
           });
-          if (opt.dataset.stories === '1') storiesCb.checked = true; else storiesCb.checked = false;
           currency = (opt.dataset.currency || 'gbp').toLowerCase();
           if (!prices[currency]) currency = 'gbp';
           currencyBtns.forEach(function(b) {
             b.style.borderColor = b.dataset.currency === currency ? 'var(--lum-gold)' : 'rgba(255,255,255,0.3)';
           });
+          syncUpgradeStoriesAddon(opt.dataset.stories === '1');
           updatePrice();
-          storiesWrap.style.display = hasInstaFb() ? 'block' : 'none';
-          if (!hasInstaFb()) storiesCb.checked = false;
         }
         function updateUpgradePlatformLabels() {
           var p = prices[currency] || prices.gbp;
@@ -376,6 +385,7 @@
         if (prefillSelect) prefillSelect.addEventListener('change', syncFromPrefill);
         if (platformsSelect) platformsSelect.addEventListener('change', function() {
           document.querySelectorAll('.upgrade-which-cb').forEach(function(cb) { cb.checked = false; });
+          syncUpgradeStoriesAddon();
           updatePrice();
         });
         document.querySelectorAll('.upgrade-which-cb').forEach(function(cb) {
@@ -383,8 +393,7 @@
             var n = parseInt(platformsSelect.value, 10) || 1;
             var checked = document.querySelectorAll('.upgrade-which-cb:checked');
             if (checked.length > n && this.checked) this.checked = false;
-            storiesWrap.style.display = hasInstaFb() ? 'block' : 'none';
-            if (!hasInstaFb() && storiesCb) storiesCb.checked = false;
+            syncUpgradeStoriesAddon();
             updatePrice();
           });
         });
