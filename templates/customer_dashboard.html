@@ -352,8 +352,9 @@
               editFormFirstWrap.style.display = 'block';
               if (editFormFirstLink) {
                 var upgradeStories = (storiesCb && storiesCb.checked) ? '1' : '0';
-                var params = 't=' + encodeURIComponent(copyFrom) + '&return_url=' + encodeURIComponent('/account/upgrade') + '&upgrade_stories=' + upgradeStories + '&platforms=' + encodeURIComponent(String(n));
+                var params = 't=' + encodeURIComponent(copyFrom) + '&return_url=' + encodeURIComponent('/account/upgrade') + '&upgrade_stories=' + upgradeStories + '&platforms=' + encodeURIComponent(String(n)) + '&currency=' + encodeURIComponent(currency);
                 if (selected) params += '&selected=' + encodeURIComponent(selected);
+                if (getPackToday) params += '&get_pack_now=1';
                 editFormFirstLink.href = '/captions-intake?' + params;
               }
             } else {

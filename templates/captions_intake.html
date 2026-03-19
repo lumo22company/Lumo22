@@ -656,6 +656,19 @@
           if (result.status === 200 && result.json.success) {
             var returnUrl = (document.body.getAttribute('data-return-url') || '').trim();
             if (returnUrl) {
+              if (returnUrl.indexOf('/account/upgrade') !== -1) {
+                var params = new URLSearchParams(window.location.search || '');
+                var token = (params.get('t') || '').trim();
+                if (token) {
+                  var q = 'copy_from=' + encodeURIComponent(token) + '&platforms=' + encodeURIComponent(params.get('platforms') || '1') + '&currency=' + encodeURIComponent(params.get('currency') || 'gbp');
+                  var sel = (params.get('selected') || '').trim();
+                  if (sel) q += '&selected=' + encodeURIComponent(sel);
+                  if (params.get('upgrade_stories') === '1') q += '&stories=1';
+                  if (params.get('get_pack_now') === '1') q += '&get_pack_now=1';
+                  window.location.href = '/api/captions-checkout-subscription?' + q;
+                  return;
+                }
+              }
               window.location.href = returnUrl;
               return;
             }
@@ -1080,6 +1093,19 @@
           if (result.status === 200 && result.json.success) {
             var returnUrl = (document.body.getAttribute('data-return-url') || '').trim();
             if (returnUrl) {
+              if (returnUrl.indexOf('/account/upgrade') !== -1) {
+                var params = new URLSearchParams(window.location.search || '');
+                var token = (params.get('t') || '').trim();
+                if (token) {
+                  var q = 'copy_from=' + encodeURIComponent(token) + '&platforms=' + encodeURIComponent(params.get('platforms') || '1') + '&currency=' + encodeURIComponent(params.get('currency') || 'gbp');
+                  var sel = (params.get('selected') || '').trim();
+                  if (sel) q += '&selected=' + encodeURIComponent(sel);
+                  if (params.get('upgrade_stories') === '1') q += '&stories=1';
+                  if (params.get('get_pack_now') === '1') q += '&get_pack_now=1';
+                  window.location.href = '/api/captions-checkout-subscription?' + q;
+                  return;
+                }
+              }
               window.location.href = returnUrl;
               return;
             }
