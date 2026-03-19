@@ -213,6 +213,7 @@
           <div style="margin-bottom: 1.25rem;">
             <label class="account-settings-label" style="display: block; font-size: 0.95rem; font-weight: 600; color: #fff; margin-bottom: 0.5rem;">Base subscription on</label>
             <select id="upgrade-prefill-select" class="account-upgrade-select account-upgrade-select--styled" style="width: 100%; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); color: #1a1a1a; font-size: 1rem;">
+              <option value="" selected disabled>Please select</option>
               {% for o in one_off_orders %}
               {% set biz = (o.get('intake') or {}).get('business_name', '')|trim %}
               {% set label = (biz|title) if biz else (o.created_at[:10] if o.created_at else 'Pack') %}
@@ -250,7 +251,7 @@
             <p style="font-size: 0.85rem; color: rgba(255,255,255,0.8); margin: 0.35rem 0 0 1.75rem; line-height: 1.4;">You'll be charged at checkout and we'll send your first subscription pack right away. Leave unchecked to be charged when your first pack is ready (30 days after your one-off delivery date).</p>
             <div id="upgrade-edit-form-first-wrap" style="display: none; margin-top: 1rem; margin-left: 1.75rem; padding: 0.75rem 1rem; background: rgba(255,255,255,0.06); border-radius: 8px; border: 1px solid rgba(255,255,255,0.15);">
               <p style="font-size: 0.95rem; font-weight: 600; color: #fff; margin: 0 0 0.35rem;">Do you need to update your form?</p>
-              <p style="font-size: 0.9rem; color: rgba(255,255,255,0.9); margin: 0 0 0.5rem;">Edit your details or tell us about an event coming up—we'll use this for your first pack. After you submit, you'll come back here to complete checkout.</p>
+              <p style="font-size: 0.9rem; color: rgba(255,255,255,0.9); margin: 0 0 0.5rem;">Update your details or tell us about an event coming up—we'll use this for your first pack. After you submit the form, we'll take you to checkout to complete your subscription.</p>
               <a href="#" id="upgrade-edit-form-first-link" class="account-billing-portal-link account-btn-swipe-light" style="font-size: 0.85rem;">Edit form</a>
             </div>
           </div>
@@ -310,7 +311,18 @@
         function syncFromPrefill() {
           if (!prefillSelect) return;
           var opt = prefillSelect.options[prefillSelect.selectedIndex];
-          if (!opt) return;
+          if (!opt || !(prefillSelect.value || '').trim()) {
+            platformsSelect.value = '1';
+            document.querySelectorAll('.upgrade-which-cb').forEach(function(cb) { cb.checked = false; });
+            currency = 'gbp';
+            if (!prices[currency]) currency = 'gbp';
+            currencyBtns.forEach(function(b) {
+              b.style.borderColor = b.dataset.currency === currency ? 'var(--lum-gold)' : 'rgba(255,255,255,0.3)';
+            });
+            syncUpgradeStoriesAddon();
+            updatePrice();
+            return;
+          }
           var n = Math.max(1, Math.min(4, parseInt(opt.dataset.platforms, 10) || 1));
           platformsSelect.value = String(n);
           document.querySelectorAll('.upgrade-which-cb').forEach(function(cb) { cb.checked = false; });
@@ -353,8 +365,13 @@
           if (stories) q += '&stories=1';
           if (getPackToday) q += '&get_pack_now=1';
           if (checkoutBtn) {
-            checkoutBtn.href = '/api/captions-checkout-subscription?' + q;
-            checkoutBtn.dataset.checkoutUrl = '/api/captions-checkout-subscription?' + q;
+            if (copyFrom) {
+              checkoutBtn.href = '/api/captions-checkout-subscription?' + q;
+              checkoutBtn.dataset.checkoutUrl = '/api/captions-checkout-subscription?' + q;
+            } else {
+              checkoutBtn.href = '#';
+              checkoutBtn.dataset.checkoutUrl = '';
+            }
           }
           if (editFormFirstWrap) {
             if (getPackToday && copyFrom) {
@@ -377,6 +394,7 @@
           }
         }
         function validate() {
+          if (!prefillSelect || !(prefillSelect.value || '').trim()) return false;
           var n = parseInt(platformsSelect.value, 10) || 1;
           var selected = getSelected();
           if (n > 1 && (!selected || selected.split(',').length !== n)) return false;
@@ -408,6 +426,12 @@
         });
         if (checkoutBtn) {
           checkoutBtn.addEventListener('click', function(e) {
+            if (!prefillSelect || !(prefillSelect.value || '').trim()) {
+              e.preventDefault();
+              e.stopImmediatePropagation();
+              alert('Please select which one-off pack to base your subscription on.');
+              return false;
+            }
             if (!validate()) {
               e.preventDefault();
               e.stopImmediatePropagation();
