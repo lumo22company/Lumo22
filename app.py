@@ -302,13 +302,31 @@ def captions_intake_page():
             return redirect(url_for('account_page'))
     return_url = request.args.get("return_url", "").strip()
     is_upgrade_flow = bool(return_url and "/account/upgrade" in return_url)
-    # Upgrade flow: if they unchecked Story Ideas on the upgrade page, intake form should reflect that (no "included", align unchecked)
-    if is_oneoff and request.args.get("upgrade_stories") == "0":
-        stories_paid = False
+    # Upgrade flow: Story Ideas selection on the upgrade page overrides the one-off's value so the form matches what they're subscribing to
+    if is_upgrade_flow and token:
+        upgrade_stories = request.args.get("upgrade_stories", "").strip()
+        if upgrade_stories == "0":
+            stories_paid = False
+        elif upgrade_stories == "1":
+            stories_paid = True
+    # Upgrade flow: if they chose platform count/selection on the upgrade page, show that on the form (not the one-off's old values)
+    upgrade_selected = (request.args.get("selected", "").strip() if is_upgrade_flow else "") or ""
+    if is_upgrade_flow and token:
+        upgrade_platforms = request.args.get("platforms", "").strip()
+        if upgrade_platforms:
+            try:
+                n = max(1, min(4, int(upgrade_platforms)))
+                platforms_count = n
+                if request.args.get("selected", "").strip():
+                    selected_platforms = request.args.get("selected", "").strip()
+            except ValueError:
+                pass
     # Prefill platform from order (chosen at checkout) when they haven't saved intake yet
     prefilled_platform = (existing_intake.get("platform") or "").strip() if existing_intake else ""
     if not prefilled_platform and selected_platforms:
         prefilled_platform = selected_platforms
+    if is_upgrade_flow and upgrade_selected:
+        prefilled_platform = upgrade_selected
     # Normalise legacy "Instagram" / "Facebook" to grouped "Instagram & Facebook"
     if prefilled_platform in ("Instagram", "Facebook"):
         prefilled_platform = "Instagram & Facebook"

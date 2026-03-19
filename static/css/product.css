@@ -3219,9 +3219,10 @@
   position: relative;
   z-index: 2;
 }
-/* Dropdown arrows: more space from right border (upgrade page) */
+/* Dropdown arrows: generous space from right border (upgrade page) */
 .account-upgrade-form select.account-upgrade-select {
-  padding-right: 4.25rem !important;
+  padding: 0.6rem 0.75rem;
+  padding-right: 5rem !important;
   padding-left: 0.75rem;
 }
 

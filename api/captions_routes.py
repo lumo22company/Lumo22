@@ -1102,9 +1102,11 @@ def captions_intake_submit():
     # Edit mode: order already has intake (intake_completed, generating, delivered)
     if order.get("intake") and status in ("intake_completed", "generating", "delivered"):
         platform_val = (intake.get("platform") or "").strip()
+        is_oneoff_edit = not (order.get("stripe_subscription_id") or "").strip()
         if platform_val and "," in platform_val:
             platform_parts = [p.strip() for p in platform_val.split(",") if p.strip()]
-            if len(platform_parts) > order_platforms_count:
+            # One-off (delivered): allow saving more platforms so they can prepare form before upgrading
+            if len(platform_parts) > order_platforms_count and not is_oneoff_edit:
                 base = (Config.BASE_URL or request.url_root or "").strip().rstrip("/")
                 if base and not base.startswith("http"):
                     base = "https://" + base
