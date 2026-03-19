@@ -348,15 +348,15 @@ def captions_intake_page():
     now = datetime.utcnow()
     subscribe_url = None
     order_currency = "gbp"
-    intake_add_platform_text = "+£29 one-off / +£19/mo"
-    intake_add_stories_text = "+£29 one-off / +£17/mo"
+    intake_add_platform_text = "+£29 one-off/+£19/mo"
+    intake_add_stories_text = "+£29 one-off/+£17/mo"
     if order:
         order_currency = (order.get("currency") or "gbp").strip().lower()
         if order_currency not in ("gbp", "usd", "eur"):
             order_currency = "gbp"
         p = CAPTIONS_DISPLAY_PRICES.get(order_currency, CAPTIONS_DISPLAY_PRICES["gbp"])
-        intake_add_platform_text = "+{symbol}{extra_oneoff} one-off / +{symbol}{extra_sub}/mo".format(symbol=p["symbol"], extra_oneoff=p["extra_oneoff"], extra_sub=p["extra_sub"])
-        intake_add_stories_text = "+{symbol}{stories_oneoff} one-off / +{symbol}{stories_sub}/mo".format(symbol=p["symbol"], stories_oneoff=p["stories_oneoff"], stories_sub=p["stories_sub"])
+        intake_add_platform_text = "+{symbol}{extra_oneoff} one-off/+{symbol}{extra_sub}/mo".format(symbol=p["symbol"], extra_oneoff=p["extra_oneoff"], extra_sub=p["extra_sub"])
+        intake_add_stories_text = "+{symbol}{stories_oneoff} one-off/+{symbol}{stories_sub}/mo".format(symbol=p["symbol"], stories_oneoff=p["stories_oneoff"], stories_sub=p["stories_sub"])
     if token and is_oneoff:
         from urllib.parse import urlencode
         sub_params = {"copy_from": token, "platforms": platforms_count}

@@ -177,7 +177,7 @@
           <li>Changes are reflected in your <strong>next</strong> captions and stories pack, not in packs already delivered.</li>
           <li>Edits are free; adding Story Ideas or extra platforms may require an additional charge.</li>
           <li><strong>Platforms:</strong> Edit form is the only place to add, change, or reduce platforms—not Manage subscription.</li>
-          <li>Subscribers: to add more platforms, open the form and use "Add another platform" (+£19/mo).</li>
+          <li>Subscribers: to add more platforms, open the form and use "Add another platform" (+£29 one-off/+£19/mo).</li>
           <li>To change which platforms or reduce the number (or remove Story Ideas), edit the form and submit—you'll be asked to accept the new price.</li>
           <li>All changes apply to your next pack.</li>
         </ul>
@@ -243,7 +243,7 @@
           </div>
           <div style="margin-bottom: 1.25rem;" id="upgrade-stories-wrap">
             <label class="account-upgrade-cb-label" style="display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.95rem; color: #fff; font-weight: 600;">
-              <input type="checkbox" id="upgrade-stories-cb" class="upgrade-stories-cb"> 30 Days Story Ideas (+<span id="upgrade-stories-price">£17</span>/mo)
+              <input type="checkbox" id="upgrade-stories-cb" class="upgrade-stories-cb"> 30 Days Story Ideas <span id="upgrade-stories-price-wrap">(+£17/mo)</span>
             </label>
           </div>
           <div style="margin-bottom: 1.25rem;">
@@ -283,7 +283,7 @@
         var editFormFirstWrap = document.getElementById('upgrade-edit-form-first-wrap');
         var editFormFirstLink = document.getElementById('upgrade-edit-form-first-link');
         var firstPackCopyEl = document.getElementById('upgrade-first-pack-copy');
-        var storiesPriceEl = document.getElementById('upgrade-stories-price');
+        var storiesPriceWrap = document.getElementById('upgrade-stories-price-wrap');
         var priceDisplay = document.getElementById('upgrade-price-display');
         var checkoutBtn = document.getElementById('upgrade-checkout-btn');
         var currencyBtns = document.querySelectorAll('.account-upgrade-currency-btn');
@@ -357,7 +357,7 @@
           var stories = storiesCb && storiesCb.checked;
           var total = p.sub + (n - 1) * p.extra_sub + (stories ? p.stories_sub : 0);
           updateUpgradePlatformLabels();
-          if (storiesPriceEl) storiesPriceEl.textContent = p.symbol + p.stories_sub;
+          if (storiesPriceWrap) storiesPriceWrap.textContent = '(+' + p.symbol + p.stories_sub + '/mo)';
           if (priceDisplay) priceDisplay.textContent = p.symbol + total;
           var selected = getSelected();
           var copyFrom = prefillSelect ? prefillSelect.value : '';

@@ -240,9 +240,9 @@
         <select id="captions-platforms" name="platforms" style="width: 100%; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); color: inherit; font-size: 1rem;">
           <option value="1">1 platform</option>
           {% if supports_multi_platform|default(false) %}
-          <option value="2">2 platforms — add £29 one-off / £19/mo</option>
-          <option value="3">3 platforms — add £58 one-off / £38/mo</option>
-          <option value="4">4 platforms — add £87 one-off / £57/mo</option>
+          <option value="2">2 platforms — +£29 one-off/+£19/mo</option>
+          <option value="3">3 platforms — +£58 one-off/+£38/mo</option>
+          <option value="4">4 platforms — +£87 one-off/+£57/mo</option>
           {% endif %}
         </select>
         <div id="captions-which-wrap" style="margin-top: 1rem;">
@@ -257,7 +257,7 @@
           {% if stories_addon_available|default(false) %}
           <div id="captions-stories-wrap" class="captions-stories-wrap" style="display: none;">
             <p id="captions-stories-headline" style="font-size: 0.95rem; font-weight: 600; margin: 0 0 0.5rem; color: inherit;">Add Story Ideas for Instagram &amp; Facebook—align each to that day's caption or keep them separate.</p>
-            <label class="captions-checkbox-label"><input type="checkbox" id="captions-stories-cb" name="stories"> Add 30 Days Story Ideas (<span id="captions-stories-price-label">+£29 one-off / +£17/mo</span>)</label>
+            <label class="captions-checkbox-label"><input type="checkbox" id="captions-stories-cb" name="stories"> Add 30 Days Story Ideas (<span id="captions-stories-price-label">+£29 one-off/+£17/mo</span>)</label>
             <p>One-line prompts for Instagram/Facebook Stories each day.</p>
             <p class="captions-stories-disclaimer" style="font-size: 0.8rem; color: var(--lum-text-muted); margin: 0.5rem 0 0; line-height: 1.4;">If you add Story Ideas later (e.g. from Manage subscription in your account), they’ll be delivered with your <strong>next</strong> pack, not instantly.</p>
           </div>
@@ -357,7 +357,7 @@
         </details>
         <details class="dfd-faq-item">
           <summary class="dfd-faq-question">How do I add or change platforms in my order or subscription?</summary>
-          <p class="dfd-faq-answer"><strong>Platforms are changed in Edit form only</strong>—not in Manage subscription. Go to your account → Edit form and open the form for your order. <strong>To add more platforms</strong> (if you have fewer than 4): use the "Add another platform" link (+£29 one-off / +£19/mo), go to checkout, and pay. Extra platforms are delivered with your <strong>next</strong> pack, not instantly. <strong>To change or reduce platforms</strong> (e.g. swap TikTok for Pinterest or reduce from 3 to 2): edit the form and submit—you'll be asked to accept the new price. Changes apply to your next pack.</p>
+          <p class="dfd-faq-answer"><strong>Platforms are changed in Edit form only</strong>—not in Manage subscription. Go to your account → Edit form and open the form for your order. <strong>To add more platforms</strong> (if you have fewer than 4): use the "Add another platform" link (+£29 one-off/+£19/mo), go to checkout, and pay. Extra platforms are delivered with your <strong>next</strong> pack, not instantly. <strong>To change or reduce platforms</strong> (e.g. swap TikTok for Pinterest or reduce from 3 to 2): edit the form and submit—you'll be asked to accept the new price. Changes apply to your next pack.</p>
         </details>
         <details class="dfd-faq-item" id="refer-a-friend">
           <summary class="dfd-faq-question">How does refer-a-friend work?</summary>
@@ -444,13 +444,13 @@
         var opts = sel.querySelectorAll('option[value="2"], option[value="3"], option[value="4"]');
         opts.forEach(function(o) {
           var v = parseInt(o.value, 10);
-          if (v === 2) o.textContent = '2 platforms — add ' + sym + p.extra_oneoff + ' one-off / ' + sym + p.extra_sub + '/mo';
-          else if (v === 3) o.textContent = '3 platforms — add ' + sym + (2 * p.extra_oneoff) + ' one-off / ' + sym + (2 * p.extra_sub) + '/mo';
-          else if (v === 4) o.textContent = '4 platforms — add ' + sym + (3 * p.extra_oneoff) + ' one-off / ' + sym + (3 * p.extra_sub) + '/mo';
+          if (v === 2) o.textContent = '2 platforms — +' + sym + p.extra_oneoff + ' one-off/+' + sym + p.extra_sub + '/mo';
+          else if (v === 3) o.textContent = '3 platforms — +' + sym + (2 * p.extra_oneoff) + ' one-off/+' + sym + (2 * p.extra_sub) + '/mo';
+          else if (v === 4) o.textContent = '4 platforms — +' + sym + (3 * p.extra_oneoff) + ' one-off/+' + sym + (3 * p.extra_sub) + '/mo';
         });
       }
       var storiesLabel = document.getElementById('captions-stories-price-label');
-      if (storiesLabel) storiesLabel.textContent = '+' + p.symbol + p.stories_oneoff + ' one-off / +' + p.symbol + p.stories_sub + '/mo';
+      if (storiesLabel) storiesLabel.textContent = '+' + p.symbol + p.stories_oneoff + ' one-off/+' + p.symbol + p.stories_sub + '/mo';
     }
     function updateLinks() {
       var n = getN();
