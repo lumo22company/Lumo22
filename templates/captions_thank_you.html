@@ -19,6 +19,7 @@
     .thankyou-card .thankyou-back { margin-top: 2rem; }
     .thankyou-card .thankyou-back a { color: var(--lum-text-muted); text-decoration: none; font-size: 0.95rem; }
     .thankyou-card .thankyou-back a:hover { color: var(--lum-text); }
+    .thankyou-card input::placeholder { color: #666; }
     /* Fill out form now / I'll do it later: yellow text, yellow outline, swipe on hover — see landing.css .thankyou-cta-swipe */
     .thankyou-spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid var(--lum-text-muted); border-top-color: transparent; border-radius: 50%; animation: thankyou-spin 0.8s linear infinite; vertical-align: middle; margin-right: 0.5rem; }
     @keyframes thankyou-spin { to { transform: rotate(360deg); } }
@@ -53,11 +54,11 @@
           <p style="font-size: 0.95rem; color: var(--lum-text-muted); margin: 0 0 1rem; line-height: 1.5;">Set a password so you can log in and manage your subscription. We'll send a verification link to your email to confirm your address.</p>
           <div id="signup-form-wrap" style="max-width: 320px;">
             <label for="signup-email" style="display:block; font-size: 0.9rem; margin-bottom: 0.25rem;">Email</label>
-            <input type="email" id="signup-email" readonly style="width: 100%; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.06); color: inherit; font-size: 1rem; margin-bottom: 0.75rem;" placeholder="your@email.com">
+            <input type="email" id="signup-email" readonly style="width: 100%; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: #ffffff; color: #1a1a1a; font-size: 1rem; margin-bottom: 0.75rem;" placeholder="your@email.com">
             <label for="signup-password" style="display:block; font-size: 0.9rem; margin-bottom: 0.25rem;">Password</label>
-            <input type="password" id="signup-password" style="width: 100%; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.08); color: inherit; font-size: 1rem; margin-bottom: 0.75rem;" placeholder="Choose a password">
+            <input type="password" id="signup-password" style="width: 100%; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: #ffffff; color: #1a1a1a; font-size: 1rem; margin-bottom: 0.75rem;" placeholder="Choose a password">
             <label for="signup-confirm" style="display:block; font-size: 0.9rem; margin-bottom: 0.25rem;">Confirm password</label>
-            <input type="password" id="signup-confirm" style="width: 100%; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.08); color: inherit; font-size: 1rem; margin-bottom: 0.5rem;" placeholder="Confirm password">
+            <input type="password" id="signup-confirm" style="width: 100%; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: #ffffff; color: #1a1a1a; font-size: 1rem; margin-bottom: 0.5rem;" placeholder="Confirm password">
             <p id="signup-error" style="display: none; font-size: 0.9rem; color: #f99; margin-bottom: 0.5rem;"></p>
             <button type="button" id="signup-btn" class="lumo-btn-primary btn-cta-account-style" style="padding: 0.6rem 1.25rem;">Create account</button>
           </div>
@@ -68,7 +69,7 @@
       <div id="thankyou-email-fallback" style="display: none; margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid rgba(255,255,255,0.12);">
         <p style="margin: 0 0 0.75rem; font-size: 0.95rem;">Or enter the email you used for this order to get your form link:</p>
         <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; max-width: 360px;">
-          <input type="email" id="thankyou-email-input" placeholder="your@email.com" style="flex: 1; min-width: 180px; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.08); color: inherit; font-size: 1rem;">
+          <input type="email" id="thankyou-email-input" placeholder="your@email.com" style="flex: 1; min-width: 180px; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: #ffffff; color: #1a1a1a; font-size: 1rem;">
           <button type="button" id="thankyou-email-btn" class="lumo-btn-primary btn-cta-account-style" style="padding: 0.6rem 1.25rem;">Get form link</button>
         </div>
         <p id="thankyou-email-error" style="display: none; margin: 0.5rem 0 0; font-size: 0.9rem; color: #f99;"></p>

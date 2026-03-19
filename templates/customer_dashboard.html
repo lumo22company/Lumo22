@@ -128,7 +128,7 @@
         <p class="account-section-desc">View or download your previous packs. Each pack is available as a PDF; if you added Story Ideas, you get a separate Stories PDF. Only delivered packs appear here — for current orders use Edit form or Manage subscription.</p>
         <div class="account-history-filters" id="account-history-filters">
           <label for="account-history-business-filter">Business</label>
-          <select id="account-history-business-filter">
+          <select id="account-history-business-filter" style="padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: #ffffff; color: #1a1a1a; font-size: 0.95rem;">
             <option value="">All packs</option>
           </select>
             </div>
@@ -136,7 +136,7 @@
           {% for o in delivered_orders %}
           {% set biz = (o.get('intake') or {}).get('business_name', '')|trim %}
           {% set is_sub = (o.get('stripe_subscription_id') or '')|trim %}
-          {% set label = biz if biz else ('Subscription' if is_sub else 'One-off') %}
+          {% set label = (biz|title) if biz else ('Subscription' if is_sub else 'One-off') %}
           <div class="account-history-item" data-history-token="{{ o.token }}" data-business="{{ biz }}">
             <div class="account-history-item-title-row">
               <span>{{ label }} — Pack {{ o.created_at[:10] if o.created_at else '—' }}</span>
@@ -184,7 +184,7 @@
         <ul class="account-edit-form-list">
           {% for o in edit_form_orders %}
           {% set biz = (o.get('intake') or {}).get('business_name', '') %}
-          {% set label = biz if biz else (o.created_at[:10] if o.created_at else 'Subscription') %}
+          {% set label = (biz|title) if biz else (o.created_at[:10] if o.created_at else 'Subscription') %}
           <li>
               {% if o.status == 'awaiting_intake' %}
             <a href="/captions-intake?t={{ o.token }}" class="account-billing-portal-link account-btn-swipe-light">Complete the form — {{ label }}</a>
@@ -212,17 +212,17 @@
         <div class="account-upgrade-form" style="max-width: 480px;">
           <div style="margin-bottom: 1.25rem;">
             <label class="account-settings-label" style="display: block; font-size: 0.95rem; font-weight: 600; color: #fff; margin-bottom: 0.5rem;">Base subscription on</label>
-            <select id="upgrade-prefill-select" class="account-upgrade-select" style="width: 100%; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.08); color: #fff; font-size: 1rem;">
+            <select id="upgrade-prefill-select" class="account-upgrade-select" style="width: 100%; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: #ffffff; color: #1a1a1a; font-size: 1rem;">
               {% for o in one_off_orders %}
               {% set biz = (o.get('intake') or {}).get('business_name', '')|trim %}
-              {% set label = biz if biz else (o.created_at[:10] if o.created_at else 'Pack') %}
+              {% set label = (biz|title) if biz else (o.created_at[:10] if o.created_at else 'Pack') %}
               <option value="{{ o.get('token', '') }}" data-platforms="{{ o.get('platforms_count') or 1 }}" data-selected="{{ (o.get('selected_platforms') or '')|e }}" data-stories="{{ '1' if o.get('include_stories') else '0' }}" data-currency="{{ (o.get('currency') or 'gbp')|lower }}">{{ label }}</option>
               {% endfor %}
             </select>
             </div>
           <div style="margin-bottom: 1.25rem;">
             <label for="upgrade-platforms" class="account-settings-label" style="display: block; font-size: 0.95rem; font-weight: 600; color: #fff; margin-bottom: 0.5rem;">Number of platforms</label>
-            <select id="upgrade-platforms" class="account-upgrade-select" style="width: 100%; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.08); color: #fff; font-size: 1rem;">
+            <select id="upgrade-platforms" class="account-upgrade-select" style="width: 100%; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: #ffffff; color: #1a1a1a; font-size: 1rem;">
               <option value="1">1 platform</option>
               <option value="2">2 platforms — +£19/mo</option>
               <option value="3">3 platforms — +£38/mo</option>
@@ -453,7 +453,7 @@
         </div>
         {% for o in sub_orders %}
         {% set pause_biz = (o.get('intake') or {}).get('business_name', '') %}
-        {% set pause_label = pause_biz if pause_biz else ((o.get('created_at') or '')[:10] if o.get('created_at') else 'Subscription') %}
+        {% set pause_label = (pause_biz|title) if pause_biz else ((o.get('created_at') or '')[:10] if o.get('created_at') else 'Subscription') %}
         {% set sub_id = (o.get('stripe_subscription_id') or '')|trim %}
         {% set current_pm = (subscription_billing.get('subscription_payment_methods') or {}).get(sub_id) if subscription_billing else None %}
         <div class="account-pause-block" style="margin-bottom: 1rem;">
@@ -555,7 +555,7 @@
         {% if subscribe_options %}
         <p class="account-section-desc" style="margin-bottom: 0.75rem;">Want a new pack every month? Upgrade to a subscription and the choices from a previous one-off pack will be prefilled on the checkout page. Your first subscription pack arrives 30 days after that one-off pack.{% if subscribe_options|length > 1 %} You have more than one one-off pack — choose which one to base the subscription on below.{% endif %}</p>
         {% for opt in subscribe_options %}
-        <p style="margin-bottom: 0.5rem;"><a href="{{ opt.url }}" class="dfd-btn dfd-btn-secondary account-upgrade-subscription-btn">Upgrade to subscription{% if opt.business_name %} — {{ opt.business_name }}{% else %} — use this pack’s choices{% endif %}</a></p>
+        <p style="margin-bottom: 0.5rem;"><a href="{{ opt.url }}" class="dfd-btn dfd-btn-secondary account-upgrade-subscription-btn">Upgrade to subscription{% if opt.business_name %} — {{ opt.business_name|title }}{% else %} — use this pack’s choices{% endif %}</a></p>
         {% endfor %}
         {% endif %}
       {% endif %}
@@ -657,7 +657,7 @@
         <p class="account-delete-modal-text">Adjust how many platforms you use and whether Story Ideas is included. Changes apply to your <strong>next</strong> pack, not packs already delivered.</p>
         <div class="account-delete-modal-text" style="margin-bottom: 0.75rem;">
           <label for="change-plan-platforms" style="display:block; font-weight:600; margin-bottom:0.25rem;">Number of platforms</label>
-          <select id="change-plan-platforms" style="width:100%; padding:0.5rem 0.75rem; border-radius:8px; border:1px solid rgba(0,0,0,0.2); font-size:0.95rem;">
+          <select id="change-plan-platforms" style="width:100%; padding:0.5rem 0.75rem; border-radius:8px; border:1px solid rgba(255,255,255,0.3); background:#ffffff; color:#1a1a1a; font-size:0.95rem;">
             <option value="1">1 platform</option>
             <option value="2">2 platforms — +£19/mo</option>
             <option value="3">3 platforms — +£38/mo</option>

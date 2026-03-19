@@ -126,14 +126,37 @@ LANGUAGE_INSTRUCTIONS = {
 }
 
 
+def _role_line_for_intake(intake: Dict[str, Any]) -> str:
+    """Build a tailored role line so the AI is framed as an expert for this type of business."""
+    business_type = (intake.get("business_type") or "").strip()
+    offer = (intake.get("offer_one_line") or "").strip().lower()
+    niche = "professional and founder-led brands"
+    if business_type:
+        # e.g. "Product brand / E-commerce" -> "product brand and e-commerce businesses"
+        parts = [p.strip().lower() for p in business_type.split("/") if p.strip()]
+        if len(parts) >= 2:
+            niche = " and ".join(parts) + " businesses"
+        elif len(parts) == 1:
+            p = parts[0]
+            niche = (p + "s") if not p.endswith("s") else p  # e.g. "service business" -> "service businesses"
+    # If offer strongly suggests a niche, use it when it's clearer (e.g. "I make cakes" and no type)
+    if offer and len(offer) < 60:
+        if any(w in offer for w in ("cake", "baking", "bakery")):
+            niche = "cake makers and bakeries"
+        elif any(w in offer for w in ("coach", "consulting", "strategy")):
+            niche = "coaches and consultants"
+    return f"You are a top social media manager for {niche}. You write scroll-stopping, conversion-focused captions that fit the brand and drive engagement."
+
+
 def _build_system_prompt(intake: Dict[str, Any]) -> str:
     lang = (intake.get("caption_language") or "English (UK)").strip()
     lang_instruction = LANGUAGE_INSTRUCTIONS.get(lang, LANGUAGE_INSTRUCTIONS["English (UK)"])
-    return f"""You are a senior content strategist and conversion-focused copywriter. You write social media captions for professionals and founders.
+    role_line = _role_line_for_intake(intake)
+    return f"""{role_line} You are also a senior content strategist and conversion-focused copywriter. You write social media captions.
 
 {lang_instruction}
 
-Tone: confident, editorial, modern, premium. No emojis. No buzzwords or marketing clichés. Smart, human, intelligent. Avoid hype and generic AI language.
+Tone: confident, editorial, modern, premium. When the client specifies "Voice / tone to use" or "Words / style to avoid" in the intake, match those preferences—they override the default. No emojis. No buzzwords or marketing clichés. Smart, human, intelligent. Avoid hype and generic AI language.
 
 Variety and anti-repetition: Every caption must feel fresh and distinct. Use a wide range of vocabulary—avoid reusing the same words, phrases, hooks, or openings across days. Vary sentence structures, transitions, and sign-offs. No two captions should start with the same opener (e.g. avoid "Here's the thing" or "Let's talk about" repeatedly). Rotate through different angles, examples, and approaches. If you've used a phrase in one caption, use different wording in the next.
 
@@ -162,6 +185,8 @@ Pinterest: When Pinterest is one of the client's platforms, for days assigned to
 Hashtag guidance (when HASHTAGS_REQUESTED is true): Every single caption MUST include a **Hashtags:** line. Never omit hashtags for any day or platform. Choose hashtags that support algorithm reach and discovery. Use a mix of (a) niche/specific tags relevant to the client's industry and audience, and (b) broader, high-activity tags where the content fits. Match hashtags to the caption topic and the platform for that day (e.g. LinkedIn vs Instagram vs TikTok norms). Avoid banned or spammy tags. Hashtag count per caption must fall strictly between HASHTAG_MIN and HASHTAG_MAX (inclusive).
 
 Single platform: Write 30 distinct captions (one per day). Multiple platforms: Write 30 × [number of platforms] distinct captions — for each day, one caption per platform. Rotate through the five categories across days so the mix is balanced (roughly 6 days per category). Every caption must be tailored to the client's business, audience, voice, the platform it is for, and goal. Each caption must also be linguistically distinct: vary your vocabulary, sentence openings, and structure so the full set avoids repetition and feels varied. When a business name is provided, use it naturally where it fits (e.g. sign-offs, occasional mentions like "At [name] we...") — don't force it into every caption. No placeholder text. No "[insert X]". Each caption should be 2–6 short paragraphs (or 1–3 lines for TikTok days), copy-paste ready.
+
+Business relevance (CRITICAL): Every caption must be clearly about THIS business—what they actually sell or do, who they serve, and their specific product or service. Do not write generic "founder", "strategy", "building a brand", or "scaling a business" captions that could apply to any company. If the business is cakes and baking, reference cakes, baking, ingredients, orders, customers, flavours, etc. If the business is coaching, reference coaching, clients, sessions, outcomes. Match the vocabulary and examples to the business type and "What they offer" from the intake. A reader should immediately understand which industry and offer the caption is for.
 
 Launch/event phasing (when LAUNCH_EVENT is provided): Days before launch = pre-launch (build anticipation, teasers, countdown). Launch day = announcement, go-live. Days after launch = post-launch (thank-you, feedback, early results — NOT hype or anticipation)."""
 
@@ -220,6 +245,8 @@ def _build_user_prompt(
     audience_cares = n(intake.get("audience_cares") or "", sentence_case=True)
     platform_habits = n(intake.get("platform_habits") or "", sentence_case=True) or "None"
     goal = n(intake.get("goal") or "", sentence_case=False)
+    voice_words = n(intake.get("voice_words") or "", sentence_case=False)
+    voice_avoid = n(intake.get("voice_avoid") or "", sentence_case=True)
 
     parts = [
         f"Generate the full 30-day caption document for this client. Current month/year: {month_year}.",
@@ -234,10 +261,16 @@ def _build_user_prompt(
         f"- Primary audience: {audience}",
         f"- Consumer age range (if applicable): {consumer_age}",
         f"- What audience cares about: {audience_cares}",
+        f"- Voice / tone to use: {voice_words or 'Not specified'}",
+        f"- Words / style to avoid: {voice_avoid or 'None'}",
         f"- Platform(s): {platform_raw or 'Not specified'}",
         f"- Platform habits: {platform_habits}",
         f"- Goal for the month: {goal}",
         f"- Caption language: {intake.get('caption_language', 'English (UK)')}",
+        "",
+        "RELEVANCE: Every caption must be clearly about this business—their product/service, their audience, their offer. Do not write generic business/strategy/founder captions that could apply to any company. Use concrete details from the intake (e.g. if they offer cakes, reference cakes, baking, ingredients, orders; if they offer coaching, reference sessions, clients, outcomes). A reader should know which industry and offer the caption is for.",
+        "",
+        "VOICE: Match the client's voice (Voice / tone to use) and avoid their listed words or style (Words / style to avoid). When the goal is leads or inquiries, include a clear, low-pressure next step (e.g. link in bio, DM, book a call) where it fits naturally.",
     ]
     if len(platform_list) > 1:
         parts.append("")

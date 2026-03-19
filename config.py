@@ -129,12 +129,41 @@ class Config:
     CAPTIONS_DELIVER_TEST_SECRET = _sanitize_header_value(os.getenv('CAPTIONS_DELIVER_TEST_SECRET', '').strip() or '')
 
     @staticmethod
+    def is_production():
+        """True if we should enforce production config (SECRET_KEY changed from default or FLASK_ENV=production)."""
+        default_secret = 'dev-secret-key-change-in-production'
+        secret = (os.getenv('SECRET_KEY') or '').strip()
+        env = (os.getenv('FLASK_ENV') or 'development').strip().lower()
+        return (secret and secret != default_secret) or env == 'production'
+
+    @staticmethod
     def validate():
-        """Validate that required configuration is present (Captions: Supabase)."""
+        """Validate that required configuration is present. Stricter in production."""
         required = ['SUPABASE_URL', 'SUPABASE_KEY']
         missing = [key for key in required if not getattr(Config, key)]
-
         if missing:
             raise ValueError(f"Missing required configuration: {', '.join(missing)}")
+
+        if Config.is_production():
+            production_required = [
+                'SECRET_KEY',
+                'STRIPE_SECRET_KEY',
+                'STRIPE_WEBHOOK_SECRET',
+                'SENDGRID_API_KEY',
+                'BASE_URL',
+            ]
+            default_secret = 'dev-secret-key-change-in-production'
+            prod_missing = []
+            for key in production_required:
+                val = getattr(Config, key, None)
+                if key == 'SECRET_KEY' and (not val or (val == default_secret)):
+                    prod_missing.append(key)
+                elif not val or (isinstance(val, str) and not val.strip()):
+                    prod_missing.append(key)
+            if prod_missing:
+                raise ValueError(
+                    f"Production missing required configuration: {', '.join(prod_missing)}. "
+                    "Set these in your host (e.g. Railway) Variables. See PRODUCTION_ENV_SETUP.md."
+                )
 
         return True

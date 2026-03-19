@@ -26,6 +26,15 @@ Every day (1–30) must have a full caption (and hashtags when requested) for **
 
 This reduces the chance of PDFs with missing entries (e.g. Day 11 or 12 with blank captions).
 
+## Business relevance
+
+Captions must be clearly about **this** business—what they sell or do, who they serve, and their specific product or service. Generic "founder", "strategy", or "building a brand" copy that could apply to any company is avoided.
+
+- **System prompt:** "Business relevance (CRITICAL)" instructs the model to tie every caption to the business type and "What they offer" (e.g. cakes → reference cakes, baking, ingredients, orders; coaching → sessions, clients, outcomes). A reader should immediately understand which industry and offer the caption is for.
+- **User prompt:** After the INTAKE block, a "RELEVANCE" line reinforces: use concrete details from the intake; do not write generic business/strategy/founder captions.
+
+This reduces off-topic or vague captions that don't make sense for the actual business.
+
 ## Related
 
 - **Key date → day number:** See prompt and `_parse_key_date_from_text()` — the key date from intake is parsed and the AI is told exactly which day number is "launch day" so phasing is correct.

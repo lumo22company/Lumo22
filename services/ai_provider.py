@@ -45,13 +45,20 @@ def _anthropic_completion(system: str, user: str, temperature: float, max_tokens
     if not Config.ANTHROPIC_API_KEY:
         raise ValueError("ANTHROPIC_API_KEY not configured (required when AI_PROVIDER=anthropic)")
     client = Anthropic(api_key=Config.ANTHROPIC_API_KEY)
+    # Same effective config as OpenAI: system + user, temperature, max_tokens
     response = client.messages.create(
         model=Config.ANTHROPIC_MODEL,
         max_tokens=max_tokens,
         system=system,
         messages=[{"role": "user", "content": user}],
-        temperature=temperature,
+        temperature=max(0.0, min(1.0, temperature)),  # Anthropic expects 0–1
     )
-    if response.content and len(response.content) > 0:
-        return (response.content[0].text or "").strip()
-    return ""
+    # Concatenate all text blocks (same as OpenAI's single content string; avoids losing content)
+    if not response.content:
+        return ""
+    parts = []
+    for block in response.content:
+        text = getattr(block, "text", None)
+        if text:
+            parts.append(text)
+    return ("".join(parts) or "").strip()

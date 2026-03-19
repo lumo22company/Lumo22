@@ -1969,19 +1969,19 @@
   max-width: 12rem;
   padding: 0.5rem 0.75rem;
   font-size: 0.95rem;
-  color: #fff;
-  background: rgba(255, 255, 255, 0.1);
+  color: #1a1a1a;
+  background: #ffffff;
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: var(--dfd-radius);
   margin-bottom: 0.35rem;
 }
 .account-delete-modal-type-input::placeholder {
-  color: rgba(255, 255, 255, 0.5);
+  color: #666;
 }
 .account-delete-modal-type-input:focus {
   outline: none;
-  border-color: rgba(255, 255, 255, 0.5);
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.15);
+  border-color: var(--lum-gold, #fff200);
+  box-shadow: 0 0 0 2px rgba(255, 242, 0, 0.2);
 }
 .account-delete-modal-type-hint {
   display: block;
@@ -3221,7 +3221,7 @@
 }
 /* Dropdown arrows: more space from right border (upgrade page) */
 .account-upgrade-form select.account-upgrade-select {
-  padding-right: 3.5rem !important;
+  padding-right: 4.25rem !important;
   padding-left: 0.75rem;
 }
 
