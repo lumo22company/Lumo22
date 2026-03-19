@@ -177,7 +177,7 @@
           <li>Changes are reflected in your <strong>next</strong> captions and stories pack, not in packs already delivered.</li>
           <li>Edits are free; adding Story Ideas or extra platforms may require an additional charge.</li>
           <li><strong>Platforms:</strong> Edit form is the only place to add, change, or reduce platforms—not Manage subscription.</li>
-          <li>Subscribers: to add more platforms, open the form and use "Add another platform" (+£29 one-off/+£19/mo).</li>
+          <li>Subscribers: to add more platforms, open the form and use "Add another platform" (+£29 one-off / +£19 monthly).</li>
           <li>To change which platforms or reduce the number (or remove Story Ideas), edit the form and submit—you'll be asked to accept the new price.</li>
           <li>All changes apply to your next pack.</li>
         </ul>
@@ -227,9 +227,9 @@
             <label for="upgrade-platforms" class="account-settings-label" style="display: block; font-size: 0.95rem; font-weight: 600; color: #fff; margin-bottom: 0.5rem;">Number of platforms</label>
             <select id="upgrade-platforms" class="account-upgrade-select account-upgrade-select--styled" style="width: 100%; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); color: #1a1a1a; font-size: 1rem;">
               <option value="1">1 platform</option>
-              <option value="2">2 platforms — +£19/mo</option>
-              <option value="3">3 platforms — +£38/mo</option>
-              <option value="4">4 platforms — +£57/mo</option>
+              <option value="2">2 platforms — +£19 monthly</option>
+              <option value="3">3 platforms — +£38 monthly</option>
+              <option value="4">4 platforms — +£57 monthly</option>
             </select>
           </div>
           <div style="margin-bottom: 1.25rem;" id="upgrade-which-wrap">
@@ -243,7 +243,7 @@
           </div>
           <div style="margin-bottom: 1.25rem;" id="upgrade-stories-wrap">
             <label class="account-upgrade-cb-label" style="display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.95rem; color: #fff; font-weight: 600;">
-              <input type="checkbox" id="upgrade-stories-cb" class="upgrade-stories-cb"> 30 Days Story Ideas <span id="upgrade-stories-price-wrap">(+£17/mo)</span>
+              <input type="checkbox" id="upgrade-stories-cb" class="upgrade-stories-cb"> 30 Days Story Ideas <span id="upgrade-stories-price-wrap">(+£17 monthly)</span>
             </label>
           </div>
           <div style="margin-bottom: 1.25rem;">
@@ -347,9 +347,9 @@
           if (!platformsSelect || !platformsSelect.options) return;
           var opts = platformsSelect.options;
           if (opts[0]) opts[0].textContent = '1 platform';
-          if (opts[1]) opts[1].textContent = '2 platforms — +' + p.symbol + p.extra_sub + '/mo';
-          if (opts[2]) opts[2].textContent = '3 platforms — +' + p.symbol + (2 * p.extra_sub) + '/mo';
-          if (opts[3]) opts[3].textContent = '4 platforms — +' + p.symbol + (3 * p.extra_sub) + '/mo';
+          if (opts[1]) opts[1].textContent = '2 platforms — +' + p.symbol + p.extra_sub + ' monthly';
+          if (opts[2]) opts[2].textContent = '3 platforms — +' + p.symbol + (2 * p.extra_sub) + ' monthly';
+          if (opts[3]) opts[3].textContent = '4 platforms — +' + p.symbol + (3 * p.extra_sub) + ' monthly';
         }
         function updatePrice() {
           var p = prices[currency] || prices.gbp;
@@ -357,7 +357,7 @@
           var stories = storiesCb && storiesCb.checked;
           var total = p.sub + (n - 1) * p.extra_sub + (stories ? p.stories_sub : 0);
           updateUpgradePlatformLabels();
-          if (storiesPriceWrap) storiesPriceWrap.textContent = '(+' + p.symbol + p.stories_sub + '/mo)';
+          if (storiesPriceWrap) storiesPriceWrap.textContent = '(+' + p.symbol + p.stories_sub + ' monthly)';
           if (priceDisplay) priceDisplay.textContent = p.symbol + total;
           var selected = getSelected();
           var copyFrom = prefillSelect ? prefillSelect.value : '';
@@ -697,9 +697,9 @@
           <label for="change-plan-platforms" style="display:block; font-weight:600; margin-bottom:0.25rem;">Number of platforms</label>
           <select id="change-plan-platforms" style="width:100%; padding:0.5rem 0.75rem; border-radius:8px; border:1px solid rgba(255,255,255,0.3); background:#ffffff; color:#1a1a1a; font-size:0.95rem;">
             <option value="1">1 platform</option>
-            <option value="2">2 platforms — +£19/mo</option>
-            <option value="3">3 platforms — +£38/mo</option>
-            <option value="4">4 platforms — +£57/mo</option>
+            <option value="2">2 platforms — +£19 monthly</option>
+            <option value="3">3 platforms — +£38 monthly</option>
+            <option value="4">4 platforms — +£57 monthly</option>
           </select>
         </div>
         <div class="account-delete-modal-text" style="margin-bottom: 0.75rem;">
@@ -1010,9 +1010,9 @@
         if (sel && sel.options) {
           var opts = sel.options;
           if (opts[0]) opts[0].textContent = '1 platform';
-          if (opts[1]) opts[1].textContent = '2 platforms — +' + (p.symbol || '£') + p.extra_sub + '/mo';
-          if (opts[2]) opts[2].textContent = '3 platforms — +' + (p.symbol || '£') + (2 * p.extra_sub) + '/mo';
-          if (opts[3]) opts[3].textContent = '4 platforms — +' + (p.symbol || '£') + (3 * p.extra_sub) + '/mo';
+          if (opts[1]) opts[1].textContent = '2 platforms — +' + (p.symbol || '£') + p.extra_sub + ' monthly';
+          if (opts[2]) opts[2].textContent = '3 platforms — +' + (p.symbol || '£') + (2 * p.extra_sub) + ' monthly';
+          if (opts[3]) opts[3].textContent = '4 platforms — +' + (p.symbol || '£') + (3 * p.extra_sub) + ' monthly';
         }
         if (!priceEl) return;
         var newPlatforms = parseInt(sel && sel.value ? sel.value : '1', 10);
