@@ -2123,16 +2123,29 @@
   padding: 0.35rem 2rem 0.35rem 0.6rem;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.4);
-  background: rgba(0, 0, 0, 0.6);
+  background-color: rgba(0, 0, 0, 0.6);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23fff' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 10px;
   color: #ffffff;
   min-width: 140px;
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23fff' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 0.5rem center;
-  background-size: 10px;
+}
+/* History filter select has white bg (inline); same dark arrow, 1rem inset */
+#account-history-business-filter {
+  background-color: #fff !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 8L1 3h10z'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 1rem center !important;
+  background-size: 10px !important;
+  padding-right: 2.5rem !important;
+  color: #1a1a1a;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
 }
 .account-history-item {
   display: flex;
@@ -3099,13 +3112,13 @@
 .account-page-wrap .account-payment-method-select {
   font: inherit;
   font-size: 0.9rem;
-  padding: 0.4rem 2.75rem 0.4rem 0.75rem;
+  padding: 0.4rem 2.5rem 0.4rem 0.75rem;
   border: 1px solid rgba(0,0,0,0.2);
   border-radius: var(--dfd-radius);
   background-color: #fff;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 1.25rem center;
+  background-position: right 1rem center;
   background-size: 10px;
   -webkit-appearance: none;
   -moz-appearance: none;
@@ -3252,9 +3265,30 @@
   background-color: var(--lum-gold, #fff200);
 }
 
-/* Captions page dropdown: more space for native arrow */
+/* Captions page dropdown: same arrow as other selects, 1rem inset */
 .product-page-captions #captions-platforms {
-  padding: 0.6rem 1.5rem 0.6rem 0.75rem !important;
+  padding: 0.6rem 2.5rem 0.6rem 0.75rem !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+  background-color: rgba(255,255,255,0.1) !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23fff' d='M6 8L1 3h10z'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 1rem center !important;
+  background-size: 10px !important;
+}
+
+/* Change plan modal select: same arrow as other light-background dropdowns */
+#change-plan-platforms {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-color: #fff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 10px;
+  padding-right: 2.5rem !important;
 }
 
 /* Upgrade subscription button: swipe left-to-right yellow fill on hover, dark text */
