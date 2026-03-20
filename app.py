@@ -264,6 +264,25 @@ def _is_safe_redirect_url(url: str) -> bool:
         return False
 
 
+def _normalize_next_url(raw_next: str | None) -> str | None:
+    """Decode once/twice if needed so /path style next URLs stay usable."""
+    if not raw_next or not isinstance(raw_next, str):
+        return None
+    raw_next = raw_next.strip()
+    if not raw_next:
+        return None
+    from urllib.parse import unquote
+    decoded = raw_next
+    for _ in range(2):
+        if decoded.startswith(('/', 'http://', 'https://')):
+            break
+        next_decoded = unquote(decoded)
+        if next_decoded == decoded:
+            break
+        decoded = next_decoded
+    return decoded
+
+
 @app.route('/captions-intake')
 def captions_intake_page():
     """Intake form for 30 Days Captions (sent to client after payment). Token in ?t= links form to order.
@@ -452,20 +471,20 @@ def captions_checkout_page():
 def captions_checkout_subscription_page():
     """Pre-checkout page for Captions subscription: agree to T&Cs then continue to Stripe. Supports GBP, USD, EUR.
     Accepts copy_from=TOKEN to pass through to Stripe metadata for one-off → subscription flow.
-    All subscription checkouts (new and upgrade from one-off) require login before payment."""
+    All subscription checkouts (new and upgrade from one-off) require an account before payment (signup first, then log in if already registered)."""
     from urllib.parse import urlencode, quote
     copy_from = (request.args.get("copy_from") or "").strip()
     if not get_current_customer():
-        login_url = url_for("customer_login_page") + "?next=" + quote(request.full_path or "/captions-checkout-subscription", safe="")
+        signup_url = url_for("customer_signup_page") + "?next=" + quote(request.full_path or "/captions-checkout-subscription", safe="")
         if copy_from:
             try:
                 from services.caption_order_service import CaptionOrderService
                 order = CaptionOrderService().get_by_token(copy_from)
                 if order and (order.get("customer_email") or "").strip():
-                    login_url += "&email=" + quote((order.get("customer_email") or "").strip(), safe="")
+                    signup_url += "&email=" + quote((order.get("customer_email") or "").strip(), safe="")
             except Exception:
                 pass
-        return redirect(login_url)
+        return redirect(signup_url)
     platforms = _parse_platforms_from_request()
     selected = (request.args.get("selected") or request.args.get("selected_platforms") or "").strip()
     stories = request.args.get("stories", "").strip().lower() in ("1", "true", "yes", "on")
@@ -676,7 +695,7 @@ def captions_upgrade_page():
 @app.route('/signup')
 def customer_signup_page():
     """Signup for Lumo 22 customers (Captions). Accepts next= and email= for upgrade flow."""
-    next_url = request.args.get('next', '').strip() or None
+    next_url = _normalize_next_url(request.args.get('next')) or None
     prefilled_email = (request.args.get('email') or '').strip() or None
     return render_template('customer_signup.html', next_url=next_url, prefilled_email=prefilled_email)
 
@@ -687,7 +706,7 @@ def customer_login_page():
     if request.method == 'POST':
         email = (request.form.get('email') or '').strip().lower()
         password = (request.form.get('password') or '').strip()
-        next_url = request.form.get('next') or request.args.get('next') or '/account'
+        next_url = _normalize_next_url(request.form.get('next') or request.args.get('next')) or '/account'
         if not email or not password:
             return render_template('customer_login.html', login_error='Please enter your email and password.', next_url=next_url)
         try:
@@ -712,7 +731,7 @@ def customer_login_page():
             return render_template('login_success.html', next_url=redirect_url)
         except Exception:
             return render_template('customer_login.html', login_error='Something went wrong. Please try again.', next_url=next_url)
-    next_url = request.args.get('next', '/account')
+    next_url = _normalize_next_url(request.args.get('next')) or '/account'
     prefilled_email = (request.args.get('email') or '').strip() or None
     return render_template('customer_login.html', next_url=next_url, prefilled_email=prefilled_email)
 

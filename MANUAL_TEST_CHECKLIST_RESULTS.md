@@ -27,7 +27,7 @@
 | Platform count can be changed | ✅ PASS | Combobox "How many platforms?" with 1–4 options and add-on pricing. |
 | Story Ideas add-on appears when relevant | ✅ PASS | "Add 30 Days Story Ideas (+£29 one-off / +£17/mo)" visible. |
 | Click through to **one-off checkout** works | ✅ PASS | Link "Get my 30 days" → captions-checkout (not tested to Stripe). |
-| Click through to **subscription checkout** works | ✅ PASS | "Subscribe — £79/month" → captions-checkout-subscription; when not logged in, redirects to login with `next=` set. |
+| Click through to **subscription checkout** works | ✅ PASS | "Subscribe — £79/month" → captions-checkout-subscription; when not logged in, redirects to **signup** with `next=` (and "Already have an account? Log in"). |
 
 ---
 
@@ -45,7 +45,7 @@
 
 | Step | Result | Evidence |
 |------|--------|----------|
-| Subscription checkout shows monthly price and summary | ✅ PASS | When not logged in, /captions-checkout-subscription redirects to /login?next=... (correct). Logged-in flow not run. |
+| Subscription checkout shows monthly price and summary | ✅ PASS | When not logged in, /captions-checkout-subscription redirects to /signup?next=... (correct). Logged-in flow not run. |
 | Terms modal works | ⏳ MANUAL | Same as one-off. |
 | Complete Stripe test subscription | ⏳ MANUAL | As above. |
 

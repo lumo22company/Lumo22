@@ -235,6 +235,31 @@ def test_no_subscribe_url_for_subscription():
     print("PASS: No subscribe_url for subscription orders")
 
 
+def test_subscription_checkout_guest_redirects_to_signup():
+    """Unauthenticated subscription checkout should go to signup (not login) with next= preserved."""
+    from app import app
+    from urllib.parse import urlparse, parse_qs
+
+    with app.test_client() as client:
+        r = client.get(
+            "/captions-checkout-subscription?platforms=1&currency=gbp",
+            follow_redirects=False,
+        )
+    if r.status_code != 302:
+        print(f"FAIL: expected 302, got {r.status_code}")
+        sys.exit(1)
+    loc = r.headers.get("Location") or ""
+    parsed = urlparse(loc)
+    if parsed.path != "/signup":
+        print(f"FAIL: expected redirect to /signup, got {loc!r}")
+        sys.exit(1)
+    qs = parse_qs(parsed.query)
+    if "next" not in qs or not qs["next"]:
+        print(f"FAIL: expected next= in redirect, got {loc!r}")
+        sys.exit(1)
+    print("PASS: guest subscription checkout redirects to /signup with next=")
+
+
 if __name__ == "__main__":
     # Patch at module level - app imports CaptionOrderService in the route
     # We need to patch where it's used: in app.captions_intake_page it's "from services.caption_order_service import CaptionOrderService"
@@ -246,4 +271,5 @@ if __name__ == "__main__":
     test_subscribe_url_includes_copy_from()
     test_subscribe_url_includes_stories_when_paid()
     test_no_subscribe_url_for_subscription()
+    test_subscription_checkout_guest_redirects_to_signup()
     print("\nAll tests passed.")

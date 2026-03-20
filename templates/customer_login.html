@@ -52,7 +52,7 @@
         <p class="block-desc">Access your Captions in one place.</p>
 
         <form id="login-form" action="/login" method="post">
-          <input type="hidden" name="next" value="{{ next_url|default(request.args.get('next', '/account')) }}">
+          <input type="hidden" name="next" value="{{ next_url|default(request.args.get('next', '/account'))|e }}">
           <label for="email">Email</label>
           <input type="email" id="email" name="email" required autocomplete="email" placeholder="you@example.com" value="{{ request.form.get('email', '') or prefilled_email|default('', true) }}">
 

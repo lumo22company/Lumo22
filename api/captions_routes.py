@@ -242,16 +242,16 @@ def captions_checkout_subscription():
     if not customer:
         from urllib.parse import quote
         next_url = request.url
-        login_url = url_for("customer_login_page") + "?next=" + quote(next_url, safe="")
+        signup_url = url_for("customer_signup_page") + "?next=" + quote(next_url, safe="")
         if copy_from:
             try:
                 from services.caption_order_service import CaptionOrderService
                 order = CaptionOrderService().get_by_token(copy_from)
                 if order and (order.get("customer_email") or "").strip():
-                    login_url += "&email=" + quote((order.get("customer_email") or "").strip(), safe="")
+                    signup_url += "&email=" + quote((order.get("customer_email") or "").strip(), safe="")
             except Exception:
                 pass
-        return redirect(login_url)
+        return redirect(signup_url)
     import stripe
     currency = _parse_currency(request)
     price_id = _get_sub_price_id(currency)
