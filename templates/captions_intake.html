@@ -88,14 +88,30 @@
     /* All intake CTA buttons (non-swipe): readable font */
     .intake-page .btn-submit:not(.account-btn-swipe-light) { font-size: 1rem !important; font-weight: 600 !important; letter-spacing: 0.02em; }
     .intake-page .btn-submit:not(.account-btn-swipe-light) { padding: 12px 24px; min-height: 48px; }
-    /* Create-account success box: Your account, Log in, Sign up — same readable button style */
-    .intake-page #create-account-box a.account-btn-swipe-light {
+    /* Create-account success box: Sign up / generic swipe links — readable inline size */
+    .intake-page #create-account-box a.account-btn-swipe-light:not(.intake-account-cta) {
       display: inline-flex !important; align-items: center; justify-content: center;
       padding: 12px 24px !important; min-height: 48px !important;
       font-size: 1rem !important; font-weight: 600 !important;
       letter-spacing: 0.02em; text-transform: none !important;
       border: 2px solid rgba(0,0,0,0.25); border-radius: var(--radius-btn, 8px);
       text-decoration: none !important;
+    }
+    /* "Your account" — same family as dashboard Change email (compact swipe, uppercase) */
+    .intake-page #create-account-box a.intake-account-cta.account-btn-swipe-light {
+      display: inline-flex !important;
+      align-items: center;
+      justify-content: center;
+      padding: 0.4rem 0.9rem !important;
+      min-height: auto !important;
+      margin-left: 0.35rem;
+      vertical-align: middle;
+      font-size: 0.7rem !important;
+      font-weight: 600 !important;
+      letter-spacing: 0.2em !important;
+      text-transform: uppercase !important;
+      text-decoration: none !important;
+      border-radius: var(--radius-btn, 8px);
     }
     .intake-page #create-account-box .btn-submit#ca-btn { padding: 12px 24px; min-height: 48px; font-size: 1rem; font-weight: 600; }
     /* Edit preferences button */
@@ -130,8 +146,6 @@
     .intake-page label input[type="checkbox"] { flex-shrink: 0; vertical-align: middle; align-self: center; margin: 0; }
     .intake-add-platform-link { color: var(--lum-gold, #c9a227); font-weight: 600; text-decoration: none; }
     .intake-add-platform-link:hover { text-decoration: underline; }
-    .intake-page .btn-go-account { margin-top: 0.5rem; display: inline-flex; align-items: center; justify-content: center; padding: 10px 20px; min-height: 44px; text-decoration: none !important; border-radius: var(--radius-btn, 8px); }
-    .intake-page .btn-go-account:hover { text-decoration: none !important; }
     .intake-add-platform-note { color: var(--lum-text-muted, #666); }
     .intake-page-body .lumo-nav { background: #000; border-bottom: 1px solid rgba(255,255,255,0.06); box-shadow: 0 4px 24px rgba(0,0,0,0.2); }
     .intake-edit-preferences-modal { position: fixed; inset: 0; z-index: 1000; display: none; align-items: center; justify-content: center; padding: 1rem; box-sizing: border-box; }
@@ -181,7 +195,7 @@
           <p id="ca-signup-wrap" style="display: none; margin: 0.75rem 0 0; font-size: 0.9rem; color: var(--lum-text-muted);">Prefer to sign up on a separate page? <a id="ca-signup-link" href="#" class="account-btn-swipe-light" style="display: inline-block; margin-top: 0.25rem; padding: 0.4rem 0.9rem; font-size: 0.9rem;">Sign up</a> (your email will be prefilled).</p>
         </div>
         <p id="ca-done" style="display:none; margin:0; color: #1a1a1a;"><span id="ca-done-msg">Check your email to verify your address — then you can log in.</span> <a href="/login" style="color: #1a1a1a; font-weight: 600; text-decoration: underline;">Log in</a></p>
-        <p id="ca-already-logged-in" style="display:none; margin:0; font-weight: 500;">You're logged in. <a href="/account" class="btn-go-account account-btn-swipe-light">Your account</a></p>
+        <p id="ca-already-logged-in" style="display:none; margin:0; font-weight: 500;">You're logged in. <a href="/account" class="intake-account-cta account-billing-portal-link account-btn-swipe-light">Your account</a></p>
         <p id="ca-already-has-account" style="display:none; margin:0; font-weight: 500;">You already have an account. <a href="/login" id="ca-login-link" class="account-btn-swipe-light" style="display: inline-block; padding: 0.4rem 0.9rem; font-size: 0.9rem;">Log in</a></p>
       </div>
     </div>
