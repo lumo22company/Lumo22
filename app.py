@@ -37,6 +37,7 @@ from api.routes import api_bp
 from api.webhooks import webhook_bp
 from api.captions_routes import captions_bp
 from api.auth_routes import auth_bp, get_current_customer
+from api.passkey_routes import passkey_bp
 from api.billing_routes import billing_bp
 from services.login_guard import check_locked, record_failure, clear_failures
 
@@ -113,6 +114,7 @@ app.register_blueprint(api_bp)
 app.register_blueprint(webhook_bp)
 app.register_blueprint(captions_bp)
 app.register_blueprint(auth_bp)
+app.register_blueprint(passkey_bp)
 app.register_blueprint(billing_bp)
 
 # Fail fast on mis-set AI_PROVIDER (e.g. API key in Railway variable) and enforce prod API keys.

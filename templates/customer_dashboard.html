@@ -82,6 +82,17 @@
               <a href="/forgot-password" class="account-billing-portal-link account-btn-swipe-light">Change password</a>
             </div>
           </div>
+          <div class="account-info-row">
+            <div>
+              <span class="account-info-label">Passkeys</span>
+              <div class="account-info-value">Sign in with Face ID, Touch ID, Windows Hello, or a security key</div>
+              <p id="passkey-account-msg" style="display:none; margin:0.5rem 0 0; font-size:0.85rem;"></p>
+              <ul id="passkey-list" style="margin:0.75rem 0 0; padding-left:1.25rem; font-size:0.9rem; color:#333; max-width:520px;"></ul>
+            </div>
+            <div class="account-info-actions">
+              <button type="button" class="account-billing-portal-link account-btn-swipe-light" id="passkey-add-btn">Add passkey</button>
+            </div>
+          </div>
           <div class="account-info-row{% if request.args.get('billing') == 'no_sub' %} account-info-row--no-divider-below{% endif %}">
             <div>
               <span class="account-info-label">Billing</span>
@@ -1603,6 +1614,111 @@
         sel.addEventListener('change', function() { changeSubscriptionPaymentMethod(sel); });
       });
 
+    })();
+  </script>
+  <script src="{{ url_for('static', filename='js/passkeys.js') }}?v={{ asset_version }}"></script>
+  <script>
+    (function() {
+      var listEl = document.getElementById('passkey-list');
+      var addBtn = document.getElementById('passkey-add-btn');
+      var msgEl = document.getElementById('passkey-account-msg');
+      if (!listEl || !addBtn || !window.LumoPasskeys || !LumoPasskeys.supported()) {
+        if (addBtn) addBtn.style.display = 'none';
+        return;
+      }
+
+      function showMsg(text, isError) {
+        if (!msgEl) return;
+        msgEl.textContent = text || '';
+        msgEl.style.display = text ? 'block' : 'none';
+        msgEl.style.color = isError ? '#c00' : '#0a0';
+      }
+
+      function loadPasskeys() {
+        fetch('/api/auth/passkeys', { credentials: 'same-origin' })
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            listEl.innerHTML = '';
+            if (!data.ok) {
+              if (data.error && data.error.indexOf('not available') !== -1) {
+                showMsg('Passkeys will be available after the database update is applied.', true);
+              }
+              return;
+            }
+            (data.passkeys || []).forEach(function(p) {
+              var li = document.createElement('li');
+              li.style.marginBottom = '0.35rem';
+              var label = document.createElement('span');
+              label.textContent = (p.friendly_name || 'Passkey') + (p.created_at ? ' · added ' + String(p.created_at).slice(0, 10) : '');
+              var rm = document.createElement('button');
+              rm.type = 'button';
+              rm.textContent = 'Remove';
+              rm.style.marginLeft = '0.5rem';
+              rm.style.fontSize = '0.8rem';
+              rm.style.background = 'transparent';
+              rm.style.border = '1px solid #999';
+              rm.style.borderRadius = '6px';
+              rm.style.cursor = 'pointer';
+              rm.addEventListener('click', function() {
+                if (!confirm('Remove this passkey? You can add it again later.')) return;
+                fetch('/api/auth/passkeys/' + encodeURIComponent(p.id), { method: 'DELETE', credentials: 'same-origin' })
+                  .then(function(r) { return r.json(); })
+                  .then(function(d) {
+                    if (d.ok) loadPasskeys();
+                    else alert(d.error || 'Could not remove passkey');
+                  })
+                  .catch(function() { alert('Could not remove passkey'); });
+              });
+              li.appendChild(label);
+              li.appendChild(rm);
+              listEl.appendChild(li);
+            });
+          })
+          .catch(function() { showMsg('Could not load passkeys.', true); });
+      }
+
+      addBtn.addEventListener('click', function() {
+        showMsg('');
+        addBtn.disabled = true;
+        fetch('/api/auth/passkeys/register/begin', { method: 'POST', credentials: 'same-origin' })
+          .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+          .then(function(res) {
+            if (!res.ok || !res.data || !res.data.ok) {
+              throw new Error((res.data && res.data.error) || 'Could not start passkey setup.');
+            }
+            var opts = LumoPasskeys.preparePublicKeyCreationOptions(res.data.options);
+            return navigator.credentials.create({ publicKey: opts });
+          })
+          .then(function(cred) {
+            if (!cred) throw new Error('Cancelled.');
+            var name = window.prompt('Name this passkey (optional), e.g. MacBook or iPhone:', '');
+            return fetch('/api/auth/passkeys/register/finish', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'same-origin',
+              body: JSON.stringify({
+                credential: LumoPasskeys.registrationCredentialToJSON(cred),
+                friendly_name: name || null
+              })
+            });
+          })
+          .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+          .then(function(res) {
+            if (!res.ok || !res.data || !res.data.ok) {
+              throw new Error((res.data && res.data.error) || 'Could not save passkey.');
+            }
+            showMsg('Passkey added. You can use it on the log in page.');
+            loadPasskeys();
+          })
+          .catch(function(err) {
+            alert(err.message || 'Passkey setup did not complete.');
+          })
+          .then(function() {
+            addBtn.disabled = false;
+          });
+      });
+
+      loadPasskeys();
     })();
   </script>
   <script>

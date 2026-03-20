@@ -34,6 +34,11 @@
     .auth-links .auth-muted a:hover { color: var(--lum-text); }
     .auth-links .auth-muted a.auth-signup-link { color: var(--lum-gold) !important; }
     .auth-links .auth-muted a.auth-signup-link:hover { color: var(--lum-ivory) !important; }
+    .auth-passkey-wrap { margin-top: 0.5rem; }
+    .auth-passkey-or { margin: 1rem 0 0.5rem; text-align: center; font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--lum-text-muted); }
+    .auth-passkey-btn { margin-top: 0; background: transparent !important; color: var(--lum-gold) !important; border: 2px solid var(--lum-gold) !important; }
+    .auth-passkey-btn:hover:not(:disabled) { background: var(--lum-gold) !important; color: #000 !important; }
+    .auth-passkey-hint { display: none; font-size: 0.78rem; color: var(--lum-text-muted); margin: 0.5rem 0 0; line-height: 1.4; }
   </style>
 </head>
 <body class="lumo-landing">
@@ -70,6 +75,12 @@
           {% endif %}
         </form>
 
+        <div class="auth-passkey-wrap">
+          <p class="auth-passkey-or">or</p>
+          <button type="button" class="auth-btn auth-btn-swipe auth-passkey-btn" id="passkey-login-btn" style="display:none;">Sign in with passkey</button>
+          <p class="auth-passkey-hint" id="passkey-login-hint">Enter your email above, then use Face ID, Touch ID, or Windows Hello.</p>
+        </div>
+
         <div class="auth-links">
           {% if needs_verification %}
           <p><button type="button" id="resend-verify-btn" style="background:none;border:none;padding:0;color:var(--lum-gold);cursor:pointer;font-size:0.9rem;font-family:inherit;">Resend verification email</button></p>
@@ -85,6 +96,8 @@
 
   {% include '_footer.html' %}
 
+  <script>window.__LUMO_LOGIN_NEXT__ = {{ (next_url or '/account')|tojson }};</script>
+  <script src="{{ url_for('static', filename='js/passkeys.js') }}?v={{ asset_version }}"></script>
   <script>
     (function() {
       var btn = document.getElementById('btn');
@@ -106,6 +119,63 @@
       }
       var resendBtn = document.getElementById('resend-verify-btn');
       var emailInput = document.getElementById('email');
+      var pkBtn = document.getElementById('passkey-login-btn');
+      var pkHint = document.getElementById('passkey-login-hint');
+      if (pkBtn && window.LumoPasskeys && LumoPasskeys.supported()) {
+        pkBtn.style.display = 'inline-flex';
+        if (pkHint) pkHint.style.display = 'block';
+        pkBtn.addEventListener('click', function() {
+          var emailInput = document.getElementById('email');
+          var email = emailInput ? emailInput.value.trim().toLowerCase() : '';
+          if (!email || email.indexOf('@') === -1) {
+            alert('Enter your email first, then try passkey sign-in.');
+            return;
+          }
+          pkBtn.disabled = true;
+          pkBtn.textContent = 'Waiting for device…';
+          fetch('/api/auth/passkeys/login/begin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email }),
+            credentials: 'same-origin'
+          })
+          .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, status: r.status, data: d }; }); })
+          .then(function(res) {
+            if (!res.ok || !res.data || !res.data.ok) {
+              throw new Error((res.data && res.data.error) || 'Passkey sign-in could not start.');
+            }
+            var opts = LumoPasskeys.preparePublicKeyRequestOptions(res.data.options);
+            return navigator.credentials.get({ publicKey: opts });
+          })
+          .then(function(cred) {
+            if (!cred) throw new Error('Cancelled.');
+            return fetch('/api/auth/passkeys/login/finish', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ credential: LumoPasskeys.authenticationCredentialToJSON(cred) }),
+              credentials: 'same-origin'
+            });
+          })
+          .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+          .then(function(res) {
+            if (!res.ok || !res.data || !res.data.ok) {
+              throw new Error((res.data && res.data.error) || 'Passkey sign-in failed.');
+            }
+            var next = window.__LUMO_LOGIN_NEXT__ || '/account';
+            if (typeof next === 'string' && next.indexOf('/') === 0 && next.indexOf('//') !== 0) {
+              window.location.href = next;
+            } else {
+              window.location.href = '/account';
+            }
+          })
+          .catch(function(err) {
+            alert(err.message || 'Passkey sign-in did not complete.');
+            pkBtn.disabled = false;
+            pkBtn.textContent = 'Sign in with passkey';
+          });
+        });
+      }
+
       if (resendBtn && emailInput) {
         resendBtn.addEventListener('click', function() {
           resendBtn.disabled = true;
