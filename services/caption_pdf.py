@@ -95,16 +95,39 @@ def _parse_markdown_to_structure(md: str) -> Tuple[Dict[str, str], List[Tuple[st
                         break
                 cap["platform"] = pl
             rest = "\n".join(block.split("\n")[1:]).strip()
-            hook_m = re.search(r"\*\*(?:Suggested hook|Caption)\*\*\s*:\s*(.+?)(?=\n\n|\n\*\*|\Z)", rest, re.I | re.DOTALL)
+            # Support both **Caption:** and plain Caption: (AI sometimes omits bold)
+            hook_m = re.search(
+                r"(?:\*\*(?:Suggested hook|Caption)\*\*|(?:Suggested hook|Caption))\s*:\s*(.+?)(?=\n\n|\n\*\*|\Z)",
+                rest,
+                re.I | re.DOTALL,
+            )
             if hook_m:
                 cap["hook"] = hook_m.group(1).strip()
             hashtag_m = re.search(r"\*\*Hashtags?:\*\*\s*([\s\S]+?)(?=\n\s*---|\n\s*\*\*|\n\s*##|\Z)", rest, re.I)
             if hashtag_m:
                 cap["hashtags"] = hashtag_m.group(1).strip()
             main = re.sub(r"\*\*Hashtags?:\*\*[\s\S]*", "", rest, flags=re.I).strip()
-            main = re.sub(r"\*\*(?:Suggested hook:|Caption:)\*\*\s*[^\n]*(?=\n\n|\n\*\*|\Z)", "", main, flags=re.I | re.DOTALL).strip()
+            # Remove Caption/Suggested hook line (with or without **); allow : on own line (\n) or with inline text
+            main = re.sub(
+                r"(?:\*\*(?:Suggested hook|Caption)\*\*|(?:Suggested hook|Caption))\s*:\s*[^\n]*(?=\n|\n\n|\n\*\*|\Z)",
+                "",
+                main,
+                flags=re.I | re.DOTALL,
+            ).strip()
             cap["body"] = _strip_separators(main)
-            if cap["platform"] or cap["body"]:
+            # Fallback: if both empty, use content between Platform and Hashtags — AI may use alternate format
+            if not cap["body"] and not cap["hook"]:
+                raw = re.sub(r"\*\*Hashtags?:\*\*[\s\S]*", "", rest, flags=re.I).strip()
+                raw = _strip_separators(raw)
+                if raw:
+                    cap["body"] = _strip_label(raw, "Caption", also=["Suggested hook"])
+            # Clean stray "**" or "**\n" at start (leftover from **Caption:** parsing)
+            for key in ("body", "hook"):
+                v = (cap.get(key) or "").strip()
+                if v and re.match(r"^\*{2}\s*\n?", v):
+                    v = re.sub(r"^\*{2}\s*\n?\s*", "", v).strip()
+                    cap[key] = v
+            if cap["platform"] or cap["body"] or cap["hook"]:
                 captions.append(cap)
         if day_heading and captions:
             days.append((day_heading, captions))
@@ -456,7 +479,7 @@ def _make_stories_doc_flowables(
             hash_idx = prompt.find(hash_marker)
 
             if sw_idx != -1:
-                base_prompt = prompt[:sw_idx].strip()
+                base_prompt = _strip_label(prompt[:sw_idx].strip(), "Idea")
                 rest = prompt[sw_idx + len(sw_marker):].strip()
                 if hash_idx != -1 and hash_idx > sw_idx:
                     rel_hash_idx = rest.find(hash_marker)
@@ -470,8 +493,10 @@ def _make_stories_doc_flowables(
                 # Suggested wording should not be wrapped in quotes in the PDF
                 suggested = _strip_surrounding_quotes(suggested)
             elif hash_idx != -1:
-                base_prompt = prompt[:hash_idx].strip()
+                base_prompt = _strip_label(prompt[:hash_idx].strip(), "Idea")
                 hashtags = prompt[hash_idx + len(hash_marker):].strip()
+            else:
+                base_prompt = _strip_label(prompt, "Idea")
 
         data = []
         if base_prompt:
@@ -489,7 +514,7 @@ def _make_stories_doc_flowables(
             ])
 
         if not data:
-            data.append([Paragraph("<nobr>Idea:</nobr>", lbl), Paragraph(_escape_and_breaks(prompt), tight_style)])
+            data.append([Paragraph("<nobr>Idea:</nobr>", lbl), Paragraph(_escape_and_breaks(_strip_label(prompt, "Idea")), tight_style)])
 
         # Wider label column so 'Suggested wording' and 'Story hashtags' stay on one line
         content_t = Table(data, colWidths=[45 * mm, 135 * mm])
