@@ -168,7 +168,7 @@
   <main class="intake-page">
     <!-- intake-form-version: 2025-02-v3 -->
     <h1>30 DAYS CAPTIONS — YOUR DETAILS</h1>
-    <p class="sub">Complete this form so we can tailor your caption set. Your answers shape your voice and structure for the month. The more detail you give us, the better we can align your captions with your brand and business.</p>
+    <p class="sub">Complete this form so we can tailor your caption set. Your answers shape your voice, structure, and strategy for the month. The more detail you give, the better we can align your captions with your brand. Edits are free and will apply to your next pack.</p>
     {% if existing_intake %}
     <p class="intake-edit-notice" style="margin: 0 0 1.25rem; padding: 0.75rem 1rem; background: rgba(0,0,0,0.06); border-radius: 8px; border: 2px solid var(--lum-gold, #c9a227); font-size: 0.9rem; color: #1a1a1a;">{% if is_upgrade_flow %}Your answers here will be used for your first subscription pack. Content edits (voice, topics, key dates, etc.) are free.{% else %}Any updates you make here will be reflected in your <strong>next</strong> captions and stories pack, not in packs already delivered. Edits are free; adding Story Ideas or extra platforms may require an additional charge.{% endif %}</p>
     {% endif %}
@@ -203,14 +203,14 @@
     <div id="intake-upgrade-cta" style="display: none; margin: 0 0 2rem; padding: 1rem 0;"></div>
 
     <form id="captions-intake-form" action="#" method="post" data-platforms-count="{{ platforms_count }}">
-      <input type="hidden" name="token" id="intake_token" value="{{ intake_token }}">
+      <input type="hidden" name="token" id="intake_token" value="{{ intake_token }}" data-testid="intake_token">
       <p id="intake-validation-hint" style="display: none; margin: -0.5rem 0 1rem; font-size: 0.9rem; color: #c00;"></p>
       <div class="form-section">
         <h2>Business</h2>
         <label for="business_name">What is your business name? <span style="color:#999;">(required)</span></label>
-        <input type="text" id="business_name" name="business_name" required placeholder="e.g. Lumo 22, Acme Coaching" value="{{ existing_intake.get('business_name', '') }}">
+        <input type="text" id="business_name" name="business_name" required placeholder="e.g. Lumo 22, Acme Coaching" value="{{ existing_intake.get('business_name', '') }}" data-testid="business_name">
         <label for="business_type">What type of business do you run? <span style="color:#999;">(required)</span></label>
-        <select id="business_type" name="business_type" required>
+        <select id="business_type" name="business_type" required data-testid="business_type">
           <option value="">— Select one —</option>
           <option value="Consultancy" {% if existing_intake.get('business_type') == 'Consultancy' %}selected{% endif %}>Consultancy</option>
           <option value="Agency" {% if existing_intake.get('business_type') == 'Agency' %}selected{% endif %}>Agency</option>
@@ -222,13 +222,16 @@
         </select>
         <input type="text" id="business_type_other" name="business_type_other" placeholder="Specify your business type" class="intake-other-field" style="display: none; margin-top: 0.5rem;" value="{{ existing_intake.get('business_type', '') if existing_intake.get('business_type') and existing_intake.get('business_type') not in ['Consultancy', 'Agency', 'Coach / Mentor', 'Product brand / E-commerce', 'Product brand', 'E-commerce', 'Service business', 'Creative / Freelancer'] else '' }}">
         <label for="offer_one_line">In one sentence, what do you offer and to whom? <span style="color:#999;">(required)</span></label>
-        <textarea id="offer_one_line" name="offer_one_line" required placeholder="e.g. We help busy founders build a content habit without the daily grind">{{ existing_intake.get('offer_one_line', '') }}</textarea>
+        <textarea id="offer_one_line" name="offer_one_line" required placeholder="e.g. We help busy founders build a content habit without the daily grind" data-testid="offer_one_line">{{ existing_intake.get('offer_one_line', '') }}</textarea>
         <p class="field-helper">A couple of sentences is enough.</p>
+        <label for="operating_hours">Operating hours <span style="color:#999;">(optional)</span></label>
+        <input type="text" id="operating_hours" name="operating_hours" data-testid="operating_hours" placeholder="e.g. Mon–Fri 9–5, 24/7, weekends only" value="{{ existing_intake.get('operating_hours', '') }}">
+        <p class="field-helper">Helps us tailor CTAs (e.g. "pop in", "book a call") to when you're available.</p>
       </div>
       <div class="form-section">
         <h2>Audience</h2>
         <p class="field-helper" style="margin-bottom: 0.5rem;">Who is your primary audience? (pick any that apply)</p>
-        <div class="intake-checkbox-group" role="group" aria-label="Primary audience">
+        <div class="intake-checkbox-group" role="group" aria-label="Primary audience" data-testid="audience">
           <label class="intake-checkbox-label"><input type="checkbox" name="audience_cb" value="Founders"> Founders</label>
           <label class="intake-checkbox-label"><input type="checkbox" name="audience_cb" value="Small business owners"> Small business owners</label>
           <label class="intake-checkbox-label"><input type="checkbox" name="audience_cb" value="Marketing leads"> Marketing leads</label>
@@ -242,12 +245,12 @@
         <input type="text" id="audience_other" name="audience_other" placeholder="Other (e.g. coaches, agencies)" style="margin-top: 0.75rem;" value="">
         <input type="hidden" id="audience" name="audience" value="{{ existing_intake.get('audience', '') }}">
         <label for="audience_cares">What do they care about most when they land on your content? <span style="color:#999;">(required)</span></label>
-        <textarea id="audience_cares" name="audience_cares" required placeholder="e.g. quick wins, feeling less overwhelmed, practical tips">{{ existing_intake.get('audience_cares', '') }}</textarea>
+        <textarea id="audience_cares" name="audience_cares" required placeholder="e.g. quick wins, feeling less overwhelmed, practical tips" data-testid="audience_cares">{{ existing_intake.get('audience_cares', '') }}</textarea>
       </div>
       <div class="form-section">
         <h2>Voice</h2>
         <p class="field-helper" style="margin-bottom: 0.5rem;">Choose 3–5 words that describe how you want to sound (pick any that apply):</p>
-        <div class="intake-checkbox-group" role="group" aria-label="Voice tone">
+        <div class="intake-checkbox-group" role="group" aria-label="Voice tone" data-testid="voice_words">
           <label class="intake-checkbox-label"><input type="checkbox" name="voice_words_cb" value="direct"> Direct</label>
           <label class="intake-checkbox-label"><input type="checkbox" name="voice_words_cb" value="thoughtful"> Thoughtful</label>
           <label class="intake-checkbox-label"><input type="checkbox" name="voice_words_cb" value="warm"> Warm</label>
@@ -261,13 +264,13 @@
         </div>
         <input type="text" id="voice_words_other" name="voice_words_other" placeholder="Other words (optional)" style="margin-top: 0.75rem;" value="">
         <input type="hidden" id="voice_words" name="voice_words" value="{{ existing_intake.get('voice_words', '') }}">
-        <label for="voice_avoid">Is there any language or phrasing you want to avoid?</label>
-        <textarea id="voice_avoid" name="voice_avoid" placeholder="e.g. jargon, hype, overly formal (optional)">{{ existing_intake.get('voice_avoid', '') }}</textarea>
+        <label for="voice_avoid">Any words, phrases, or tones to avoid? <span style="color:#999;">(optional)</span></label>
+        <textarea id="voice_avoid" name="voice_avoid" placeholder="e.g. jargon, hype, overly formal" data-testid="voice_avoid">{{ existing_intake.get('voice_avoid', '') }}</textarea>
       </div>
       <div class="form-section">
         <h2>Language</h2>
         <label for="caption_language">What language should your captions be written in?</label>
-        <select id="caption_language" name="caption_language">
+        <select id="caption_language" name="caption_language" data-testid="caption_language">
           <option value="English (UK)" {% if existing_intake.get('caption_language') == 'English (UK)' or not existing_intake.get('caption_language') %}selected{% endif %}>English (UK)</option>
           <option value="English (US)" {% if existing_intake.get('caption_language') == 'English (US)' %}selected{% endif %}>English (US)</option>
           <option value="Spanish" {% if existing_intake.get('caption_language') == 'Spanish' %}selected{% endif %}>Spanish</option>
@@ -280,13 +283,13 @@
           <option value="Turkish" {% if existing_intake.get('caption_language') == 'Turkish' %}selected{% endif %}>Turkish</option>
           <option value="Swedish" {% if existing_intake.get('caption_language') == 'Swedish' %}selected{% endif %}>Swedish</option>
         </select>
-        <p class="field-helper">Spelling, idioms, and tone will match this variety (e.g. American vs British English).</p>
+        <p class="field-helper">For example: British English or American English.</p>
       </div>
       <div class="form-section">
         <h2>Platform</h2>
         {% if platforms_count > 1 %}
         <p class="field-helper" style="margin-bottom: 0.5rem;">Platforms included in your order (fixed for this pack — cannot be changed here).</p>
-        <div class="intake-checkbox-group" role="group" aria-label="Platforms" id="platform-btn-group" data-max-platforms="{{ platforms_count }}" data-platforms-locked="true">
+        <div class="intake-checkbox-group" role="group" aria-label="Platforms" id="platform-btn-group" data-testid="platform" data-max-platforms="{{ platforms_count }}" data-platforms-locked="true">
           <button type="button" class="platform-btn" data-platform="Instagram & Facebook">Instagram &amp; Facebook</button>
           <button type="button" class="platform-btn" data-platform="LinkedIn">LinkedIn</button>
           <button type="button" class="platform-btn" data-platform="TikTok">TikTok</button>
@@ -337,7 +340,7 @@
       <div class="form-section">
         <h2>Goal for this month</h2>
         <label for="goal">What's the main outcome you want from this 30 days? <span style="color:#999;">(required)</span></label>
-        <select id="goal" name="goal" required>
+        <select id="goal" name="goal" required data-testid="goal">
           <option value="">— Select one —</option>
           <option value="More inquiries / leads" {% if existing_intake.get('goal') == 'More inquiries / leads' %}selected{% endif %}>More inquiries / leads</option>
           <option value="Build authority" {% if existing_intake.get('goal') == 'Build authority' %}selected{% endif %}>Build authority</option>
@@ -352,16 +355,22 @@
         </div>
       </div>
       <div class="form-section">
-        <h2>Key date (optional)</h2>
-        <p class="field-helper" style="margin-bottom: 0.75rem;">If you have a product launch, event, sale, or similar within the next 30 days of your caption set, we'll tailor captions: before the date we build anticipation; on the day we announce; during we promote and drive action; after we shift to thank-you and feedback.</p>
-        <label for="launch_event_description">What's happening? Include dates.</label>
-        <input type="text" id="launch_event_description" name="launch_event_description" placeholder="e.g. Valentine's sale 10–14 Feb, product launch 20 March, Black Friday weekend 28–30 Nov" value="{{ existing_intake.get('launch_event_description', '') }}">
-        <p class="field-helper">Include dates for each event (e.g. sale runs 10–14 Feb, launch on 15 March). Multiple events? List them all with their dates.</p>
+        <h2>What's happening this month? <span style="color:#999;">(optional)</span></h2>
+        <p class="field-helper" style="margin-bottom: 0.75rem;">If you have a product launch, event, sale, or regular recurring event within the next 30 days, we'll tailor captions: before the date we build anticipation; on the day we announce; during we promote; after we shift to thank-you.</p>
+        <label for="launch_event_description">Include dates or regular events.</label>
+        <input type="text" id="launch_event_description" name="launch_event_description" data-testid="launch_event_description" placeholder="e.g. Valentine's sale 10–14 Feb, product launch 20 March, weekly tips every Tuesday" value="{{ existing_intake.get('launch_event_description', '') }}">
+        <p class="field-helper">Include dates for each (e.g. sale 10–14 Feb, launch 15 March). Multiple events? List them with dates.</p>
+      </div>
+      <div class="form-section">
+        <h2>What do you usually talk about? <span style="color:#999;">(optional)</span></h2>
+        <label for="usual_topics">Content themes you often use (e.g. tips, behind the scenes, education, client wins, product drops)</label>
+        <textarea id="usual_topics" name="usual_topics" data-testid="usual_topics" placeholder="e.g. weekly tips, behind-the-scenes of our process, client success stories, new product drops" style="min-height: 80px;">{{ existing_intake.get('usual_topics', '') }}</textarea>
+        <p class="field-helper">Helps us pick themes and angles that fit your content mix.</p>
       </div>
       <div class="form-section">
         <h2>Example captions (optional)</h2>
         <label for="caption_examples">Paste 1–3 example captions you like — from your own posts, competitors, or inspiration. We'll match this style, tone, and structure where relevant.</label>
-        <textarea id="caption_examples" name="caption_examples" placeholder="Paste example captions here (optional)" style="min-height: 140px;">{{ existing_intake.get('caption_examples', '') }}</textarea>
+        <textarea id="caption_examples" name="caption_examples" data-testid="caption_examples" placeholder="Paste example captions here (optional)" style="min-height: 140px;">{{ existing_intake.get('caption_examples', '') }}</textarea>
       </div>
       <button type="button" class="btn-submit account-btn-swipe-light" id="btn-review">{% if existing_intake %}REVIEW CHANGES{% else %}NEXT STEP{% endif %}</button>
     </form>
@@ -587,6 +596,7 @@
       reviewContent.appendChild(sect('Business name', gv('business_name')));
       reviewContent.appendChild(sect('Business type', gso('business_type', 'business_type_other') || '(not provided)'));
       reviewContent.appendChild(sect('What you offer', gv('offer_one_line')));
+      if (gv('operating_hours')) reviewContent.appendChild(sect('Operating hours', gv('operating_hours')));
       reviewContent.appendChild(sect('Primary audience', gv('audience') || '(not provided)'));
       if (gv('consumer_age_range')) reviewContent.appendChild(sect('Consumer age range', gv('consumer_age_range')));
       reviewContent.appendChild(sect('What they care about', gv('audience_cares')));
@@ -609,6 +619,8 @@
       reviewContent.appendChild(sect('Goal for this month', gso('goal', 'goal_other') || '(not provided)'));
       var launchDesc = gv('launch_event_description');
       if (launchDesc) reviewContent.appendChild(sect('Key date', launchDesc));
+      var usualTopics = gv('usual_topics');
+      if (usualTopics) reviewContent.appendChild(sect('What you usually talk about', usualTopics));
       reviewContent.appendChild(sect('Example captions', gv('caption_examples')));
       form.style.display = 'none';
       reviewStep.classList.add('show');
@@ -645,6 +657,7 @@
         business_name: gv('business_name'),
         business_type: gso('business_type', 'business_type_other'),
         offer_one_line: gv('offer_one_line'),
+        operating_hours: gv('operating_hours'),
         audience: gv('audience'),
         consumer_age_range: gv('consumer_age_range'),
         audience_cares: gv('audience_cares'),
@@ -657,6 +670,7 @@
         hashtag_max: maxH,
         goal: gso('goal', 'goal_other'),
         launch_event_description: gv('launch_event_description'),
+        usual_topics: gv('usual_topics'),
         caption_examples: gv('caption_examples'),
         caption_language: gv('caption_language') || 'English (UK)',
         include_stories: !!(document.getElementById('include_stories') && document.getElementById('include_stories').checked),
@@ -1035,6 +1049,7 @@
         reviewContent.appendChild(sect('Business name', getVal('business_name')));
         reviewContent.appendChild(sect('Business type', getSelectOrOther('business_type', 'business_type_other') || '(not provided)'));
         reviewContent.appendChild(sect('What you offer', getVal('offer_one_line')));
+        if (getVal('operating_hours')) reviewContent.appendChild(sect('Operating hours', getVal('operating_hours')));
         reviewContent.appendChild(sect('Primary audience', getVal('audience') || '(not provided)'));
         var ageRange = getVal('consumer_age_range');
         if (ageRange) reviewContent.appendChild(sect('Consumer age range', ageRange));
@@ -1052,6 +1067,8 @@
         reviewContent.appendChild(sect('Goal for this month', getSelectOrOther('goal', 'goal_other') || '(not provided)'));
         var launchDesc = getVal('launch_event_description');
         if (launchDesc) reviewContent.appendChild(sect('Key date', launchDesc));
+        var usualTopics = getVal('usual_topics');
+        if (usualTopics) reviewContent.appendChild(sect('What you usually talk about', usualTopics));
         reviewContent.appendChild(sect('Example captions', getVal('caption_examples')));
         form.style.display = 'none';
         reviewStep.classList.add('show');
@@ -1079,6 +1096,7 @@
           business_name: getVal('business_name'),
           business_type: getSelectOrOther('business_type', 'business_type_other'),
           offer_one_line: getVal('offer_one_line'),
+          operating_hours: getVal('operating_hours'),
           audience: getVal('audience'),
           consumer_age_range: getVal('consumer_age_range'),
           audience_cares: getVal('audience_cares'),
@@ -1091,6 +1109,7 @@
           hashtag_max: maxH,
           goal: getSelectOrOther('goal', 'goal_other'),
           launch_event_description: getVal('launch_event_description'),
+          usual_topics: getVal('usual_topics'),
           caption_examples: getVal('caption_examples'),
           include_stories: !!(document.getElementById('include_stories') && document.getElementById('include_stories').checked),
           align_stories_to_captions: !!(document.getElementById('align_stories') && document.getElementById('align_stories').checked)

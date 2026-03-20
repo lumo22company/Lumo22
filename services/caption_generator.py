@@ -240,9 +240,11 @@ def _build_user_prompt(
     business_name = n(intake.get("business_name") or "", sentence_case=False) or "Not specified"
     business_type = n(intake.get("business_type") or "", sentence_case=False)
     offer_one_line = n(intake.get("offer_one_line") or "", sentence_case=True)
+    operating_hours = n(intake.get("operating_hours") or "", sentence_case=True)
     audience = n(intake.get("audience") or "", sentence_case=False) or "Not specified"
     consumer_age = n(intake.get("consumer_age_range") or "", sentence_case=False) or "Not specified"
     audience_cares = n(intake.get("audience_cares") or "", sentence_case=True)
+    usual_topics = n(intake.get("usual_topics") or "", sentence_case=True)
     platform_habits = n(intake.get("platform_habits") or "", sentence_case=True) or "None"
     goal = n(intake.get("goal") or "", sentence_case=False)
     voice_words = n(intake.get("voice_words") or "", sentence_case=False)
@@ -258,9 +260,11 @@ def _build_user_prompt(
         f"- Business name: {business_name}",
         f"- Business type: {business_type}",
         f"- What they offer (one sentence): {offer_one_line}",
+        f"- Operating hours: {operating_hours or 'Not specified'}",
         f"- Primary audience: {audience}",
         f"- Consumer age range (if applicable): {consumer_age}",
         f"- What audience cares about: {audience_cares}",
+        f"- What they usually talk about (content themes): {usual_topics or 'Not specified'}",
         f"- Voice / tone to use: {voice_words or 'Not specified'}",
         f"- Words / style to avoid: {voice_avoid or 'None'}",
         f"- Platform(s): {platform_raw or 'Not specified'}",
