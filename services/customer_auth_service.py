@@ -18,9 +18,9 @@ def _sanitize_url(u: str) -> str:
 
 
 def validate_password(password: str) -> Tuple[bool, Optional[str]]:
-    """Check password: at least 10 characters, at least 1 number. Returns (ok, error_message)."""
-    if not password or len(password) < 10:
-        return (False, "Password must be at least 10 characters")
+    """Check password: at least 12 characters, at least 1 number. Returns (ok, error_message)."""
+    if not password or len(password) < 12:
+        return (False, "Password must be at least 12 characters")
     if not any(c.isdigit() for c in password):
         return (False, "Password must include at least one number")
     return (True, None)
@@ -115,7 +115,7 @@ class CustomerAuthService:
         existing = self.get_by_email(email)
         if existing:
             raise ValueError("An account with this email already exists")
-        pw_hash = generate_password_hash(password, method="pbkdf2:sha256")
+        pw_hash = generate_password_hash(password, method="scrypt")
         referrer_id = None
         if referral_code:
             referrer = self.get_by_referral_code(referral_code)
@@ -302,7 +302,7 @@ class CustomerAuthService:
             return (False, err)
 
         try:
-            pw_hash = generate_password_hash(new_password, method="pbkdf2:sha256")
+            pw_hash = generate_password_hash(new_password, method="scrypt")
             self.client.table(self.table).update({
                 "password_hash": pw_hash,
                 "password_reset_token": None,

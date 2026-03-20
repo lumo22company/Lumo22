@@ -27,6 +27,10 @@
     .auth-page .link { margin-top: 1.5rem; text-align: center; }
     .auth-page .link a { color: var(--lum-gold); text-decoration: none; }
     .auth-page .link a:hover { text-decoration: underline; }
+    .auth-page .hint { margin: -0.75rem 0 0.85rem; font-size: 0.82rem; color: var(--lum-text-muted); }
+    .auth-page .hint.ok { color: #7ddc85; }
+    .pw-toggle { margin: -0.75rem 0 1rem; text-align: right; }
+    .pw-toggle button { background: none; border: 0; color: var(--lum-gold); cursor: pointer; font-size: 0.82rem; padding: 0; }
   </style>
 </head>
 <body class="lumo-landing">
@@ -48,11 +52,13 @@
       <label for="email">Email</label>
       <input type="email" id="email" name="email" required autocomplete="email" placeholder="you@example.com" value="{{ prefilled_email|default('', true)|e }}">
 
-      <label for="password">Password <span style="font-weight:400;color:var(--lum-text-muted);">(min 10 characters, include 1 number)</span></label>
-      <input type="password" id="password" name="password" required minlength="10" autocomplete="new-password" placeholder="At least 10 characters, 1 number">
+      <label for="password">Password <span style="font-weight:400;color:var(--lum-text-muted);">(min 12 characters, include 1 number)</span></label>
+      <input type="password" id="password" name="password" required minlength="12" autocomplete="new-password" placeholder="At least 12 characters, 1 number">
+      <div class="pw-toggle"><button type="button" id="toggle-password">Show password</button></div>
+      <p id="pw-hint" class="hint">Use at least 12 characters and include 1 number.</p>
 
       <label for="password_confirm">Confirm password</label>
-      <input type="password" id="password_confirm" name="password_confirm" required minlength="10" autocomplete="new-password">
+      <input type="password" id="password_confirm" name="password_confirm" required minlength="12" autocomplete="new-password">
 
       <button type="submit" class="btn" id="btn">Create account</button>
       <div id="msg" class="msg" style="display: none;"></div>
@@ -80,6 +86,24 @@
       var form = document.getElementById('signup-form');
       var btn = document.getElementById('btn');
       var msg = document.getElementById('msg');
+      var pwInput = document.getElementById('password');
+      var pwHint = document.getElementById('pw-hint');
+      var pwToggle = document.getElementById('toggle-password');
+      if (pwInput && pwHint) {
+        pwInput.addEventListener('input', function() {
+          var v = pwInput.value || '';
+          var strongEnough = v.length >= 12 && /\d/.test(v);
+          pwHint.className = strongEnough ? 'hint ok' : 'hint';
+          pwHint.textContent = strongEnough ? 'Good password strength for this account.' : 'Use at least 12 characters and include 1 number.';
+        });
+      }
+      if (pwToggle && pwInput) {
+        pwToggle.addEventListener('click', function() {
+          var showing = pwInput.type === 'text';
+          pwInput.type = showing ? 'password' : 'text';
+          pwToggle.textContent = showing ? 'Show password' : 'Hide password';
+        });
+      }
 
       form.addEventListener('submit', function(e) {
         e.preventDefault();
@@ -91,9 +115,9 @@
           msg.style.display = 'block';
           return;
         }
-        if (pw.length < 10 || !/\d/.test(pw)) {
+        if (pw.length < 12 || !/\d/.test(pw)) {
           msg.className = 'msg error';
-          msg.textContent = 'Use at least 10 characters and include 1 number.';
+          msg.textContent = 'Use at least 12 characters and include 1 number.';
           msg.style.display = 'block';
           return;
         }

@@ -38,6 +38,7 @@ from api.webhooks import webhook_bp
 from api.captions_routes import captions_bp
 from api.auth_routes import auth_bp, get_current_customer
 from api.billing_routes import billing_bp
+from services.login_guard import check_locked, record_failure, clear_failures
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -707,17 +708,24 @@ def customer_login_page():
         email = (request.form.get('email') or '').strip().lower()
         password = (request.form.get('password') or '').strip()
         next_url = _normalize_next_url(request.form.get('next') or request.args.get('next')) or '/account'
+        client_ip = (request.headers.get("X-Forwarded-For") or request.remote_addr or "").split(",")[0].strip()
         if not email or not password:
             return render_template('customer_login.html', login_error='Please enter your email and password.', next_url=next_url)
+        is_locked, retry_after = check_locked(email, client_ip)
+        if is_locked:
+            mins = max(1, int((retry_after + 59) // 60))
+            return render_template('customer_login.html', login_error=f'Too many failed attempts. Try again in about {mins} minute(s).', next_url=next_url)
         try:
             from services.customer_auth_service import CustomerAuthService
             svc = CustomerAuthService()
             customer = svc.get_by_email(email)
             if not customer or not svc.verify_password(customer, password):
+                record_failure(email, client_ip)
                 return render_template('customer_login.html', login_error='Invalid email or password.', next_url=next_url)
             if not customer.get('email_verified', True):
                 return render_template('customer_login.html', login_error='Please verify your email before logging in. Check your inbox or request a new verification link.', needs_verification=True, verification_email=email, next_url=next_url)
             svc.update_last_login(customer['id'])
+            clear_failures(email, client_ip)
             session.permanent = True
             session['customer_id'] = str(customer['id'])
             session['customer_email'] = customer['email']

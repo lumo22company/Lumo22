@@ -5,6 +5,7 @@ import logging
 from flask import Blueprint, request, jsonify, session, redirect, url_for
 from config import Config
 from services.customer_auth_service import CustomerAuthService
+from services.login_guard import check_locked, record_failure, clear_failures
 from services.notifications import NotificationService
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
@@ -100,15 +101,25 @@ def login():
         data = request.get_json(silent=True) or request.form or {}
         email = (data.get("email") or "").strip().lower()
         password = (data.get("password") or "").strip()
+        client_ip = (request.headers.get("X-Forwarded-For") or request.remote_addr or "").split(",")[0].strip()
 
         if not email or not password:
             return jsonify({"ok": False, "error": "Email and password required"}), 400
+        is_locked, retry_after = check_locked(email, client_ip)
+        if is_locked:
+            return jsonify({
+                "ok": False,
+                "error": "Too many failed login attempts. Please try again shortly.",
+                "retry_after_seconds": retry_after,
+            }), 429
 
         svc = CustomerAuthService()
         customer = svc.get_by_email(email)
         if not customer:
+            record_failure(email, client_ip)
             return jsonify({"ok": False, "error": "Invalid email or password"}), 401
         if not svc.verify_password(customer, password):
+            record_failure(email, client_ip)
             return jsonify({"ok": False, "error": "Invalid email or password"}), 401
 
         # Require email verification (existing customers have email_verified=true from migration)
@@ -124,6 +135,7 @@ def login():
         session.permanent = True
         session["customer_id"] = str(customer["id"])
         session["customer_email"] = customer["email"]
+        clear_failures(email, client_ip)
 
         return jsonify({"ok": True, "email": customer["email"]}), 200
     except Exception as e:

@@ -51,7 +51,7 @@
         </div>
         <div id="thankyou-create-account" style="display: none; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.15);">
           <h2 style="font-size: 1.15rem; margin: 0 0 0.5rem;">Create your account</h2>
-          <p style="font-size: 0.95rem; color: var(--lum-text-muted); margin: 0 0 1rem; line-height: 1.5;">Set a password so you can log in and manage your subscription. We'll send a verification link to your email to confirm your address.</p>
+          <p style="font-size: 0.95rem; color: var(--lum-text-muted); margin: 0 0 1rem; line-height: 1.5;">Set a password (at least 12 characters and 1 number) so you can log in and manage your subscription. We'll send a verification link to your email to confirm your address.</p>
           <div id="signup-form-wrap" style="max-width: 320px;">
             <label for="signup-email" style="display:block; font-size: 0.9rem; margin-bottom: 0.25rem;">Email</label>
             <input type="email" id="signup-email" readonly style="width: 100%; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: #ffffff; color: #1a1a1a; font-size: 1rem; margin-bottom: 0.75rem;" placeholder="your@email.com">
@@ -274,6 +274,10 @@
           }
           if (!password) {
             if (errEl) { errEl.textContent = 'Please choose a password.'; errEl.style.display = 'block'; }
+            return;
+          }
+          if (password.length < 12 || !/\d/.test(password)) {
+            if (errEl) { errEl.textContent = 'Use at least 12 characters and include 1 number.'; errEl.style.display = 'block'; }
             return;
           }
           if (password !== confirm) {
