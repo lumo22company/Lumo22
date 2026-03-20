@@ -60,13 +60,22 @@
     </form>
 
     <p class="link">Already have an account? <a href="/login{% if next_url %}?next={{ next_url|urlencode }}{% if prefilled_email %}&amp;email={{ prefilled_email|urlencode }}{% endif %}{% elif prefilled_email %}?email={{ prefilled_email|urlencode }}{% endif %}">Log in</a></p>
-    <p class="link"><a href="/">← Back to Lumo 22</a></p>
+    <p class="link"><a href="/captions" id="back-link">← Back</a></p>
   </main>
 
   <script>
     (function() {
       var ref = (new URLSearchParams(window.location.search).get('ref') || '').trim();
       if (ref) document.getElementById('referral_code').value = ref;
+      var backLink = document.getElementById('back-link');
+      if (backLink) {
+        backLink.addEventListener('click', function(e) {
+          if (window.history.length > 1) {
+            e.preventDefault();
+            window.history.back();
+          }
+        });
+      }
 
       var form = document.getElementById('signup-form');
       var btn = document.getElementById('btn');
