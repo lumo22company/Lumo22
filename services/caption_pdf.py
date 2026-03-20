@@ -167,6 +167,20 @@ def _strip_surrounding_quotes(s: str) -> str:
     return s
 
 
+def _strip_embedded_label_repeat(s: str, label: str) -> str:
+    """
+    If the AI repeats a section label inside the value (e.g. '...bar from 6pm. Suggested wording: ...'),
+    keep only the text before the duplicate label. Case-insensitive.
+    """
+    if not s or not label:
+        return (s or "").strip()
+    pat = re.compile(r"\s+" + re.escape(label) + r"\s*:\s*", re.I)
+    m = pat.search(s)
+    if m:
+        return s[: m.start()].strip()
+    return s.strip()
+
+
 def _strip_label(s: str, label: str, *, also: Optional[List[str]] = None) -> str:
     """Remove leading 'Label:' or '**Label:** ' from text to avoid duplication when we already show the label."""
     if not s:
@@ -492,6 +506,8 @@ def _make_stories_doc_flowables(
                     suggested = rest
                 # Suggested wording should not be wrapped in quotes in the PDF
                 suggested = _strip_surrounding_quotes(suggested)
+                # AI sometimes duplicates "Suggested wording:" inside the same field
+                suggested = _strip_embedded_label_repeat(suggested, "Suggested wording")
             elif hash_idx != -1:
                 base_prompt = _strip_label(prompt[:hash_idx].strip(), "Idea")
                 hashtags = prompt[hash_idx + len(hash_marker):].strip()
