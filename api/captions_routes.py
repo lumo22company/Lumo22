@@ -678,22 +678,23 @@ def captions_intake_link_by_email():
     }), 200
 
 
-def _run_generation_and_deliver(order_id: str):
-    """Background: generate captions, save, email client. Runs outside request context."""
+def _run_generation_and_deliver(order_id: str, *, force_redeliver: bool = False):
+    """Background: generate captions, save, email client. Runs outside request context.
+    force_redeliver: when True, regenerate and email even if status is 'delivered' (used by force-deliver endpoint)."""
     import traceback
     from datetime import datetime
     from services.caption_order_service import CaptionOrderService
     from services.caption_generator import CaptionGenerator, extract_day_categories_from_captions_md
     from services.notifications import NotificationService, _captions_delivery_email_html
 
-    print(f"[Captions] Starting generation for order {order_id}")
+    print(f"[Captions] Starting generation for order {order_id} (force_redeliver={force_redeliver})")
     order_service = CaptionOrderService()
     row = order_service.get_by_id(order_id)
     if not row:
         print(f"[Captions] Order {order_id} not found, skipping")
         return (False, "Order not found")
     status = (row.get("status") or "").strip()
-    if status == "delivered":
+    if status == "delivered" and not force_redeliver:
         print(f"[Captions] Order {order_id} already delivered, skipping duplicate")
         return (True, None)
     if status == "generating":
@@ -887,14 +888,14 @@ def captions_deliver_test():
         if not order.get("intake"):
             return jsonify({"ok": False, "error": "Please submit the form first."}), 200
         if sync_mode:
-            ok, err = _run_generation_and_deliver(order_id)
+            ok, err = _run_generation_and_deliver(order_id, force_redeliver=True)
             if ok:
                 return jsonify({
                     "ok": True,
                     "message": "Delivery completed. Check your email (and spam).",
                 }), 200
             return jsonify({"ok": False, "error": err or "Delivery failed"}), 200
-        thread = threading.Thread(target=_run_generation_and_deliver, args=(order_id,))
+        thread = threading.Thread(target=_run_generation_and_deliver, args=(order_id,), kwargs={"force_redeliver": True})
         thread.daemon = False
         thread.start()
         return jsonify({
@@ -1034,7 +1035,12 @@ def captions_intake_submit():
     order_id = order["id"]
     status = order.get("status") or ""
 
-    if status == "awaiting_intake":
+    # First intake OR retry when delivery never completed (failed worker, SendGrid error, stuck "generating")
+    from services.caption_delivery_recovery import row_needs_first_delivery_retry
+
+    if status == "awaiting_intake" or row_needs_first_delivery_retry(
+        order, intake_completed_grace_seconds=0
+    ):
         platform_val = (intake.get("platform") or "").strip()
         if platform_val and "," in platform_val:
             platform_parts = [p.strip() for p in platform_val.split(",") if p.strip()]
@@ -1573,6 +1579,33 @@ def _run_scheduled_deliveries():
     return {"scheduled_deliveries_triggered": triggered}
 
 
+def _run_stuck_first_deliveries(max_orders: int = 5) -> dict:
+    """
+    Pick orders that have intake but no captions_md and start generation threads.
+    Called from daily cron and from APScheduler every 10 minutes in production.
+    """
+    import threading
+    from services.caption_order_service import CaptionOrderService
+
+    order_service = CaptionOrderService()
+    stuck = order_service.get_orders_needing_first_delivery_recovery(limit=max_orders)
+    triggered = 0
+    for order in stuck:
+        order_id = order.get("id")
+        if not order_id:
+            continue
+        thread = threading.Thread(target=_run_generation_and_deliver, args=(str(order_id),))
+        thread.daemon = False
+        thread.start()
+        triggered += 1
+    if triggered:
+        print(f"[Captions recovery] started delivery threads for {triggered} stuck order(s)")
+    return {
+        "stuck_first_delivery_triggered": triggered,
+        "stuck_order_ids": [o.get("id") for o in stuck if o.get("id")],
+    }
+
+
 @captions_bp.route("/captions-upgrade-reminder-unsubscribe", methods=["GET"])
 def captions_upgrade_reminder_unsubscribe():
     """
@@ -1622,6 +1655,8 @@ def captions_send_reminders():
         result = run_reminders()
         scheduled = _run_scheduled_deliveries()
         result["scheduled_deliveries_triggered"] = scheduled.get("scheduled_deliveries_triggered", 0)
+        stuck = _run_stuck_first_deliveries(max_orders=5)
+        result["stuck_first_delivery_triggered"] = stuck.get("stuck_first_delivery_triggered", 0)
         return jsonify({"ok": True, **result}), 200
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
