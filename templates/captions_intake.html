@@ -196,7 +196,7 @@
         </div>
         <p id="ca-done" style="display:none; margin:0; color: #1a1a1a;"><span id="ca-done-msg">Check your email to verify your address — then you can log in.</span> <a href="/login" style="color: #1a1a1a; font-weight: 600; text-decoration: underline;">Log in</a></p>
         <p id="ca-already-logged-in" style="display:none; margin:0; font-weight: 500;">You're logged in. <a href="/account" class="intake-account-cta account-billing-portal-link account-btn-swipe-light">Your account</a></p>
-        <p id="ca-already-has-account" style="display:none; margin:0; font-weight: 500;">You already have an account. <a href="/login" id="ca-login-link" class="account-btn-swipe-light" style="display: inline-block; padding: 0.4rem 0.9rem; font-size: 0.9rem;">Log in</a></p>
+        <p id="ca-already-has-account" style="display:none; margin:0; font-weight: 500;">You already have an account. <a href="/login" id="ca-login-link" class="account-billing-portal-link account-btn-swipe-light" style="display: inline-block;">Log in</a></p>
       </div>
     </div>
     <div id="intake-error" style="display: none; margin: 2rem 0; padding: 1.5rem; background: rgba(200,80,80,0.15); border-radius: 8px; color: #1a1a1a;"></div>
@@ -488,7 +488,10 @@
     <div class="intake-subscribe-cta" style="margin: 2rem 0 1.5rem; padding: 1.25rem 1rem; background: rgba(0,0,0,0.06); border-radius: 8px; border: 1px solid rgba(201,162,39,0.35); font-size: 0.95rem; color: #1a1a1a;">
       <p style="margin: 0 0 0.75rem; font-weight: 600;">Want a new pack every month?{% if _intake_biz %} <span style="font-weight: 400; color: #555;">({{ _intake_biz }})</span>{% endif %}</p>
       <p style="margin: 0 0 1rem;">Upgrade to a subscription and your answers from this intake form will be pre-filled on the checkout page. Your first subscription pack arrives 30 days after this one-off pack, so you get continuous content with no overlap. You can edit your form anytime in your account after you subscribe.</p>
-      <a href="{{ subscribe_url }}" class="btn-submit" style="display: inline-block; text-decoration: none; text-align: center;">Upgrade to subscription{% if _intake_biz %} — {{ _intake_biz }}{% else %} — use this form’s answers{% endif %}</a>
+      <p style="margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem;">
+        <a href="{{ subscribe_url }}" class="account-billing-portal-link account-btn-swipe-light" style="display: inline-block; text-decoration: none;">Upgrade to subscription</a>
+        <span style="font-size: 0.9rem; color: #555;">{% if _intake_biz %}— {{ _intake_biz }}{% else %}— use this form’s answers{% endif %}</span>
+      </p>
     </div>
     {% endif %}
 
