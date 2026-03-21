@@ -79,6 +79,8 @@ def billing_portal():
     """
     Create Stripe billing portal session and redirect.
     Requires logged-in customer with a caption order that has stripe_customer_id.
+    Optional ?order_token=xxx: open portal for that order's stripe_customer_id (helps when
+    user has multiple billing accounts).
     """
     customer = get_current_customer()
     if not customer:
@@ -95,12 +97,22 @@ def billing_portal():
     except Exception as e:
         return jsonify({"ok": False, "error": "Could not load orders"}), 500
 
+    order_token = (request.args.get("order_token") or "").strip()
     stripe_customer_id = None
-    for o in orders:
-        cid = (o.get("stripe_customer_id") or "").strip()
-        if cid:
-            stripe_customer_id = cid
-            break
+    if order_token:
+        for o in orders:
+            if (o.get("token") or "").strip() == order_token:
+                cid = (o.get("stripe_customer_id") or "").strip()
+                if cid:
+                    stripe_customer_id = cid
+                    break
+                break
+    if not stripe_customer_id:
+        for o in orders:
+            cid = (o.get("stripe_customer_id") or "").strip()
+            if cid:
+                stripe_customer_id = cid
+                break
 
     if not stripe_customer_id:
         from flask import url_for

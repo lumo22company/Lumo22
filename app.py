@@ -149,10 +149,39 @@ def _start_captions_reminder_scheduler():
                 except Exception as e:
                     print(f"[Captions reminder] error: {e}")
 
+        def run_stuck_delivery_job():
+            """Retry first-pack generation when intake succeeded but email/PDF never landed."""
+            with app.app_context():
+                try:
+                    from api.captions_routes import _run_scheduled_deliveries, _run_stuck_first_deliveries
+
+                    sched_r = _run_scheduled_deliveries()
+                    stuck_r = _run_stuck_first_deliveries(max_orders=3)
+                    n_sched = sched_r.get("scheduled_deliveries_triggered", 0)
+                    n_stuck = stuck_r.get("stuck_first_delivery_triggered", 0)
+                    if n_sched or n_stuck:
+                        print(
+                            f"[Captions recovery] scheduled_deliveries={n_sched} "
+                            f"stuck_first_delivery={n_stuck}"
+                        )
+                except Exception as e:
+                    print(f"[Captions recovery] error: {e}")
+
+        from datetime import datetime, timezone, timedelta
+        from apscheduler.triggers.interval import IntervalTrigger
+
         sched = BackgroundScheduler(daemon=True)
         sched.add_job(run_reminders_job, CronTrigger(hour=9, minute=0, timezone="UTC"))
+        # Heal stuck orders (background thread died, SendGrid fail, etc.) without waiting for manual cron
+        sched.add_job(
+            run_stuck_delivery_job,
+            IntervalTrigger(minutes=10, timezone="UTC"),
+            next_run_time=datetime.now(timezone.utc) + timedelta(seconds=60),
+            id="captions_stuck_and_scheduled_delivery",
+            replace_existing=True,
+        )
         sched.start()
-        print("[Captions reminder] scheduler started (daily 9am UTC)")
+        print("[Captions reminder] scheduler started (daily 9am UTC + stuck-delivery recovery every 10 min)")
     except Exception as e:
         print(f"[Captions reminder] scheduler not started: {e}")
 
@@ -875,6 +904,25 @@ def _account_context():
 
     subscription_billing = _get_subscription_billing(caption_orders)
 
+    # Billing accounts: one per unique stripe_customer_id among subscription orders
+    # Each has { stripe_customer_id, label, order_token } so Manage billing can be scoped
+    billing_accounts = []
+    seen_cids = set()
+    sub_orders = [o for o in caption_orders if (o.get("stripe_subscription_id") or "").strip()]
+    for o in sub_orders:
+        cid = (o.get("stripe_customer_id") or "").strip()
+        if not cid or cid in seen_cids:
+            continue
+        seen_cids.add(cid)
+        intake = o.get("intake") or {}
+        biz = (intake.get("business_name") or "").strip()
+        label = biz.title() if biz else ((o.get("created_at") or "")[:10] or "Subscription")
+        billing_accounts.append({
+            "stripe_customer_id": cid,
+            "label": label,
+            "order_token": (o.get("token") or "").strip(),
+        })
+
     # Upgrade options for one-off customers: one entry per one-off order so they can choose which pack to base a subscription on
     subscribe_options = []
     one_off_orders = [o for o in caption_orders if not (o.get("stripe_subscription_id") or "").strip()]
@@ -911,6 +959,7 @@ def _account_context():
         "caption_orders": caption_orders,
         "current_intake_order": current_intake_order,
         "subscription_billing": subscription_billing,
+        "billing_accounts": billing_accounts,
         "subscribe_options": subscribe_options,
         "subscribe_url": subscribe_url,
         "subscribe_business_name": subscribe_business_name,

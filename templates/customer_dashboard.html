@@ -99,7 +99,13 @@
               <div class="account-info-value">Payment method and invoices</div>
             </div>
             <div class="account-info-actions">
+              {% if billing_accounts and billing_accounts|length > 1 %}
+              <a href="/account/pause" class="account-billing-portal-link account-btn-swipe-light">Manage billing</a>
+              {% elif billing_accounts and billing_accounts[0].order_token %}
+              <a href="/api/billing/portal?order_token={{ billing_accounts[0].order_token }}" class="account-billing-portal-link account-btn-swipe-light">Manage billing</a>
+              {% else %}
               <a href="/api/billing/portal" class="account-billing-portal-link account-btn-swipe-light">Manage billing</a>
+              {% endif %}
             </div>
           </div>
     {% if request.args.get('billing') == 'no_sub' %}
@@ -496,9 +502,25 @@
           <li>Pause billing for one month and manage form reminders below.</li>
           <li><strong>Platforms (add, change, or reduce)</strong> and <strong>Story Ideas (add or remove)</strong> — use the buttons below, or Edit form to change platforms and remove Story Ideas.</li>
         </ul>
-        <div class="account-pause-manage-billing" style="margin-bottom: 1.25rem; display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
+        <div class="account-pause-manage-billing" style="margin-bottom: 1.25rem;">
+          {% if billing_accounts and billing_accounts|length > 1 %}
+          <p class="account-settings-desc" style="margin: 0 0 0.5rem; font-size: 0.9rem; color: #fff;">You have more than one billing account. Choose the one that matches the subscription you want to manage:</p>
+          <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
+          {% for ba in billing_accounts %}
+          <a href="/api/billing/portal?order_token={{ ba.order_token }}" class="account-billing-portal-link account-btn-swipe-dark">Manage billing — {{ ba.label }}</a>
+          {% endfor %}
+          </div>
+          {% elif billing_accounts %}
+          <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
+          <a href="/api/billing/portal?order_token={{ billing_accounts[0].order_token }}" class="account-billing-portal-link account-btn-swipe-dark">Manage billing</a>
+          <span class="account-settings-desc" style="margin: 0; font-size: 0.9rem; color: #fff;">— cancel subscription, update card, or view invoices</span>
+          </div>
+          {% else %}
+          <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
           <a href="/api/billing/portal" class="account-billing-portal-link account-btn-swipe-dark">Manage billing</a>
           <span class="account-settings-desc" style="margin: 0; font-size: 0.9rem; color: #fff;">— cancel subscription, update card, or view invoices</span>
+          </div>
+          {% endif %}
         </div>
         {% for o in sub_orders %}
         {% set pause_biz = (o.get('intake') or {}).get('business_name', '') %}
@@ -520,7 +542,7 @@
           {% endfor %}
               </select>
               {% else %}
-              <span class="account-payment-method-no-cards">Add a card via <a href="/api/billing/portal">Manage billing</a></span>
+              <span class="account-payment-method-no-cards">Add a card via <a href="/api/billing/portal?order_token={{ o.get('token', '') }}">Manage billing</a></span>
               {% endif %}
         </div>
           </div>
@@ -597,6 +619,13 @@
             <button type="button" class="account-get-pack-sooner-btn account-billing-portal-link account-btn-swipe-light" data-order-id="{{ o.get('id', '') }}" data-order-token="{{ o.get('token', '') }}" data-amount="{{ _gps_p.get('symbol', '£') }}{{ _gps_total }}" data-amount-symbol="{{ _gps_p.get('symbol', '£') }}" onclick="showGetPackSoonerModal(this)">Get my pack sooner</button>
           </div>
           {% endif %}
+          <div class="account-settings-row" style="padding: 1rem 0 0; border-bottom: none;">
+            <div>
+              <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Cancel or manage billing</div>
+              <div class="account-settings-desc">Cancel this subscription, update your card, or view invoices.</div>
+            </div>
+            <a href="/api/billing/portal?order_token={{ o.get('token', '') }}" class="account-billing-portal-link account-btn-swipe-light">Manage billing — {{ pause_label }}</a>
+          </div>
         </div>
         {% endfor %}
         {% else %}
