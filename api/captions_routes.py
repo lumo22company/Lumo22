@@ -917,7 +917,8 @@ def captions_intake_submit():
     import traceback
 
     try:
-        data = request.get_json(silent=True) or request.form or {}
+        # force=True parses JSON even when Content-Type is missing/wrong (e.g. proxy)
+        data = request.get_json(silent=True, force=True) or request.form or {}
     except Exception as parse_err:
         print(f"[captions-intake] JSON parse error: {parse_err}")
         return jsonify({"error": "Invalid request body. Please try again."}), 400
@@ -926,9 +927,10 @@ def captions_intake_submit():
         return _captions_intake_submit_impl(data)
     except Exception as e:
         traceback.print_exc()
-        detail = str(e) if os.environ.get("SHOW_500_DETAIL") else None
+        detail = str(e)
         payload = {"error": "Internal server error"}
-        if detail:
+        # Include detail for debugging (set SHOW_500_DETAIL=0 to hide in production)
+        if os.environ.get("SHOW_500_DETAIL", "1") != "0":
             payload["detail"] = f"{type(e).__name__}: {detail}"
         return jsonify(payload), 500
 
