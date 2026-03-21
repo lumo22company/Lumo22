@@ -929,8 +929,8 @@ def captions_intake_submit():
         traceback.print_exc()
         detail = str(e)
         payload = {"error": "Internal server error"}
-        # Include detail for debugging (set SHOW_500_DETAIL=0 to hide in production)
-        if os.environ.get("SHOW_500_DETAIL", "1") != "0":
+        # Include detail only when SHOW_500_DETAIL=1 (for debugging)
+        if os.environ.get("SHOW_500_DETAIL") == "1":
             payload["detail"] = f"{type(e).__name__}: {detail}"
         return jsonify(payload), 500
 

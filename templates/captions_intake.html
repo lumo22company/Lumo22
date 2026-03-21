@@ -760,7 +760,7 @@
           } else {
             var errEl = document.getElementById('intake-error');
             var ctaEl = document.getElementById('intake-upgrade-cta');
-            var errMsg = result.json.error || 'Something didn\'t send — try again or email us at hello@lumo22.com.'; if (result.json.detail) errMsg += ' (' + result.json.detail + ')'; if (errEl) { errEl.textContent = errMsg; errEl.style.display = 'block'; }
+            if (errEl) { errEl.textContent = result.json.error || 'Something didn\'t send — try again or email us at hello@lumo22.com.'; errEl.style.display = 'block'; }
             if (ctaEl) {
               if (result.json.downgrade_required) {
                 var sym = result.json.new_price_symbol || '£';
@@ -1156,7 +1156,7 @@
           } else {
             var errEl = document.getElementById('intake-error');
             var ctaEl = document.getElementById('intake-upgrade-cta');
-            var errMsg = result.json.error || 'Something didn\'t send — try again or email us at hello@lumo22.com.'; if (result.json.detail) errMsg += ' (' + result.json.detail + ')'; if (errEl) { errEl.textContent = errMsg; errEl.style.display = 'block'; }
+            if (errEl) { errEl.textContent = result.json.error || 'Something didn\'t send — try again or email us at hello@lumo22.com.'; errEl.style.display = 'block'; }
             if (ctaEl) {
               if (result.json.downgrade_required) {
                 var sym = result.json.new_price_symbol || '£';
