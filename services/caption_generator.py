@@ -508,6 +508,22 @@ DATE_CONTEXT (their 30 days start on a specific date; use when relevant, e.g. we
 
 You may reference the actual day/date where it helps (e.g. Monday tip, weekend post). Use only when natural.
 """
+        # Key date phasing: stories must align with launch/event dates (same as captions)
+        key_date_block = ""
+        launch_desc_raw = (intake.get("launch_event_description") or "").strip()
+        launch_desc = n(launch_desc_raw, sentence_case=True) if launch_desc_raw else ""
+        key_date_day = _parse_key_date_from_text(launch_desc_raw or launch_desc, start_str) if (launch_desc_raw or launch_desc) else None
+        if launch_desc:
+            key_date_block = f"""
+
+KEY_DATE_EVENTS (user included dates in description):
+{launch_desc}
+
+Phase story content by the dates above: BEFORE = anticipation, teasers, countdown; ON/DURING = announce, promote; AFTER = thank-you, feedback. Do not put launch-day tone on the wrong day. Use the actual dates from DATE_CONTEXT when mentioning when events happen—do not invent different dates."""
+            if key_date_day is not None:
+                key_date_block += f"""
+
+IMPORTANT — The client's key date above falls on Day {key_date_day}. Write pre-launch/anticipation stories for days 1 to {key_date_day - 1}, launch-day/announcement for Day {key_date_day}, and post-launch/thank-you for days {key_date_day + 1} to 30. Suggested wording must reference the correct dates (e.g. if launch is Day 7 = Fri 27 Mar, do not say "opens in April" on Day 7)."""
         variety_note = ""
         if is_subscription_variety:
             variety_note = "\n\nThis client receives packs monthly; vary story types and angles (polls, BTS, tips, testimonials, etc.) so this month feels fresh and not repetitive with previous packs.\n"
@@ -526,6 +542,7 @@ INTAKE:
 - Audience: {intake.get('audience', '')}
 - Goal: {intake.get('goal', '')}
 {date_block}
+{key_date_block}
 {variety_note}
 {brand_rule}
 
@@ -601,6 +618,22 @@ DATE_CONTEXT (their 30 days start on a specific date; use when relevant):
 
 You may reference the actual day/date where it helps. Use only when natural.
 """
+        # Key date phasing: stories must align with launch/event dates (same as captions)
+        key_date_block = ""
+        launch_desc_raw = (intake.get("launch_event_description") or "").strip()
+        launch_desc = n(launch_desc_raw, sentence_case=True) if launch_desc_raw else ""
+        key_date_day = _parse_key_date_from_text(launch_desc_raw or launch_desc, start_str) if (launch_desc_raw or launch_desc) else None
+        if launch_desc:
+            key_date_block = f"""
+
+KEY_DATE_EVENTS (user included dates in description):
+{launch_desc}
+
+Phase story content by the dates above. Use the actual dates from DATE_CONTEXT when mentioning when events happen—do not invent different dates."""
+            if key_date_day is not None:
+                key_date_block += f"""
+
+IMPORTANT — The client's key date above falls on Day {key_date_day}. Suggested wording must reference the correct dates (e.g. if launch is Day 7 = Fri 27 Mar, do not say "opens in April" on Day 7)."""
         variety_note = ""
         if is_subscription_variety:
             variety_note = "\n\nThis client receives packs monthly; vary story types and angles (polls, BTS, tips, testimonials, etc.) so this month feels fresh and not repetitive with previous packs.\n"
@@ -620,6 +653,7 @@ INTAKE:
 - Audience: {intake.get('audience', '')}
 - Goal: {intake.get('goal', '')}
 {date_block}
+{key_date_block}
 {variety_note}
 {brand_rule}
 
