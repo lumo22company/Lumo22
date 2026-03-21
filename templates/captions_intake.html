@@ -97,8 +97,8 @@
       border: 2px solid rgba(0,0,0,0.25); border-radius: var(--radius-btn, 8px);
       text-decoration: none !important;
     }
-    /* "Your account" — same family as dashboard Change email (compact swipe, uppercase) */
-    .intake-page #create-account-box a.intake-account-cta.account-btn-swipe-light {
+    /* "Your account", Log in, Upgrade to subscription — same family as dashboard Change email (compact swipe, uppercase) */
+    .intake-page a.intake-account-cta.account-btn-swipe-light {
       display: inline-flex !important;
       align-items: center;
       justify-content: center;
@@ -113,6 +113,7 @@
       text-decoration: none !important;
       border-radius: var(--radius-btn, 8px);
     }
+    .intake-page .intake-subscribe-cta a.intake-account-cta.account-btn-swipe-light { margin-left: 0; }
     .intake-page #create-account-box .btn-submit#ca-btn { padding: 12px 24px; min-height: 48px; font-size: 1rem; font-weight: 600; }
     /* Edit preferences button — same compact swipe style as Your account / Change email */
     .intake-page .intake-edit-preferences-btn { padding: 0.4rem 0.9rem !important; min-height: auto !important; font-size: 0.7rem !important; font-weight: 600 !important; letter-spacing: 0.2em !important; text-transform: uppercase !important; }
@@ -196,7 +197,7 @@
         </div>
         <p id="ca-done" style="display:none; margin:0; color: #1a1a1a;"><span id="ca-done-msg">Check your email to verify your address — then you can log in.</span> <a href="/login" style="color: #1a1a1a; font-weight: 600; text-decoration: underline;">Log in</a></p>
         <p id="ca-already-logged-in" style="display:none; margin:0; font-weight: 500;">You're logged in. <a href="/account" class="intake-account-cta account-billing-portal-link account-btn-swipe-light">Your account</a></p>
-        <p id="ca-already-has-account" style="display:none; margin:0; font-weight: 500;">You already have an account. <a href="/login" id="ca-login-link" class="account-billing-portal-link account-btn-swipe-light" style="display: inline-block;">Log in</a></p>
+        <p id="ca-already-has-account" style="display:none; margin:0; font-weight: 500;">You already have an account. <a href="/login" id="ca-login-link" class="intake-account-cta account-billing-portal-link account-btn-swipe-light" style="display: inline-block;">Log in</a></p>
       </div>
     </div>
     <div id="intake-error" style="display: none; margin: 2rem 0; padding: 1.5rem; background: rgba(200,80,80,0.15); border-radius: 8px; color: #1a1a1a;"></div>
@@ -489,7 +490,7 @@
       <p style="margin: 0 0 0.75rem; font-weight: 600;">Want a new pack every month?{% if _intake_biz %} <span style="font-weight: 400; color: #555;">({{ _intake_biz }})</span>{% endif %}</p>
       <p style="margin: 0 0 1rem;">Upgrade to a subscription and your answers from this intake form will be pre-filled on the checkout page. Your first subscription pack arrives 30 days after this one-off pack, so you get continuous content with no overlap. You can edit your form anytime in your account after you subscribe.</p>
       <p style="margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem;">
-        <a href="{{ subscribe_url }}" class="account-billing-portal-link account-btn-swipe-light" style="display: inline-block; text-decoration: none;">Upgrade to subscription</a>
+        <a href="{{ subscribe_url }}" class="intake-account-cta account-billing-portal-link account-btn-swipe-light" style="display: inline-block; text-decoration: none;">Upgrade to subscription</a>
         <span style="font-size: 0.9rem; color: #555;">{% if _intake_biz %}— {{ _intake_biz }}{% else %}— use this form’s answers{% endif %}</span>
       </p>
     </div>
