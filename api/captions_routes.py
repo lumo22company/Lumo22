@@ -4,6 +4,7 @@ API routes for 30 Days Captions: checkout (redirect to intake after payment), in
 Subscription (£79/mo) vs one-off (£97): same intake form and delivery flow; subscription uses Stripe
 mode=subscription and is detected in webhook so we create order and send intake email on first payment.
 """
+import os
 from flask import Blueprint, request, jsonify, redirect, Response, url_for
 from urllib.parse import quote
 from config import Config
@@ -913,10 +914,29 @@ def captions_intake_submit():
     Submit intake for a 30 Days Captions order (identified by token).
     Saves intake and starts generation in background; returns immediately.
     """
+    import traceback
+
+    try:
+        data = request.get_json(silent=True) or request.form or {}
+    except Exception as parse_err:
+        print(f"[captions-intake] JSON parse error: {parse_err}")
+        return jsonify({"error": "Invalid request body. Please try again."}), 400
+
+    try:
+        return _captions_intake_submit_impl(data)
+    except Exception as e:
+        traceback.print_exc()
+        detail = str(e) if os.environ.get("SHOW_500_DETAIL") else None
+        payload = {"error": "Internal server error"}
+        if detail:
+            payload["detail"] = f"{type(e).__name__}: {detail}"
+        return jsonify(payload), 500
+
+
+def _captions_intake_submit_impl(data):
     from services.caption_order_service import CaptionOrderService
     import threading
 
-    data = request.get_json() or request.form
     if not data:
         return jsonify({"error": "Please fill in the form."}), 400
 
