@@ -3,10 +3,9 @@ Webhook handlers for third-party integrations.
 Allows external services to send leads to the system.
 """
 import re
+import time
 from flask import Blueprint, request, jsonify, current_app
 from config import Config
-from api.routes import capture_lead
-
 webhook_bp = Blueprint('webhooks', __name__, url_prefix='/webhooks')
 
 # --- Stripe (30 Days Captions) ---
@@ -216,6 +215,7 @@ def _handle_captions_payment(session):
         if (not upgraded_from_oneoff) and (not is_trial_upgrade):
             try:
                 notif.send_order_receipt_email(customer_email, order=order, session=session)
+                time.sleep(2)  # Ensure confirmation is queued before intake so it arrives first
             except Exception as receipt_err:
                 print(f"[Stripe webhook] Receipt email failed (non-fatal): {receipt_err}")
         if upgraded_from_oneoff:
@@ -437,7 +437,6 @@ def stripe_webhook():
             return jsonify({"received": True}), 200
 
         if event_type == "customer.subscription.updated":
-            # Plan change via Stripe billing portal: send confirmation email with explicit pricing
             sub_obj = event.get("data", {}).get("object") if isinstance(event, dict) else None
             if not sub_obj or not isinstance(sub_obj, dict):
                 return jsonify({"received": True}), 200
@@ -446,7 +445,6 @@ def stripe_webhook():
                 return jsonify({"received": True}), 200
             from services.caption_order_service import CaptionOrderService
             from services.notifications import NotificationService
-            from api.billing_routes import _subscription_monthly_price, subscription_platforms_and_stories_from_stripe
             order_service = CaptionOrderService()
             order = order_service.get_by_stripe_subscription_id(sub_id)
             if not order:
@@ -456,6 +454,19 @@ def stripe_webhook():
                 base = (Config.BASE_URL or "https://www.lumo22.com").strip().rstrip("/")
                 if not base.startswith("http"):
                     base = "https://" + base
+                # Cancellation scheduled (cancel at period end): send confirmation immediately
+                if sub_obj.get("cancel_at_period_end"):
+                    try:
+                        captions_url = base.rstrip("/") + "/captions"
+                        notif = NotificationService()
+                        notif.send_subscription_cancelled_email(customer_email, captions_url)
+                        print(f"[Stripe webhook] Cancellation scheduled confirmation sent to {customer_email}")
+                    except Exception as e:
+                        print(f"[Stripe webhook] Cancellation confirmation email failed: {e}")
+                    return jsonify({"received": True}), 200
+            # Plan change via Stripe billing portal: send confirmation email with explicit pricing
+            from api.billing_routes import _subscription_monthly_price, subscription_platforms_and_stories_from_stripe
+            if customer_email and "@" in customer_email:
                 account_url = base + "/account"
                 try:
                     currency = (order.get("currency") or "gbp").strip().lower()
@@ -601,99 +612,21 @@ def stripe_webhook():
 
 @webhook_bp.route('/typeform', methods=['POST'])
 def typeform_webhook():
-    """
-    Handle Typeform webhook submissions.
-    Maps Typeform response format to our lead format.
-    """
+    """Typeform webhook. Lead capture discontinued; return 200 so integrations don't fail."""
     try:
-        data = request.get_json()
-        
-        # Typeform webhook format
-        # Extract answers from form_response
-        if 'form_response' not in data:
-            return jsonify({'error': 'Invalid Typeform webhook format'}), 400
-        
-        form_response = data['form_response']
-        answers = form_response.get('answers', [])
-        
-        # Map Typeform answers to lead fields
-        # This assumes specific field IDs - adjust based on your Typeform
-        lead_data = {
-            'name': '',
-            'email': '',
-            'phone': '',
-            'service_type': '',
-            'message': '',
-            'source': 'typeform'
-        }
-        
-        # Typeform answers are in a specific format
-        # You'll need to map based on your form structure
-        for answer in answers:
-            field_type = answer.get('type')
-            field_ref = answer.get('field', {}).get('ref', '')
-            
-            if field_type == 'text' or field_type == 'short_text':
-                value = answer.get('text', '')
-                # Map based on your form field IDs
-                if 'name' in field_ref.lower() or not lead_data['name']:
-                    lead_data['name'] = value
-                elif 'email' in field_ref.lower() or '@' in value:
-                    lead_data['email'] = value
-                elif 'phone' in field_ref.lower() or any(c.isdigit() for c in value):
-                    lead_data['phone'] = value
-                elif 'message' in field_ref.lower() or 'description' in field_ref.lower():
-                    lead_data['message'] = value
-            
-            elif field_type == 'choice':
-                value = answer.get('choice', {}).get('label', '')
-                if 'service' in field_ref.lower():
-                    lead_data['service_type'] = value
-        
-        # Use the capture_lead function
-        from flask import current_app
-        with current_app.test_request_context(
-            '/api/capture',
-            method='POST',
-            json=lead_data
-        ):
-            return capture_lead()
-        
-    except Exception as e:
-        print(f"Error processing Typeform webhook: {e}")
-        return jsonify({'error': str(e)}), 500
+        request.get_json(silent=True)
+    except Exception:
+        pass
+    return jsonify({'ok': True}), 200
 
 @webhook_bp.route('/zapier', methods=['POST'])
 def zapier_webhook():
-    """
-    Handle Zapier webhook submissions.
-    Generic webhook that accepts standard lead format.
-    """
+    """Zapier webhook. Lead capture discontinued; return 200 so integrations don't fail."""
     try:
-        data = request.get_json()
-        
-        # Zapier typically sends data in a clean format
-        lead_data = {
-            'name': data.get('name', ''),
-            'email': data.get('email', ''),
-            'phone': data.get('phone', ''),
-            'service_type': data.get('service_type', ''),
-            'message': data.get('message', ''),
-            'source': data.get('source', 'zapier')
-        }
-        
-        # Use the capture_lead function
-        from flask import current_app
-        with current_app.test_request_context(
-            '/api/capture',
-            method='POST',
-            json=lead_data
-        ):
-            return capture_lead()
-        
-    except Exception as e:
-        print(f"Error processing Zapier webhook: {e}")
-        return jsonify({'error': str(e)}), 500
+        request.get_json(silent=True)
+    except Exception:
+        pass
+    return jsonify({'ok': True}), 200
 
 @webhook_bp.route('/sendgrid-inbound', methods=['POST'])
 def sendgrid_inbound():
@@ -705,32 +638,9 @@ def sendgrid_inbound():
 
 @webhook_bp.route('/generic', methods=['POST'])
 def generic_webhook():
-    """
-    Generic webhook endpoint that accepts any JSON format.
-    Attempts to intelligently map fields.
-    """
+    """Generic webhook. Lead capture discontinued; return 200 so integrations don't fail."""
     try:
-        data = request.get_json()
-        
-        # Intelligent field mapping
-        lead_data = {
-            'name': data.get('name') or data.get('full_name') or data.get('contact_name', ''),
-            'email': data.get('email') or data.get('email_address', ''),
-            'phone': data.get('phone') or data.get('phone_number') or data.get('mobile', ''),
-            'service_type': data.get('service_type') or data.get('service') or data.get('product', ''),
-            'message': data.get('message') or data.get('description') or data.get('notes', ''),
-            'source': data.get('source', 'webhook')
-        }
-        
-        # Use the capture_lead function
-        from flask import current_app
-        with current_app.test_request_context(
-            '/api/capture',
-            method='POST',
-            json=lead_data
-        ):
-            return capture_lead()
-        
-    except Exception as e:
-        print(f"Error processing generic webhook: {e}")
-        return jsonify({'error': str(e)}), 500
+        request.get_json(silent=True)
+    except Exception:
+        pass
+    return jsonify({'ok': True}), 200
