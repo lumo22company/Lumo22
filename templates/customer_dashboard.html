@@ -568,7 +568,13 @@
               <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Resume subscription</div>
               <div class="account-settings-desc">Your subscription will renew again at the end of your billing period.</div>
             </div>
-            <button type="button" class="account-billing-portal-link account-btn-swipe-light account-restart-btn" style="flex-shrink: 0;" data-order-id="{{ o.get('id', '') }}" onclick="restartSubscription(this)">Resume subscription</button>
+            {% set _resume_platforms = (o.get('platforms_count') or 1)|int %}
+            {% set _resume_stories = o.get('include_stories') %}
+            {% set _resume_currency = (o.get('currency') or 'gbp')|lower %}
+            {% set _resume_p = captions_prices.get(_resume_currency, captions_prices['gbp']) %}
+            {% set _resume_total = _resume_p.get('sub', 79) + (_resume_platforms - 1) * _resume_p.get('extra_sub', 19) + (_resume_p.get('stories_sub', 17) if _resume_stories else 0) %}
+            {% set _resume_ends = (o.get('subscription_pause') or {}).get('ends_at') or 'at period end' %}
+            <button type="button" class="account-billing-portal-link account-btn-swipe-light account-restart-btn" style="flex-shrink: 0;" data-order-id="{{ o.get('id', '') }}" data-ends-at="{{ _resume_ends }}" data-price="{{ _resume_p.get('symbol', '£') }}{{ _resume_total }}" onclick="showResumeSubscriptionModal(this)">Resume subscription</button>
           </div>
           {% endif %}
           <div class="account-settings-row account-payment-method-row" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid rgba(0,0,0,0.06);" data-subscription-id="{{ sub_id }}">
@@ -772,6 +778,20 @@
           <button type="button" class="account-delete-modal-btn account-delete-modal-keep" onclick="closeRemoveStoriesModal()">Cancel</button>
           <button type="button" id="remove-stories-modal-confirm" class="account-delete-modal-btn account-remove-stories-confirm" disabled>I have read and agree — accept new price</button>
         </div>
+      </div>
+    </div>
+    <div id="resume-subscription-modal" class="account-delete-modal" role="dialog" aria-labelledby="resume-subscription-modal-title" aria-modal="true" hidden>
+      <div class="account-delete-modal-backdrop" onclick="closeResumeSubscriptionModal()"></div>
+      <div class="account-delete-modal-box remove-stories-modal-box" style="max-width: 520px;">
+        <h2 id="resume-subscription-modal-title" class="account-delete-modal-title">Resume subscription?</h2>
+        <p class="account-delete-modal-text">Your subscription will renew <span id="resume-subscription-date-wrap"></span> at your current rate (<strong id="resume-subscription-price"></strong>/month). You'll receive packs each month until you cancel again.</p>
+        <p class="account-delete-modal-text" style="font-size: 0.9rem; margin-bottom: 0.5rem;">You need to resume before your subscription ends to keep it. After that, you'll need to subscribe again.</p>
+        <p class="account-delete-modal-text" style="font-size: 0.85rem; margin-bottom: 1rem; color: rgba(255,255,255,0.85);">Need your next pack before the renewal date? You can use <strong>Get my pack sooner</strong> from this page after resuming.</p>
+        <div class="account-delete-modal-buttons">
+          <button type="button" class="account-delete-modal-btn account-delete-modal-keep" onclick="closeResumeSubscriptionModal()">Cancel</button>
+          <button type="button" id="resume-subscription-confirm-btn" class="account-delete-modal-btn account-add-stories-confirm" onclick="confirmResumeSubscription()">Resume subscription</button>
+        </div>
+        <p id="resume-subscription-error" style="display: none; margin-top: 0.75rem; color: #c00; font-size: 0.9rem;"></p>
       </div>
     </div>
     <div id="change-plan-modal" class="account-delete-modal" role="dialog" aria-labelledby="change-plan-modal-title" aria-modal="true" hidden>
@@ -1079,11 +1099,38 @@
       }
       window.resumeSubscription = resumeSubscription;
 
-      function restartSubscription(btn) {
+      var resumeSubscriptionState = { orderId: null };
+      function showResumeSubscriptionModal(btn) {
         var orderId = btn.getAttribute('data-order-id');
+        var endsAt = btn.getAttribute('data-ends-at') || 'at period end';
+        var price = btn.getAttribute('data-price') || '—';
         if (!orderId) return;
-        btn.disabled = true;
-        btn.textContent = 'Resuming…';
+        resumeSubscriptionState.orderId = orderId;
+        var dateWrap = document.getElementById('resume-subscription-date-wrap');
+        var priceEl = document.getElementById('resume-subscription-price');
+        if (dateWrap) {
+          if (endsAt && endsAt !== 'at period end') {
+            dateWrap.innerHTML = 'on <strong>' + endsAt + '</strong>';
+          } else {
+            dateWrap.textContent = 'at the end of your current billing period';
+          }
+        }
+        if (priceEl) priceEl.textContent = price;
+        var errEl = document.getElementById('resume-subscription-error');
+        if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+        var modal = document.getElementById('resume-subscription-modal');
+        if (modal) { modal.hidden = false; modal.removeAttribute('hidden'); }
+      }
+      function closeResumeSubscriptionModal() {
+        resumeSubscriptionState.orderId = null;
+        var modal = document.getElementById('resume-subscription-modal');
+        if (modal) { modal.hidden = true; modal.setAttribute('hidden', ''); }
+      }
+      function confirmResumeSubscription() {
+        var orderId = resumeSubscriptionState.orderId;
+        if (!orderId) return;
+        var btn = document.getElementById('resume-subscription-confirm-btn');
+        if (btn) { btn.disabled = true; btn.textContent = 'Resuming…'; }
         fetch('/api/captions/restart-subscription', {
           credentials: 'same-origin',
           method: 'POST',
@@ -1095,18 +1142,20 @@
           if (data.ok) {
             window.location.reload();
           } else {
-            alert(data.error || 'Could not resume subscription');
-            btn.disabled = false;
-            btn.textContent = 'Resume subscription';
+            var errEl = document.getElementById('resume-subscription-error');
+            if (errEl) { errEl.textContent = data.error || 'Could not resume subscription'; errEl.style.display = 'block'; }
+            if (btn) { btn.disabled = false; btn.textContent = 'Resume subscription'; }
           }
         })
         .catch(function() {
-          alert('Something went wrong — try again.');
-          btn.disabled = false;
-          btn.textContent = 'Resume subscription';
+          var errEl = document.getElementById('resume-subscription-error');
+          if (errEl) { errEl.textContent = 'Something went wrong — try again.'; errEl.style.display = 'block'; }
+          if (btn) { btn.disabled = false; btn.textContent = 'Resume subscription'; }
         });
       }
-      window.restartSubscription = restartSubscription;
+      window.showResumeSubscriptionModal = showResumeSubscriptionModal;
+      window.closeResumeSubscriptionModal = closeResumeSubscriptionModal;
+      window.confirmResumeSubscription = confirmResumeSubscription;
 
       // Change plan modal (upgrade/downgrade platforms and Stories)
       var changePlanState = {
