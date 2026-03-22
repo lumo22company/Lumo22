@@ -503,29 +503,33 @@
           <li><strong>Platforms (add, change, or reduce)</strong> and <strong>Story Ideas (add or remove)</strong> — use the buttons below, or Edit form to change platforms and remove Story Ideas.</li>
         </ul>
         <div class="account-pause-manage-billing" style="margin-bottom: 1.25rem;">
-          {% if billing_accounts and billing_accounts|length > 1 %}
-          <p class="account-settings-desc" style="margin: 0 0 0.5rem; font-size: 0.9rem; color: #fff;">You have more than one billing account. Select the subscription you want to manage:</p>
+          {% if sub_orders and sub_orders|length > 1 %}
+          <p class="account-settings-desc" style="margin: 0 0 0.5rem; font-size: 0.9rem; color: #fff;">You have more than one subscription. Select the one you want to manage:</p>
           <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
-            <select id="billing-account-select" aria-label="Select subscription to manage" style="padding: 0.5rem 2rem 0.5rem 0.75rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.2); color: #fff; font-size: 0.95rem; cursor: pointer; min-width: 200px;">
-              <option value="">— Select subscription —</option>
-              {% for ba in billing_accounts %}
-              <option value="/api/billing/portal?order_token={{ ba.order_token }}">{{ ba.label }}</option>
+            <select id="subscription-filter-select" aria-label="Select subscription to manage" style="padding: 0.5rem 2rem 0.5rem 0.75rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.2); color: #fff; font-size: 0.95rem; cursor: pointer; min-width: 200px;">
+              <option value="">— Show all —</option>
+              {% for o in sub_orders %}
+              {% set _label = ((o.get('intake') or {}).get('business_name', '')|title) if (o.get('intake') or {}).get('business_name') else ((o.get('created_at') or '')[:10] if o.get('created_at') else 'Subscription') %}
+              <option value="{{ o.get('token', '') }}">{{ _label }}</option>
               {% endfor %}
             </select>
-            <a href="#" id="billing-portal-go-btn" class="account-billing-portal-link account-btn-swipe-dark" style="pointer-events: none; opacity: 0.6;">Manage billing</a>
           </div>
           <script>
-          (function() {
-            var sel = document.getElementById('billing-account-select');
-            var btn = document.getElementById('billing-portal-go-btn');
-            if (sel && btn) {
-              sel.addEventListener('change', function() {
-                var url = sel.value;
-                if (url) { btn.href = url; btn.style.pointerEvents = ''; btn.style.opacity = '1'; }
-                else { btn.href = '#'; btn.style.pointerEvents = 'none'; btn.style.opacity = '0.6'; }
-              });
+          document.addEventListener('DOMContentLoaded', function() {
+            var sel = document.getElementById('subscription-filter-select');
+            var panels = document.querySelectorAll('.account-pause-block[data-order-token]');
+            function filterPanels() {
+              var token = sel ? sel.value : '';
+              for (var i = 0; i < panels.length; i++) {
+                var p = panels[i];
+                p.style.display = (!token || p.getAttribute('data-order-token') === token) ? '' : 'none';
+              }
             }
-          })();
+            if (sel) {
+              sel.addEventListener('change', filterPanels);
+              filterPanels();
+            }
+          });
           </script>
           {% elif billing_accounts %}
           <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
@@ -544,7 +548,7 @@
         {% set pause_label = (pause_biz|title) if pause_biz else ((o.get('created_at') or '')[:10] if o.get('created_at') else 'Subscription') %}
         {% set sub_id = (o.get('stripe_subscription_id') or '')|trim %}
         {% set current_pm = (subscription_billing.get('subscription_payment_methods') or {}).get(sub_id) if subscription_billing else None %}
-        <div class="account-pause-block" style="margin-bottom: 1rem;">
+        <div class="account-pause-block" data-order-token="{{ o.get('token', '') }}" style="margin-bottom: 1rem;">
           <div class="account-pause-panel-title" style="font-size: 0.9rem; font-weight: 600; color: #000; margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(0,0,0,0.08);">{{ pause_label }}</div>
           <div class="account-settings-row account-payment-method-row" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid rgba(0,0,0,0.06);" data-subscription-id="{{ sub_id }}">
         <div>
