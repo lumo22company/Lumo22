@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lumo 22 — Manual Test Checklist</title>
+  <style>
+    @media print { body { font-size: 11pt; } .page-break { page-break-before: always; } }
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 700px; margin: 0 auto; padding: 24px; color: #1a1a1a; line-height: 1.5; }
+    h1 { font-size: 1.5rem; border-bottom: 2px solid #000; padding-bottom: 8px; margin-top: 0; }
+    h2 { font-size: 1.2rem; margin-top: 24px; }
+    table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 0.9rem; }
+    th, td { border: 1px solid #ccc; padding: 8px 10px; text-align: left; vertical-align: top; }
+    th { background: #f5f5f5; font-weight: 600; width: 35%; }
+    .example-num { background: #000; color: #fff; padding: 2px 8px; font-weight: 600; font-size: 0.85rem; }
+    ul { margin: 8px 0; padding-left: 20px; }
+    .checkbox { display: inline-block; width: 14px; height: 14px; border: 1.5px solid #333; margin-right: 6px; vertical-align: middle; }
+    li { margin: 4px 0; }
+    .note { background: #f9f9f9; padding: 10px 12px; margin: 12px 0; border-left: 4px solid #c9a227; font-size: 0.95rem; }
+    code { background: #eee; padding: 1px 4px; font-size: 0.9em; }
+    .section { margin-bottom: 28px; }
+    .flows { list-style: none; padding-left: 0; }
+    .flows li { margin: 12px 0; padding: 12px; background: #f8f8f8; border-radius: 6px; }
+  </style>
+</head>
+<body>
+
+<h1>Lumo 22 — Manual Test Checklist</h1>
+<p><strong>Print this and tick off as you test.</strong> Use Stripe test card <code>4242 4242 4242 4242</code> for payments.</p>
+
+<div class="note">
+  <strong>Base URL:</strong> <code>https://www.lumo22.com</code> (or your live URL)<br>
+  <strong>Test card:</strong> 4242 4242 4242 4242 | Any future expiry | Any CVC
+</div>
+
+<!-- ========== EXAMPLE 1 ========== -->
+<div class="section page-break">
+  <h2>Example 1: Clear Path Strategy (Consultancy) — no key date</h2>
+  <p><em>Tests: standard flow, consultancy niche, tone & variety</em></p>
+  <table>
+    <tr><th>Field</th><th>Value</th></tr>
+    <tr><td>Business name</td><td>Clear Path Strategy</td></tr>
+    <tr><td>Business type</td><td>Consultancy</td></tr>
+    <tr><td>What you offer</td><td>We help busy founders and small business owners get clarity on strategy without the daily grind.</td></tr>
+    <tr><td>Operating hours</td><td>Mon–Fri 9–5</td></tr>
+    <tr><td>Audience — checkboxes</td><td>☑ Founders ☑ Small business owners ☐ Marketing leads ☐ Creatives ☐ Consumers</td></tr>
+    <tr><td>Audience — Other</td><td><em>Leave blank</em></td></tr>
+    <tr><td>Consumer age</td><td>N/A</td></tr>
+    <tr><td>What they care about</td><td>Quick wins, feeling less overwhelmed, practical tips they can use straight away</td></tr>
+    <tr><td>Voice — checkboxes</td><td>☑ Direct ☑ Thoughtful ☑ Professional ☐ Warm ☐ Playful ☐ etc.</td></tr>
+    <tr><td>Voice — Other</td><td><em>Leave blank</em></td></tr>
+    <tr><td>Words to avoid</td><td>Hype, jargon</td></tr>
+    <tr><td>Language</td><td>English (UK)</td></tr>
+    <tr><td>Platform</td><td>Instagram & Facebook, LinkedIn (select at checkout)</td></tr>
+    <tr><td>Include stories</td><td>Yes (if paid for)</td></tr>
+    <tr><td>Align stories to captions</td><td>Either — try one of each</td></tr>
+    <tr><td>Include hashtags</td><td>Yes (3–10)</td></tr>
+    <tr><td>Goal</td><td>More inquiries / leads</td></tr>
+    <tr><td>Key date</td><td><em>Leave blank</em></td></tr>
+    <tr><td>Usual topics</td><td>Weekly tips, strategy frameworks, client wins</td></tr>
+  </table>
+</div>
+
+<!-- ========== EXAMPLE 2 ========== -->
+<div class="section page-break">
+  <h2>Example 2: Meadow Bakery (Product) — with key date</h2>
+  <p><em>Tests: key date phasing, captions + stories date alignment</em></p>
+  <table>
+    <tr><th>Field</th><th>Value</th></tr>
+    <tr><td>Business name</td><td>Meadow Bakery</td></tr>
+    <tr><td>Business type</td><td>Product brand / E-commerce</td></tr>
+    <tr><td>What you offer</td><td>Artisan sourdough and pastries made with local flour. For food lovers and weekend brunchers.</td></tr>
+    <tr><td>Operating hours</td><td>Thu–Sun 8am–2pm</td></tr>
+    <tr><td>Audience — checkboxes</td><td>☐ Founders ☐ Small business owners ☐ Marketing leads ☐ Creatives ☑ Consumers</td></tr>
+    <tr><td>Audience — Other</td><td>Food lovers, families, weekend brunchers</td></tr>
+    <tr><td>Consumer age</td><td>25–55</td></tr>
+    <tr><td>What they care about</td><td>Quality ingredients, supporting local, treating themselves at the weekend</td></tr>
+    <tr><td>Voice — checkboxes</td><td>☑ Warm ☑ Friendly ☑ Understated ☐ etc.</td></tr>
+    <tr><td>Voice — Other</td><td><em>Leave blank</em></td></tr>
+    <tr><td>Words to avoid</td><td>Hype, artificial</td></tr>
+    <tr><td>Language</td><td>English (UK)</td></tr>
+    <tr><td>Platform</td><td>Instagram & Facebook</td></tr>
+    <tr><td>Include stories</td><td>Yes</td></tr>
+    <tr><td>Align stories to captions</td><td>Try one run with, one without</td></tr>
+    <tr><td>Include hashtags</td><td>Yes</td></tr>
+    <tr><td>Goal</td><td>Launch visibility</td></tr>
+    <tr><td>Key date</td><td><strong>Easter weekend pop-up stall, 18–19 April</strong> <em>(or pick a date within your 30-day pack)</em></td></tr>
+    <tr><td>Usual topics</td><td>Behind-the-scenes baking, ingredient spotlights, customer favourites</td></tr>
+  </table>
+  <div class="note"><strong>Quality check:</strong> Verify launch-day (Day 18 or 19) captions and stories reference April correctly — not "May" or wrong month.</div>
+</div>
+
+<!-- ========== EXAMPLE 3 ========== -->
+<div class="section page-break">
+  <h2>Example 3: Calm Space Cleaning (Service) — subscription</h2>
+  <p><em>Tests: subscription flow, service business language</em></p>
+  <table>
+    <tr><th>Field</th><th>Value</th></tr>
+    <tr><td>Business name</td><td>Calm Space Cleaning</td></tr>
+    <tr><td>Business type</td><td>Service business</td></tr>
+    <tr><td>What you offer</td><td>Eco-friendly home cleaning for busy families. We use plant-based products and focus on calm, clutter-free spaces.</td></tr>
+    <tr><td>Operating hours</td><td>Mon–Fri 8am–6pm</td></tr>
+    <tr><td>Audience — checkboxes</td><td>☐ Founders ☐ Small business owners ☐ Marketing leads ☐ Creatives ☑ Consumers</td></tr>
+    <tr><td>Audience — Other</td><td>Parents, dual-income households</td></tr>
+    <tr><td>Consumer age</td><td>30–50</td></tr>
+    <tr><td>What they care about</td><td>Time back, eco credentials, trustworthy team in their home</td></tr>
+    <tr><td>Voice — checkboxes</td><td>☑ Warm ☑ Professional ☑ Concise ☐ etc.</td></tr>
+    <tr><td>Voice — Other</td><td><em>Leave blank</em></td></tr>
+    <tr><td>Words to avoid</td><td>Hype, pushy sales</td></tr>
+    <tr><td>Language</td><td>English (UK)</td></tr>
+    <tr><td>Platform</td><td>Instagram & Facebook</td></tr>
+    <tr><td>Include stories</td><td>Yes</td></tr>
+    <tr><td>Align stories to captions</td><td>Either</td></tr>
+    <tr><td>Include hashtags</td><td>Yes</td></tr>
+    <tr><td>Goal</td><td>Consistent presence</td></tr>
+    <tr><td>Key date</td><td>Spring deep-clean promotion, 15 March <em>(or date within pack)</em></td></tr>
+    <tr><td>Usual topics</td><td>Cleaning tips, eco swaps, before/after, client testimonials</td></tr>
+  </table>
+</div>
+
+<!-- ========== MANUAL TEST FLOWS ========== -->
+<div class="section page-break">
+  <h2>Manual test flows</h2>
+  <ul class="flows">
+    <li>
+      <strong>1. One-off purchase</strong>
+      <ul>
+        <li>☐ Go to /captions → checkout (one-off) → Stripe (4242...) → thank-you page</li>
+        <li>☐ Intake link appears within ~5–10 sec → Fill out form → Submit</li>
+        <li>☐ Email: confirmation + intake link, then captions PDF within ~5–15 min</li>
+      </ul>
+    </li>
+    <li>
+      <strong>2. Subscription purchase</strong>
+      <ul>
+        <li>☐ Go to /captions → subscription → Stripe → thank-you → intake</li>
+        <li>☐ Submit form → Create account (if prompted)</li>
+        <li>☐ Check email for captions + stories</li>
+      </ul>
+    </li>
+    <li>
+      <strong>3. Logged-in account</strong>
+      <ul>
+        <li>☐ Log in → /account → see packs, Manage billing, Edit form</li>
+        <li>☐ Download captions PDF</li>
+      </ul>
+    </li>
+    <li>
+      <strong>4. Billing auth</strong>
+      <ul>
+        <li>☐ Without login: try change subscription from intake → error/redirect</li>
+        <li>☐ With login: change subscription → succeeds</li>
+      </ul>
+    </li>
+    <li>
+      <strong>5. Intake link by email</strong>
+      <ul>
+        <li>☐ Without login: thank-you fallback "enter email" → "Please log in"</li>
+        <li>☐ With login: matching email → intake link</li>
+      </ul>
+    </li>
+    <li>
+      <strong>6. Data export</strong>
+      <ul>
+        <li>☐ Log in → visit /api/auth/export-data → JSON with account + orders</li>
+      </ul>
+    </li>
+    <li>
+      <strong>7. Error pages</strong>
+      <ul>
+        <li>☐ /nonexistent-page → 404</li>
+      </ul>
+    </li>
+  </ul>
+</div>
+
+<!-- ========== QUALITY CHECKS ========== -->
+<div class="section">
+  <h2>Quality checks (when reviewing PDFs)</h2>
+  <ul>
+    <li>☐ <strong>Captions:</strong> Business-specific language, not generic "founder/strategy"</li>
+    <li>☐ <strong>Key date:</strong> Launch day content uses correct month (e.g. April not May)</li>
+    <li>☐ <strong>Stories:</strong> Same date phasing — teasers before, announce on day, thank-you after</li>
+    <li>☐ <strong>Brand name:</strong> Real business name used, not substituted</li>
+    <li>☐ <strong>Variety:</strong> No repetitive openers or phrases across days</li>
+    <li>☐ <strong>Completeness:</strong> All 30 days present, no empty blocks</li>
+  </ul>
+</div>
+
+<p style="margin-top: 32px; font-size: 0.9rem; color: #666;">Lumo 22 — Manual Test Checklist | Print from browser (Cmd/Ctrl + P → Save as PDF)</p>
+
+</body>
+</html>

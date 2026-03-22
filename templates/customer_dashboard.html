@@ -44,7 +44,7 @@
       <div class="account-info-panel" style="margin-bottom: 1rem; background: rgba(200,80,80,0.08); border-color: rgba(200,80,80,0.25);">
         <p style="margin: 0; color: #333;">Could not open billing portal. Please try again or email hello@lumo22.com.</p>
       </div>
-      {% endif %}
+    {% endif %}
       {% if request.args.get('email_changed') == '1' %}
       <div class="account-info-panel" style="margin-bottom: 1rem; background: rgba(76,175,80,0.15); border-color: rgba(76,175,80,0.3);">
         <p style="margin: 0; color: #333;">Your email address has been updated.</p>
@@ -56,13 +56,13 @@
         <p class="account-section-desc">Update your email, password, and billing securely below.</p>
         <div class="account-info-panel">
           <div class="account-info-row">
-            <div>
+      <div>
               <span class="account-info-label">Email</span>
               <div class="account-info-value" id="account-email-display">{{ customer.email }}</div>
-            </div>
+      </div>
             <div class="account-info-actions">
               <button type="button" class="account-change-email-btn account-billing-portal-link account-btn-swipe-light" id="account-change-email-trigger" onclick="toggleEmailChangeForm()">Change email</button>
-            </div>
+    </div>
           </div>
           <div id="account-change-email-form" class="account-change-email-form" style="display: none; margin-top: 0.5rem; padding: 1rem; background: rgba(0,0,0,0.04); border-radius: 8px; border: 1px solid rgba(0,0,0,0.08);">
             <p style="margin: 0 0 0.75rem; font-size: 0.9rem; color: #333;">Enter your new email. We'll send a verification link there. You must click the link to confirm the change.</p>
@@ -103,22 +103,22 @@
               <a href="/account/pause" class="account-billing-portal-link account-btn-swipe-light">Manage billing</a>
               {% elif billing_accounts and billing_accounts[0].order_token %}
               <a href="/api/billing/portal?order_token={{ billing_accounts[0].order_token }}" class="account-billing-portal-link account-btn-swipe-light">Manage billing</a>
-              {% else %}
+            {% else %}
               <a href="/api/billing/portal" class="account-billing-portal-link account-btn-swipe-light">Manage billing</a>
-              {% endif %}
+            {% endif %}
             </div>
           </div>
     {% if request.args.get('billing') == 'no_sub' %}
           <div class="account-billing-no-sub-box">
             No subscription found. If you're on the monthly plan, use the link in your order emails to manage billing.
           </div>
-    {% endif %}
+            {% endif %}
           <div class="account-info-row account-info-row--marketing">
       <div>
               <span class="account-info-label">Marketing emails</span>
               <div class="account-info-value">Tips, updates, and offers from Lumo 22</div>
               <p id="marketing-toggle-error" class="account-toggle-error" style="display: none; margin: 0.5rem 0 0; font-size: 0.85rem; color: #c00;"></p>
-      </div>
+            </div>
             <div id="marketing-toggle-wrap" role="button" tabindex="0" class="account-toggle {% if customer.get('marketing_opt_in', True) %}on{% endif %}" aria-label="Toggle marketing emails" onclick="toggleMarketing()" onkeydown="if(event.key==='Enter'||event.key===' ') { event.preventDefault(); toggleMarketing(); }"></div>
           </div>
           <div class="account-info-row account-info-row--delete">
@@ -504,23 +504,40 @@
         </ul>
         <div class="account-pause-manage-billing" style="margin-bottom: 1.25rem;">
           {% if billing_accounts and billing_accounts|length > 1 %}
-          <p class="account-settings-desc" style="margin: 0 0 0.5rem; font-size: 0.9rem; color: #fff;">You have more than one billing account. Choose the one that matches the subscription you want to manage:</p>
+          <p class="account-settings-desc" style="margin: 0 0 0.5rem; font-size: 0.9rem; color: #fff;">You have more than one billing account. Select the subscription you want to manage:</p>
           <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
-          {% for ba in billing_accounts %}
-          <a href="/api/billing/portal?order_token={{ ba.order_token }}" class="account-billing-portal-link account-btn-swipe-dark">Manage billing — {{ ba.label }}</a>
-          {% endfor %}
+            <select id="billing-account-select" aria-label="Select subscription to manage" style="padding: 0.5rem 2rem 0.5rem 0.75rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.2); color: #fff; font-size: 0.95rem; cursor: pointer; min-width: 200px;">
+              <option value="">— Select subscription —</option>
+              {% for ba in billing_accounts %}
+              <option value="/api/billing/portal?order_token={{ ba.order_token }}">{{ ba.label }}</option>
+              {% endfor %}
+            </select>
+            <a href="#" id="billing-portal-go-btn" class="account-billing-portal-link account-btn-swipe-dark" style="pointer-events: none; opacity: 0.6;">Manage billing</a>
           </div>
+          <script>
+          (function() {
+            var sel = document.getElementById('billing-account-select');
+            var btn = document.getElementById('billing-portal-go-btn');
+            if (sel && btn) {
+              sel.addEventListener('change', function() {
+                var url = sel.value;
+                if (url) { btn.href = url; btn.style.pointerEvents = ''; btn.style.opacity = '1'; }
+                else { btn.href = '#'; btn.style.pointerEvents = 'none'; btn.style.opacity = '0.6'; }
+              });
+            }
+          })();
+          </script>
           {% elif billing_accounts %}
           <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
           <a href="/api/billing/portal?order_token={{ billing_accounts[0].order_token }}" class="account-billing-portal-link account-btn-swipe-dark">Manage billing</a>
           <span class="account-settings-desc" style="margin: 0; font-size: 0.9rem; color: #fff;">— cancel subscription, update card, or view invoices</span>
           </div>
-          {% else %}
+      {% else %}
           <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
           <a href="/api/billing/portal" class="account-billing-portal-link account-btn-swipe-dark">Manage billing</a>
           <span class="account-settings-desc" style="margin: 0; font-size: 0.9rem; color: #fff;">— cancel subscription, update card, or view invoices</span>
           </div>
-          {% endif %}
+      {% endif %}
         </div>
         {% for o in sub_orders %}
         {% set pause_biz = (o.get('intake') or {}).get('business_name', '') %}
@@ -530,10 +547,10 @@
         <div class="account-pause-block" style="margin-bottom: 1rem;">
           <div class="account-pause-panel-title" style="font-size: 0.9rem; font-weight: 600; color: #000; margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(0,0,0,0.08);">{{ pause_label }}</div>
           <div class="account-settings-row account-payment-method-row" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid rgba(0,0,0,0.06);" data-subscription-id="{{ sub_id }}">
-            <div>
+        <div>
               <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Payment method</div>
               <div class="account-settings-desc account-payment-method-display">{% if current_pm %}{{ current_pm.get('brand', '') }} ****{{ current_pm.get('last4', '') }}{% else %}—{% endif %}</div>
-            </div>
+        </div>
             <div class="account-payment-method-select-wrap">
               {% if subscription_billing and subscription_billing.get('payment_methods') %}
               <select class="account-payment-method-select" aria-label="Choose card for this subscription" data-subscription-id="{{ sub_id }}">
@@ -544,7 +561,7 @@
               {% else %}
               <span class="account-payment-method-no-cards">Add a card via <a href="/api/billing/portal?order_token={{ o.get('token', '') }}">Manage billing</a></span>
               {% endif %}
-        </div>
+      </div>
           </div>
           <div class="account-settings-row" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid rgba(0,0,0,0.06);">
             <div>

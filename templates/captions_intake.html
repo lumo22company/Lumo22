@@ -224,7 +224,6 @@
         <input type="text" id="business_type_other" name="business_type_other" placeholder="Specify your business type" class="intake-other-field" style="display: none; margin-top: 0.5rem;" value="{{ existing_intake.get('business_type', '') if existing_intake.get('business_type') and existing_intake.get('business_type') not in ['Consultancy', 'Agency', 'Coach / Mentor', 'Product brand / E-commerce', 'Product brand', 'E-commerce', 'Service business', 'Creative / Freelancer'] else '' }}">
         <label for="offer_one_line">In one sentence, what do you offer and to whom? <span style="color:#999;">(required)</span></label>
         <textarea id="offer_one_line" name="offer_one_line" required placeholder="e.g. We help busy founders build a content habit without the daily grind" data-testid="offer_one_line">{{ existing_intake.get('offer_one_line', '') }}</textarea>
-        <p class="field-helper">A couple of sentences is enough.</p>
         <label for="operating_hours">Operating hours <span style="color:#999;">(optional)</span></label>
         <input type="text" id="operating_hours" name="operating_hours" data-testid="operating_hours" placeholder="e.g. Mon–Fri 9–5, 24/7, weekends only" value="{{ existing_intake.get('operating_hours', '') }}">
         <p class="field-helper">Helps us tailor CTAs (e.g. "pop in", "book a call") to when you're available.</p>
