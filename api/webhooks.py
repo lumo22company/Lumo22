@@ -454,7 +454,7 @@ def stripe_webhook():
                 base = (Config.BASE_URL or "https://www.lumo22.com").strip().rstrip("/")
                 if not base.startswith("http"):
                     base = "https://" + base
-                # Cancellation scheduled (cancel at period end): send confirmation immediately
+                # Cancellation scheduled (cancel at period end): send confirmation, switch off form reminders
                 if sub_obj.get("cancel_at_period_end"):
                     try:
                         captions_url = base.rstrip("/") + "/captions"
@@ -463,6 +463,10 @@ def stripe_webhook():
                         print(f"[Stripe webhook] Cancellation scheduled confirmation sent to {customer_email}")
                     except Exception as e:
                         print(f"[Stripe webhook] Cancellation confirmation email failed: {e}")
+                    try:
+                        order_service.update(order["id"], {"reminder_opt_out": True})
+                    except Exception as e:
+                        print(f"[Stripe webhook] reminder_opt_out update on cancel failed: {e}")
                     return jsonify({"received": True}), 200
             # Plan change via Stripe billing portal: send confirmation email with explicit pricing
             from api.billing_routes import _subscription_monthly_price, subscription_platforms_and_stories_from_stripe
