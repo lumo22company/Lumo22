@@ -645,7 +645,7 @@
               <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Cancel or manage billing</div>
               <div class="account-settings-desc">Cancel this subscription, update your card, or view invoices.</div>
             </div>
-            <a href="/api/billing/portal?order_token={{ o.get('token', '') }}" class="account-billing-portal-link account-btn-swipe-light">Manage billing — {{ pause_label }}</a>
+            <a href="/api/billing/portal?order_token={{ o.get('token', '') }}" class="account-billing-portal-link account-btn-swipe-light">Manage billing</a>
           </div>
         </div>
         {% endfor %}
