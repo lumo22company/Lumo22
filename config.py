@@ -32,8 +32,8 @@ class Config:
     SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
     FLASK_ENV = os.getenv('FLASK_ENV', 'development')
     FLASK_DEBUG = os.getenv('FLASK_DEBUG', 'True').lower() == 'true'
-    # Session cookie: SameSite Lax so login persists after redirect. Secure=False so cookie is sent even when app is behind HTTPS-terminating proxy.
-    SESSION_COOKIE_SECURE = False
+    # Session cookie: SameSite Lax so login persists after redirect. Secure=True in production (HTTPS).
+    SESSION_COOKIE_SECURE = False  # Overridden in app.py when is_production()
     SESSION_COOKIE_SAMESITE = 'Lax'
     SESSION_COOKIE_HTTPONLY = True
     PERMANENT_SESSION_LIFETIME = timedelta(hours=1)  # Inactivity logout: session expires after 1 hour of no requests

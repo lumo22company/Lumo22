@@ -296,6 +296,35 @@ class CaptionOrderService:
                 pass
         return out
 
+    def get_orders_needing_first_delivery_recovery(self, limit: int = 8) -> list:
+        """
+        Orders that have intake but never got captions_md — e.g. failed email, dead thread, stuck generating.
+        Caller should start _run_generation_and_deliver for each id (usually capped per run).
+        """
+        from services.caption_delivery_recovery import row_needs_first_delivery_retry
+
+        try:
+            # Omit "failed" here: auto-retry every 10m would burn AI credits; user can resubmit intake or use deliver-test.
+            result = self.client.table(self.table).select("*").in_(
+                "status", ["intake_completed", "generating"]
+            ).order("updated_at", desc=False).limit(80).execute()
+        except Exception:
+            return []
+        rows = result.data or []
+        out = []
+        for row in rows:
+            intake = row.get("intake")
+            if not intake or not isinstance(intake, dict):
+                continue
+            if not (intake.get("business_name") or "").strip():
+                continue
+            if not row_needs_first_delivery_retry(row, intake_completed_grace_seconds=120):
+                continue
+            out.append(row)
+            if len(out) >= limit:
+                break
+        return out
+
     def get_active_subscription_orders(self) -> list:
         """Get caption orders that have an active Stripe subscription (for reminder emails)."""
         result = self.client.table(self.table).select(

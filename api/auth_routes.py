@@ -197,7 +197,29 @@ def delete_account():
     try:
         if email:
             from services.caption_order_service import CaptionOrderService
+            from services.webauthn_credential_service import WebAuthnCredentialService
             co_svc = CaptionOrderService()
+            orders = co_svc.get_by_customer_email_including_stripe_customer(email)
+            stripe_customer_ids = list({
+                (o.get("stripe_customer_id") or "").strip()
+                for o in (orders or [])
+                if (o.get("stripe_customer_id") or "").strip()
+            })
+            for sc_id in stripe_customer_ids:
+                try:
+                    import stripe
+                    if Config.STRIPE_SECRET_KEY:
+                        stripe.api_key = Config.STRIPE_SECRET_KEY
+                        stripe.Customer.delete(sc_id)
+                except Exception as e:
+                    if "No such customer" in str(e) or "deleted" in str(e).lower():
+                        pass
+                    else:
+                        logging.warning("Stripe customer delete on account deletion: %s", e)
+            try:
+                WebAuthnCredentialService().delete_all_for_customer(str(customer_id))
+            except Exception as e:
+                logging.warning("WebAuthn delete on account deletion: %s", e)
             co_svc.add_to_deleted_blocklist(email)
             co_svc.delete_by_customer_email(email)
         svc = CustomerAuthService()
@@ -226,6 +248,51 @@ def me():
             "marketing_opt_in": customer.get("marketing_opt_in", True),
         }
     }), 200
+
+
+@auth_bp.route("/export-data", methods=["GET"])
+def export_data():
+    """
+    Export all personal data for the logged-in customer (GDPR data portability).
+    Returns account info and caption order summaries including intake data.
+    """
+    customer = get_current_customer()
+    if not customer:
+        return jsonify({"ok": False, "error": "Not logged in"}), 401
+
+    email = (customer.get("email") or "").strip().lower()
+    if not email or "@" not in email:
+        return jsonify({"ok": False, "error": "Invalid account"}), 400
+
+    from datetime import datetime, timezone
+    export = {
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "account": {
+            "id": str(customer.get("id", "")),
+            "email": customer.get("email", ""),
+            "created_at": customer.get("created_at"),
+            "marketing_opt_in": customer.get("marketing_opt_in", True),
+        },
+        "caption_orders": [],
+    }
+
+    try:
+        from services.caption_order_service import CaptionOrderService
+        co_svc = CaptionOrderService()
+        orders = co_svc.get_by_customer_email_including_stripe_customer(email)
+        for o in orders or []:
+            export["caption_orders"].append({
+                "id": str(o.get("id", "")),
+                "status": o.get("status"),
+                "created_at": o.get("created_at"),
+                "platforms_count": o.get("platforms_count"),
+                "include_stories": o.get("include_stories"),
+                "intake": o.get("intake"),
+            })
+    except Exception:
+        pass
+
+    return jsonify(export), 200
 
 
 @auth_bp.route("/preferences", methods=["PATCH"])
@@ -356,7 +423,10 @@ def forgot_password():
 
 @auth_bp.route("/forgot-password/status", methods=["GET"])
 def forgot_password_status():
-    """Diagnostic: confirm backend has env needed for forgot-password (no secrets)."""
+    """Diagnostic: confirm backend has env needed for forgot-password (no secrets). In production, requires ?secret=CRON_SECRET when set."""
+    if Config.is_production() and getattr(Config, "CRON_SECRET", None):
+        if request.args.get("secret", "").strip() != Config.CRON_SECRET:
+            return jsonify({"error": "Unauthorized"}), 401
     return jsonify({
         "ok": True,
         "SUPABASE_SERVICE_ROLE_KEY_set": bool(getattr(Config, "SUPABASE_SERVICE_ROLE_KEY", "")),

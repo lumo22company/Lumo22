@@ -1,6 +1,6 @@
 # Passkeys (WebAuthn) setup
 
-1. **Database** — In Supabase → SQL Editor, run `database_webauthn_credentials.sql` (creates `webauthn_credentials` linked to `customers`).
+1. **Database** — In Supabase → SQL Editor, run `database_webauthn_credentials.sql` (creates `webauthn_credentials` linked to `customers`). The table has **RLS enabled** with no policies: the app must use **`SUPABASE_SERVICE_ROLE_KEY`** (or the service role bypasses RLS). If tables already exist, run `database_rls_webauthn_deleted_accounts.sql` once to fix Supabase “RLS not enabled” warnings.
 
 2. **Deploy** — Push/deploy so `webauthn` is installed (`requirements.txt`) and the new routes are live.
 

@@ -16,3 +16,12 @@ CREATE TABLE IF NOT EXISTS webauthn_credentials (
 CREATE INDEX IF NOT EXISTS idx_webauthn_credentials_customer_id ON webauthn_credentials(customer_id);
 
 COMMENT ON TABLE webauthn_credentials IS 'Passkey (WebAuthn) credentials; public keys only, no secrets.';
+
+-- RLS: deny anon/authenticated; service_role bypasses RLS. Backend must use SUPABASE_SERVICE_ROLE_KEY.
+ALTER TABLE public.webauthn_credentials ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "webauthn_credentials_deny_anon_auth" ON public.webauthn_credentials;
+CREATE POLICY "webauthn_credentials_deny_anon_auth"
+ON public.webauthn_credentials FOR ALL
+TO anon, authenticated
+USING (false)
+WITH CHECK (false);

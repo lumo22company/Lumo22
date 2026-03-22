@@ -126,6 +126,7 @@ class CustomerAuthService:
             "password_hash": pw_hash,
             "referral_code": self._generate_referral_code().upper(),
             "referred_by_customer_id": referrer_id,
+            "marketing_opt_in": False,  # GDPR: default opt-out; require explicit consent for marketing
         }
         result = self.client.table(self.table).insert(row).execute()
         if not result.data:

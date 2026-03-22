@@ -317,7 +317,12 @@ def reduce_subscription():
     Reduce subscription: fewer platforms and/or remove Story Ideas.
     Customer must accept new (lower) price. Modifies Stripe subscription and updates order.
     Body: { token, new_platforms (1–4), new_stories (bool) }.
+    Requires login; order must belong to customer.
     """
+    customer = get_current_customer()
+    if not customer:
+        return jsonify({"ok": False, "error": "Not logged in"}), 401
+
     try:
         data = request.get_json() or {}
         token = (data.get("token") or "").strip()
@@ -337,6 +342,11 @@ def reduce_subscription():
         return jsonify({"ok": False, "error": "Could not load order"}), 500
     if not order:
         return jsonify({"ok": False, "error": "Order not found"}), 404
+
+    order_email = (order.get("customer_email") or "").strip().lower()
+    customer_email = (customer.get("email") or "").strip().lower()
+    if order_email != customer_email:
+        return jsonify({"ok": False, "error": "This order does not belong to your account"}), 403
 
     subscription_id = (order.get("stripe_subscription_id") or "").strip()
     if not subscription_id:
@@ -449,7 +459,12 @@ def change_subscription_plan():
     Body: { token, new_platforms (1–4), new_stories (bool) }.
     - Uses same Stripe item update logic as reduce_subscription.
     - Sends a plan-change confirmation email with old/new price.
+    Requires login; order must belong to customer.
     """
+    customer = get_current_customer()
+    if not customer:
+        return jsonify({"ok": False, "error": "Not logged in"}), 401
+
     try:
         data = request.get_json() or {}
         token = (data.get("token") or "").strip()
@@ -469,6 +484,11 @@ def change_subscription_plan():
         return jsonify({"ok": False, "error": "Could not load order"}), 500
     if not order:
         return jsonify({"ok": False, "error": "Order not found"}), 404
+
+    order_email = (order.get("customer_email") or "").strip().lower()
+    customer_email = (customer.get("email") or "").strip().lower()
+    if order_email != customer_email:
+        return jsonify({"ok": False, "error": "This order does not belong to your account"}), 403
 
     subscription_id = (order.get("stripe_subscription_id") or "").strip()
     if not subscription_id:

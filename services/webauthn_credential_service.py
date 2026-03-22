@@ -112,3 +112,14 @@ class WebAuthnCredentialService:
             return True
         except Exception:
             return False
+
+    def delete_all_for_customer(self, customer_id: str) -> bool:
+        """Delete all WebAuthn credentials for a customer (e.g. on account deletion)."""
+        if not customer_id:
+            return False
+        try:
+            self.client.table(self.table).delete().eq("customer_id", str(customer_id)).execute()
+            return True
+        except Exception as e:
+            logging.warning("webauthn delete_all_for_customer: %s", e)
+            return False
