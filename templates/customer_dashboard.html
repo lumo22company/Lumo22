@@ -550,7 +550,12 @@
         {% set sub_id = (o.get('stripe_subscription_id') or '')|trim %}
         {% set current_pm = (subscription_billing.get('subscription_payment_methods') or {}).get(sub_id) if subscription_billing else None %}
         <div class="account-pause-block" data-order-token="{{ o.get('token', '') }}" style="margin-bottom: 1rem;">
-          <div class="account-pause-panel-title" style="font-size: 0.9rem; font-weight: 600; color: #000; margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(0,0,0,0.08);">{{ pause_label }}</div>
+          <div class="account-pause-panel-title" style="font-size: 0.9rem; font-weight: 600; color: #000; margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(0,0,0,0.08); display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+            {{ pause_label }}
+            {% if (o.get('subscription_pause') or {}).get('cancel_at_period_end') %}
+            <span class="account-cancel-badge" style="font-size: 0.8rem; font-weight: 500; color: #c45c00; padding: 0.25rem 0.6rem; background: rgba(196,92,0,0.12); border-radius: 12px;">Cancelled — ends {{ (o.get('subscription_pause') or {}).get('ends_at') or 'at period end' }}</span>
+            {% endif %}
+          </div>
           <div class="account-settings-row account-payment-method-row" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid rgba(0,0,0,0.06);" data-subscription-id="{{ sub_id }}">
         <div>
               <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Payment method</div>

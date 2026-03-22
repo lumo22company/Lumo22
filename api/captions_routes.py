@@ -5,11 +5,15 @@ Subscription (£79/mo) vs one-off (£97): same intake form and delivery flow; su
 mode=subscription and is detected in webhook so we create order and send intake email on first payment.
 """
 import os
+import time
 from flask import Blueprint, request, jsonify, redirect, Response, url_for
 from urllib.parse import quote
 from config import Config
 
 captions_bp = Blueprint("captions", __name__, url_prefix="/api")
+
+# Cooldown for intake email resends (order_id -> last_sent_timestamp) to avoid spam
+_intake_email_sent_at = {}
 
 
 def _get_referral_coupon_id():
@@ -505,6 +509,7 @@ def _send_intake_email_for_order(order: dict) -> None:
         else:
             try:
                 notif.send_order_receipt_email(customer_email, order=order)
+                time.sleep(2)  # Ensure confirmation is queued before intake so it arrives first
             except Exception as e:
                 print(f"[captions-intake-link] Receipt email failed (non-fatal): {e!r}")
             ok = notif.send_intake_link_email(customer_email, intake_url, order)
@@ -637,11 +642,22 @@ def captions_intake_link():
 def captions_intake_link_by_email():
     """
     Return the intake form URL for the most recent caption order with this email.
-    Used when thank-you page has no session_id or session lookup fails — customer can enter email to get the link.
+    Used when thank-you page has no session_id or session lookup fails.
+    Requires login; requested email must match logged-in customer (prevents token disclosure by email enumeration).
     """
+    from api.auth_routes import get_current_customer
+    customer = get_current_customer()
+    if not customer:
+        return jsonify({"status": "error", "error": "Please log in to get your form link, or check your email for the link we sent."}), 401
+    customer_email = (customer.get("email") or "").strip().lower()
+    if not customer_email or "@" not in customer_email:
+        return jsonify({"status": "error", "error": "Invalid account"}), 400
+
     email = (request.args.get("email") or request.args.get("e") or "").strip().lower()
     if not email or "@" not in email:
         return jsonify({"status": "error", "error": "Valid email required"}), 400
+    if email != customer_email:
+        return jsonify({"status": "error", "error": "This email does not match your account."}), 403
     try:
         from services.caption_order_service import CaptionOrderService
         order_service = CaptionOrderService()
@@ -667,7 +683,14 @@ def captions_intake_link_by_email():
     if not intake_url:
         return jsonify({"status": "error", "error": "Order has no token."}), 200
     if (order.get("status") or "").strip().lower() == "awaiting_intake":
-        _send_intake_email_for_order(order)
+        order_id = order.get("id")
+        if order_id:
+            import time
+            now = time.time()
+            last = _intake_email_sent_at.get(str(order_id), 0)
+            if now - last >= 300:
+                _send_intake_email_for_order(order)
+                _intake_email_sent_at[str(order_id)] = now
     is_subscription = bool((order.get("stripe_subscription_id") or "").strip())
     is_prefilled_from_oneoff = bool((order.get("upgraded_from_token") or "").strip())
     return jsonify({
@@ -806,8 +829,11 @@ def _run_generation_and_deliver(order_id: str, *, force_redeliver: bool = False)
 def captions_delivery_status():
     """
     Diagnostic: check config needed for caption generation and delivery.
-    Returns JSON with status (no secrets). Use to debug why PDF emails aren't arriving.
+    Returns JSON with status (no secrets). In production, requires ?secret=CRON_SECRET when set.
     """
+    if Config.is_production() and getattr(Config, "CRON_SECRET", None):
+        if request.args.get("secret", "").strip() != Config.CRON_SECRET:
+            return jsonify({"error": "Unauthorized"}), 401
     from config import Config
     provider = (getattr(Config, "AI_PROVIDER", None) or "openai").strip().lower()
     ai_ok = False
@@ -929,8 +955,8 @@ def captions_intake_submit():
         traceback.print_exc()
         detail = str(e)
         payload = {"error": "Internal server error"}
-        # Include detail only when SHOW_500_DETAIL=1 (for debugging)
-        if os.environ.get("SHOW_500_DETAIL") == "1":
+        # Include detail only when SHOW_500_DETAIL=1 and NOT production
+        if os.environ.get("SHOW_500_DETAIL") == "1" and not Config.is_production():
             payload["detail"] = f"{type(e).__name__}: {detail}"
         return jsonify(payload), 500
 
@@ -1242,7 +1268,7 @@ def captions_download():
                 from services.caption_pdf import build_stories_pdf, get_logo_path
                 logo_path = get_logo_path()
                 pdf_bytes = build_stories_pdf(
-                    captions_md, logo_path=logo_path, pack_start_date=pack_start_for_pdf
+                    captions_md, logo_path=logo_path, pack_start_date=date_str
                 )
             except Exception as e:
                 return jsonify({"error": "Could not build Stories PDF: {}".format(str(e))}), 500
@@ -1261,7 +1287,7 @@ def captions_download():
         from services.caption_pdf import build_caption_pdf, get_logo_path
         logo_path = get_logo_path()
         pdf_bytes = build_caption_pdf(
-            captions_md, logo_path=logo_path, pack_start_date=pack_start_for_pdf
+            captions_md, logo_path=logo_path, pack_start_date=date_str
         )
     except Exception as e:
         return jsonify({"error": "Could not build PDF: {}".format(str(e))}), 500
@@ -1275,7 +1301,7 @@ def captions_download():
 
 
 def _get_subscription_pause_info(stripe_subscription_id: str):
-    """Fetch subscription from Stripe; return {paused: bool, resumes_at: str or None}."""
+    """Fetch subscription from Stripe; return {paused, resumes_at, cancel_at_period_end, ends_at}."""
     from api.stripe_utils import is_valid_stripe_subscription_id
     if not stripe_subscription_id or not Config.STRIPE_SECRET_KEY or not is_valid_stripe_subscription_id(stripe_subscription_id):
         return None
@@ -1284,17 +1310,31 @@ def _get_subscription_pause_info(stripe_subscription_id: str):
         from datetime import datetime
         stripe.api_key = Config.STRIPE_SECRET_KEY
         sub = stripe.Subscription.retrieve(stripe_subscription_id.strip())
+        out = {"paused": False, "resumes_at": None, "cancel_at_period_end": False, "ends_at": None}
+        # Pause info
         pc = sub.get("pause_collection")
-        if not pc or not isinstance(pc, dict):
-            return {"paused": False, "resumes_at": None}
-        resumes_ts = pc.get("resumes_at")
-        if not resumes_ts:
-            return {"paused": True, "resumes_at": None}
-        try:
-            dt = datetime.utcfromtimestamp(resumes_ts)
-            return {"paused": True, "resumes_at": dt.strftime("%d %b %Y")}
-        except (TypeError, ValueError, OSError):
-            return {"paused": True, "resumes_at": None}
+        if pc and isinstance(pc, dict):
+            resumes_ts = pc.get("resumes_at")
+            if resumes_ts:
+                try:
+                    dt = datetime.utcfromtimestamp(resumes_ts)
+                    out["paused"] = True
+                    out["resumes_at"] = dt.strftime("%d %b %Y")
+                except (TypeError, ValueError, OSError):
+                    out["paused"] = True
+            else:
+                out["paused"] = True
+        # Cancellation info (cancel at period end)
+        if sub.get("cancel_at_period_end"):
+            out["cancel_at_period_end"] = True
+            cancel_ts = sub.get("cancel_at") or sub.get("current_period_end")
+            if cancel_ts:
+                try:
+                    dt = datetime.utcfromtimestamp(cancel_ts)
+                    out["ends_at"] = dt.strftime("%d %b %Y")
+                except (TypeError, ValueError, OSError):
+                    pass
+        return out
     except Exception:
         return None
 

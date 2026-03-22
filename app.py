@@ -43,7 +43,20 @@ from services.login_guard import check_locked, record_failure, clear_failures
 
 app = Flask(__name__)
 app.config.from_object(Config)
-CORS(app)  # Enable CORS for API access
+if Config.is_production():
+    app.config['SESSION_COOKIE_SECURE'] = True
+
+if Config.is_production():
+    _base = (Config.BASE_URL or "").strip().rstrip("/")
+    if _base and not _base.startswith("http"):
+        _base = "https://" + _base
+    _cors_origins = list({o for o in [
+        _base, "https://www.lumo22.com", "https://lumo22.com",
+        "https://lumo-22-production.up.railway.app",
+    ] if o and o.startswith("http")}) or ["https://www.lumo22.com", "https://lumo22.com"]
+    CORS(app, origins=_cors_origins, supports_credentials=True)
+else:
+    CORS(app)
 
 # Cache-bust static assets: include CSS mtime so updated files always get a new version after deploy
 _css_mtime_for_version = None
@@ -210,7 +223,13 @@ def index():
 
 @app.route('/debug-deploy')
 def debug_deploy():
-    """Return what this process is serving (template, asset_version, static file info). Hit this on Railway after deploy."""
+    """Return what this process is serving (template, asset_version, static file info). Requires ?secret=DEBUG_DEPLOY_SECRET when set."""
+    debug_secret = os.environ.get('DEBUG_DEPLOY_SECRET', '').strip()
+    if debug_secret:
+        if request.args.get('secret', '').strip() != debug_secret:
+            return jsonify({"error": "Unauthorized"}), 401
+    elif Config.is_production():
+        return jsonify({"error": "Not available"}), 404
     css_path = os.path.join(app.root_path, 'static', 'css', 'landing.css')
     exists = os.path.exists(css_path)
     mtime = None
@@ -886,9 +905,9 @@ def _account_context():
                 if sub_id:
                     try:
                         info = _get_subscription_pause_info(sub_id)
-                        o["subscription_pause"] = info or {"paused": False, "resumes_at": None}
+                        o["subscription_pause"] = info or {"paused": False, "resumes_at": None, "cancel_at_period_end": False, "ends_at": None}
                     except Exception:
-                        o["subscription_pause"] = {"paused": False, "resumes_at": None}
+                        o["subscription_pause"] = {"paused": False, "resumes_at": None, "cancel_at_period_end": False, "ends_at": None}
                 else:
                     o["subscription_pause"] = None
         except Exception:
@@ -1092,22 +1111,26 @@ def internal_error(error):
     import traceback
     traceback.print_exc()
     payload = {'error': 'Internal server error'}
-    if os.environ.get('SHOW_500_DETAIL'):
+    if os.environ.get('SHOW_500_DETAIL') and not Config.is_production():
         orig = getattr(error, 'original_exception', error)
         payload['detail'] = '{}: {}'.format(type(orig).__name__, str(orig)) if orig else 'Unknown'
+    if request.accept_mimetypes.best_match(['text/html', 'application/json']) == 'text/html':
+        return render_template('500.html'), 500
     return jsonify(payload), 500
 
 @app.errorhandler(Exception)
 def catch_all_exception(error):
-    """Capture unhandled exceptions so we return the real error message when SHOW_500_DETAIL is set."""
+    """Capture unhandled exceptions. Return HTML for browsers, JSON for API clients."""
     from werkzeug.exceptions import HTTPException
     if isinstance(error, HTTPException):
         return error.get_response()
     import traceback
     traceback.print_exc()
     payload = {'error': 'Internal server error'}
-    if os.environ.get('SHOW_500_DETAIL'):
+    if os.environ.get('SHOW_500_DETAIL') and not Config.is_production():
         payload['detail'] = '{}: {}'.format(type(error).__name__, str(error))
+    if request.accept_mimetypes.best_match(['text/html', 'application/json']) == 'text/html':
+        return render_template('500.html'), 500
     return jsonify(payload), 500
 
 if __name__ == '__main__':
