@@ -154,6 +154,8 @@ def _build_system_prompt(intake: Dict[str, Any]) -> str:
     role_line = _role_line_for_intake(intake)
     return f"""{role_line} You are also a senior content strategist and conversion-focused copywriter. You write social media captions.
 
+Quality bar: Every caption set must be as tailored and specific as a premium copywriter would deliver for this exact business—no generic filler, no wrong dates, no off-brand tone. Match the standard of a highly polished 30-day plan.
+
 {lang_instruction}
 
 Tone: confident, editorial, modern, premium. When the client specifies "Voice / tone to use" or "Words / style to avoid" in the intake, match those preferences—they override the default. No emojis. No buzzwords or marketing clichés. Smart, human, intelligent. Avoid hype and generic AI language.
@@ -406,6 +408,112 @@ def _chunk_has_empty_blocks(content: str, include_hashtags: bool) -> bool:
     return False
 
 
+def _validate_caption_quality(
+    captions_md: str, intake: Dict[str, Any], pack_start_date: str
+) -> list:
+    """
+    Post-generation validation. Returns list of warning strings.
+    Catches detectable quality issues (e.g. launch-day content referencing wrong dates).
+    Does not block delivery; caller may log warnings.
+    """
+    warnings = []
+    launch_desc = (intake.get("launch_event_description") or "").strip()
+    if not launch_desc:
+        return warnings
+    key_date_day = _parse_key_date_from_text(launch_desc, pack_start_date)
+    if key_date_day is None:
+        return warnings
+    try:
+        start = datetime.strptime((pack_start_date or "")[:10], "%Y-%m-%d")
+        launch_date = start + timedelta(days=key_date_day - 1)
+        expected_month = launch_date.strftime("%B").lower()  # e.g. "march"
+        month_order = [
+            "january", "february", "march", "april", "may", "june",
+            "july", "august", "september", "october", "november", "december",
+        ]
+        expected_idx = month_order.index(expected_month) if expected_month in month_order else -1
+    except (ValueError, TypeError):
+        return warnings
+
+    # Extract content for launch day: ## Day N caption blocks and **Day N:** story lines
+    day_content = []
+    in_day_block = False
+    current_day = 0
+    for line in captions_md.splitlines():
+        m = re.match(r"^##\s*Day\s+(\d+)\s*[—\-]", line.strip())
+        if m:
+            current_day = int(m.group(1))
+            in_day_block = current_day == key_date_day
+            if in_day_block:
+                day_content.append(line)
+            continue
+        m2 = re.match(r"^\*\*Day\s+(\d+):\*\*", line.strip())
+        if m2 and int(m2.group(1)) == key_date_day:
+            day_content.append(line)
+            continue
+        if in_day_block and current_day == key_date_day:
+            # Still in caption block for this day (until next ## Day)
+            day_content.append(line)
+
+    text = " ".join(day_content).lower()
+
+    # Wrong month: launch day says "april" when launch is March
+    wrong_months = []
+    for m in month_order:
+        if m == expected_month:
+            continue
+        if m in text:
+            wrong_months.append(m)
+    if wrong_months and expected_idx >= 0:
+        # Allow "march and april" or "through april" (range) but flag "opens april" style
+        wrong_date_phrases = [
+            r"opens?\s+(in\s+)?(" + "|".join(wrong_months) + r")",
+            r"(" + "|".join(wrong_months) + r")\s+\d{1,2}",
+            r"\d{1,2}\s+(" + "|".join(wrong_months) + r")",  # e.g. "4 April"
+            r"(in|on)\s+(" + "|".join(wrong_months) + r")",
+            r"mark\s+(your\s+)?calendars?\s+for\s+(" + "|".join(wrong_months) + r")",
+        ]
+        for pat in wrong_date_phrases:
+            if re.search(pat, text):
+                warnings.append(
+                    f"Quality check: Launch day (Day {key_date_day}) may reference wrong month. "
+                    f"Expected {expected_month}; found reference to {wrong_months}. "
+                    f"Review CAPTION_QUALITY_STANDARDS.md and STORY_QUALITY_STANDARDS.md."
+                )
+                break
+    return warnings
+
+
+def _validate_story_quality(stories_md: str) -> list:
+    """
+    Post-generation validation for story output. Returns list of warning strings.
+    Catches completeness issues (missing days, empty Idea/Suggested wording).
+    Does not block delivery; caller may log warnings.
+    """
+    warnings = []
+    if not stories_md or "**Day" not in stories_md:
+        return warnings
+    found_days = set()
+    for m in re.finditer(r"\*\*Day\s+(\d+)\s*:\*\*\s*(.*?)(?=\s*\*\*Day\s+\d+\s*:\*\*|$)", stories_md, re.I | re.DOTALL):
+        day_num = int(m.group(1))
+        content = (m.group(2) or "").strip()
+        if 1 <= day_num <= 30:
+            found_days.add(day_num)
+        if not content:
+            warnings.append(f"Quality check: Story Day {day_num} has no content.")
+            continue
+        if "idea:" not in content.lower():
+            warnings.append(f"Quality check: Story Day {day_num} missing Idea.")
+        if "suggested wording:" not in content.lower():
+            warnings.append(f"Quality check: Story Day {day_num} missing Suggested wording.")
+        if "story hashtags:" not in content.lower() and "hashtags:" not in content.lower():
+            warnings.append(f"Quality check: Story Day {day_num} missing Story hashtags.")
+    missing = set(range(1, 31)) - found_days
+    if missing:
+        warnings.append(f"Quality check: Story ideas missing days: {sorted(missing)[:10]}{'...' if len(missing) > 10 else ''}.")
+    return warnings
+
+
 class CaptionGenerator:
     """Generate 30 captions from intake using AI. Uses 3 chunks to avoid timeouts and token limits."""
 
@@ -483,6 +591,13 @@ class CaptionGenerator:
                 )
             if stories_md:
                 result = result + "\n\n" + stories_md
+                for w in _validate_story_quality(stories_md):
+                    print(f"[CaptionGenerator] Story quality warning: {w}")
+
+        # Post-generation validation: log quality warnings (does not block delivery)
+        for w in _validate_caption_quality(result, intake, start_str):
+            print(f"[CaptionGenerator] Quality warning: {w}")
+
         return result
 
     def _generate_stories(
@@ -491,7 +606,12 @@ class CaptionGenerator:
         is_subscription_variety: bool = False,
         pack_start_date: Optional[str] = None,
     ) -> str:
-        """Generate 30 one-line Story prompts for Instagram/Facebook."""
+        """Generate 30 one-line Story prompts for Instagram/Facebook.
+
+        Stories use the SAME before/during/after key-date phasing as captions:
+        pre-launch (days 1 to key_date-1), launch day (key_date), post-launch (key_date+1 to 30).
+        KEY_DATE_EVENTS and day mapping must be passed when launch_event_description is set.
+        """
         lang = (intake.get("caption_language") or "English (UK)").strip()
         lang_instruction = LANGUAGE_INSTRUCTIONS.get(lang, LANGUAGE_INSTRUCTIONS["English (UK)"])
         n = _normalize_intake_case
@@ -534,6 +654,8 @@ Ground every suggestion in their intake (offer, audience, goal)—not generic in
 
         prompt = f"""Generate 30 Story prompts for Instagram/Facebook Stories. One per day (Day 1–30). Each day must have exactly three parts: Idea, Suggested wording, Story hashtags.
 
+Quality bar: Every story set must be as tailored and specific as a premium content strategist would deliver for this exact business—no generic filler, no wrong dates, no off-brand tone. Match the standard of a highly polished 30-day story plan.
+
 {lang_instruction}
 
 INTAKE:
@@ -563,6 +685,7 @@ Use the exact labels "Idea:", "Suggested wording:", and "Story hashtags:" on eve
             content = chat_completion(
                 system=(
                     "You write concise Story prompts (Idea, Suggested wording, Story hashtags). "
+                    "Quality bar: as tailored as a premium 30-day story plan. "
                     "Always respect INTAKE exactly: use only the client's real business name and offer—never fictional or example brands."
                 ),
                 user=prompt,
@@ -581,7 +704,10 @@ Use the exact labels "Idea:", "Suggested wording:", and "Story hashtags:" on eve
         is_subscription_variety: bool = False,
         pack_start_date: Optional[str] = None,
     ) -> str:
-        """Generate 30 Story prompts with explicit day-by-day alignment to captions."""
+        """Generate 30 Story prompts with explicit day-by-day alignment to captions.
+
+        Also receives KEY_DATE_EVENTS and before/during/after phasing (same as captions)
+        so Suggested wording uses correct dates, not invented ones."""
         # Extract "## Day N — ..." headings to summarise each day's caption.
         day_summaries: Dict[int, str] = {}
         for line in captions_md.splitlines():
@@ -645,6 +771,8 @@ Ground every suggestion in their intake and that day's caption theme—not gener
 
         prompt = f"""Generate 30 Story prompts for Instagram/Facebook Stories. One per day (Day 1–30). Each day must have exactly three parts: Idea, Suggested wording, Story hashtags.
 
+Quality bar: Every story set must be as tailored and specific as a premium content strategist would deliver for this exact business—no generic filler, no wrong dates, no off-brand tone. Each day's story must support that day's caption theme.
+
 {lang_instruction}
 
 INTAKE:
@@ -680,6 +808,7 @@ Use the exact labels "Idea:", "Suggested wording:", and "Story hashtags:" on eve
             content = chat_completion(
                 system=(
                     "You write concise Story prompts aligned with an existing captions plan. "
+                    "Quality bar: as tailored as a premium 30-day story plan. "
                     "Each day: Idea, Suggested wording, Story hashtags. Use only the client's real business name from INTAKE—never fictional brands."
                 ),
                 user=prompt,

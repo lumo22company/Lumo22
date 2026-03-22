@@ -35,6 +35,18 @@ Captions must be clearly about **this** business—what they sell or do, who the
 
 This reduces off-topic or vague captions that don't make sense for the actual business.
 
+## Stories and key-date phasing
+
+See also **STORY_QUALITY_STANDARDS.md** for the full story quality bar.
+
+Story ideas use the **same before/during/after phasing** as captions when `launch_event_description` is set:
+
+- **BEFORE (days 1 to key_date−1):** Anticipation, teasers, countdown
+- **ON launch day (key_date):** Announcement, go-live
+- **AFTER (days key_date+1 to 30):** Thank-you, feedback
+
+Both `_generate_stories` and `_generate_stories_aligned` receive `KEY_DATE_EVENTS` and the explicit day mapping (e.g. "key date falls on Day 7") so Suggested wording uses the correct dates from DATE_CONTEXT—not invented ones. Regression test: `test_story_key_date_phasing.py`.
+
 ## Related
 
 - **Key date → day number:** See prompt and `_parse_key_date_from_text()` — the key date from intake is parsed and the AI is told exactly which day number is "launch day" so phasing is correct.
