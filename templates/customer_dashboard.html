@@ -506,7 +506,7 @@
           {% if sub_orders and sub_orders|length > 1 %}
           <p class="account-settings-desc" style="margin: 0 0 0.5rem; font-size: 0.9rem; color: #fff;">You have more than one subscription. Select the one you want to manage:</p>
           <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
-            <select id="subscription-filter-select" aria-label="Select subscription to manage" style="padding: 0.5rem 2rem 0.5rem 0.75rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.2); color: #fff; font-size: 0.95rem; cursor: pointer; min-width: 200px;">
+            <select id="subscription-filter-select" class="account-subscription-filter-select" aria-label="Select subscription to manage">
               <option value="">— Show all —</option>
               {% for o in sub_orders %}
               {% set _label = ((o.get('intake') or {}).get('business_name', '')|title) if (o.get('intake') or {}).get('business_name') else ((o.get('created_at') or '')[:10] if o.get('created_at') else 'Subscription') %}
