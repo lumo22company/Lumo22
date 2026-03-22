@@ -1469,6 +1469,65 @@ def captions_resume_subscription():
         return jsonify({"ok": False, "error": str(e)}), 500
 
 
+@captions_bp.route("/captions/restart-subscription", methods=["POST"])
+def captions_restart_subscription():
+    """
+    Restart a subscription that was cancelled at period end.
+    Sets cancel_at_period_end=False so it will renew again.
+    Body: { "order_id": "..." }
+    """
+    from api.auth_routes import get_current_customer
+    import stripe
+
+    customer = get_current_customer()
+    if not customer:
+        return jsonify({"ok": False, "error": "Not logged in"}), 401
+    email = (customer.get("email") or "").strip().lower()
+    if not email or "@" not in email:
+        return jsonify({"ok": False, "error": "Invalid customer"}), 400
+    if not Config.STRIPE_SECRET_KEY:
+        return jsonify({"ok": False, "error": "Billing not configured"}), 503
+
+    try:
+        data = request.get_json() or {}
+        order_id = (data.get("order_id") or "").strip()
+        if not order_id:
+            return jsonify({"ok": False, "error": "order_id required"}), 400
+
+        from services.caption_order_service import CaptionOrderService
+        order_service = CaptionOrderService()
+        order = order_service.get_by_id(order_id)
+        if not order:
+            return jsonify({"ok": False, "error": "Order not found"}), 404
+        order_email = (order.get("customer_email") or "").strip().lower()
+        if order_email != email:
+            return jsonify({"ok": False, "error": "This order does not belong to your account"}), 403
+
+        sub_id = (order.get("stripe_subscription_id") or "").strip()
+        if not sub_id:
+            return jsonify({"ok": False, "error": "This order is not a subscription"}), 400
+        from api.stripe_utils import is_valid_stripe_subscription_id
+        if not is_valid_stripe_subscription_id(sub_id):
+            return jsonify({"ok": False, "error": "Invalid subscription"}), 400
+
+        stripe.api_key = Config.STRIPE_SECRET_KEY
+        sub = stripe.Subscription.retrieve(sub_id)
+        if not sub.get("cancel_at_period_end"):
+            return jsonify({"ok": False, "error": "Subscription is not scheduled for cancellation"}), 400
+
+        stripe.Subscription.modify(sub_id, cancel_at_period_end=False)
+        return jsonify({"ok": True, "message": "Subscription restarted. It will renew at the end of your billing period."}), 200
+    except stripe.error.InvalidRequestError as e:
+        msg = str(e).lower()
+        if "no such" in msg or "deleted" in msg or "canceled" in msg or "cancel" in msg:
+            return jsonify({"ok": False, "error": "This subscription is no longer active."}), 400
+        return jsonify({"ok": False, "error": (str(e) or "Could not restart")[:200]}), 400
+    except stripe.error.StripeError as e:
+        return jsonify({"ok": False, "error": str(e)[:200]}), 400
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
 @captions_bp.route("/captions/reminder-preference", methods=["PATCH"])
 def captions_reminder_preference():
     """
