@@ -1516,12 +1516,12 @@ def captions_restart_subscription():
             return jsonify({"ok": False, "error": "Subscription is not scheduled for cancellation"}), 400
 
         stripe.Subscription.modify(sub_id, cancel_at_period_end=False)
-        return jsonify({"ok": True, "message": "Subscription restarted. It will renew at the end of your billing period."}), 200
+        return jsonify({"ok": True, "message": "Subscription resumed. It will renew at the end of your billing period."}), 200
     except stripe.error.InvalidRequestError as e:
         msg = str(e).lower()
         if "no such" in msg or "deleted" in msg or "canceled" in msg or "cancel" in msg:
             return jsonify({"ok": False, "error": "This subscription is no longer active."}), 400
-        return jsonify({"ok": False, "error": (str(e) or "Could not restart")[:200]}), 400
+        return jsonify({"ok": False, "error": (str(e) or "Could not resume")[:200]}), 400
     except stripe.error.StripeError as e:
         return jsonify({"ok": False, "error": str(e)[:200]}), 400
     except Exception as e:

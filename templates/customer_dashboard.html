@@ -560,10 +560,10 @@
           {% if _cancelled %}
           <div class="account-settings-row" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid rgba(0,0,0,0.06);">
             <div>
-              <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Restart subscription</div>
+              <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Resume subscription</div>
               <div class="account-settings-desc">Your subscription will renew again at the end of your billing period.</div>
             </div>
-            <button type="button" class="account-billing-portal-link account-btn-swipe-light account-restart-btn" data-order-id="{{ o.get('id', '') }}" onclick="restartSubscription(this)">Restart subscription</button>
+            <button type="button" class="account-billing-portal-link account-btn-swipe-light account-restart-btn" data-order-id="{{ o.get('id', '') }}" onclick="restartSubscription(this)">Resume subscription</button>
           </div>
           {% endif %}
           <div class="account-settings-row account-payment-method-row" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid rgba(0,0,0,0.06);" data-subscription-id="{{ sub_id }}">
@@ -1076,7 +1076,7 @@
         var orderId = btn.getAttribute('data-order-id');
         if (!orderId) return;
         btn.disabled = true;
-        btn.textContent = 'Restarting…';
+        btn.textContent = 'Resuming…';
         fetch('/api/captions/restart-subscription', {
           credentials: 'same-origin',
           method: 'POST',
@@ -1088,15 +1088,15 @@
           if (data.ok) {
             window.location.reload();
           } else {
-            alert(data.error || 'Could not restart subscription');
+            alert(data.error || 'Could not resume subscription');
             btn.disabled = false;
-            btn.textContent = 'Restart subscription';
+            btn.textContent = 'Resume subscription';
           }
         })
         .catch(function() {
           alert('Something went wrong — try again.');
           btn.disabled = false;
-          btn.textContent = 'Restart subscription';
+          btn.textContent = 'Resume subscription';
         });
       }
       window.restartSubscription = restartSubscription;
