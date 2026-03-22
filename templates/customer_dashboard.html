@@ -202,11 +202,15 @@
           {% for o in edit_form_orders %}
           {% set biz = (o.get('intake') or {}).get('business_name', '') %}
           {% set label = (biz|title) if biz else (o.created_at[:10] if o.created_at else 'Subscription') %}
-          <li>
+          {% set _edit_cancelled = (o.get('subscription_pause') or {}).get('cancel_at_period_end') %}
+          <li style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
               {% if o.status == 'awaiting_intake' %}
             <a href="/captions-intake?t={{ o.token }}" class="account-billing-portal-link account-btn-swipe-light">Complete the form — {{ label }}</a>
               {% else %}
             <a href="/captions-intake?t={{ o.token }}" class="account-billing-portal-link account-btn-swipe-light">Edit form — {{ label }}</a>
+            {% endif %}
+            {% if _edit_cancelled %}
+            <span class="account-cancel-badge" style="font-size: 0.75rem; font-weight: 500; color: #c45c00; padding: 0.2rem 0.5rem; background: rgba(196,92,0,0.12); border-radius: 10px;">Cancelled — ends {{ (o.get('subscription_pause') or {}).get('ends_at') or 'at period end' }}</span>
             {% endif %}
           </li>
           {% endfor %}
@@ -510,8 +514,9 @@
             <select id="subscription-filter-select" class="account-subscription-filter-select" aria-label="Select subscription to manage">
               <option value="">— Show all —</option>
               {% for o in sub_orders %}
-              {% set _label = ((o.get('intake') or {}).get('business_name', '')|title) if (o.get('intake') or {}).get('business_name') else ((o.get('created_at') or '')[:10] if o.get('created_at') else 'Subscription') %}
-              <option value="{{ o.get('token', '') }}">{{ _label }}</option>
+              {% set _flabel = ((o.get('intake') or {}).get('business_name', '')|title) if (o.get('intake') or {}).get('business_name') else ((o.get('created_at') or '')[:10] if o.get('created_at') else 'Subscription') %}
+              {% set _fcancelled = (o.get('subscription_pause') or {}).get('cancel_at_period_end') %}
+              <option value="{{ o.get('token', '') }}">{{ _flabel }}{% if _fcancelled %} (Cancelled){% endif %}</option>
               {% endfor %}
             </select>
           </div>
