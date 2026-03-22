@@ -365,12 +365,25 @@ def _welcome_and_verify_email_html(verify_url: str) -> str:
     return _email_wrapper(content)
 
 
-def _subscription_cancelled_email_html(captions_url: str) -> str:
+def _subscription_cancelled_email_html(
+    captions_url: str,
+    plan_summary: str | None = None,
+    price_display: str | None = None,
+) -> str:
     """Build branded HTML for subscription cancelled confirmation."""
     import html
     safe_url = html.escape(captions_url or "", quote=True)
+    summary_line = ""
+    if plan_summary or price_display:
+        parts = []
+        if plan_summary:
+            parts.append(html.escape(plan_summary, quote=False))
+        if price_display:
+            parts.append(html.escape(price_display, quote=False))
+        summary_line = f'<p style="margin:0 0 16px;"><strong>What you cancelled:</strong> {" — ".join(parts)}</p>'
     content = f"""<p style="margin:0 0 16px;">Hi,</p>
-<p style="margin:0 0 16px;">Your 30 Days of Social Media Captions subscription has been cancelled. You'll keep access until the end of your current billing period. After that, you can still access your past captions in your account at any time.</p>
+<p style="margin:0 0 16px;">Your 30 Days of Social Media Captions subscription has been cancelled. Your subscription stays active until the end of your current billing period. After that, you can still access your past captions in your account at any time.</p>
+{summary_line}
 <p style="margin:0 0 16px;">We're sorry to see you go. If you change your mind, you can subscribe again anytime at <a href="{safe_url}" style="color:{BRAND_BLACK}; text-decoration:none; border-bottom:1px solid {BRAND_BLACK};">lumo22.com/captions</a>.</p>
 <p style="margin:0;">— Lumo 22</p>"""
     return _email_wrapper(content)
@@ -606,17 +619,32 @@ You can manage your subscription anytime in your account: {account_url or ""}
         )
         return self.send_email(to_email, subject, body, html_body=html_body)
 
-    def send_subscription_cancelled_email(self, to_email: str, captions_url: str) -> bool:
+    def send_subscription_cancelled_email(
+        self,
+        to_email: str,
+        captions_url: str,
+        plan_summary: str | None = None,
+        price_display: str | None = None,
+    ) -> bool:
         """Send confirmation when customer cancels their subscription."""
         subject = "Your subscription has been cancelled"
+        summary_block = ""
+        if plan_summary or price_display:
+            parts = []
+            if plan_summary:
+                parts.append(plan_summary)
+            if price_display:
+                parts.append(price_display)
+            summary_block = f"\n\nWhat you cancelled: {' — '.join(parts)}\n"
         body = f"""Hi,
 
-Your 30 Days of Social Media Captions subscription has been cancelled. You'll keep access until the end of your current billing period. After that, you can still access your past captions in your account at any time.
-
+Your 30 Days of Social Media Captions subscription has been cancelled. Your subscription stays active until the end of your current billing period. After that, you can still access your past captions in your account at any time.{summary_block}
 We're sorry to see you go. If you change your mind, you can subscribe again anytime at {captions_url or "lumo22.com/captions"}.
 
 — Lumo 22"""
-        html_body = _subscription_cancelled_email_html(captions_url)
+        html_body = _subscription_cancelled_email_html(
+            captions_url, plan_summary=plan_summary, price_display=price_display
+        )
         return self.send_email(to_email, subject, body, html_body=html_body)
 
     def send_email_change_verification_email(self, to_email: str, confirm_url: str) -> bool:

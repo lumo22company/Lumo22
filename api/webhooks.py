@@ -429,8 +429,21 @@ def stripe_webhook():
                     base = "https://www.lumo22.com"
                 captions_url = base.rstrip("/") + "/captions"
                 try:
+                    from api.billing_routes import _subscription_monthly_price
+                    platforms = max(1, int(order.get("platforms_count", 1)))
+                    stories = bool(order.get("include_stories"))
+                    currency = (order.get("currency") or "gbp").strip().lower()
+                    sym, amt = _subscription_monthly_price(currency, platforms, stories)
+                    plan_parts = [f"30 Days Captions, {platforms} platform{'s' if platforms != 1 else ''}"]
+                    if stories:
+                        plan_parts.append("Story Ideas")
+                    plan_summary = ", ".join(plan_parts)
+                    price_display = f"{sym}{amt}/month"
                     notif = NotificationService()
-                    notif.send_subscription_cancelled_email(customer_email, captions_url)
+                    notif.send_subscription_cancelled_email(
+                        customer_email, captions_url,
+                        plan_summary=plan_summary, price_display=price_display,
+                    )
                     print(f"[Stripe webhook] Subscription cancelled confirmation sent to {customer_email}")
                 except Exception as e:
                     print(f"[Stripe webhook] Subscription cancelled email failed: {e}")
@@ -458,8 +471,21 @@ def stripe_webhook():
                 if sub_obj.get("cancel_at_period_end"):
                     try:
                         captions_url = base.rstrip("/") + "/captions"
+                        from api.billing_routes import _subscription_monthly_price
+                        platforms = max(1, int(order.get("platforms_count", 1)))
+                        stories = bool(order.get("include_stories"))
+                        currency = (order.get("currency") or "gbp").strip().lower()
+                        sym, amt = _subscription_monthly_price(currency, platforms, stories)
+                        plan_parts = [f"30 Days Captions, {platforms} platform{'s' if platforms != 1 else ''}"]
+                        if stories:
+                            plan_parts.append("Story Ideas")
+                        plan_summary = ", ".join(plan_parts)
+                        price_display = f"{sym}{amt}/month"
                         notif = NotificationService()
-                        notif.send_subscription_cancelled_email(customer_email, captions_url)
+                        notif.send_subscription_cancelled_email(
+                            customer_email, captions_url,
+                            plan_summary=plan_summary, price_display=price_display,
+                        )
                         print(f"[Stripe webhook] Cancellation scheduled confirmation sent to {customer_email}")
                     except Exception as e:
                         print(f"[Stripe webhook] Cancellation confirmation email failed: {e}")
