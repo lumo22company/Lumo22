@@ -370,7 +370,7 @@ def _subscription_cancelled_email_html(captions_url: str) -> str:
     import html
     safe_url = html.escape(captions_url or "", quote=True)
     content = f"""<p style="margin:0 0 16px;">Hi,</p>
-<p style="margin:0 0 16px;">Your 30 Days of Social Media Captions subscription has been cancelled. You'll keep access until the end of your current billing period.</p>
+<p style="margin:0 0 16px;">Your 30 Days of Social Media Captions subscription has been cancelled. You'll keep access until the end of your current billing period. After that, you can still access your past captions in your account at any time.</p>
 <p style="margin:0 0 16px;">We're sorry to see you go. If you change your mind, you can subscribe again anytime at <a href="{safe_url}" style="color:{BRAND_BLACK}; text-decoration:none; border-bottom:1px solid {BRAND_BLACK};">lumo22.com/captions</a>.</p>
 <p style="margin:0;">— Lumo 22</p>"""
     return _email_wrapper(content)
@@ -611,7 +611,7 @@ You can manage your subscription anytime in your account: {account_url or ""}
         subject = "Your subscription has been cancelled"
         body = f"""Hi,
 
-Your 30 Days of Social Media Captions subscription has been cancelled. You'll keep access until the end of your current billing period.
+Your 30 Days of Social Media Captions subscription has been cancelled. You'll keep access until the end of your current billing period. After that, you can still access your past captions in your account at any time.
 
 We're sorry to see you go. If you change your mind, you can subscribe again anytime at {captions_url or "lumo22.com/captions"}.
 
