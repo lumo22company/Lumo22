@@ -230,7 +230,7 @@
       </div>
       <div class="form-section">
         <h2>Audience</h2>
-        <p class="field-helper" style="margin-bottom: 0.5rem;">Who is your primary audience? (pick any that apply)</p>
+        <p class="field-helper" style="margin-bottom: 0.5rem;">Who is your primary audience? <span style="color:#999;">(required)</span> (pick any that apply)</p>
         <div class="intake-checkbox-group" role="group" aria-label="Primary audience" data-testid="audience">
           <label class="intake-checkbox-label"><input type="checkbox" name="audience_cb" value="Founders"> Founders</label>
           <label class="intake-checkbox-label"><input type="checkbox" name="audience_cb" value="Small business owners"> Small business owners</label>
@@ -239,17 +239,18 @@
           <label class="intake-checkbox-label"><input type="checkbox" name="audience_cb" value="Consumers" id="audience_cb_consumers"> Consumers</label>
         </div>
         <div id="consumer_age_wrap" class="intake-other-wrap" style="display: none; margin-top: 0.75rem;" data-consumer-age-field="true">
-          <label for="consumer_age_range">What age range is your consumer audience?</label>
+          <label for="consumer_age_range">What age range is your consumer audience? <span style="color:#999;">(optional)</span></label>
           <input type="text" id="consumer_age_range" name="consumer_age_range" placeholder="e.g. 18-24 or 30+" value="{{ existing_intake.get('consumer_age_range', '') }}" autocomplete="off">
         </div>
-        <input type="text" id="audience_other" name="audience_other" placeholder="Other (e.g. coaches, agencies)" style="margin-top: 0.75rem;" value="">
+        <label for="audience_other" style="margin-top: 0.75rem; display: block;">Other audience <span style="color:#999;">(optional)</span></label>
+        <input type="text" id="audience_other" name="audience_other" placeholder="e.g. coaches, agencies" style="margin-top: 0.5rem;" value="">
         <input type="hidden" id="audience" name="audience" value="{{ existing_intake.get('audience', '') }}">
         <label for="audience_cares">What do they care about most when they land on your content? <span style="color:#999;">(required)</span></label>
         <textarea id="audience_cares" name="audience_cares" required placeholder="e.g. quick wins, feeling less overwhelmed, practical tips" data-testid="audience_cares">{{ existing_intake.get('audience_cares', '') }}</textarea>
       </div>
       <div class="form-section">
         <h2>Voice</h2>
-        <p class="field-helper" style="margin-bottom: 0.5rem;">Choose 3–5 words that describe how you want to sound (pick any that apply):</p>
+        <p class="field-helper" style="margin-bottom: 0.5rem;">Choose 3–5 words that describe how you want to sound <span style="color:#999;">(optional)</span> (pick any that apply):</p>
         <div class="intake-checkbox-group" role="group" aria-label="Voice tone" data-testid="voice_words">
           <label class="intake-checkbox-label"><input type="checkbox" name="voice_words_cb" value="direct"> Direct</label>
           <label class="intake-checkbox-label"><input type="checkbox" name="voice_words_cb" value="thoughtful"> Thoughtful</label>
@@ -262,14 +263,15 @@
           <label class="intake-checkbox-label"><input type="checkbox" name="voice_words_cb" value="concise"> Concise</label>
           <label class="intake-checkbox-label"><input type="checkbox" name="voice_words_cb" value="inspiring"> Inspiring</label>
         </div>
-        <input type="text" id="voice_words_other" name="voice_words_other" placeholder="Other words (optional)" style="margin-top: 0.75rem;" value="">
+        <label for="voice_words_other" style="margin-top: 0.75rem; display: block;">Other voice words <span style="color:#999;">(optional)</span></label>
+        <input type="text" id="voice_words_other" name="voice_words_other" placeholder="e.g. witty, empathetic, no-fluff" style="margin-top: 0.5rem;" value="">
         <input type="hidden" id="voice_words" name="voice_words" value="{{ existing_intake.get('voice_words', '') }}">
         <label for="voice_avoid">Any words, phrases, or tones to avoid? <span style="color:#999;">(optional)</span></label>
         <textarea id="voice_avoid" name="voice_avoid" placeholder="e.g. jargon, hype, overly formal" data-testid="voice_avoid">{{ existing_intake.get('voice_avoid', '') }}</textarea>
       </div>
       <div class="form-section">
         <h2>Language</h2>
-        <label for="caption_language">What language should your captions be written in?</label>
+        <label for="caption_language">What language should your captions be written in? <span style="color:#999;">(optional)</span></label>
         <select id="caption_language" name="caption_language" data-testid="caption_language">
           <option value="English (UK)" {% if existing_intake.get('caption_language') == 'English (UK)' or not existing_intake.get('caption_language') %}selected{% endif %}>English (UK)</option>
           <option value="English (US)" {% if existing_intake.get('caption_language') == 'English (US)' %}selected{% endif %}>English (US)</option>
@@ -306,8 +308,8 @@
         </p>
         {% endif %}
 
-        <label for="platform_habits" style="margin-top: 1.25rem; display: block;">Any platform-specific habits?</label>
-        <input type="text" id="platform_habits" name="platform_habits" placeholder="e.g. shorter on Instagram, longer on LinkedIn (optional)" value="{{ existing_intake.get('platform_habits', '') }}">
+        <label for="platform_habits" style="margin-top: 1.25rem; display: block;">Any platform-specific habits? <span style="color:#999;">(optional)</span></label>
+        <input type="text" id="platform_habits" name="platform_habits" placeholder="e.g. shorter on Instagram, longer on LinkedIn" value="{{ existing_intake.get('platform_habits', '') }}">
         <div id="stories-addon-wrap" class="intake-other-wrap" data-stories-paid="{{ 'true' if stories_paid else 'false' }}" style="margin-top: 1rem; padding: 1rem; background: rgba(255,255,255,0.5); border-radius: 8px; border: 1px solid #ddd; {% if not stories_paid %}display: none;{% endif %}">
           <p class="field-helper" style="margin: 0 0 0.5rem; font-weight: 600;">{% if stories_paid %}{% if is_upgrade_flow %}30 Days Story Ideas included in your upgrade.{% else %}30 Days Story Ideas included with your order.{% endif %}{% else %}Using Instagram &amp; Facebook? Add Story Ideas—optionally align each day's Story to your feed caption (same theme, same day) or leave unaligned so they're different.{% endif %}</p>
           <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; margin-bottom: 0.25rem;">
@@ -324,7 +326,7 @@
         </div>
       </div>
       <div class="form-section">
-        <h2 style="display: flex; align-items: center;">Hashtags<span class="help-trigger" tabindex="0" role="button" aria-label="Hashtag guidelines"><span aria-hidden="true">?</span><span class="help-tooltip"><strong>Recommended by platform:</strong><br>Instagram &amp; Facebook 2–5 (or up to 30 on Instagram)<br>LinkedIn 2–5<br>TikTok 2–5<br>Pinterest 2–5<br><br>Quality over quantity. 3–10 is a safe range for most posts.</span></span></h2>
+        <h2 style="display: flex; align-items: center;">Hashtags <span style="color:#999; margin-left: 0.35rem;">(optional)</span><span class="help-trigger" tabindex="0" role="button" aria-label="Hashtag guidelines"><span aria-hidden="true">?</span><span class="help-tooltip"><strong>Recommended by platform:</strong><br>Instagram &amp; Facebook 2–5 (or up to 30 on Instagram)<br>LinkedIn 2–5<br>TikTok 2–5<br>Pinterest 2–5<br><br>Quality over quantity. 3–10 is a safe range for most posts.</span></span></h2>
         <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; margin-bottom: 0.5rem;">
           <input type="checkbox" id="include_hashtags" name="include_hashtags" {% if existing_intake.get('include_hashtags', True) %}checked{% endif %} style="width: auto;">
           <span>Include suggested hashtags with each caption</span>
@@ -368,9 +370,9 @@
         <p class="field-helper">Helps us pick themes and angles that fit your content mix.</p>
       </div>
       <div class="form-section">
-        <h2>Example captions (optional)</h2>
+        <h2>Example captions <span style="color:#999;">(optional)</span></h2>
         <label for="caption_examples">Paste 1–3 example captions you like — from your own posts, competitors, or inspiration. We'll match this style, tone, and structure where relevant.</label>
-        <textarea id="caption_examples" name="caption_examples" data-testid="caption_examples" placeholder="Paste example captions here (optional)" style="min-height: 140px;">{{ existing_intake.get('caption_examples', '') }}</textarea>
+        <textarea id="caption_examples" name="caption_examples" data-testid="caption_examples" placeholder="Paste example captions here" style="min-height: 140px;">{{ existing_intake.get('caption_examples', '') }}</textarea>
       </div>
       <button type="button" class="btn-submit account-btn-swipe-light" id="btn-review">{% if existing_intake %}REVIEW CHANGES{% else %}NEXT STEP{% endif %}</button>
     </form>
