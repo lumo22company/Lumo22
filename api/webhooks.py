@@ -307,6 +307,18 @@ def _handle_captions_payment(session):
         print(f"[Stripe webhook] Referrer credit increment failed (non-fatal): {e}")
 
 
+def _cancel_confirmation_already_sent(order: dict | None) -> bool:
+    """True if we already emailed cancel confirmation for this caption_orders row."""
+    if not order:
+        return False
+    v = order.get("cancel_confirmation_sent_at")
+    if v is None:
+        return False
+    if isinstance(v, str):
+        return bool(v.strip())
+    return True
+
+
 def _stripe_nested_to_dict(obj):
     """Normalize Stripe API / webhook objects to dict for shared helpers."""
     if obj is None:
@@ -428,6 +440,15 @@ def _send_captions_subscription_cancelled_confirmation(sub_id: str, sub_obj: dic
         )
         if ok:
             print(f"[Stripe webhook] cancel confirmation email sent → {customer_email} (sub …{sub_id[-8:]})")
+            # Dedupe: subscription.updated (schedule/immediate) + subscription.deleted both fire — only one email
+            if order and order.get("id"):
+                from datetime import datetime
+
+                ts = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+                try:
+                    order_service.update(str(order["id"]), {"cancel_confirmation_sent_at": ts})
+                except Exception as ex:
+                    print(f"[Stripe webhook] cancel_confirmation_sent_at update failed: {ex}")
         else:
             print(
                 f"[Stripe webhook] cancel confirmation email NOT sent (send_email returned False) → {customer_email}"
@@ -540,12 +561,22 @@ def stripe_webhook():
             return jsonify({"received": True}), 200
 
         if event_type == "customer.subscription.deleted":
-            # Subscription ended: send confirmation (DB row optional — Stripe fallback for email)
+            # Subscription ended: send confirmation only if we did not already email on subscription.updated
             sub_obj = event.get("data", {}).get("object") if isinstance(event, dict) else None
             if not sub_obj or not isinstance(sub_obj, dict):
                 return jsonify({"received": True}), 200
             sub_id = (sub_obj.get("id") or "").strip()
             if not sub_id:
+                return jsonify({"received": True}), 200
+            from services.caption_order_service import CaptionOrderService
+
+            order_service = CaptionOrderService()
+            existing = order_service.get_by_stripe_subscription_id(sub_id)
+            if existing and _cancel_confirmation_already_sent(existing):
+                print(
+                    f"[Stripe webhook] subscription.deleted: cancel email already sent for sub {sub_id[:20]}...; "
+                    "skipping duplicate"
+                )
                 return jsonify({"received": True}), 200
             _send_captions_subscription_cancelled_confirmation(sub_id, sub_obj)
             return jsonify({"received": True}), 200
@@ -561,12 +592,42 @@ def stripe_webhook():
             from services.notifications import NotificationService
             order_service = CaptionOrderService()
             order = order_service.get_by_stripe_subscription_id(sub_id)
+            # Customer resumed: clear dedupe flag so a future cancel sends again
+            prev_attrs = (event.get("data", {}) if isinstance(event, dict) else {}).get("previous_attributes") or {}
+            if (
+                order
+                and order.get("id")
+                and isinstance(prev_attrs, dict)
+                and prev_attrs.get("cancel_at_period_end") is True
+                and not sub_obj.get("cancel_at_period_end")
+                and _cancel_confirmation_already_sent(order)
+            ):
+                try:
+                    order_service.update(str(order["id"]), {"cancel_confirmation_sent_at": None})
+                    print(
+                        f"[Stripe webhook] subscription resumed (cancel_at_period_end cleared); "
+                        f"reset cancel_confirmation_sent_at for order {str(order['id'])[:8]}..."
+                    )
+                except Exception as e:
+                    print(f"[Stripe webhook] cancel_confirmation_sent_at clear failed: {e}")
             # Cancellation scheduled (cancel at period end) OR immediate cancel (status=canceled before delete).
             # Do not require a caption_orders row — email uses Stripe customer fallback when DB is missing.
             status = (sub_obj.get("status") or "").strip()
             cancel_scheduled = bool(sub_obj.get("cancel_at_period_end"))
             immediate_cancel = status == "canceled" and not cancel_scheduled
             if cancel_scheduled or immediate_cancel:
+                if order and _cancel_confirmation_already_sent(order):
+                    print(
+                        f"[Stripe webhook] subscription.updated cancel: confirmation already sent for sub "
+                        f"{sub_id[:20]}...; skipping duplicate webhook"
+                    )
+                    row = order
+                    if row.get("id"):
+                        try:
+                            order_service.update(row["id"], {"reminder_opt_out": True})
+                        except Exception as e:
+                            print(f"[Stripe webhook] reminder_opt_out update on cancel failed: {e}")
+                    return jsonify({"received": True}), 200
                 order_for_reminder = _send_captions_subscription_cancelled_confirmation(sub_id, sub_obj)
                 row = order_for_reminder or order
                 if row and row.get("id"):
