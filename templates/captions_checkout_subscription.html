@@ -46,8 +46,9 @@
       {% if add_platforms_url %}<p style="font-size: 0.9rem; color: var(--lum-text-muted); margin: 0.35rem 0 0;">Need more platforms? <a href="{{ add_platforms_url }}" style="color: var(--lum-gold); font-weight: 600;">Change your selection</a>—{% if is_upgrade_from_oneoff|default(false) %}your form will still be prefilled from your one-off pack; you can edit it anytime in your account. {% endif %}If you add more platforms later from your account, they're delivered with your <strong>next</strong> pack, not instantly.</p>{% endif %}
       {% endif %}
       {% if is_upgrade_from_oneoff|default(false) %}
-      <p style="font-size: 0.9rem; color: #fff; margin: 1.5rem 0 1rem; padding: 0.75rem 1rem; background: #000; border-radius: 8px; border: 2px solid #fff;">Upgrading from one-off? Your first subscription pack will be delivered <strong>30 days after your one-off pack</strong>, so you get continuous content with no overlap. <strong>Your form will be prefilled</strong> with your answers from your one-off pack—even if you add more platforms or Story Ideas here. You can edit your form anytime in your account.</p>
-      <p style="font-size: 0.9rem; color: var(--lum-text-muted); margin: 0 0 0.5rem;">You won't be charged today. You'll be charged <strong>{{ currency_symbol|default('£') }}{{ total_sub|default(79) }}/month</strong> when your first subscription pack is ready{% if first_charge_date %} (on {{ first_charge_date }}){% endif %}. By continuing you agree to this.</p>
+      <p style="font-size: 0.9rem; color: #fff; margin: 1.5rem 0 1rem; padding: 0.75rem 1rem; background: #000; border-radius: 8px; border: 2px solid #fff;">Upgrading from one-off? Your first subscription pack will be delivered <strong>30 days after your one-off pack is delivered</strong>, so you get continuous content with no overlap. <strong>Your form will be prefilled</strong> with your answers from your one-off pack—even if you add more platforms or Story Ideas here. You can edit your form anytime in your account.</p>
+      <p style="font-size: 0.9rem; color: var(--lum-text-muted); margin: 0 0 0.5rem;">You won't be charged today. You'll be charged <strong>{{ currency_symbol|default('£') }}{{ total_sub|default(79) }}/month</strong> when your first subscription pack is ready{% if first_charge_date %} (on {{ first_charge_date }}){% else %} (30 days after your one-off pack is delivered){% endif %}. By continuing you agree to this.</p>
+      {% if can_get_pack_now|default(false) %}
       <div id="get-pack-now-option" style="margin: 1rem 0 1rem; padding: 1rem; background: rgba(255,242,0,0.08); border: 1px solid rgba(255,242,0,0.35); border-radius: 8px;">
         <label style="display: flex; align-items: flex-start; gap: 0.75rem; cursor: pointer;">
           <input type="checkbox" id="get-pack-now-checkbox" name="get_pack_now" value="1" style="margin-top: 0.2rem;">
@@ -57,6 +58,9 @@
           </span>
         </label>
       </div>
+      {% else %}
+      <p style="font-size: 0.9rem; color: var(--lum-text-muted); margin: 1rem 0 0.5rem;">Get your first pack now becomes available after your one-off pack has been delivered.</p>
+      {% endif %}
       {% endif %}
       <p class="price-note">New 30-day caption pack each month. Renews monthly until you cancel. Cancel anytime from your Stripe customer portal. You’ll complete a short form after payment; your captions are ready within 15 minutes.</p>
 
@@ -78,7 +82,7 @@
   {% if not platforms_invalid|default(false) %}
   {% include '_terms_modal.html' %}
   {% endif %}
-  {% if is_upgrade_from_oneoff|default(false) and api_url %}
+  {% if is_upgrade_from_oneoff|default(false) and can_get_pack_now|default(false) and api_url %}
   <script>
     (function() {
       var btn = document.getElementById('btn-continue');

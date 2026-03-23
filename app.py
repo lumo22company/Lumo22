@@ -571,14 +571,17 @@ def captions_checkout_subscription_page():
         add_stories_url = None
     add_platforms_url = ("/captions" + captions_prefill) if platforms < 4 else None
     first_charge_date_str = None
+    can_get_pack_now = False
     if copy_from:
         try:
             from services.caption_order_service import CaptionOrderService
             from datetime import datetime, timedelta, timezone
             one_off = CaptionOrderService().get_by_token(copy_from)
             if one_off:
+                is_delivered = bool(one_off.get("status") == "delivered" or one_off.get("delivered_at"))
+                can_get_pack_now = is_delivered
                 raw = one_off.get("delivered_at") or one_off.get("updated_at") or one_off.get("created_at")
-                if raw:
+                if is_delivered and raw:
                     dt = datetime.fromisoformat(raw.replace("Z", "+00:00")) if isinstance(raw, str) else raw
                     if getattr(dt, "tzinfo", None) is None:
                         dt = dt.replace(tzinfo=timezone.utc)
@@ -599,6 +602,7 @@ def captions_checkout_subscription_page():
         back_to_captions_url=back_to_captions_url,
         is_upgrade_from_oneoff=bool(copy_from),
         first_charge_date=first_charge_date_str,
+        can_get_pack_now=can_get_pack_now,
     )
 
 
