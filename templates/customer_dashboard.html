@@ -308,6 +308,9 @@
         var priceDisplay = document.getElementById('upgrade-price-display');
         var checkoutBtn = document.getElementById('upgrade-checkout-btn');
         var currencyBtns = document.querySelectorAll('.account-upgrade-currency-btn');
+        // Keep Story Ideas aligned with the selected one-off pack until user explicitly changes it.
+        var storiesDefaultFromPrefill = false;
+        var storiesTouched = false;
         var currency = 'gbp';
         function hasInstaFb() {
           var cbs = document.querySelectorAll('.upgrade-which-cb:checked');
@@ -329,6 +332,8 @@
             storiesCb.checked = false;
           } else if (typeof prefillIncludeStories === 'boolean') {
             storiesCb.checked = prefillIncludeStories;
+          } else if (!storiesTouched) {
+            storiesCb.checked = !!storiesDefaultFromPrefill;
           }
         }
         function syncFromPrefill() {
@@ -342,6 +347,8 @@
             currencyBtns.forEach(function(b) {
               b.style.borderColor = b.dataset.currency === currency ? 'var(--lum-gold)' : 'rgba(255,255,255,0.3)';
             });
+            storiesDefaultFromPrefill = false;
+            storiesTouched = false;
             syncUpgradeStoriesAddon();
             updatePrice();
             return;
@@ -360,7 +367,9 @@
           currencyBtns.forEach(function(b) {
             b.style.borderColor = b.dataset.currency === currency ? 'var(--lum-gold)' : 'rgba(255,255,255,0.3)';
           });
-          syncUpgradeStoriesAddon(opt.dataset.stories === '1');
+          storiesDefaultFromPrefill = (opt.dataset.stories === '1');
+          storiesTouched = false;
+          syncUpgradeStoriesAddon(storiesDefaultFromPrefill);
           updatePrice();
         }
         function updateUpgradePlatformLabels() {
@@ -438,7 +447,10 @@
             updatePrice();
           });
         });
-        if (storiesCb) storiesCb.addEventListener('change', updatePrice);
+        if (storiesCb) storiesCb.addEventListener('change', function() {
+          storiesTouched = true;
+          updatePrice();
+        });
         if (getPackTodayCb) getPackTodayCb.addEventListener('change', updatePrice);
         currencyBtns.forEach(function(b) {
           b.addEventListener('click', function() {
