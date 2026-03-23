@@ -1127,13 +1127,11 @@ def _captions_intake_submit_impl(data):
         scheduled_date_str = None
         deliver_base_one_off_now = False
         base_one_off_id = None
-        base_one_off_has_intake = False
         base_one_off_delivered = False
         if upgraded_from and order.get("stripe_subscription_id"):
             one_off = order_service.get_by_token(upgraded_from)
             if one_off:
                 base_one_off_id = one_off.get("id")
-                base_one_off_has_intake = bool(one_off.get("intake"))
                 base_one_off_delivered = bool(one_off.get("status") == "delivered" or one_off.get("delivered_at"))
                 try:
                     from datetime import datetime, timedelta, timezone
@@ -1150,11 +1148,11 @@ def _captions_intake_submit_impl(data):
                         else:
                             scheduled = datetime.now(timezone.utc) + timedelta(days=30)
                     else:
-                        # Base one-off not delivered yet: deliver it now once we save this intake,
-                        # then keep subscription first pack 30 days from now.
+                        # Base one-off not delivered yet: always deliver it after this save.
+                        # (Prefilled intake from the one-off or any non-awaiting_intake status used to skip
+                        # the trigger while we still returned early with only scheduled_delivery_at — no PDFs.)
                         scheduled = datetime.now(timezone.utc) + timedelta(days=30)
-                        if not base_one_off_has_intake and (one_off.get("status") or "").strip() == "awaiting_intake":
-                            deliver_base_one_off_now = True
+                        deliver_base_one_off_now = True
                     scheduled_delivery_at = scheduled.strftime("%Y-%m-%dT%H:%M:%SZ")
                     scheduled_date_str = scheduled.strftime("%d %B %Y")
                 except Exception:
