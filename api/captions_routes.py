@@ -1120,28 +1120,56 @@ def _captions_intake_submit_impl(data):
                     "upgrade_type": "platforms",
                     "upgrade_url": upgrade_url,
                 }), 400
-        # Upgrade-from-one-off: schedule first pack 30 days after one-off delivery (no overlap)
+        # Upgrade-from-one-off: first deliver the already-paid one-off pack (if still pending),
+        # then schedule the first subscription pack ~30 days later to avoid overlap.
         upgraded_from = (order.get("upgraded_from_token") or "").strip()
         scheduled_delivery_at = None
         scheduled_date_str = None
+        deliver_base_one_off_now = False
+        base_one_off_id = None
+        base_one_off_has_intake = False
+        base_one_off_delivered = False
         if upgraded_from and order.get("stripe_subscription_id"):
             one_off = order_service.get_by_token(upgraded_from)
-            if one_off and one_off.get("status") == "delivered":
-                delivered_at_raw = one_off.get("delivered_at") or one_off.get("updated_at") or one_off.get("created_at")
-                if delivered_at_raw:
-                    try:
-                        from datetime import datetime, timedelta, timezone
-                        if isinstance(delivered_at_raw, str):
-                            dt = datetime.fromisoformat(delivered_at_raw.replace("Z", "+00:00"))
+            if one_off:
+                base_one_off_id = one_off.get("id")
+                base_one_off_has_intake = bool(one_off.get("intake"))
+                base_one_off_delivered = bool(one_off.get("status") == "delivered" or one_off.get("delivered_at"))
+                try:
+                    from datetime import datetime, timedelta, timezone
+                    if base_one_off_delivered:
+                        delivered_at_raw = one_off.get("delivered_at") or one_off.get("updated_at") or one_off.get("created_at")
+                        if delivered_at_raw:
+                            if isinstance(delivered_at_raw, str):
+                                dt = datetime.fromisoformat(delivered_at_raw.replace("Z", "+00:00"))
+                            else:
+                                dt = delivered_at_raw
+                            if getattr(dt, "tzinfo", None) is None:
+                                dt = dt.replace(tzinfo=timezone.utc)
+                            scheduled = dt + timedelta(days=30)
                         else:
-                            dt = delivered_at_raw
-                        scheduled = dt + timedelta(days=30)
-                        scheduled_delivery_at = scheduled.strftime("%Y-%m-%dT%H:%M:%SZ")
-                        scheduled_date_str = scheduled.strftime("%d %B %Y")
-                    except Exception:
-                        pass
+                            scheduled = datetime.now(timezone.utc) + timedelta(days=30)
+                    else:
+                        # Base one-off not delivered yet: deliver it now once we save this intake,
+                        # then keep subscription first pack 30 days from now.
+                        scheduled = datetime.now(timezone.utc) + timedelta(days=30)
+                        if not base_one_off_has_intake and (one_off.get("status") or "").strip() == "awaiting_intake":
+                            deliver_base_one_off_now = True
+                    scheduled_delivery_at = scheduled.strftime("%Y-%m-%dT%H:%M:%SZ")
+                    scheduled_date_str = scheduled.strftime("%d %B %Y")
+                except Exception:
+                    pass
         if not order_service.save_intake(order_id, intake, scheduled_delivery_at=scheduled_delivery_at):
             return jsonify({"error": "Failed to save. Please try again."}), 500
+        if deliver_base_one_off_now and base_one_off_id:
+            try:
+                # Reuse submitted intake for the original one-off so customer receives the pack they already paid for.
+                if order_service.save_intake(base_one_off_id, intake):
+                    thread_base = threading.Thread(target=_run_generation_and_deliver, args=(base_one_off_id,))
+                    thread_base.daemon = False
+                    thread_base.start()
+            except Exception as e:
+                print(f"[captions_intake] base one-off immediate delivery trigger failed: {e}")
         if scheduled_delivery_at and scheduled_date_str:
             is_subscription = True
             customer_email = (order.get("customer_email") or "").strip().lower()
@@ -1153,9 +1181,12 @@ def _captions_intake_submit_impl(data):
                     customer_has_account = auth_svc.get_by_email(customer_email) is not None
                 except Exception:
                     pass
+            msg = f"Thanks. Your first subscription pack will be delivered on {scheduled_date_str} — 30 days after your one-off pack, so you get continuous content with no overlap."
+            if deliver_base_one_off_now:
+                msg = "Thanks. We are delivering your one-off pack now, and your first subscription pack will be delivered on " + scheduled_date_str + " (about 30 days later) so you get continuous content with no overlap."
             return jsonify({
                 "success": True,
-                "message": f"Thanks. Your first subscription pack will be delivered on {scheduled_date_str} — 30 days after your one-off pack, so you get continuous content with no overlap.",
+                "message": msg,
                 "scheduled_delivery_date": scheduled_date_str,
                 "customer_email": order.get("customer_email") or "",
                 "is_subscription": True,
