@@ -138,15 +138,12 @@
         var emailFallback = document.getElementById('thankyou-email-fallback');
         if (emailFallback) emailFallback.style.display = 'none';
         var isLoggedIn = (document.body.getAttribute('data-current-customer') || '').toLowerCase() === 'true';
-        var prefilledNote = isPrefilledFromOneoff
-          ? ' <strong>Your form is prefilled</strong> from your one-off pack—create your account below, then log in to review or edit it in your account. '
-          : ' ';
         var accountLine = isSubscription && !isLoggedIn
           ? 'Create your account below (set a password) so you can log in and manage your subscription. We\'ll send a verification link to your email.'
           : (isSubscription ? 'You can manage your subscription from your account.' : 'On the form you can also create an account to access your captions in one place.');
         var emailText = customerEmail
-          ? 'Thank you. We\'ve emailed you at <strong>' + escapeHtml(customerEmail) + '</strong>.' + (isPrefilledFromOneoff ? ' Your form is already filled from your one-off pack; you can edit it anytime in your account.' : ' Fill in the short form to get started.') + prefilledNote + (isPrefilledFromOneoff ? '' : 'Your captions are usually ready within 15 minutes. ') + accountLine
-          : 'Thank you. We\'ve emailed you.' + (isPrefilledFromOneoff ? ' Your form is prefilled from your one-off pack; you can edit it anytime in your account.' : ' Fill in the form to get started.') + prefilledNote + (isPrefilledFromOneoff ? '' : 'Your captions are usually ready within 15 minutes. ') + accountLine;
+          ? 'Thank you. We\'ve emailed you at <strong>' + escapeHtml(customerEmail) + '</strong>.' + (isPrefilledFromOneoff ? ' Your form is already filled from your one-off pack; you can edit it anytime in your account.' : ' Fill in the short form to get started.') + (isPrefilledFromOneoff ? '' : 'Your captions are usually ready within 15 minutes. ') + accountLine
+          : 'Thank you. We\'ve emailed you.' + (isPrefilledFromOneoff ? ' Your form is prefilled from your one-off pack; you can edit it anytime in your account.' : ' Fill in the form to get started.') + (isPrefilledFromOneoff ? '' : 'Your captions are usually ready within 15 minutes. ') + accountLine;
         emailMsgEl.innerHTML = emailText;
         intakeLinkEl.href = url;
         intakeLinkEl.textContent = isPrefilledFromOneoff ? 'Review your form' : 'Fill out form now';
