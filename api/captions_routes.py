@@ -1630,6 +1630,23 @@ def captions_get_pack_sooner():
         if not order.get("intake"):
             return jsonify({"ok": False, "error": "Please complete your form first. Edit your form then try again."}), 400
 
+        # Eligibility guard: allow only after at least one delivered pack exists
+        # (either the subscription order itself or its upgraded-from one-off base order).
+        delivered_self = bool(order.get("status") == "delivered" or order.get("delivered_at"))
+        delivered_base = False
+        upgraded_from = (order.get("upgraded_from_token") or "").strip()
+        if upgraded_from:
+            try:
+                one_off = order_service.get_by_token(upgraded_from)
+                delivered_base = bool(one_off and (one_off.get("status") == "delivered" or one_off.get("delivered_at")))
+            except Exception:
+                delivered_base = False
+        if not (delivered_self or delivered_base):
+            return jsonify({
+                "ok": False,
+                "error": "Get pack sooner is available after at least one pack has been delivered."
+            }), 400
+
         # Check subscription is not paused
         pause_info = _get_subscription_pause_info(sub_id)
         if pause_info and pause_info.get("paused"):

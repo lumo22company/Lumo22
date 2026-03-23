@@ -686,7 +686,7 @@
 <button type="button" class="account-remove-stories-btn account-billing-portal-link account-btn-swipe-light" data-order-token="{{ o.get('token', '') }}" data-platforms-count="{{ _platforms }}" data-new-price="{{ _new_price }}" data-new-price-symbol="£" onclick="showRemoveStoriesModal(this)">Remove Story Ideas</button>
           </div>
           {% endif %}
-          {% if not (o.get('subscription_pause') or {}).get('paused') %}
+          {% if not (o.get('subscription_pause') or {}).get('paused') and o.get('has_delivered_pack') %}
           <div class="account-settings-row account-remove-stories-row account-get-pack-sooner-row">
             <div class="account-remove-stories-text account-get-pack-sooner-text">
               <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Get your pack sooner</div>
@@ -698,6 +698,13 @@
             {% set _gps_p = captions_prices.get(_gps_currency, captions_prices['gbp']) %}
             {% set _gps_total = _gps_p.get('sub', 79) + (_gps_platforms - 1) * _gps_p.get('extra_sub', 19) + (_gps_p.get('stories_sub', 17) if _gps_stories else 0) %}
             <button type="button" class="account-get-pack-sooner-btn account-billing-portal-link account-btn-swipe-light" data-order-id="{{ o.get('id', '') }}" data-order-token="{{ o.get('token', '') }}" data-amount="{{ _gps_p.get('symbol', '£') }}{{ _gps_total }}" data-amount-symbol="{{ _gps_p.get('symbol', '£') }}" onclick="showGetPackSoonerModal(this)">Get my pack sooner</button>
+          </div>
+          {% elif not (o.get('subscription_pause') or {}).get('paused') %}
+          <div class="account-settings-row account-remove-stories-row account-get-pack-sooner-row">
+            <div class="account-remove-stories-text account-get-pack-sooner-text">
+              <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Get your pack sooner</div>
+              <div class="account-settings-desc">Available after at least one pack has been delivered on this subscription path.</div>
+            </div>
           </div>
           {% endif %}
           {% endif %}

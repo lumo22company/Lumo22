@@ -897,6 +897,21 @@ def _account_context():
         co_svc = CaptionOrderService()
         auth_svc = CustomerAuthService()
         caption_orders = co_svc.get_by_customer_email_including_stripe_customer(email)
+        # Eligibility for "Get my pack sooner": customer must already have at least one delivered pack
+        # (either this subscription order itself, or the one-off order it was upgraded from).
+        by_token = {
+            (o.get("token") or "").strip(): o
+            for o in caption_orders
+            if (o.get("token") or "").strip()
+        }
+        for o in caption_orders:
+            delivered_self = bool(o.get("status") == "delivered" or o.get("delivered_at"))
+            upgraded_from = (o.get("upgraded_from_token") or "").strip()
+            delivered_base = False
+            if upgraded_from:
+                base = by_token.get(upgraded_from)
+                delivered_base = bool(base and (base.get("status") == "delivered" or base.get("delivered_at")))
+            o["has_delivered_pack"] = bool(delivered_self or delivered_base)
         referral_code = auth_svc.ensure_referral_code(str(customer["id"]))
         try:
             from api.captions_routes import _get_subscription_pause_info
