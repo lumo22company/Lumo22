@@ -151,6 +151,81 @@ def _normalize_error(err) -> str:
     return "".join(c for c in out if ord(c) < 128)
 
 
+def _captions_subscription_base_price_ids() -> set:
+    """Stripe price IDs for the monthly Captions base subscription (all currencies)."""
+    out = set()
+    for key in (
+        "STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID",
+        "STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID_USD",
+        "STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID_EUR",
+    ):
+        pid = (getattr(Config, key, None) or "").strip()
+        if pid:
+            out.add(pid)
+    return out
+
+
+def _stripe_subscription_has_captions_base_price(sub_obj: dict) -> bool:
+    """True if subscription line items include a Captions base monthly price."""
+    base_ids = _captions_subscription_base_price_ids()
+    if not base_ids:
+        return False
+    items = sub_obj.get("items") or {}
+    if isinstance(items, dict):
+        items = items.get("data") or []
+    for item in items or []:
+        if not isinstance(item, dict):
+            continue
+        price = item.get("price") or {}
+        pid = price.get("id") if isinstance(price, dict) else None
+        if pid and pid in base_ids:
+            return True
+    return False
+
+
+def _stripe_subscription_blocks_new_checkout(sub_obj: dict) -> bool:
+    """True if this Captions subscription is active enough that we should not start another checkout."""
+    if not _stripe_subscription_has_captions_base_price(sub_obj):
+        return False
+    status = (sub_obj.get("status") or "").strip()
+    if status in ("canceled", "unpaid", "incomplete_expired", "incomplete"):
+        return False
+    return status in ("active", "trialing", "past_due")
+
+
+def _customer_has_blocking_captions_subscription(email: str) -> bool:
+    """
+    True if this customer already has an active/trialing/past_due Captions subscription in Stripe.
+    Each completed subscription checkout creates a new Stripe subscription + caption_orders row;
+    this guard prevents accidental duplicate monthly subscriptions for the same account.
+    """
+    if not email or "@" not in email:
+        return False
+    import stripe
+
+    if not Config.STRIPE_SECRET_KEY:
+        return False
+    stripe.api_key = Config.STRIPE_SECRET_KEY
+    from services.caption_order_service import CaptionOrderService
+
+    co_svc = CaptionOrderService()
+    orders = co_svc.get_by_customer_email_including_stripe_customer(email.strip().lower())
+    seen_subs = set()
+    for o in orders:
+        sid = (o.get("stripe_subscription_id") or "").strip()
+        if not sid or sid in seen_subs:
+            continue
+        seen_subs.add(sid)
+        try:
+            sub = stripe.Subscription.retrieve(sid)
+        except Exception as e:
+            print(f"[captions_checkout_subscription] Stripe retrieve failed for sub {sid[:14]}...: {e}")
+            continue
+        if _stripe_subscription_blocks_new_checkout(sub):
+            return True
+    return False
+
+
 @captions_bp.route("/captions-checkout", methods=["GET"])
 def captions_checkout():
     """
@@ -264,6 +339,13 @@ def captions_checkout_subscription():
     if not Config.STRIPE_SECRET_KEY or not price_id:
         return jsonify({"error": "Subscription not configured (STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID)"}), 503
     stripe.api_key = Config.STRIPE_SECRET_KEY
+    # Prevent multiple active Captions subscriptions for the same account (each checkout = new Stripe sub + new order row).
+    if customer and (customer.get("email") or "").strip():
+        try:
+            if _customer_has_blocking_captions_subscription((customer.get("email") or "").strip().lower()):
+                return redirect(url_for("account_page") + "?subscription_duplicate=1")
+        except Exception as e:
+            print(f"[captions_checkout_subscription] duplicate guard failed (non-fatal): {e}")
     platforms = _parse_platforms(request)
     selected = _parse_selected_platforms(request)
     stories = _parse_stories(request)
