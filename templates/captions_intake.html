@@ -191,6 +191,10 @@
             <input type="hidden" id="ca-email" value="">
             <label for="ca-password" style="display:block; font-size:0.9rem; margin-bottom:0.25rem;">Password (min 12 characters, include 1 number)</label>
             <input type="password" id="ca-password" required minlength="12" style="width:100%; padding:0.5rem 0.75rem; margin-bottom:0.75rem; border-radius:6px; border:1px solid var(--lum-border);" placeholder="At least 12 characters, 1 number">
+            <label style="display:flex;align-items:flex-start;gap:0.5rem;font-size:0.85rem;cursor:pointer;margin:0 0 0.75rem;line-height:1.45;color:var(--lum-text-muted);">
+              <input type="checkbox" id="ca-marketing-opt-in" style="margin-top:0.15rem;flex-shrink:0;">
+              <span>Email me tips, updates and offers (optional).</span>
+            </label>
             <button type="submit" class="btn-submit" id="ca-btn">Create account</button>
           </form>
           <p id="ca-signup-wrap" style="display: none; margin: 0.75rem 0 0; font-size: 0.9rem; color: var(--lum-text-muted);">Prefer to sign up on a separate page? <a id="ca-signup-link" href="#" class="account-btn-swipe-light" style="display: inline-block; margin-top: 0.25rem; padding: 0.4rem 0.9rem; font-size: 0.9rem;">Sign up</a> (your email will be prefilled).</p>
@@ -939,7 +943,8 @@
         if (pw.length < 12 || !/\d/.test(pw)) { alert('Password must be at least 12 characters and include a number.'); return; }
         var caBtn = document.getElementById('ca-btn');
         if (caBtn) { caBtn.disabled = true; caBtn.textContent = 'Creating…'; }
-        fetch('/api/auth/create-account', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email.toLowerCase(), password: pw }) })
+        var caMo = document.getElementById('ca-marketing-opt-in');
+        fetch('/api/auth/create-account', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email.toLowerCase(), password: pw, marketing_opt_in: !!(caMo && caMo.checked) }) })
           .then(function(r) { return r.json(); })
           .then(function(data) {
             if (data.ok) {

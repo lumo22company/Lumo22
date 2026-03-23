@@ -124,7 +124,7 @@
               <div class="account-info-value">Tips, updates, and offers from Lumo 22</div>
               <p id="marketing-toggle-error" class="account-toggle-error" style="display: none; margin: 0.5rem 0 0; font-size: 0.85rem; color: #c00;"></p>
             </div>
-            <div id="marketing-toggle-wrap" role="button" tabindex="0" class="account-toggle {% if customer.get('marketing_opt_in', True) %}on{% endif %}" aria-label="Toggle marketing emails" onclick="toggleMarketing()" onkeydown="if(event.key==='Enter'||event.key===' ') { event.preventDefault(); toggleMarketing(); }"></div>
+            <div id="marketing-toggle-wrap" role="button" tabindex="0" class="account-toggle {% if customer.get('marketing_opt_in', False) %}on{% endif %}" aria-label="Toggle marketing emails" onclick="toggleMarketing()" onkeydown="if(event.key==='Enter'||event.key===' ') { event.preventDefault(); toggleMarketing(); }"></div>
           </div>
           <div class="account-info-row account-info-row--delete">
             <div>

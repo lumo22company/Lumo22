@@ -105,8 +105,16 @@ class CustomerAuthService:
         except Exception:
             return None
 
-    def create(self, email: str, password: str, referral_code: Optional[str] = None) -> Dict[str, Any]:
-        """Create customer with hashed password. Raises if email exists."""
+    def create(
+        self,
+        email: str,
+        password: str,
+        referral_code: Optional[str] = None,
+        *,
+        marketing_opt_in: bool = False,
+    ) -> Dict[str, Any]:
+        """Create customer with hashed password. Raises if email exists.
+        marketing_opt_in: explicit opt-in only (default False for GDPR)."""
         if not email or "@" not in email:
             raise ValueError("Valid email required")
         ok, err = validate_password(password)
@@ -126,7 +134,7 @@ class CustomerAuthService:
             "password_hash": pw_hash,
             "referral_code": self._generate_referral_code().upper(),
             "referred_by_customer_id": referrer_id,
-            "marketing_opt_in": False,  # GDPR: default opt-out; require explicit consent for marketing
+            "marketing_opt_in": bool(marketing_opt_in),
         }
         result = self.client.table(self.table).insert(row).execute()
         if not result.data:

@@ -73,7 +73,13 @@ def signup():
             return jsonify({"ok": False, "error": err}), 400
 
         svc = CustomerAuthService()
-        customer = svc.create(email=email, password=password, referral_code=referral_code)
+        marketing_opt_in = bool(data.get("marketing_opt_in"))
+        customer = svc.create(
+            email=email,
+            password=password,
+            referral_code=referral_code,
+            marketing_opt_in=marketing_opt_in,
+        )
 
         token = svc.set_email_verification_token(str(customer["id"]))
         if token:
@@ -245,7 +251,7 @@ def me():
             "id": str(customer["id"]),
             "email": customer["email"],
             "created_at": customer.get("created_at"),
-            "marketing_opt_in": customer.get("marketing_opt_in", True),
+            "marketing_opt_in": customer.get("marketing_opt_in", False),
         }
     }), 200
 
@@ -271,7 +277,7 @@ def export_data():
             "id": str(customer.get("id", "")),
             "email": customer.get("email", ""),
             "created_at": customer.get("created_at"),
-            "marketing_opt_in": customer.get("marketing_opt_in", True),
+            "marketing_opt_in": customer.get("marketing_opt_in", False),
         },
         "caption_orders": [],
     }
@@ -480,7 +486,8 @@ def create_account():
         if existing:
             return jsonify({"ok": False, "error": "An account with this email already exists. Try logging in instead."}), 400
 
-        customer = svc.create(email=email, password=password)
+        marketing_opt_in = bool(data.get("marketing_opt_in"))
+        customer = svc.create(email=email, password=password, marketing_opt_in=marketing_opt_in)
 
         token = svc.set_email_verification_token(str(customer["id"]))
         if token:

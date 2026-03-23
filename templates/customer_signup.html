@@ -60,6 +60,11 @@
       <label for="password_confirm">Confirm password</label>
       <input type="password" id="password_confirm" name="password_confirm" required minlength="12" autocomplete="new-password">
 
+      <label style="display:flex;align-items:flex-start;gap:0.5rem;font-size:0.9rem;cursor:pointer;margin:0 0 1.25rem;line-height:1.45;">
+        <input type="checkbox" id="marketing_opt_in" name="marketing_opt_in" value="1" style="margin-top:0.2rem;flex-shrink:0;">
+        <span>Email me tips, updates and offers from Lumo 22 (optional). You can change this anytime in your account.</span>
+      </label>
+
       <button type="submit" class="btn" id="btn">Create account</button>
       <div id="msg" class="msg" style="display: none;"></div>
       <div id="msg-continue" class="msg success" style="display: none; margin-top: 1rem;"></div>
@@ -128,10 +133,12 @@
         var ref = (new URLSearchParams(window.location.search).get('ref') || document.getElementById('referral_code').value || '').trim();
         var nextInput = document.getElementById('next_url');
         var nextVal = (nextInput && nextInput.value) ? nextInput.value.trim() : '';
+        var mo = document.getElementById('marketing_opt_in');
         var payload = {
           email: document.getElementById('email').value.trim().toLowerCase(),
           password: pw,
-          referral_code: ref || undefined
+          referral_code: ref || undefined,
+          marketing_opt_in: !!(mo && mo.checked)
         };
         if (nextVal && nextVal !== '/account') payload.next = nextVal;
         fetch('/api/auth/signup', {
