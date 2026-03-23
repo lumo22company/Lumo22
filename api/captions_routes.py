@@ -243,6 +243,7 @@ def captions_checkout_subscription():
     from api.auth_routes import get_current_customer
     copy_from = (request.args.get("copy_from") or "").strip()
     get_pack_now = request.args.get("get_pack_now", "").strip().lower() in ("1", "true", "yes", "on")
+    one_off = None
     customer = get_current_customer()
     if not customer:
         from urllib.parse import quote
@@ -274,7 +275,22 @@ def captions_checkout_subscription():
         metadata["selected_platforms"] = selected
     if copy_from:
         metadata["copy_from"] = copy_from
+        try:
+            from services.caption_order_service import CaptionOrderService
+            one_off = CaptionOrderService().get_by_token(copy_from)
+        except Exception:
+            one_off = None
+        if not one_off:
+            return jsonify({"error": "Base one-off order not found for this upgrade."}), 400
     if get_pack_now:
+        # Safety guard: only allow immediate first subscription pack after the base one-off
+        # has already been delivered, so customers are never charged twice for the same day.
+        if not copy_from:
+            return jsonify({"error": "Get pack now is only available for upgrades from a one-off order."}), 400
+        if not (one_off and (one_off.get("status") == "delivered" or one_off.get("delivered_at"))):
+            return jsonify({
+                "error": "Your one-off pack hasn't been delivered yet. Leave this unchecked and your subscription will start 30 days after delivery."
+            }), 400
         metadata["get_pack_now"] = "1"
 
     # Upgraders (copy_from) without get_pack_now: first charge on first pack date (billing_cycle_anchor), no “X days free” trial wording
@@ -282,8 +298,6 @@ def captions_checkout_subscription():
     if copy_from and not get_pack_now:
         from datetime import datetime, timedelta, timezone
         try:
-            from services.caption_order_service import CaptionOrderService
-            one_off = CaptionOrderService().get_by_token(copy_from)
             if one_off:
                 delivered_at_raw = one_off.get("delivered_at") or one_off.get("updated_at") or one_off.get("created_at")
                 if delivered_at_raw:

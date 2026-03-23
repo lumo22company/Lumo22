@@ -240,7 +240,7 @@
               {% for o in one_off_orders %}
               {% set biz = (o.get('intake') or {}).get('business_name', '')|trim %}
               {% set label = (biz|title) if biz else (o.created_at[:10] if o.created_at else 'Pack') %}
-              <option value="{{ o.get('token', '') }}" data-platforms="{{ o.get('platforms_count') or 1 }}" data-selected="{{ (o.get('selected_platforms') or '')|e }}" data-stories="{{ '1' if o.get('include_stories') else '0' }}" data-currency="{{ (o.get('currency') or 'gbp')|lower }}"{% if one_off_orders|length == 1 %} selected{% endif %}>{{ label }}</option>
+              <option value="{{ o.get('token', '') }}" data-platforms="{{ o.get('platforms_count') or 1 }}" data-selected="{{ (o.get('selected_platforms') or '')|e }}" data-stories="{{ '1' if o.get('include_stories') else '0' }}" data-currency="{{ (o.get('currency') or 'gbp')|lower }}" data-delivered="{{ '1' if (o.get('status') == 'delivered' or o.get('delivered_at')) else '0' }}"{% if one_off_orders|length == 1 %} selected{% endif %}>{{ label }}</option>
               {% endfor %}
             </select>
             </div>
@@ -271,7 +271,7 @@
             <label class="account-upgrade-cb-label" style="display: inline-flex; align-items: flex-start; gap: 0.5rem; cursor: pointer; font-size: 0.95rem; color: #fff; font-weight: 600;">
               <input type="checkbox" id="upgrade-get-pack-today-cb" class="upgrade-get-pack-today-cb" style="margin-top: 0.2rem;"> Get my first subscription pack today
             </label>
-            <p style="font-size: 0.85rem; color: rgba(255,255,255,0.8); margin: 0.35rem 0 0 1.75rem; line-height: 1.4;">You'll be charged at checkout and we'll send your first subscription pack right away. Leave unchecked to be charged when your first pack is ready (30 days after your one-off delivery date).</p>
+            <p id="upgrade-get-pack-today-help" style="font-size: 0.85rem; color: rgba(255,255,255,0.8); margin: 0.35rem 0 0 1.75rem; line-height: 1.4;">You'll be charged at checkout and we'll send your first subscription pack right away. Leave unchecked to be charged when your first pack is ready (30 days after your one-off delivery date).</p>
             <div id="upgrade-edit-form-first-wrap" style="display: none; margin-top: 1rem; margin-left: 1.75rem; padding: 0.75rem 1rem; background: rgba(255,255,255,0.06); border-radius: 8px; border: 1px solid rgba(255,255,255,0.15);">
               <p style="font-size: 0.95rem; font-weight: 600; color: #fff; margin: 0 0 0.35rem;">Do you need to update your form?</p>
               <p style="font-size: 0.9rem; color: rgba(255,255,255,0.9); margin: 0 0 0.5rem;">Update your details or tell us about an event coming up—we'll use this for your first pack. After you submit the form, we'll take you to checkout to complete your subscription.</p>
@@ -304,6 +304,7 @@
         var editFormFirstWrap = document.getElementById('upgrade-edit-form-first-wrap');
         var editFormFirstLink = document.getElementById('upgrade-edit-form-first-link');
         var firstPackCopyEl = document.getElementById('upgrade-first-pack-copy');
+        var getPackTodayHelp = document.getElementById('upgrade-get-pack-today-help');
         var storiesPriceWrap = document.getElementById('upgrade-stories-price-wrap');
         var priceDisplay = document.getElementById('upgrade-price-display');
         var checkoutBtn = document.getElementById('upgrade-checkout-btn');
@@ -349,6 +350,13 @@
             });
             storiesDefaultFromPrefill = false;
             storiesTouched = false;
+            if (getPackTodayCb) {
+              getPackTodayCb.checked = false;
+              getPackTodayCb.disabled = false;
+            }
+            if (getPackTodayHelp) {
+              getPackTodayHelp.textContent = "You'll be charged at checkout and we'll send your first subscription pack right away. Leave unchecked to be charged when your first pack is ready (30 days after your one-off delivery date).";
+            }
             syncUpgradeStoriesAddon();
             updatePrice();
             return;
@@ -369,6 +377,16 @@
           });
           storiesDefaultFromPrefill = (opt.dataset.stories === '1');
           storiesTouched = false;
+          var delivered = (opt.dataset.delivered === '1');
+          if (getPackTodayCb) {
+            getPackTodayCb.checked = false;
+            getPackTodayCb.disabled = !delivered;
+          }
+          if (getPackTodayHelp) {
+            getPackTodayHelp.textContent = delivered
+              ? "You'll be charged at checkout and we'll send your first subscription pack right away. Leave unchecked to be charged when your first pack is ready (30 days after your one-off delivery date)."
+              : "Available after your one-off pack is delivered. For now, leave this unchecked and your subscription will start 30 days after your one-off delivery.";
+          }
           syncUpgradeStoriesAddon(storiesDefaultFromPrefill);
           updatePrice();
         }
