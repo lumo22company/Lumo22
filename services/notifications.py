@@ -262,11 +262,23 @@ def _subscription_upgrade_confirmation_email_html(
     intake_url = (intake_url or "").strip()
     safe_login = html.escape(login_url, quote=True)
     safe_intake = html.escape(intake_url, quote=True) if intake_url and intake_url.startswith("http") else ""
+    sooner_p = (
+        f'<p style="margin:0 0 16px;">If you want your subscription pack sooner, you can do this in '
+        f'<a href="{safe_login}" style="color:{BRAND_BLACK}; text-decoration:none; border-bottom:1px solid {BRAND_BLACK};">your account</a>.</p>'
+    )
     charge_p = ""
     if first_charge_date:
-        charge_p = f'<p style="margin:0 0 16px;">You won\'t be charged today. We\'ll charge your card when your first subscription pack is ready (on {html.escape(first_charge_date)}).</p>'
+        charge_p = (
+            f'<p style="margin:0 0 16px;">You won\'t be charged today. We\'ll charge your card when your first '
+            f"subscription pack is ready on {html.escape(first_charge_date)} (30 days after your one-off pack).</p>"
+            + sooner_p
+        )
     else:
-        charge_p = '<p style="margin:0 0 16px;">You won\'t be charged today. We\'ll charge your card when your first subscription pack is ready (about 30 days after your one-off pack).</p>'
+        charge_p = (
+            '<p style="margin:0 0 16px;">You won\'t be charged today. We\'ll charge your card when your first '
+            "subscription pack is ready (about 30 days after your one-off pack).</p>"
+            + sooner_p
+        )
     content = f"""<p style="margin:0 0 16px;">Hi,</p>
 <p style="margin:0 0 16px;">You're set up for your 30 Days Captions subscription. Your form is already filled from your one-off pack—log in to your account to review or edit it whenever you like.</p>
 {charge_p}
@@ -763,11 +775,23 @@ If you have any questions, just reply to this email.
             return False
         subject = "You're set up — 30 Days Captions subscription"
         login_url = _get_login_url()
+        sooner_line = (
+            "\nIf you want your subscription pack sooner, you can do this in your account.\n"
+        )
         charge_line = ""
         if first_charge_date:
-            charge_line = "\nYou won't be charged today. We'll charge your card when your first subscription pack is ready (on " + first_charge_date + ").\n"
+            charge_line = (
+                "\nYou won't be charged today. We'll charge your card when your first subscription pack is ready on "
+                + first_charge_date
+                + " (30 days after your one-off pack)."
+                + sooner_line
+            )
         else:
-            charge_line = "\nYou won't be charged today. We'll charge your card when your first subscription pack is ready (about 30 days after your one-off pack).\n"
+            charge_line = (
+                "\nYou won't be charged today. We'll charge your card when your first subscription pack is ready "
+                "(about 30 days after your one-off pack)."
+                + sooner_line
+            )
         body = """Hi,
 
 You're set up for your 30 Days Captions subscription. Your form is already filled from your one-off pack—log in to your account to review or edit it whenever you like.
