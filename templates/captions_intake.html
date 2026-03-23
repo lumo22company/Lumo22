@@ -358,7 +358,7 @@
         <h2>What's happening this month? <span style="color:#999;">(optional)</span></h2>
         <p class="field-helper" style="margin-bottom: 0.75rem;">If you have a product launch, event, sale, or regular recurring event within the next 30 days, we'll tailor captions: before the date we build anticipation; on the day we announce; during we promote; after we shift to thank-you.</p>
         <label for="launch_event_description">Include dates or regular events.</label>
-        <input type="text" id="launch_event_description" name="launch_event_description" data-testid="launch_event_description" placeholder="e.g. Valentine's sale 10–14 Feb, product launch 20 March, weekly tips every Tuesday" value="{{ existing_intake.get('launch_event_description', '') }}">
+        <textarea id="launch_event_description" name="launch_event_description" data-testid="launch_event_description" placeholder="e.g. Valentine's sale 10–14 Feb, product launch 20 March, weekly tips every Tuesday" rows="4" style="min-height: 96px; resize: vertical;">{{ existing_intake.get('launch_event_description', '') }}</textarea>
         <p class="field-helper">Include dates for each (e.g. sale 10–14 Feb, launch 15 March). Multiple events? List them with dates.</p>
       </div>
       <div class="form-section">
