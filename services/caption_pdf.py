@@ -564,7 +564,7 @@ def _build_stories_header_flowables(cover: Dict, logo_path: Optional[str]) -> li
 
     logo_cell = Image(logo_path, width=40 * mm, height=40 * mm) if logo_path and os.path.isfile(logo_path) else Paragraph("", val_style)
     tbl_data = [
-        [logo_cell, Paragraph('<font color="#ffffff">STORIES VISIBILITY PACK</font>', banner_title_style), Paragraph("", val_style)],
+        [logo_cell, Paragraph('<font color="#ffffff">30 DAYS OF STORY IDEAS</font>', banner_title_style), Paragraph("", val_style)],
         [Paragraph("", val_style), Paragraph((cover.get("month_year") or "").strip().upper().replace(" ", "\u00A0"), month_style), Paragraph("", val_style)],
         [Paragraph("", val_style), Paragraph("Business:", lbl_style), Paragraph(_escape(cover.get("business", "") or ""), val_style)],
         [Paragraph("", val_style), Paragraph("Audience:", lbl_style), Paragraph(_escape(cover.get("audience", "") or ""), val_style)],
@@ -610,6 +610,13 @@ def build_stories_pdf(
         return None
     cover, _ = _parse_markdown_to_structure(captions_md)
     cover = _parse_stories_cover_from_md(captions_md, cover)
+    # Keep month label aligned to the billed pack date (same rule as captions PDF).
+    if pack_start_date:
+        try:
+            from datetime import datetime
+            cover["month_year"] = datetime.strptime(pack_start_date.strip()[:10], "%Y-%m-%d").strftime("%B %Y")
+        except Exception:
+            pass
 
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4
@@ -679,6 +686,13 @@ def build_caption_pdf(captions_md: str, logo_path: Optional[str] = None, pack_st
     cover, days = _parse_markdown_to_structure(captions_md)
     if not days and "## Day" in captions_md:
         cover, days = _parse_legacy_to_structure(captions_md, cover)
+    # Keep month label aligned to the billed pack date.
+    if pack_start_date:
+        try:
+            from datetime import datetime
+            cover["month_year"] = datetime.strptime(pack_start_date.strip()[:10], "%Y-%m-%d").strftime("%B %Y")
+        except Exception:
+            pass
     data = _cover_and_days_to_dict(cover, days, pack_start_date=pack_start_date)
     return build_caption_pdf_from_dict(data, logo_path=logo_path or get_logo_path())
 
