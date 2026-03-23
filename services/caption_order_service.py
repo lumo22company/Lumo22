@@ -340,12 +340,17 @@ class CaptionOrderService:
         return result.data or []
 
     def get_by_stripe_subscription_id(self, stripe_subscription_id: str) -> Optional[Dict[str, Any]]:
-        """Get order by Stripe subscription id."""
+        """Get order by Stripe subscription id. Prefer newest row if duplicates exist (undefined order otherwise)."""
         if not stripe_subscription_id:
             return None
-        result = self.client.table(self.table).select("*").eq(
-            "stripe_subscription_id", stripe_subscription_id.strip()
-        ).execute()
+        result = (
+            self.client.table(self.table)
+            .select("*")
+            .eq("stripe_subscription_id", stripe_subscription_id.strip())
+            .order("created_at", desc=True)
+            .limit(1)
+            .execute()
+        )
         if result.data and len(result.data) > 0:
             return result.data[0]
         return None

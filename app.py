@@ -372,6 +372,17 @@ def captions_intake_page():
                             cur_email = (order.get("customer_email") or "").strip().lower()
                             if src_email and cur_email and src_email == cur_email:
                                 existing_intake = src_order.get("intake") or {}
+                # Subscription upgraded from one-off: prefill from base order even without ?copy_from=…
+                # (e.g. "Complete the form" from account only passes ?t=sub_token).
+                if not existing_intake and (order.get("stripe_subscription_id") or "").strip():
+                    upgraded_from = (order.get("upgraded_from_token") or "").strip()
+                    if upgraded_from:
+                        src_order = svc.get_by_token(upgraded_from)
+                        if src_order:
+                            src_email = (src_order.get("customer_email") or "").strip().lower()
+                            cur_email = (order.get("customer_email") or "").strip().lower()
+                            if src_email and cur_email and src_email == cur_email:
+                                existing_intake = src_order.get("intake") or {}
         except Exception:
             pass
     # Subscription orders: require login and session email must match order
@@ -383,6 +394,32 @@ def captions_intake_page():
             return redirect(url_for('customer_login_page') + '?next=' + quote(request.url, safe=''))
         if (customer.get("email") or "").strip().lower() != order_email:
             return redirect(url_for('account_page'))
+        # After auth only: copy one-off intake onto subscription row while awaiting_intake (no status change).
+        # Account links often omit ?copy_from=; without this the subscription row can stay empty until a full submit.
+        try:
+            from services.caption_order_service import CaptionOrderService
+            svc_auth = CaptionOrderService()
+            order = svc_auth.get_by_token(token)
+            if order and (order.get("status") or "").strip() == "awaiting_intake":
+                db_intake = order.get("intake") if isinstance(order.get("intake"), dict) else {}
+                src_intake = {}
+                uft = (order.get("upgraded_from_token") or "").strip()
+                if uft:
+                    bo = svc_auth.get_by_token(uft)
+                    if bo and isinstance(bo.get("intake"), dict):
+                        be = (bo.get("customer_email") or "").strip().lower()
+                        ce = (order.get("customer_email") or "").strip().lower()
+                        if be and ce and be == ce:
+                            src_intake = bo.get("intake") or {}
+                merged = {**src_intake, **db_intake}
+                if (merged.get("business_name") or "").strip() and not (db_intake.get("business_name") or "").strip():
+                    oid = order.get("id")
+                    if oid and svc_auth.update_intake_only(str(oid), merged):
+                        order = svc_auth.get_by_token(token)
+                if order and isinstance(order.get("intake"), dict) and (order["intake"].get("business_name") or "").strip():
+                    existing_intake = order["intake"]
+        except Exception:
+            pass
     return_url = request.args.get("return_url", "").strip()
     is_upgrade_flow = bool(return_url and "/account/upgrade" in return_url)
     # Upgrade flow: Story Ideas selection on the upgrade page overrides the one-off's value so the form matches what they're subscribing to
@@ -908,6 +945,24 @@ def _account_context():
             for o in caption_orders
             if (o.get("token") or "").strip()
         }
+        # Show business name / intake on subscription row when DB intake is empty but one-off has answers
+        for o in caption_orders:
+            if not (o.get("stripe_subscription_id") or "").strip():
+                continue
+            intake = dict(o.get("intake") or {})
+            if (intake.get("business_name") or "").strip():
+                continue
+            uft = (o.get("upgraded_from_token") or "").strip()
+            if not uft:
+                continue
+            base = by_token.get(uft)
+            if not base or not isinstance(base.get("intake"), dict):
+                continue
+            bi = base["intake"]
+            for k, v in bi.items():
+                if v is not None and v != "" and not intake.get(k):
+                    intake[k] = v
+            o["intake"] = intake
         for o in caption_orders:
             delivered_self = bool(o.get("status") == "delivered" or o.get("delivered_at"))
             upgraded_from = (o.get("upgraded_from_token") or "").strip()

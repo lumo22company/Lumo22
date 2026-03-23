@@ -1158,6 +1158,7 @@ def _captions_intake_submit_impl(data):
                 except Exception:
                     pass
         if not order_service.save_intake(order_id, intake, scheduled_delivery_at=scheduled_delivery_at):
+            print(f"[captions_intake] save_intake FAILED for subscription order_id={order_id} token_tail=...{(order.get('token') or '')[-8:]}")
             return jsonify({"error": "Failed to save. Please try again."}), 500
         if deliver_base_one_off_now and base_one_off_id:
             try:
@@ -1166,6 +1167,11 @@ def _captions_intake_submit_impl(data):
                     thread_base = threading.Thread(target=_run_generation_and_deliver, args=(base_one_off_id,))
                     thread_base.daemon = False
                     thread_base.start()
+                else:
+                    print(
+                        f"[captions_intake] save_intake FAILED for base one-off order_id={base_one_off_id} "
+                        f"(subscription {order_id} saved). Customer may not receive paid one-off pack — retry save or support."
+                    )
             except Exception as e:
                 print(f"[captions_intake] base one-off immediate delivery trigger failed: {e}")
         if scheduled_delivery_at and scheduled_date_str:
