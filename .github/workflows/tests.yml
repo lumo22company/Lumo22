@@ -1,0 +1,30 @@
+# Run fast, no-secrets tests on every push/PR to main.
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt pytest
+
+      - name: Run marketing + auth guard tests
+        env:
+          # Same pattern as test_remediation_security.py — app loads without real Supabase
+          SUPABASE_URL: https://example.supabase.co
+          SUPABASE_KEY: ci-placeholder-key
+        run: |
+          pytest test_marketing_opt_in.py test_remediation_security.py -v
