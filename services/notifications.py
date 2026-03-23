@@ -302,7 +302,7 @@ def _intake_link_email_html(intake_url: str, order_summary: Optional[str] = None
 <p style="margin:0 0 24px; font-size:13px; word-break:break-all; color:#333;">{safe_url}</p>
 <p style="margin:0 0 16px;">Once you submit, we'll generate your 30 captions and send them to you by email within a few minutes.</p>
 <p style="margin:0 0 16px;">{html.escape(account_line)}</p>
-<p style="margin:0 0 16px;">If you have any questions, just reply to this email.</p>
+<p style="margin:0 0 16px;">Thanks for choosing us.</p>
 <p style="margin:0;">— Lumo 22</p>"""
     return _email_wrapper(content)
 
@@ -728,7 +728,7 @@ If you didn't request this, you can ignore this email. Your email address will s
         body += intake_url
         is_sub = bool(order and (order.get("stripe_subscription_id") or "").strip())
         account_line = "On the form you can also create an account to access your captions and manage your subscription in one place." if is_sub else "On the form you can also create an account to access your captions in one place."
-        body += "\n\nOnce you submit, we'll generate your 30 captions and send them to you by email within a few minutes.\n\n" + account_line + "\n\nIf you have any questions, just reply to this email.\n\nLumo 22"
+        body += "\n\nOnce you submit, we'll generate your 30 captions and send them to you by email within a few minutes.\n\n" + account_line + "\n\nThanks for choosing us.\n\nLumo 22"
         html_body = _intake_link_email_html(intake_url, order_summary, is_subscription=is_sub)
         return self.send_email(to_email, subject, body, html_body=html_body)
 
