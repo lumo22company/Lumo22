@@ -205,11 +205,13 @@
         </ul>
         <ul class="account-edit-form-list">
           {% for o in edit_form_orders %}
-          {% set biz = (o.get('intake') or {}).get('business_name', '') %}
+          {% set biz = ((o.get('intake') or {}).get('business_name') or '')|trim %}
           {% set label = (biz|title) if biz else (o.created_at[:10] if o.created_at else 'Subscription') %}
+          {# Status can stay awaiting_intake after update_intake_only (prefill sync); use intake business_name as source of truth #}
+          {% set _needs_first_submit = (o.status == 'awaiting_intake' and not biz) %}
           {% set _edit_cancelled = (o.get('subscription_pause') or {}).get('cancel_at_period_end') %}
           <li style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-              {% if o.status == 'awaiting_intake' %}
+              {% if _needs_first_submit %}
             <a href="/captions-intake?t={{ o.token }}" class="account-billing-portal-link account-btn-swipe-light">Complete the form — {{ label }}</a>
               {% else %}
             <a href="/captions-intake?t={{ o.token }}" class="account-billing-portal-link account-btn-swipe-light">Edit form — {{ label }}</a>

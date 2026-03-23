@@ -307,6 +307,137 @@ def _handle_captions_payment(session):
         print(f"[Stripe webhook] Referrer credit increment failed (non-fatal): {e}")
 
 
+def _stripe_nested_to_dict(obj):
+    """Normalize Stripe API / webhook objects to dict for shared helpers."""
+    if obj is None:
+        return {}
+    if isinstance(obj, dict):
+        return obj
+    for name in ("to_dict_recursive", "to_dict"):
+        fn = getattr(obj, name, None)
+        if callable(fn):
+            try:
+                return fn()
+            except Exception:
+                pass
+    try:
+        return dict(obj)
+    except Exception:
+        return {}
+
+
+def _send_captions_subscription_cancelled_confirmation(sub_id: str, sub_obj: dict | None) -> dict | None:
+    """
+    Send Lumo cancellation confirmation email for a Captions Stripe subscription.
+
+    Uses caption_orders when a row matches stripe_subscription_id. If none (stale DB,
+    duplicate subs, webhook ordering), falls back to Stripe subscription + customer email.
+
+    Returns the matched caption order dict when found (for reminder_opt_out updates), else None.
+    """
+    from services.caption_order_service import CaptionOrderService
+    from services.notifications import NotificationService
+    from api.billing_routes import _subscription_monthly_price, subscription_platforms_and_stories_from_stripe
+    from api.captions_routes import _stripe_subscription_has_captions_base_price
+
+    order_service = CaptionOrderService()
+    order = order_service.get_by_stripe_subscription_id(sub_id)
+
+    base = _sanitize_base_url(Config.BASE_URL or "https://www.lumo22.com")
+    if not base or not base.startswith("http"):
+        base = "https://www.lumo22.com"
+    captions_url = base.rstrip("/") + "/captions"
+
+    customer_email = None
+    platforms, stories, currency = 1, False, "gbp"
+
+    if order:
+        customer_email = (order.get("customer_email") or "").strip()
+        platforms = max(1, int(order.get("platforms_count", 1)))
+        stories = bool(order.get("include_stories"))
+        currency = (order.get("currency") or "gbp").strip().lower()
+        if currency not in ("gbp", "usd", "eur"):
+            currency = "gbp"
+    else:
+        import stripe
+
+        if not Config.STRIPE_SECRET_KEY:
+            print(
+                f"[Stripe webhook] cancel confirmation: no caption_orders row for sub {sub_id[:20]}... "
+                "and STRIPE_SECRET_KEY missing — cannot email customer"
+            )
+            return None
+        stripe.api_key = Config.STRIPE_SECRET_KEY
+        raw = sub_obj
+        if not raw:
+            try:
+                raw = stripe.Subscription.retrieve(sub_id, expand=["customer"])
+            except Exception as e:
+                print(f"[Stripe webhook] cancel confirmation: Subscription.retrieve failed for {sub_id[:20]}...: {e}")
+                return None
+        sub_d = _stripe_nested_to_dict(raw)
+        if not sub_d:
+            print(f"[Stripe webhook] cancel confirmation: empty subscription payload for {sub_id[:20]}...")
+            return None
+        if not _stripe_subscription_has_captions_base_price(sub_d):
+            print(f"[Stripe webhook] cancel confirmation: sub {sub_id[:20]}... is not Captions; skip email")
+            return None
+        platforms, stories = subscription_platforms_and_stories_from_stripe(sub_d)
+        cur = sub_d.get("currency") or "gbp"
+        currency = (cur if isinstance(cur, str) else "gbp").strip().lower()
+        if currency not in ("gbp", "usd", "eur"):
+            currency = "gbp"
+        cust = sub_d.get("customer")
+        cust_d = _stripe_nested_to_dict(cust) if cust is not None else {}
+        customer_email = (cust_d.get("email") or "").strip()
+        if not customer_email and isinstance(cust, str) and cust:
+            try:
+                c_raw = stripe.Customer.retrieve(cust)
+                c_d = _stripe_nested_to_dict(c_raw)
+                customer_email = (c_d.get("email") or "").strip()
+            except Exception as e:
+                print(f"[Stripe webhook] cancel confirmation: Customer.retrieve failed: {e}")
+        if not customer_email:
+            print(
+                f"[Stripe webhook] cancel confirmation: no caption_orders row and no Stripe customer email "
+                f"for sub {sub_id[:20]}..."
+            )
+            return None
+        print(
+            f"[Stripe webhook] cancel confirmation: no DB order for sub {sub_id[:20]}...; "
+            f"sending via Stripe customer email fallback"
+        )
+
+    if not customer_email or "@" not in customer_email:
+        print(f"[Stripe webhook] cancel confirmation: invalid email for sub {sub_id[:20]}...")
+        return order
+
+    try:
+        sym, amt = _subscription_monthly_price(currency, platforms, stories)
+        plan_parts = [f"30 Days Captions, {platforms} platform{'s' if platforms != 1 else ''}"]
+        if stories:
+            plan_parts.append("Story Ideas")
+        plan_summary = ", ".join(plan_parts)
+        price_display = f"{sym}{amt}/month"
+        notif = NotificationService()
+        ok = notif.send_subscription_cancelled_email(
+            customer_email,
+            captions_url,
+            plan_summary=plan_summary,
+            price_display=price_display,
+        )
+        if ok:
+            print(f"[Stripe webhook] cancel confirmation email sent → {customer_email} (sub …{sub_id[-8:]})")
+        else:
+            print(
+                f"[Stripe webhook] cancel confirmation email NOT sent (send_email returned False) → {customer_email}"
+            )
+    except Exception as e:
+        print(f"[Stripe webhook] cancel confirmation email exception: {e}")
+
+    return order
+
+
 @webhook_bp.route('/stripe', methods=['GET', 'POST'])
 def stripe_webhook():
     """
@@ -409,44 +540,14 @@ def stripe_webhook():
             return jsonify({"received": True}), 200
 
         if event_type == "customer.subscription.deleted":
-            # Subscription cancelled: send confirmation email (captions only)
+            # Subscription ended: send confirmation (DB row optional — Stripe fallback for email)
             sub_obj = event.get("data", {}).get("object") if isinstance(event, dict) else None
             if not sub_obj or not isinstance(sub_obj, dict):
                 return jsonify({"received": True}), 200
             sub_id = (sub_obj.get("id") or "").strip()
             if not sub_id:
                 return jsonify({"received": True}), 200
-            from services.caption_order_service import CaptionOrderService
-            from services.notifications import NotificationService
-            order_service = CaptionOrderService()
-            order = order_service.get_by_stripe_subscription_id(sub_id)
-            if not order:
-                return jsonify({"received": True}), 200
-            customer_email = (order.get("customer_email") or "").strip()
-            if customer_email and "@" in customer_email:
-                base = _sanitize_base_url(Config.BASE_URL or "https://www.lumo22.com")
-                if not base or not base.startswith("http"):
-                    base = "https://www.lumo22.com"
-                captions_url = base.rstrip("/") + "/captions"
-                try:
-                    from api.billing_routes import _subscription_monthly_price
-                    platforms = max(1, int(order.get("platforms_count", 1)))
-                    stories = bool(order.get("include_stories"))
-                    currency = (order.get("currency") or "gbp").strip().lower()
-                    sym, amt = _subscription_monthly_price(currency, platforms, stories)
-                    plan_parts = [f"30 Days Captions, {platforms} platform{'s' if platforms != 1 else ''}"]
-                    if stories:
-                        plan_parts.append("Story Ideas")
-                    plan_summary = ", ".join(plan_parts)
-                    price_display = f"{sym}{amt}/month"
-                    notif = NotificationService()
-                    notif.send_subscription_cancelled_email(
-                        customer_email, captions_url,
-                        plan_summary=plan_summary, price_display=price_display,
-                    )
-                    print(f"[Stripe webhook] Subscription cancelled confirmation sent to {customer_email}")
-                except Exception as e:
-                    print(f"[Stripe webhook] Subscription cancelled email failed: {e}")
+            _send_captions_subscription_cancelled_confirmation(sub_id, sub_obj)
             return jsonify({"received": True}), 200
 
         if event_type == "customer.subscription.updated":
@@ -460,40 +561,31 @@ def stripe_webhook():
             from services.notifications import NotificationService
             order_service = CaptionOrderService()
             order = order_service.get_by_stripe_subscription_id(sub_id)
+            # Cancellation scheduled (cancel at period end) OR immediate cancel (status=canceled before delete).
+            # Do not require a caption_orders row — email uses Stripe customer fallback when DB is missing.
+            status = (sub_obj.get("status") or "").strip()
+            cancel_scheduled = bool(sub_obj.get("cancel_at_period_end"))
+            immediate_cancel = status == "canceled" and not cancel_scheduled
+            if cancel_scheduled or immediate_cancel:
+                order_for_reminder = _send_captions_subscription_cancelled_confirmation(sub_id, sub_obj)
+                row = order_for_reminder or order
+                if row and row.get("id"):
+                    try:
+                        order_service.update(row["id"], {"reminder_opt_out": True})
+                    except Exception as e:
+                        print(f"[Stripe webhook] reminder_opt_out update on cancel failed: {e}")
+                elif cancel_scheduled:
+                    print(
+                        f"[Stripe webhook] cancel at period end: no caption_orders id for reminder_opt_out "
+                        f"(sub {sub_id[:20]}...)"
+                    )
+                return jsonify({"received": True}), 200
             if not order:
                 return jsonify({"received": True}), 200
             customer_email = (order.get("customer_email") or "").strip()
-            if customer_email and "@" in customer_email:
-                base = (Config.BASE_URL or "https://www.lumo22.com").strip().rstrip("/")
-                if not base.startswith("http"):
-                    base = "https://" + base
-                # Cancellation scheduled (cancel at period end): send confirmation, switch off form reminders
-                if sub_obj.get("cancel_at_period_end"):
-                    try:
-                        captions_url = base.rstrip("/") + "/captions"
-                        from api.billing_routes import _subscription_monthly_price
-                        platforms = max(1, int(order.get("platforms_count", 1)))
-                        stories = bool(order.get("include_stories"))
-                        currency = (order.get("currency") or "gbp").strip().lower()
-                        sym, amt = _subscription_monthly_price(currency, platforms, stories)
-                        plan_parts = [f"30 Days Captions, {platforms} platform{'s' if platforms != 1 else ''}"]
-                        if stories:
-                            plan_parts.append("Story Ideas")
-                        plan_summary = ", ".join(plan_parts)
-                        price_display = f"{sym}{amt}/month"
-                        notif = NotificationService()
-                        notif.send_subscription_cancelled_email(
-                            customer_email, captions_url,
-                            plan_summary=plan_summary, price_display=price_display,
-                        )
-                        print(f"[Stripe webhook] Cancellation scheduled confirmation sent to {customer_email}")
-                    except Exception as e:
-                        print(f"[Stripe webhook] Cancellation confirmation email failed: {e}")
-                    try:
-                        order_service.update(order["id"], {"reminder_opt_out": True})
-                    except Exception as e:
-                        print(f"[Stripe webhook] reminder_opt_out update on cancel failed: {e}")
-                    return jsonify({"received": True}), 200
+            base = (Config.BASE_URL or "https://www.lumo22.com").strip().rstrip("/")
+            if not base.startswith("http"):
+                base = "https://" + base
             # Plan change via Stripe billing portal: send confirmation email with explicit pricing
             from api.billing_routes import _subscription_monthly_price, subscription_platforms_and_stories_from_stripe
             if customer_email and "@" in customer_email:

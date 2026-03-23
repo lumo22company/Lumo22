@@ -138,12 +138,38 @@
         var emailFallback = document.getElementById('thankyou-email-fallback');
         if (emailFallback) emailFallback.style.display = 'none';
         var isLoggedIn = (document.body.getAttribute('data-current-customer') || '').toLowerCase() === 'true';
-        var accountLine = isSubscription && !isLoggedIn
-          ? 'Create your account below (set a password) so you can log in and manage your subscription. We\'ll send a verification link to your email.'
-          : (isSubscription ? 'You can manage your subscription from your account.' : 'On the form you can also create an account to access your captions in one place.');
-        var emailText = customerEmail
-          ? 'Thank you. We\'ve emailed you at <strong>' + escapeHtml(customerEmail) + '</strong>.' + (isPrefilledFromOneoff ? ' Your form is already filled from your one-off pack; you can edit it anytime in your account.' : ' Fill in the short form to get started.') + (isPrefilledFromOneoff ? '' : 'Your captions are usually ready within 15 minutes. ') + accountLine
-          : 'Thank you. We\'ve emailed you.' + (isPrefilledFromOneoff ? ' Your form is prefilled from your one-off pack; you can edit it anytime in your account.' : ' Fill in the form to get started.') + (isPrefilledFromOneoff ? '' : 'Your captions are usually ready within 15 minutes. ') + accountLine;
+        var prefilledEditLine = '';
+        if (isPrefilledFromOneoff) {
+          if (isSubscription && isLoggedIn) {
+            prefilledEditLine = customerEmail
+              ? ' Your form is already filled from your one-off pack; you can edit it anytime and manage your subscription from your account.'
+              : ' Your form is prefilled from your one-off pack; you can edit it anytime and manage your subscription from your account.';
+          } else if (isSubscription) {
+            prefilledEditLine = customerEmail
+              ? ' Your form is already filled from your one-off pack.'
+              : ' Your form is prefilled from your one-off pack.';
+          } else {
+            prefilledEditLine = customerEmail
+              ? ' Your form is already filled from your one-off pack; you can edit it anytime in your account.'
+              : ' Your form is prefilled from your one-off pack; you can edit it anytime in your account.';
+          }
+        } else {
+          prefilledEditLine = customerEmail
+            ? ' Fill in the short form to get started.'
+            : ' Fill in the form to get started.';
+        }
+        var timingPart = isPrefilledFromOneoff ? '' : ' Your captions are usually ready within 15 minutes.';
+        var accountSuffix = '';
+        if (isSubscription && !isLoggedIn) {
+          accountSuffix = ' Create your account below (set a password) so you can log in and manage your subscription. We\'ll send a verification link to your email.';
+        } else if (isSubscription && isLoggedIn && !isPrefilledFromOneoff) {
+          accountSuffix = ' You can manage your subscription from your account.';
+        } else if (!isSubscription) {
+          accountSuffix = ' On the form you can also create an account to access your captions in one place.';
+        }
+        var emailText = (customerEmail
+          ? 'Thank you. We\'ve emailed you at <strong>' + escapeHtml(customerEmail) + '</strong>.'
+          : 'Thank you. We\'ve emailed you.') + prefilledEditLine + timingPart + accountSuffix;
         emailMsgEl.innerHTML = emailText;
         intakeLinkEl.href = url;
         intakeLinkEl.textContent = isPrefilledFromOneoff ? 'Review your form' : 'Fill out form now';
