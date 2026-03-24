@@ -80,7 +80,12 @@ def _email_wrapper(content: str) -> str:
 </html>"""
 
 
-def _captions_delivery_email_html(has_stories: bool, has_subscription: bool = False) -> str:
+def _captions_delivery_email_html(
+    has_stories: bool,
+    has_subscription: bool = False,
+    backup_captions_url: str = "",
+    backup_stories_url: str = "",
+) -> str:
     """Build explicit HTML for the 30 Days captions delivery email so the body always shows."""
     if has_stories:
         content = """<p style="margin:0 0 16px;">Hi,</p>
@@ -93,6 +98,15 @@ def _captions_delivery_email_html(has_stories: bool, has_subscription: bool = Fa
     if has_subscription:
         content += """
 <p style="margin:0 0 16px; font-size:14px; color:#666;">Deleting this email or the PDF does not cancel your subscription. To cancel, go to your account → Manage subscription.</p>"""
+    if backup_captions_url:
+        safe_captions = backup_captions_url.replace('"', "%22")
+        content += f"""
+<p style="margin:0 0 8px; font-size:14px; color:{BRAND_MUTED};">If attachments don't appear in your inbox, use your backup download link(s):</p>
+<p style="margin:0 0 8px;"><a href="{safe_captions}" style="color:{BRAND_BLACK}; text-decoration:none; border-bottom:1px solid {BRAND_BLACK};">Download captions PDF</a></p>"""
+        if backup_stories_url:
+            safe_stories = backup_stories_url.replace('"', "%22")
+            content += f"""
+<p style="margin:0 0 16px;"><a href="{safe_stories}" style="color:{BRAND_BLACK}; text-decoration:none; border-bottom:1px solid {BRAND_BLACK};">Download stories PDF</a></p>"""
     content += "\n<p style=\"margin:0;\">— Lumo 22</p>"
     return _email_wrapper(content)
 

@@ -869,6 +869,11 @@ def _run_generation_and_deliver(order_id: str, *, force_redeliver: bool = False)
                 })
         subject = "Your 30 Days of Social Media Captions"
         has_sub = bool(row.get("stripe_subscription_id"))
+        base = (Config.BASE_URL or "").strip().rstrip("/")
+        if not base.startswith("http"):
+            base = "https://www.lumo22.com"
+        backup_captions_url = f"{base}/captions-download?t={token}&type=captions"
+        backup_stories_url = f"{base}/captions-download?t={token}&type=stories" if extra_attachments else None
         if extra_attachments:
             body = (
                 "Hi,\n\nYour 30 Days of Social Media Captions and 30 Days of Story Ideas are ready. "
@@ -881,9 +886,27 @@ def _run_generation_and_deliver(order_id: str, *, force_redeliver: bool = False)
             )
         if has_sub:
             body += "Deleting this email or the PDF does not cancel your subscription. To cancel, go to your account → Manage subscription.\n\n"
+        body += "If attachments don't appear in your inbox, use your backup download link(s):\n"
+        body += backup_captions_url + "\n"
+        if backup_stories_url:
+            body += backup_stories_url + "\n"
+        body += "\n"
         body += "Lumo 22\n"
         notif = NotificationService()
-        delivery_html = _captions_delivery_email_html(bool(extra_attachments), has_subscription=has_sub)
+        delivery_html = _captions_delivery_email_html(
+            bool(extra_attachments),
+            has_subscription=has_sub,
+            backup_captions_url=backup_captions_url,
+            backup_stories_url=(backup_stories_url or ""),
+        )
+        # Save generated artifacts first so customer can still download even if email send fails.
+        stories_pdf_bytes = extra_attachments[0]["content"] if extra_attachments else None
+        order_service.set_delivered(
+            order_id,
+            captions_md,
+            stories_pdf_bytes=stories_pdf_bytes,
+            captions_pdf_bytes=file_content_bytes if mime_type == "application/pdf" else None,
+        )
         print(f"[Captions] Sending delivery email to {customer_email} for order {order_id}")
         ok, send_error = notif.send_email_with_attachment(
             customer_email,
@@ -898,10 +921,7 @@ def _run_generation_and_deliver(order_id: str, *, force_redeliver: bool = False)
         )
         if not ok:
             print(f"[Captions] Delivery email FAILED for order {order_id} to {customer_email}: {send_error}")
-            order_service.set_failed(order_id)
-            return (False, send_error or "Delivery email not sent")
-        stories_pdf_bytes = extra_attachments[0]["content"] if extra_attachments else None
-        order_service.set_delivered(order_id, captions_md, stories_pdf_bytes=stories_pdf_bytes)
+            return (True, send_error or "Delivery email not sent; backup links are available")
         # For subscriptions, record this pack's day categories so next month can vary
         if row.get("stripe_subscription_id"):
             day_categories = extract_day_categories_from_captions_md(captions_md)
@@ -1414,14 +1434,24 @@ def captions_download():
         )
 
     # Captions PDF (default)
-    try:
-        from services.caption_pdf import build_caption_pdf, get_logo_path
-        logo_path = get_logo_path()
-        pdf_bytes = build_caption_pdf(
-            captions_md, logo_path=logo_path, pack_start_date=date_str
-        )
-    except Exception as e:
-        return jsonify({"error": "Could not build PDF: {}".format(str(e))}), 500
+    import base64
+    stored_captions_b64 = (order.get("captions_pdf_base64") or "").strip()
+    if stored_captions_b64:
+        try:
+            pdf_bytes = base64.b64decode(stored_captions_b64)
+        except Exception:
+            pdf_bytes = None
+    else:
+        pdf_bytes = None
+    if not pdf_bytes:
+        try:
+            from services.caption_pdf import build_caption_pdf, get_logo_path
+            logo_path = get_logo_path()
+            pdf_bytes = build_caption_pdf(
+                captions_md, logo_path=logo_path, pack_start_date=date_str
+            )
+        except Exception as e:
+            return jsonify({"error": "Could not build PDF: {}".format(str(e))}), 500
     filename = f"{name_label}_Captions_{date_str}.pdf"
     disp = "inline" if inline else "attachment"
     return Response(
@@ -1429,6 +1459,133 @@ def captions_download():
         mimetype="application/pdf",
         headers={"Content-Disposition": "{}; filename={}".format(disp, filename)},
     )
+
+
+@captions_bp.route("/captions-resend-delivery", methods=["POST"])
+def captions_resend_delivery():
+    """
+    Resend delivery email for a delivered pack using stored artifacts when available.
+    Requires login and ownership of the order.
+    Body: { "token": "..." }  or  { "order_id": "..." }
+    """
+    from api.auth_routes import get_current_customer
+    from services.caption_order_service import CaptionOrderService
+    from services.notifications import NotificationService, _captions_delivery_email_html
+    import base64
+
+    customer = get_current_customer()
+    if not customer:
+        return jsonify({"ok": False, "error": "Not logged in"}), 401
+    email = (customer.get("email") or "").strip().lower()
+    if not email or "@" not in email:
+        return jsonify({"ok": False, "error": "Invalid customer"}), 400
+
+    try:
+        data = request.get_json() or {}
+        token = (data.get("token") or "").strip()
+        order_id = (data.get("order_id") or "").strip()
+        if not token and not order_id:
+            return jsonify({"ok": False, "error": "token or order_id required"}), 400
+
+        order_service = CaptionOrderService()
+        order = order_service.get_by_token(token) if token else order_service.get_by_id(order_id)
+        if not order:
+            return jsonify({"ok": False, "error": "Order not found"}), 404
+        order_email = (order.get("customer_email") or "").strip().lower()
+        if order_email != email:
+            return jsonify({"ok": False, "error": "This order does not belong to your account"}), 403
+        if order.get("status") != "delivered":
+            return jsonify({"ok": False, "error": "Only delivered packs can be resent"}), 400
+
+        captions_md = (order.get("captions_md") or "").strip()
+        if not captions_md:
+            return jsonify({"ok": False, "error": "No captions content saved for this pack"}), 404
+
+        # Primary artifact: saved captions PDF; fallback to regenerate.
+        captions_pdf = None
+        stored_captions_b64 = (order.get("captions_pdf_base64") or "").strip()
+        if stored_captions_b64:
+            try:
+                captions_pdf = base64.b64decode(stored_captions_b64)
+            except Exception:
+                captions_pdf = None
+        if not captions_pdf:
+            from services.caption_pdf import build_caption_pdf, get_logo_path
+            date_str = (order.get("created_at") or "")[:10] or time.strftime("%Y-%m-%d")
+            captions_pdf = build_caption_pdf(captions_md, logo_path=get_logo_path(), pack_start_date=date_str)
+
+        include_stories = bool(order.get("include_stories"))
+        extra_attachments = []
+        if include_stories:
+            stories_pdf = None
+            stored_stories_b64 = (order.get("stories_pdf_base64") or "").strip()
+            if stored_stories_b64:
+                try:
+                    stories_pdf = base64.b64decode(stored_stories_b64)
+                except Exception:
+                    stories_pdf = None
+            if not stories_pdf:
+                try:
+                    from services.caption_pdf import build_stories_pdf, get_logo_path
+                    date_str = (order.get("created_at") or "")[:10] or time.strftime("%Y-%m-%d")
+                    stories_pdf = build_stories_pdf(
+                        captions_md, logo_path=get_logo_path(), pack_start_date=date_str
+                    )
+                except Exception:
+                    stories_pdf = None
+            if stories_pdf:
+                extra_attachments.append({
+                    "filename": "30_Days_Story_Ideas.pdf",
+                    "content": stories_pdf,
+                    "mime_type": "application/pdf",
+                })
+
+        safe_token = (order.get("token") or "").strip()
+        base = (Config.BASE_URL or "").strip().rstrip("/")
+        if not base.startswith("http"):
+            base = "https://www.lumo22.com"
+        backup_captions_url = f"{base}/captions-download?t={safe_token}&type=captions"
+        backup_stories_url = f"{base}/captions-download?t={safe_token}&type=stories" if include_stories else ""
+        has_sub = bool(order.get("stripe_subscription_id"))
+
+        if extra_attachments:
+            body = (
+                "Hi,\n\nYour 30 Days of Social Media Captions and 30 Days of Story Ideas are attached.\n\n"
+                "If attachments don't appear in your inbox, use your backup download link(s):\n"
+                f"{backup_captions_url}\n{backup_stories_url}\n\n"
+            )
+        else:
+            body = (
+                "Hi,\n\nYour 30 Days of Social Media Captions are attached.\n\n"
+                "If attachments don't appear in your inbox, use your backup download link:\n"
+                f"{backup_captions_url}\n\n"
+            )
+        if has_sub:
+            body += "Deleting this email or the PDF does not cancel your subscription. To cancel, go to your account -> Manage subscription.\n\n"
+        body += "Lumo 22\n"
+
+        html_body = _captions_delivery_email_html(
+            bool(extra_attachments),
+            has_subscription=has_sub,
+            backup_captions_url=backup_captions_url,
+            backup_stories_url=backup_stories_url,
+        )
+        notif = NotificationService()
+        ok, send_error = notif.send_email_with_attachment(
+            email,
+            "Your 30 Days of Social Media Captions",
+            body,
+            filename="30_Days_Captions.pdf",
+            file_content_bytes=captions_pdf,
+            mime_type="application/pdf",
+            extra_attachments=extra_attachments if extra_attachments else None,
+            html_content=html_body,
+        )
+        if not ok:
+            return jsonify({"ok": False, "error": send_error or "Could not resend email"}), 500
+        return jsonify({"ok": True, "message": "Delivery email resent"}), 200
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
 
 
 def _get_subscription_pause_info(stripe_subscription_id: str):

@@ -165,11 +165,20 @@ class CaptionOrderService:
         return self.update(order_id, {"status": "generating"})
 
     def set_delivered(
-        self, order_id: str, captions_md: str, stories_pdf_bytes: Optional[bytes] = None
+        self,
+        order_id: str,
+        captions_md: str,
+        stories_pdf_bytes: Optional[bytes] = None,
+        captions_pdf_bytes: Optional[bytes] = None,
     ) -> bool:
-        """Mark order delivered; optionally store Stories PDF as base64 for account history."""
+        """Mark order delivered; optionally store PDF artifacts as base64 for reliable re-download/resend."""
         now_iso = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
         updates = {"status": "delivered", "captions_md": captions_md, "delivered_at": now_iso}
+        if captions_pdf_bytes is not None:
+            try:
+                updates["captions_pdf_base64"] = base64.b64encode(captions_pdf_bytes).decode("ascii")
+            except Exception:
+                pass
         if stories_pdf_bytes is not None:
             try:
                 updates["stories_pdf_base64"] = base64.b64encode(stories_pdf_bytes).decode("ascii")
