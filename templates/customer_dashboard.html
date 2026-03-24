@@ -175,7 +175,6 @@
                 <a href="/api/captions-download?t={{ o.token }}&type=stories" class="account-btn-link account-btn-link--secondary">Download stories</a>
               </span>
             {% endif %}
-              <button type="button" class="account-btn-link account-btn-link--secondary" data-token="{{ o.token }}" onclick="resendPackEmail(this)">Resend email</button>
               <button type="button" class="account-btn-link account-history-delete" data-token="{{ o.token }}" data-is-subscription="{{ '1' if is_sub else '0' }}" onclick="showDeletePackModal(this)" aria-label="Delete pack from history">Delete</button>
             </div>
           </div>
@@ -1410,41 +1409,6 @@
       })();
       window.showDeletePackModal = showDeletePackModal;
       window.closeDeletePackModal = closeDeletePackModal;
-
-      function resendPackEmail(btn) {
-        if (!btn) return;
-        var token = btn.getAttribute('data-token');
-        if (!token) return;
-        var original = btn.textContent || 'Resend email';
-        btn.disabled = true;
-        btn.textContent = 'Sending...';
-        fetch('/api/captions-resend-delivery', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'same-origin',
-          body: JSON.stringify({ token: token })
-        })
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          if (data && data.ok) {
-            btn.textContent = 'Sent';
-            setTimeout(function() {
-              btn.disabled = false;
-              btn.textContent = original;
-            }, 1800);
-            return;
-          }
-          alert((data && data.error) ? data.error : 'Could not resend email');
-          btn.disabled = false;
-          btn.textContent = original;
-        })
-        .catch(function() {
-          alert('Something went wrong - try again.');
-          btn.disabled = false;
-          btn.textContent = original;
-        });
-      }
-      window.resendPackEmail = resendPackEmail;
 
       (function initHistoryFilters() {
         var list = document.querySelector('.account-history-list');
