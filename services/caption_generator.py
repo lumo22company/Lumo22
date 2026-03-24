@@ -408,6 +408,72 @@ def _chunk_has_empty_blocks(content: str, include_hashtags: bool) -> bool:
     return False
 
 
+def _chunk_structure_error(
+    content: str,
+    day_start: int,
+    day_end: int,
+    expected_platform_count: int,
+) -> Optional[str]:
+    """
+    Return a validation error string for bad chunk structure, else None.
+    Enforces:
+    - every expected day heading appears once
+    - each day has exactly expected_platform_count platform blocks
+    - no duplicate platform label within the same day
+    """
+    if not content:
+        return "Chunk is empty."
+    expected_days = set(range(day_start, day_end + 1))
+    day_matches = list(
+        re.finditer(r"^##\s*Day\s+(\d+)\s*[—\-].*$", content, re.I | re.M)
+    )
+    found_days = []
+    blocks_by_day = {}
+    for idx, m in enumerate(day_matches):
+        day_num = int(m.group(1))
+        found_days.append(day_num)
+        start = m.end()
+        end = day_matches[idx + 1].start() if idx + 1 < len(day_matches) else len(content)
+        blocks_by_day[day_num] = content[start:end]
+
+    missing = sorted(expected_days - set(found_days))
+    if missing:
+        return f"Missing day headings in chunk: {missing}"
+    duplicates = sorted({d for d in found_days if found_days.count(d) > 1 and d in expected_days})
+    if duplicates:
+        return f"Duplicate day headings in chunk: {duplicates}"
+    unexpected = sorted(d for d in set(found_days) if d not in expected_days)
+    if unexpected:
+        return f"Unexpected day headings in chunk: {unexpected}"
+
+    platform_re = re.compile(r"(?:\*\*)?Platform(?:\*\*)?\s*:\s*(.+)", re.I)
+    for day_num in sorted(expected_days):
+        block = blocks_by_day.get(day_num, "")
+        platforms = []
+        seen = set()
+        dup_platforms = []
+        for line in block.splitlines():
+            m = platform_re.match(line.strip())
+            if not m:
+                continue
+            label = (m.group(1) or "").replace("*", "").strip().lower()
+            if not label:
+                continue
+            platforms.append(label)
+            if label in seen:
+                dup_platforms.append(label)
+            else:
+                seen.add(label)
+        if dup_platforms:
+            return f"Day {day_num} has duplicate platform blocks: {sorted(set(dup_platforms))}"
+        if len(platforms) != expected_platform_count:
+            return (
+                f"Day {day_num} has {len(platforms)} platform block(s); "
+                f"expected {expected_platform_count}"
+            )
+    return None
+
+
 def _validate_caption_quality(
     captions_md: str, intake: Dict[str, Any], pack_start_date: str
 ) -> list:
@@ -541,6 +607,9 @@ class CaptionGenerator:
         include_hashtags = intake.get("include_hashtags", True)
         if isinstance(include_hashtags, str) and include_hashtags.lower() in ("false", "0", "no", "off"):
             include_hashtags = False
+        platform_raw = (intake.get("platform") or "").strip()
+        platform_list = [p.strip() for p in platform_raw.split(",") if p.strip()]
+        expected_platform_count = max(1, len(platform_list)) if platform_list else 1
         system = _build_system_prompt(intake)
         header = _build_doc_header(intake, pack_start_date=start_str)
         parts = [header]
@@ -554,9 +623,18 @@ class CaptionGenerator:
             )
             if not content:
                 raise RuntimeError(f"AI returned empty content for days {day_start}-{day_end}")
-            # Retry once if chunk has empty Caption/Hashtags blocks (incomplete output)
-            if _chunk_has_empty_blocks(content, include_hashtags):
-                retry_user = user + "\n\nIMPORTANT: Your previous response had empty Caption or Hashtags lines. You must fill every **Caption:** and every **Hashtags:** (when requested) with real, copy-paste-ready content for every platform for every day in this range. No exceptions."
+            # Retry once if chunk has incomplete/invalid structure (empty blocks, missing day/platform, duplicates).
+            chunk_err = _chunk_structure_error(
+                content, day_start, day_end, expected_platform_count
+            )
+            if _chunk_has_empty_blocks(content, include_hashtags) or chunk_err:
+                reason = chunk_err or "empty Caption/Hashtags lines"
+                retry_user = user + (
+                    "\n\nIMPORTANT: Your previous response was invalid (" + reason + "). "
+                    "Regenerate this range exactly with strict structure: "
+                    "each expected day heading once, one platform block per platform per day, "
+                    "no duplicate platform blocks in a day, and no empty **Caption:** or **Hashtags:** lines."
+                )
                 content = chat_completion(
                     system=system,
                     user=retry_user,
@@ -565,8 +643,14 @@ class CaptionGenerator:
                 )
                 if not content:
                     raise RuntimeError(f"AI returned empty content on retry for days {day_start}-{day_end}")
-                if _chunk_has_empty_blocks(content, include_hashtags):
-                    raise RuntimeError(f"AI still returned incomplete content for days {day_start}-{day_end} (empty Caption or Hashtags). Please try again.")
+                chunk_err = _chunk_structure_error(
+                    content, day_start, day_end, expected_platform_count
+                )
+                if _chunk_has_empty_blocks(content, include_hashtags) or chunk_err:
+                    suffix = f" ({chunk_err})" if chunk_err else " (empty Caption or Hashtags)"
+                    raise RuntimeError(
+                        f"AI still returned incomplete content for days {day_start}-{day_end}{suffix}. Please try again."
+                    )
             parts.append(content)
         result = "\n".join(parts)
 
