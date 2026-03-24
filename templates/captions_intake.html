@@ -369,6 +369,7 @@
         <label for="launch_event_description">Include dates or regular events.</label>
         <textarea id="launch_event_description" name="launch_event_description" data-testid="launch_event_description" placeholder="e.g. Valentine's sale 10–14 Feb, product launch 20 March, weekly tips every Tuesday" rows="4" style="min-height: 96px; resize: vertical;">{{ existing_intake.get('launch_event_description', '') }}</textarea>
         <p class="field-helper">Include dates for each (e.g. sale 10–14 Feb, launch 15 March). Multiple events? List them with dates.</p>
+        <p id="launch-date-hint" class="field-helper" style="display:none; color:#b45309; font-weight:600;"></p>
       </div>
       <div class="form-section">
         <h2>What do you usually talk about? <span style="color:#999;">(optional)</span></h2>
@@ -1049,8 +1050,10 @@
         var reviewStep = document.getElementById('review-step');
         var reviewContent = document.getElementById('review-content');
         if (!form || !reviewStep || !reviewContent) return;
+      var launchHint = document.getElementById('launch-date-hint');
       var hintEl = document.getElementById('intake-validation-hint');
       if (hintEl) { hintEl.style.display = 'none'; hintEl.textContent = ''; }
+      if (launchHint) { launchHint.style.display = 'none'; launchHint.textContent = ''; }
         syncAudience();
         syncVoiceWords();
         if (document.querySelectorAll('.platform-btn, input[name="platform_cb"]').length) syncPlatforms();
@@ -1173,8 +1176,15 @@
             document.getElementById('ca-email').value = custEmail;
           } else {
             var errEl = document.getElementById('intake-error');
+            var launchHint = document.getElementById('launch-date-hint');
             var ctaEl = document.getElementById('intake-upgrade-cta');
             if (errEl) { errEl.textContent = result.json.error || 'Something didn\'t send — try again or email us at hello@lumo22.com.'; errEl.style.display = 'block'; }
+            if (launchHint && result.json && result.json.error && result.json.error.toLowerCase().indexOf("outside your next 30-day captions window") !== -1) {
+              launchHint.textContent = result.json.error;
+              launchHint.style.display = 'block';
+              var launchField = document.getElementById('launch_event_description');
+              if (launchField && launchField.scrollIntoView) launchField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
             if (ctaEl) {
               if (result.json.downgrade_required) {
                 var sym = result.json.new_price_symbol || '£';
