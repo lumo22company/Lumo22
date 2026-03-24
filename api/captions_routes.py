@@ -950,7 +950,6 @@ def captions_delivery_status():
     if Config.is_production() and getattr(Config, "CRON_SECRET", None):
         if request.args.get("secret", "").strip() != Config.CRON_SECRET:
             return jsonify({"error": "Unauthorized"}), 401
-    from config import Config
     provider = (getattr(Config, "AI_PROVIDER", None) or "openai").strip().lower()
     ai_ok = False
     ai_msg = ""
