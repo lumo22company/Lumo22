@@ -9,6 +9,28 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v={{ asset_version }}">
+  <style>
+    /* Match other pages: narrow blocks must be margin-auto centered, not only text-align */
+    .lumo-404-hero {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+    .lumo-404-hero .lumo-section-title,
+    .lumo-404-hero .lumo-section-desc {
+      margin-left: auto;
+      margin-right: auto;
+      text-align: center;
+    }
+    .lumo-404-hero .lumo-btn-primary {
+      align-self: center;
+    }
+    .lumo-404-hero .lumo-404-links {
+      width: 100%;
+      text-align: center;
+    }
+  </style>
 </head>
 <body class="lumo-landing">
   <nav class="lumo-nav lumo-nav-scrolled">
@@ -16,15 +38,14 @@
       <a href="/" class="lumo-nav-logo">Lumo 22</a>
       <a href="/captions" class="lumo-nav-link">Captions</a>
     </div>
-    <a href="/captions#pricing" class="lumo-nav-cta">View plans</a>
   </nav>
 
   <main id="main-content">
-  <section class="lumo-section" style="padding-top: 10rem; min-height: 50vh; text-align: center;">
+  <section class="lumo-section lumo-404-hero" style="padding-top: 10rem; min-height: 50vh;">
     <h1 class="lumo-section-title" style="margin-bottom: 0.5rem;">Page not found</h1>
     <p class="lumo-section-desc" style="max-width: 400px; margin: 0 auto 2rem;">The page you’re looking for doesn’t exist or has moved.</p>
     <a href="/" class="lumo-btn-primary btn-cta-account-style">Back to home</a>
-    <p style="margin-top: 2rem;">
+    <p class="lumo-404-links" style="margin-top: 2rem;">
       <a href="/captions" style="color: inherit; text-decoration: underline;">Captions</a> ·
       <a href="/captions#pricing" style="color: inherit; text-decoration: underline;">Pricing</a>
     </p>
