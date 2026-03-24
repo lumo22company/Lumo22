@@ -6,6 +6,7 @@ mode=subscription and is detected in webhook so we create order and send intake 
 """
 import os
 import time
+from typing import Optional
 from flask import Blueprint, request, jsonify, redirect, Response, url_for
 from urllib.parse import quote
 from config import Config
