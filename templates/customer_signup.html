@@ -29,6 +29,8 @@
     .auth-page .link a:hover { text-decoration: underline; }
     .auth-page .hint { margin: -0.75rem 0 0.85rem; font-size: 0.82rem; color: var(--lum-text-muted); }
     .auth-page .hint.ok { color: #7ddc85; }
+    .auth-page .marketing-optin-row { display:flex; align-items:flex-start; gap:0.5rem; font-size:0.9rem; cursor:pointer; margin:0 0 1.25rem; line-height:1.45; padding-left:0; width:100%; }
+    .auth-page .marketing-optin-row input[type="checkbox"] { width:auto; margin:0.2rem 0 0 0; padding:0; flex-shrink:0; }
     .pw-toggle { margin: -0.75rem 0 1rem; text-align: right; }
     .pw-toggle button { background: none; border: 0; color: var(--lum-gold); cursor: pointer; font-size: 0.82rem; padding: 0; }
   </style>
@@ -62,8 +64,8 @@
       <label for="password_confirm">Confirm password</label>
       <input type="password" id="password_confirm" name="password_confirm" required minlength="12" autocomplete="new-password">
 
-      <label style="display:flex;align-items:flex-start;gap:0.5rem;font-size:0.9rem;cursor:pointer;margin:0 0 1.25rem;line-height:1.45;padding-left:0;">
-        <input type="checkbox" id="marketing_opt_in" name="marketing_opt_in" value="1" style="margin-top:0.2rem;flex-shrink:0;">
+      <label class="marketing-optin-row">
+        <input type="checkbox" id="marketing_opt_in" name="marketing_opt_in" value="1">
         <span>Email me tips, updates and offers from Lumo 22 (optional). You can change this anytime in your account.</span>
       </label>
 
