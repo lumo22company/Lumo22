@@ -10,6 +10,41 @@ from services.notifications import NotificationService
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 
+_COMMON_EMAIL_TYPO_DOMAINS = {
+    "gamil.com": "gmail.com",
+    "gmial.com": "gmail.com",
+    "gmai.com": "gmail.com",
+    "gnail.com": "gmail.com",
+    "gmail.co": "gmail.com",
+    "gmail.con": "gmail.com",
+    "hotmial.com": "hotmail.com",
+    "hotmal.com": "hotmail.com",
+    "hotmai.com": "hotmail.com",
+    "outlok.com": "outlook.com",
+    "outllok.com": "outlook.com",
+    "outlook.co": "outlook.com",
+    "yaho.com": "yahoo.com",
+    "yahooo.com": "yahoo.com",
+    "icloud.co": "icloud.com",
+    "iclod.com": "icloud.com",
+}
+
+
+def _email_typo_hint(email: str):
+    """Return suggested corrected email if domain looks like a common typo."""
+    if not email or "@" not in email:
+        return None
+    parts = email.strip().lower().split("@")
+    if len(parts) != 2:
+        return None
+    local, domain = parts[0].strip(), parts[1].strip()
+    if not local or not domain:
+        return None
+    fixed = _COMMON_EMAIL_TYPO_DOMAINS.get(domain)
+    if not fixed:
+        return None
+    return f"{local}@{fixed}"
+
 
 def get_current_customer():
     """Get current logged-in customer from session."""
@@ -61,12 +96,18 @@ def signup():
         from urllib.parse import quote
         data = request.get_json() or {}
         email = (data.get("email") or "").strip().lower()
+        email_confirm = (data.get("email_confirm") or "").strip().lower()
         password = (data.get("password") or "").strip()
         referral_code = (data.get("referral_code") or data.get("ref") or "").strip() or None
         next_url = (data.get("next") or "").strip() or None
 
         if not email or "@" not in email:
             return jsonify({"ok": False, "error": "Valid email required"}), 400
+        if email_confirm and email_confirm != email:
+            return jsonify({"ok": False, "error": "Email addresses do not match"}), 400
+        typo_hint = _email_typo_hint(email)
+        if typo_hint:
+            return jsonify({"ok": False, "error": f"Did you mean {typo_hint}?"}), 400
         from services.customer_auth_service import validate_password
         ok, err = validate_password(password)
         if not ok:
@@ -472,10 +513,16 @@ def create_account():
     try:
         data = request.get_json() or {}
         email = (data.get("email") or "").strip().lower()
+        email_confirm = (data.get("email_confirm") or "").strip().lower()
         password = (data.get("password") or "").strip()
 
         if not email or "@" not in email:
             return jsonify({"ok": False, "error": "Valid email required"}), 400
+        if email_confirm and email_confirm != email:
+            return jsonify({"ok": False, "error": "Email addresses do not match"}), 400
+        typo_hint = _email_typo_hint(email)
+        if typo_hint:
+            return jsonify({"ok": False, "error": f"Did you mean {typo_hint}?"}), 400
         from services.customer_auth_service import validate_password
         ok, err = validate_password(password)
         if not ok:

@@ -51,6 +51,8 @@
       <input type="hidden" id="next_url" value="{{ next_url|default('', true)|e }}">
       <label for="email">Email</label>
       <input type="email" id="email" name="email" required autocomplete="email" placeholder="you@example.com" value="{{ prefilled_email|default('', true)|e }}">
+      <label for="email_confirm">Confirm email</label>
+      <input type="email" id="email_confirm" name="email_confirm" required autocomplete="email" placeholder="Re-enter your email" value="{{ prefilled_email|default('', true)|e }}">
 
       <label for="password">Password <span style="font-weight:400;color:var(--lum-text-muted);">(min 12 characters, include 1 number)</span></label>
       <input type="password" id="password" name="password" required minlength="12" autocomplete="new-password" placeholder="At least 12 characters, 1 number">
@@ -114,6 +116,20 @@
         e.preventDefault();
         var pw = document.getElementById('password').value;
         var pw2 = document.getElementById('password_confirm').value;
+        var email = document.getElementById('email').value.trim().toLowerCase();
+        var email2 = document.getElementById('email_confirm').value.trim().toLowerCase();
+        if (!email || email.indexOf('@') === -1) {
+          msg.className = 'msg error';
+          msg.textContent = 'Please enter a valid email.';
+          msg.style.display = 'block';
+          return;
+        }
+        if (email !== email2) {
+          msg.className = 'msg error';
+          msg.textContent = 'Those email addresses don\'t match.';
+          msg.style.display = 'block';
+          return;
+        }
         if (pw !== pw2) {
           msg.className = 'msg error';
           msg.textContent = 'Those passwords don\'t match.';
@@ -135,7 +151,8 @@
         var nextVal = (nextInput && nextInput.value) ? nextInput.value.trim() : '';
         var mo = document.getElementById('marketing_opt_in');
         var payload = {
-          email: document.getElementById('email').value.trim().toLowerCase(),
+          email: email,
+          email_confirm: email2,
           password: pw,
           referral_code: ref || undefined,
           marketing_opt_in: !!(mo && mo.checked)
