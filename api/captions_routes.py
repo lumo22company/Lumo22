@@ -947,36 +947,39 @@ def captions_delivery_status():
     Diagnostic: check config needed for caption generation and delivery.
     Returns JSON with status (no secrets). In production, requires ?secret=CRON_SECRET when set.
     """
-    if Config.is_production() and getattr(Config, "CRON_SECRET", None):
-        if request.args.get("secret", "").strip() != Config.CRON_SECRET:
-            return jsonify({"error": "Unauthorized"}), 401
-    provider = (getattr(Config, "AI_PROVIDER", None) or "openai").strip().lower()
-    ai_ok = False
-    ai_msg = ""
-    if provider == "anthropic":
-        key = (getattr(Config, "ANTHROPIC_API_KEY", None) or "").strip()
-        ai_ok = bool(key and len(key) > 20 and key.startswith("sk-ant"))
-        ai_msg = "ANTHROPIC_API_KEY: " + ("set" if ai_ok else "missing or invalid")
-    else:
-        key = (getattr(Config, "OPENAI_API_KEY", None) or "").strip()
-        ai_ok = bool(key and len(key) > 20 and key.startswith("sk-"))
-        ai_msg = "OPENAI_API_KEY: " + ("set" if ai_ok else "missing or invalid")
-    sg_key = (getattr(Config, "SENDGRID_API_KEY", None) or "").strip()
-    sg_ok = bool(sg_key and len(sg_key) > 20 and sg_key.startswith("SG."))
-    from_email = (getattr(Config, "FROM_EMAIL", None) or "").strip()
-    supabase_ok = bool(
-        (getattr(Config, "SUPABASE_URL", None) or "").strip()
-        and (getattr(Config, "SUPABASE_KEY", None) or "").strip()
-    )
-    return jsonify({
-        "ai_provider": provider,
-        "ai_ok": ai_ok,
-        "ai_msg": ai_msg,
-        "sendgrid_ok": sg_ok,
-        "from_email": from_email[:3] + "***" + from_email[-10:] if from_email and "@" in from_email else "(not set)",
-        "supabase_ok": supabase_ok,
-        "all_ok": ai_ok and sg_ok and bool(from_email) and supabase_ok,
-    }), 200
+    try:
+        if Config.is_production() and getattr(Config, "CRON_SECRET", None):
+            if request.args.get("secret", "").strip() != Config.CRON_SECRET:
+                return jsonify({"error": "Unauthorized"}), 401
+        provider = (getattr(Config, "AI_PROVIDER", None) or "openai").strip().lower()
+        ai_ok = False
+        ai_msg = ""
+        if provider == "anthropic":
+            key = (getattr(Config, "ANTHROPIC_API_KEY", None) or "").strip()
+            ai_ok = bool(key and len(key) > 20 and key.startswith("sk-ant"))
+            ai_msg = "ANTHROPIC_API_KEY: " + ("set" if ai_ok else "missing or invalid")
+        else:
+            key = (getattr(Config, "OPENAI_API_KEY", None) or "").strip()
+            ai_ok = bool(key and len(key) > 20 and key.startswith("sk-"))
+            ai_msg = "OPENAI_API_KEY: " + ("set" if ai_ok else "missing or invalid")
+        sg_key = (getattr(Config, "SENDGRID_API_KEY", None) or "").strip()
+        sg_ok = bool(sg_key and len(sg_key) > 20 and sg_key.startswith("SG."))
+        from_email = (getattr(Config, "FROM_EMAIL", None) or "").strip()
+        supabase_ok = bool(
+            (getattr(Config, "SUPABASE_URL", None) or "").strip()
+            and (getattr(Config, "SUPABASE_KEY", None) or "").strip()
+        )
+        return jsonify({
+            "ai_provider": provider,
+            "ai_ok": ai_ok,
+            "ai_msg": ai_msg,
+            "sendgrid_ok": sg_ok,
+            "from_email": from_email[:3] + "***" + from_email[-10:] if from_email and "@" in from_email else "(not set)",
+            "supabase_ok": supabase_ok,
+            "all_ok": ai_ok and sg_ok and bool(from_email) and supabase_ok,
+        }), 200
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)[:200]}), 500
 
 
 @captions_bp.route("/captions-deliver-test", methods=["GET"])
