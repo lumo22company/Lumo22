@@ -655,10 +655,15 @@ def _validate_story_quality(stories_md: str) -> list:
     Does not block delivery; caller may log warnings.
     """
     warnings = []
-    if not stories_md or "**Day" not in stories_md:
+    if not stories_md or not re.search(r"(?:\*\*)?Day\s+\d+\s*:(?:\*\*)?", stories_md, re.I):
         return warnings
     found_days = set()
-    for m in re.finditer(r"\*\*Day\s+(\d+)\s*:\*\*\s*(.*?)(?=\s*\*\*Day\s+\d+\s*:\*\*|$)", stories_md, re.I | re.DOTALL):
+    day_pat = r"(?:\*\*)?Day\s+(\d+)\s*:(?:\*\*)?"
+    for m in re.finditer(
+        day_pat + r"\s*(.*?)(?=\s*" + day_pat + r"|$)",
+        stories_md,
+        re.I | re.DOTALL,
+    ):
         day_num = int(m.group(1))
         content = (m.group(2) or "").strip()
         if 1 <= day_num <= 30:
@@ -676,6 +681,83 @@ def _validate_story_quality(stories_md: str) -> list:
     if missing:
         warnings.append(f"Quality check: Story ideas missing days: {sorted(missing)[:10]}{'...' if len(missing) > 10 else ''}.")
     return warnings
+
+
+def _stories_structure_error(
+    stories_md: str,
+    *,
+    hashtag_min: int = 3,
+    hashtag_max: int = 10,
+) -> Optional[str]:
+    """
+    Strict validator for stories markdown section.
+    Enforces:
+    - exactly 30 story days (1..30), each once
+    - each day has Idea, Suggested wording, Story hashtags
+    - hashtag count per day within bounds
+    - no near-duplicate suggested wording across days
+    """
+    if not stories_md or not re.search(r"(?:\*\*)?Day\s+\d+\s*:(?:\*\*)?", stories_md, re.I):
+        return "Stories output is empty or missing day entries"
+
+    day_pat = r"(?:\*\*)?Day\s+(\d+)\s*:(?:\*\*)?"
+    day_entries = list(
+        re.finditer(
+            day_pat + r"\s*(.*?)(?=\s*" + day_pat + r"|$)",
+            stories_md,
+            re.I | re.DOTALL,
+        )
+    )
+    if len(day_entries) != 30:
+        return f"Stories output has {len(day_entries)} day entries; expected 30"
+
+    day_nums = []
+    suggested_by_day = {}
+    for m in day_entries:
+        day_num = int(m.group(1))
+        content = (m.group(2) or "").strip()
+        day_nums.append(day_num)
+        if not content:
+            return f"Story Day {day_num} has no content"
+
+        idea_m = re.search(r"\bIdea\s*:\s*(.+?)(?=\bSuggested wording\s*:|\Z)", content, re.I | re.S)
+        sugg_m = re.search(r"\bSuggested wording\s*:\s*(.+?)(?=\bStory hashtags\s*:|\bHashtags?\s*:|\Z)", content, re.I | re.S)
+        hash_m = re.search(r"\b(?:Story hashtags|Hashtags?)\s*:\s*(.+)$", content, re.I | re.S)
+        idea = (idea_m.group(1).strip() if idea_m else "")
+        suggested = (sugg_m.group(1).strip() if sugg_m else "")
+        hashtags = (hash_m.group(1).strip() if hash_m else "")
+
+        if not idea:
+            return f"Story Day {day_num} missing Idea"
+        if not suggested:
+            return f"Story Day {day_num} missing Suggested wording"
+        if not hashtags:
+            return f"Story Day {day_num} missing Story hashtags"
+
+        hashtag_count = len(re.findall(r"#[a-z0-9_]+", hashtags, re.I))
+        if hashtag_count < hashtag_min or hashtag_count > hashtag_max:
+            return (
+                f"Story Day {day_num} has {hashtag_count} hashtags; "
+                f"expected {hashtag_min}-{hashtag_max}"
+            )
+
+        normalized = re.sub(r"\s+", " ", suggested.lower()).strip()
+        suggested_by_day[day_num] = normalized
+
+    if sorted(day_nums) != list(range(1, 31)):
+        return "Stories output does not contain exactly Day 1 to Day 30 once each"
+
+    # Near-duplicate suggested wording check.
+    pairs = sorted(suggested_by_day.items(), key=lambda x: x[0])
+    for i in range(len(pairs)):
+        d1, t1 = pairs[i]
+        for j in range(i + 1, len(pairs)):
+            d2, t2 = pairs[j]
+            if not t1 or not t2:
+                continue
+            if SequenceMatcher(None, t1, t2).ratio() >= 0.92:
+                return f"Near-duplicate story wording detected: Day {d1} and Day {d2}"
+    return None
 
 
 class CaptionGenerator:
@@ -790,6 +872,22 @@ class CaptionGenerator:
                     pack_start_date=start_str,
                 )
             if stories_md:
+                story_err = _stories_structure_error(
+                    stories_md,
+                    hashtag_min=hashtag_min,
+                    hashtag_max=hashtag_max,
+                )
+                if story_err:
+                    stories_md = self._generate_stories_with_retry(
+                        intake,
+                        align_stories=align_stories,
+                        captions_md=result if align_stories else None,
+                        is_subscription_variety=bool(previous_pack_themes),
+                        pack_start_date=start_str,
+                        hashtag_min=hashtag_min,
+                        hashtag_max=hashtag_max,
+                        reason=story_err,
+                    )
                 result = result + "\n\n" + stories_md
                 for w in _validate_story_quality(stories_md):
                     print(f"[CaptionGenerator] Story quality warning: {w}")
@@ -800,11 +898,64 @@ class CaptionGenerator:
 
         return result
 
+    def _generate_stories_with_retry(
+        self,
+        intake: Dict[str, Any],
+        *,
+        align_stories: bool,
+        captions_md: Optional[str],
+        is_subscription_variety: bool,
+        pack_start_date: Optional[str],
+        hashtag_min: int,
+        hashtag_max: int,
+        reason: str,
+    ) -> str:
+        """
+        Retry stories generation once with strict format instructions.
+        Raises RuntimeError if still invalid.
+        """
+        if align_stories:
+            stories_md = self._generate_stories_aligned(
+                intake,
+                captions_md or "",
+                is_subscription_variety=is_subscription_variety,
+                pack_start_date=pack_start_date,
+                strict_note=(
+                    "Previous stories output failed validation: "
+                    + reason
+                    + ". Regenerate exactly Day 1-30 once each with complete Idea/Suggested wording/Story hashtags."
+                ),
+            )
+        else:
+            stories_md = self._generate_stories(
+                intake,
+                is_subscription_variety=is_subscription_variety,
+                pack_start_date=pack_start_date,
+                strict_note=(
+                    "Previous stories output failed validation: "
+                    + reason
+                    + ". Regenerate exactly Day 1-30 once each with complete Idea/Suggested wording/Story hashtags."
+                ),
+            )
+        if not stories_md:
+            raise RuntimeError("Stories generation failed on retry (empty output)")
+        story_err = _stories_structure_error(
+            stories_md,
+            hashtag_min=hashtag_min,
+            hashtag_max=hashtag_max,
+        )
+        if story_err:
+            raise RuntimeError(
+                f"Stories output invalid after retry (initial: {reason}; retry: {story_err})"
+            )
+        return stories_md
+
     def _generate_stories(
         self,
         intake: Dict[str, Any],
         is_subscription_variety: bool = False,
         pack_start_date: Optional[str] = None,
+        strict_note: Optional[str] = None,
     ) -> str:
         """Generate 30 one-line Story prompts for Instagram/Facebook.
 
@@ -852,6 +1003,7 @@ CRITICAL — Use ONLY this business name when naming the brand in Idea or Sugges
 Do not invent, substitute, or use example/tagline business names from training (e.g. do not replace the real name with a slogan or another company). You may use "we" / "us" / "our" where natural; if the business name appears, it must be exactly "{business}".
 Ground every suggestion in their intake (offer, audience, goal)—not generic industries from examples."""
 
+        strict_block = f"\n\nSTRICT FIX NOTE: {strict_note}\n" if strict_note else ""
         prompt = f"""Generate 30 Story prompts for Instagram/Facebook Stories. One per day (Day 1–30). Each day must have exactly three parts: Idea, Suggested wording, Story hashtags.
 
 Quality bar: Every story set must be as tailored and specific as a premium content strategist would deliver for this exact business—no generic filler, no wrong dates, no off-brand tone. Match the standard of a highly polished 30-day story plan.
@@ -880,7 +1032,8 @@ Output format — markdown only, one line per day with all three parts on that l
 **Day 30:** Idea: [short idea]. Suggested wording: [suggestion, no quotes]. Story hashtags: #tag1 #tag2 #tag3
 ---
 
-Use the exact labels "Idea:", "Suggested wording:", and "Story hashtags:" on every line. Do not put quotation marks around the Suggested wording content. Output the complete list only. No preamble."""
+Use the exact labels "Idea:", "Suggested wording:", and "Story hashtags:" on every line. Do not put quotation marks around the Suggested wording content. Output the complete list only. No preamble.
+{strict_block}"""
         try:
             content = chat_completion(
                 system=(
@@ -903,6 +1056,7 @@ Use the exact labels "Idea:", "Suggested wording:", and "Story hashtags:" on eve
         captions_md: str,
         is_subscription_variety: bool = False,
         pack_start_date: Optional[str] = None,
+        strict_note: Optional[str] = None,
     ) -> str:
         """Generate 30 Story prompts with explicit day-by-day alignment to captions.
 
@@ -969,6 +1123,7 @@ CRITICAL — Use ONLY this business name when naming the brand in Idea or Sugges
 Do not invent, substitute, or use example/tagline business names from training. If the business name appears, it must be exactly "{business}".
 Ground every suggestion in their intake and that day's caption theme—not generic industries from examples."""
 
+        strict_block = f"\n\nSTRICT FIX NOTE: {strict_note}\n" if strict_note else ""
         prompt = f"""Generate 30 Story prompts for Instagram/Facebook Stories. One per day (Day 1–30). Each day must have exactly three parts: Idea, Suggested wording, Story hashtags.
 
 Quality bar: Every story set must be as tailored and specific as a premium content strategist would deliver for this exact business—no generic filler, no wrong dates, no off-brand tone. Each day's story must support that day's caption theme.
@@ -1002,7 +1157,8 @@ Output format — markdown only, one line per day with all three parts on that l
 **Day 30:** Idea: [short idea]. Suggested wording: [suggestion, no quotes]. Story hashtags: #tag1 #tag2 #tag3
 ---
 
-Use the exact labels "Idea:", "Suggested wording:", and "Story hashtags:" on every line. Do not put quotation marks around the Suggested wording content. Output the complete list only. No preamble."""
+Use the exact labels "Idea:", "Suggested wording:", and "Story hashtags:" on every line. Do not put quotation marks around the Suggested wording content. Output the complete list only. No preamble.
+{strict_block}"""
 
         try:
             content = chat_completion(
