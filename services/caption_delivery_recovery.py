@@ -7,6 +7,9 @@ from __future__ import annotations
 from datetime import datetime, timezone, timedelta
 from typing import Any, Dict
 
+# Total failed attempts before auto-retry stops (1st try + 2 automatic retries).
+CAPTIONS_MAX_AUTO_DELIVERY_FAILURES = 3
+
 
 def row_needs_first_delivery_retry(
     order: Dict[str, Any],
@@ -37,7 +40,8 @@ def row_needs_first_delivery_retry(
         except Exception:
             pass
     if status == "failed":
-        return True
+        n = int(order.get("delivery_failure_count") or 0)
+        return n < CAPTIONS_MAX_AUTO_DELIVERY_FAILURES
     if status == "intake_completed":
         updated = order.get("updated_at") or order.get("created_at")
         if updated and intake_completed_grace_seconds > 0:
