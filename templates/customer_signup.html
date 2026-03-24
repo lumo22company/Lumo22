@@ -39,7 +39,8 @@
       <a href="/" class="lumo-nav-logo">Lumo 22</a>
       <a href="/captions" class="lumo-nav-link">Captions</a>
     </div>
-    <a href="/login{% if next_url %}?next={{ next_url|urlencode }}{% if prefilled_email %}&amp;email={{ prefilled_email|urlencode }}{% endif %}{% elif prefilled_email %}?email={{ prefilled_email|urlencode }}{% endif %}" class="lumo-nav-cta lumo-nav-login">Log in</a>
+    {% set _next_login = (next_url or request.args.get('next', ''))|trim %}
+    <a href="/login{% if _next_login %}?next={{ _next_login|urlencode }}{% if prefilled_email %}&amp;email={{ prefilled_email|urlencode }}{% endif %}{% elif prefilled_email %}?email={{ prefilled_email|urlencode }}{% endif %}" class="lumo-nav-cta lumo-nav-login">Log in</a>
   </nav>
 
   <main class="auth-page">
@@ -71,7 +72,7 @@
       <div id="msg-continue" class="msg success" style="display: none; margin-top: 1rem;"></div>
     </form>
 
-    <p class="link">Already have an account? <a href="/login{% if next_url %}?next={{ next_url|urlencode }}{% if prefilled_email %}&amp;email={{ prefilled_email|urlencode }}{% endif %}{% elif prefilled_email %}?email={{ prefilled_email|urlencode }}{% endif %}">Log in</a></p>
+    <p class="link">Already have an account? <a href="/login{% if _next_login %}?next={{ _next_login|urlencode }}{% if prefilled_email %}&amp;email={{ prefilled_email|urlencode }}{% endif %}{% elif prefilled_email %}?email={{ prefilled_email|urlencode }}{% endif %}">Log in</a></p>
     <p class="link"><a href="/captions" id="back-link">← Back</a></p>
   </main>
 
