@@ -27,8 +27,8 @@
     .auth-page .link { margin-top: 1.5rem; text-align: center; }
     .auth-page .link a { color: var(--lum-gold); text-decoration: none; }
     .auth-page .link a:hover { text-decoration: underline; }
-    .auth-page .hint { margin: -0.75rem 0 0.85rem; font-size: 0.82rem; color: var(--lum-text-muted); }
-    .auth-page .hint.ok { color: #7ddc85; }
+    .auth-page .marketing-optin-row { display:flex; align-items:flex-start; gap:0.5rem; font-size:0.9rem; cursor:pointer; margin:0 0 1.25rem; line-height:1.45; padding-left:0; width:100%; }
+    .auth-page .marketing-optin-row input[type="checkbox"] { width:auto; margin:0.2rem 0 0 0; padding:0; flex-shrink:0; }
     .pw-toggle { margin: -0.75rem 0 1rem; text-align: right; }
     .pw-toggle button { background: none; border: 0; color: var(--lum-gold); cursor: pointer; font-size: 0.82rem; padding: 0; }
   </style>
@@ -39,7 +39,8 @@
       <a href="/" class="lumo-nav-logo">Lumo 22</a>
       <a href="/captions" class="lumo-nav-link">Captions</a>
     </div>
-    <a href="/login" class="lumo-nav-cta lumo-nav-login">Log in</a>
+    {% set _next_login = (next_url or request.args.get('next', ''))|trim %}
+    <a href="/login{% if _next_login %}?next={{ _next_login|urlencode }}{% if prefilled_email %}&amp;email={{ prefilled_email|urlencode }}{% endif %}{% elif prefilled_email %}?email={{ prefilled_email|urlencode }}{% endif %}" class="lumo-nav-cta lumo-nav-login">Log in</a>
   </nav>
 
   <main class="auth-page">
@@ -51,17 +52,18 @@
       <input type="hidden" id="next_url" value="{{ next_url|default('', true)|e }}">
       <label for="email">Email</label>
       <input type="email" id="email" name="email" required autocomplete="email" placeholder="you@example.com" value="{{ prefilled_email|default('', true)|e }}">
+      <label for="email_confirm">Confirm email</label>
+      <input type="email" id="email_confirm" name="email_confirm" required autocomplete="email" placeholder="Re-enter your email" value="{{ prefilled_email|default('', true)|e }}">
 
       <label for="password">Password <span style="font-weight:400;color:var(--lum-text-muted);">(min 12 characters, include 1 number)</span></label>
       <input type="password" id="password" name="password" required minlength="12" autocomplete="new-password" placeholder="At least 12 characters, 1 number">
       <div class="pw-toggle"><button type="button" id="toggle-password">Show password</button></div>
-      <p id="pw-hint" class="hint">Use at least 12 characters and include 1 number.</p>
 
       <label for="password_confirm">Confirm password</label>
       <input type="password" id="password_confirm" name="password_confirm" required minlength="12" autocomplete="new-password">
 
-      <label style="display:flex;align-items:flex-start;gap:0.5rem;font-size:0.9rem;cursor:pointer;margin:0 0 1.25rem;line-height:1.45;">
-        <input type="checkbox" id="marketing_opt_in" name="marketing_opt_in" value="1" style="margin-top:0.2rem;flex-shrink:0;">
+      <label class="marketing-optin-row">
+        <input type="checkbox" id="marketing_opt_in" name="marketing_opt_in" value="1">
         <span>Email me tips, updates and offers from Lumo 22 (optional). You can change this anytime in your account.</span>
       </label>
 
@@ -70,7 +72,7 @@
       <div id="msg-continue" class="msg success" style="display: none; margin-top: 1rem;"></div>
     </form>
 
-    <p class="link">Already have an account? <a href="/login{% if next_url %}?next={{ next_url|urlencode }}{% if prefilled_email %}&amp;email={{ prefilled_email|urlencode }}{% endif %}{% elif prefilled_email %}?email={{ prefilled_email|urlencode }}{% endif %}">Log in</a></p>
+    <p class="link">Already have an account? <a href="/login{% if _next_login %}?next={{ _next_login|urlencode }}{% if prefilled_email %}&amp;email={{ prefilled_email|urlencode }}{% endif %}{% elif prefilled_email %}?email={{ prefilled_email|urlencode }}{% endif %}">Log in</a></p>
     <p class="link"><a href="/captions" id="back-link">← Back</a></p>
   </main>
 
@@ -92,16 +94,7 @@
       var btn = document.getElementById('btn');
       var msg = document.getElementById('msg');
       var pwInput = document.getElementById('password');
-      var pwHint = document.getElementById('pw-hint');
       var pwToggle = document.getElementById('toggle-password');
-      if (pwInput && pwHint) {
-        pwInput.addEventListener('input', function() {
-          var v = pwInput.value || '';
-          var strongEnough = v.length >= 12 && /\d/.test(v);
-          pwHint.className = strongEnough ? 'hint ok' : 'hint';
-          pwHint.textContent = strongEnough ? 'Good password strength for this account.' : 'Use at least 12 characters and include 1 number.';
-        });
-      }
       if (pwToggle && pwInput) {
         pwToggle.addEventListener('click', function() {
           var showing = pwInput.type === 'text';
@@ -114,6 +107,20 @@
         e.preventDefault();
         var pw = document.getElementById('password').value;
         var pw2 = document.getElementById('password_confirm').value;
+        var email = document.getElementById('email').value.trim().toLowerCase();
+        var email2 = document.getElementById('email_confirm').value.trim().toLowerCase();
+        if (!email || email.indexOf('@') === -1) {
+          msg.className = 'msg error';
+          msg.textContent = 'Please enter a valid email.';
+          msg.style.display = 'block';
+          return;
+        }
+        if (email !== email2) {
+          msg.className = 'msg error';
+          msg.textContent = 'Those email addresses don\'t match.';
+          msg.style.display = 'block';
+          return;
+        }
         if (pw !== pw2) {
           msg.className = 'msg error';
           msg.textContent = 'Those passwords don\'t match.';
@@ -135,7 +142,8 @@
         var nextVal = (nextInput && nextInput.value) ? nextInput.value.trim() : '';
         var mo = document.getElementById('marketing_opt_in');
         var payload = {
-          email: document.getElementById('email').value.trim().toLowerCase(),
+          email: email,
+          email_confirm: email2,
           password: pw,
           referral_code: ref || undefined,
           marketing_opt_in: !!(mo && mo.checked)

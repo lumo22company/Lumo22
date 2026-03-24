@@ -564,14 +564,6 @@ def captions_checkout_subscription_page():
     copy_from = (request.args.get("copy_from") or "").strip()
     if not get_current_customer():
         signup_url = url_for("customer_signup_page") + "?next=" + quote(request.full_path or "/captions-checkout-subscription", safe="")
-        if copy_from:
-            try:
-                from services.caption_order_service import CaptionOrderService
-                order = CaptionOrderService().get_by_token(copy_from)
-                if order and (order.get("customer_email") or "").strip():
-                    signup_url += "&email=" + quote((order.get("customer_email") or "").strip(), safe="")
-            except Exception:
-                pass
         return redirect(signup_url)
     platforms = _parse_platforms_from_request()
     selected = (request.args.get("selected") or request.args.get("selected_platforms") or "").strip()
@@ -592,6 +584,12 @@ def captions_checkout_subscription_page():
         params["ref"] = ref
     if copy_from:
         params["copy_from"] = copy_from
+    business_name = (request.args.get("business_name") or "").strip()
+    business_key = (request.args.get("business_key") or "").strip()
+    if business_name:
+        params["business_name"] = business_name
+    if business_key:
+        params["business_key"] = business_key
     q = urlencode(params)
     api_url = f"/api/captions-checkout-subscription?{q}" if not platforms_invalid else None
     total = prices["sub"] + (platforms - 1) * prices["extra_sub"] + (prices["stories_sub"] if stories else 0)
@@ -603,6 +601,10 @@ def captions_checkout_subscription_page():
             add_stories_params += "&selected=" + quote(selected)
         if copy_from:
             add_stories_params += "&copy_from=" + quote(copy_from)
+        if business_name:
+            add_stories_params += "&business_name=" + quote(business_name)
+        if business_key:
+            add_stories_params += "&business_key=" + quote(business_key)
         add_stories_url = "/captions?" + add_stories_params + "#pricing"
     else:
         add_stories_url = None

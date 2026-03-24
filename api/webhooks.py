@@ -28,6 +28,27 @@ def _sanitize_for_email(text: str) -> str:
     return re.sub(r"[\x00-\x09\x0b-\x1f\x7f]", "", text)
 
 
+def _should_send_plan_change_email(
+    prev_attrs: dict,
+    old_platforms: int,
+    old_stories: bool,
+    new_platforms: int,
+    new_stories: bool,
+) -> bool:
+    """
+    Guard plan-change confirmations to true plan changes only.
+    Prevents false positives from unrelated subscription.updated events.
+    """
+    if old_platforms != new_platforms or old_stories != new_stories:
+        return True
+    if not isinstance(prev_attrs, dict) or not prev_attrs:
+        return False
+    # Only treat as plan change if Stripe says items changed.
+    if "items" in prev_attrs:
+        return True
+    return False
+
+
 def _is_captions_subscription_payment(session) -> bool:
     """True if this checkout is for 30 Days Captions subscription (£79/month). Reuses same intake/delivery as one-off."""
     mode = (session.get("mode") or "") if isinstance(session, dict) else ""
@@ -656,6 +677,18 @@ def stripe_webhook():
                     old_platforms = max(1, int(order.get("platforms_count", 1)))
                     old_stories = bool(order.get("include_stories"))
                     new_platforms, new_stories = subscription_platforms_and_stories_from_stripe(sub_obj)
+                    if not _should_send_plan_change_email(
+                        prev_attrs if isinstance(prev_attrs, dict) else {},
+                        old_platforms,
+                        old_stories,
+                        new_platforms,
+                        new_stories,
+                    ):
+                        print(
+                            f"[Stripe webhook] subscription.updated: no plan delta for {sub_id[:20]}...; "
+                            "skipping plan-change email"
+                        )
+                        return jsonify({"received": True}), 200
                     change_bits = []
                     if new_platforms != old_platforms:
                         change_bits.append(f"your subscription now includes {new_platforms} platform{'s' if new_platforms != 1 else ''} instead of {old_platforms}")

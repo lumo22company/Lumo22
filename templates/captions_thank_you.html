@@ -54,7 +54,9 @@
           <p style="font-size: 0.95rem; color: var(--lum-text-muted); margin: 0 0 1rem; line-height: 1.5;">Set a password (at least 12 characters and 1 number) so you can log in and manage your subscription. We'll send a verification link to your email to confirm your address.</p>
           <div id="signup-form-wrap" style="max-width: 320px;">
             <label for="signup-email" style="display:block; font-size: 0.9rem; margin-bottom: 0.25rem;">Email</label>
-            <input type="email" id="signup-email" readonly style="width: 100%; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: #ffffff; color: #1a1a1a; font-size: 1rem; margin-bottom: 0.75rem;" placeholder="your@email.com">
+            <input type="email" id="signup-email" style="width: 100%; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: #ffffff; color: #1a1a1a; font-size: 1rem; margin-bottom: 0.75rem;" placeholder="your@email.com">
+            <label for="signup-email-confirm" style="display:block; font-size: 0.9rem; margin-bottom: 0.25rem;">Confirm email</label>
+            <input type="email" id="signup-email-confirm" style="width: 100%; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: #ffffff; color: #1a1a1a; font-size: 1rem; margin-bottom: 0.75rem;" placeholder="Re-enter your email">
             <label for="signup-password" style="display:block; font-size: 0.9rem; margin-bottom: 0.25rem;">Password</label>
             <input type="password" id="signup-password" style="width: 100%; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: #ffffff; color: #1a1a1a; font-size: 1rem; margin-bottom: 0.75rem;" placeholder="Choose a password">
             <label for="signup-confirm" style="display:block; font-size: 0.9rem; margin-bottom: 0.25rem;">Confirm password</label>
@@ -183,7 +185,9 @@
           if (isSubscription && !isLoggedIn && customerEmail) {
             createAccountEl.style.display = 'block';
             var signupEmail = document.getElementById('signup-email');
+            var signupEmailConfirm = document.getElementById('signup-email-confirm');
             if (signupEmail) signupEmail.value = customerEmail;
+            if (signupEmailConfirm) signupEmailConfirm.value = customerEmail;
             var signupSuccess = document.getElementById('signup-success');
             if (signupSuccess) signupSuccess.style.display = 'none';
             var signupError = document.getElementById('signup-error');
@@ -287,16 +291,22 @@
       if (signupBtn) {
         signupBtn.addEventListener('click', function() {
           var emailEl = document.getElementById('signup-email');
+          var emailConfirmEl = document.getElementById('signup-email-confirm');
           var pwEl = document.getElementById('signup-password');
           var confirmEl = document.getElementById('signup-confirm');
           var errEl = document.getElementById('signup-error');
           var successEl = document.getElementById('signup-success');
           var email = (emailEl && emailEl.value || '').trim().toLowerCase();
+          var emailConfirm = (emailConfirmEl && emailConfirmEl.value || '').trim().toLowerCase();
           var password = (pwEl && pwEl.value || '').trim();
           var confirm = (confirmEl && confirmEl.value || '').trim();
           if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
           if (!email || email.indexOf('@') === -1) {
             if (errEl) { errEl.textContent = 'Please enter a valid email.'; errEl.style.display = 'block'; }
+            return;
+          }
+          if (email !== emailConfirm) {
+            if (errEl) { errEl.textContent = 'Email addresses do not match.'; errEl.style.display = 'block'; }
             return;
           }
           if (!password) {
@@ -317,7 +327,7 @@
           fetch('/api/auth/signup', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: email, password: password, marketing_opt_in: !!(tyMo && tyMo.checked) })
+            body: JSON.stringify({ email: email, email_confirm: emailConfirm, password: password, marketing_opt_in: !!(tyMo && tyMo.checked) })
           })
           .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
           .then(function(res) {

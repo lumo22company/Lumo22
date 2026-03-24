@@ -6,6 +6,7 @@ mode=subscription and is detected in webhook so we create order and send intake 
 """
 import os
 import time
+from typing import Optional
 from flask import Blueprint, request, jsonify, redirect, Response, url_for
 from urllib.parse import quote
 from config import Config
@@ -193,11 +194,125 @@ def _stripe_subscription_blocks_new_checkout(sub_obj: dict) -> bool:
     return status in ("active", "trialing", "past_due")
 
 
-def _customer_has_blocking_captions_subscription(email: str) -> bool:
+def _normalize_business_key(value: str) -> str:
+    """Normalize business identifier for matching (lowercase, alnum + single hyphens)."""
+    raw = (value or "").strip().lower()
+    if not raw:
+        return ""
+    out = []
+    prev_dash = False
+    for ch in raw:
+        if ch.isalnum():
+            out.append(ch)
+            prev_dash = False
+        elif not prev_dash:
+            out.append("-")
+            prev_dash = True
+    return "".join(out).strip("-")
+
+
+def _order_business_keys(order: dict) -> set:
+    """
+    Return possible business keys for an order/subscription row.
+    Includes upgraded_from_token key and intake.business_name key when available.
+    """
+    keys = set()
+    if not isinstance(order, dict):
+        return keys
+    up = (order.get("upgraded_from_token") or "").strip()
+    if up:
+        keys.add(f"token:{up}")
+    intake = order.get("intake") or {}
+    if isinstance(intake, dict):
+        biz = _normalize_business_key((intake.get("business_name") or "").strip())
+        if biz:
+            keys.add(f"biz:{biz}")
+    # Forward-compatible: if a canonical key is later persisted directly on the row.
+    persisted = _normalize_business_key((order.get("business_key") or "").strip())
+    if persisted:
+        keys.add(f"biz:{persisted}")
+    return keys
+
+
+def _target_business_key_from_request(copy_from: str, explicit_business_key: str, business_name_raw: str) -> str:
+    """Build canonical business key for duplicate-subscription guard."""
+    if copy_from:
+        return f"token:{copy_from}"
+    if explicit_business_key:
+        bk = _normalize_business_key(explicit_business_key)
+        return f"biz:{bk}" if bk else ""
+    if business_name_raw:
+        bk = _normalize_business_key(business_name_raw)
+        return f"biz:{bk}" if bk else ""
+    return ""
+
+
+def _validate_launch_event_window(launch_desc: str, pack_start_date: str) -> Optional[str]:
+    """
+    Validate key-date text falls within the upcoming 30-day pack window.
+    Returns an error message when a parseable date is outside the window; else None.
+    """
+    text = (launch_desc or "").strip()
+    if not text:
+        return None
+    try:
+        from datetime import datetime
+        import re
+        from services.caption_generator import _parse_key_date_from_text
+    except Exception:
+        return None
+    start_raw = (pack_start_date or "").strip()
+    if not start_raw:
+        return None
+    try:
+        start = datetime.strptime(start_raw[:10], "%Y-%m-%d")
+    except ValueError:
+        return None
+
+    month_names = (
+        "january|february|march|april|may|june|july|august|september|october|november|december"
+    )
+    month_num = {m: i for i, m in enumerate(month_names.split("|"), 1)}
+    t = text.lower()
+    m = re.search(r"(\d{1,2})(?:st|nd|rd|th)?\s*(" + month_names + r")(?:\s+(\d{4}))?", t)
+    day_num = None
+    month_idx = None
+    year = start.year
+    if m:
+        day_num = int(m.group(1))
+        month_idx = month_num.get(m.group(2))
+        if m.group(3):
+            year = int(m.group(3))
+    if day_num is None or month_idx is None:
+        m = re.search(r"(" + month_names + r")\s*(\d{1,2})(?:st|nd|rd|th)?(?:\s+(\d{4}))?", t)
+        if m:
+            month_idx = month_num.get(m.group(1))
+            day_num = int(m.group(2))
+            if m.group(3):
+                year = int(m.group(3))
+    if day_num is None or month_idx is None:
+        return None
+    try:
+        event_date = datetime(year, month_idx, day_num)
+    except ValueError:
+        return "The date in 'What's happening this month?' is invalid. Please check it and try again."
+
+    in_window_day = _parse_key_date_from_text(text, start_raw)
+    if in_window_day is not None:
+        return None
+    return (
+        f"The date '{event_date.strftime('%d %B %Y')}' is outside your next 30-day captions window "
+        f"(starting {start.strftime('%d %B %Y')}). Please correct it so we can phase before/on/after content correctly."
+    )
+
+
+def _customer_has_blocking_captions_subscription(email: str, target_business_key: Optional[str] = None) -> bool:
     """
     True if this customer already has an active/trialing/past_due Captions subscription in Stripe.
     Each completed subscription checkout creates a new Stripe subscription + caption_orders row;
-    this guard prevents accidental duplicate monthly subscriptions for the same account.
+    this guard prevents accidental duplicate monthly subscriptions.
+    If target_business_key is provided, only blocks when an existing active subscription
+    matches that same business context (allows multiple businesses under one email).
     """
     if not email or "@" not in email:
         return False
@@ -210,6 +325,7 @@ def _customer_has_blocking_captions_subscription(email: str) -> bool:
 
     co_svc = CaptionOrderService()
     orders = co_svc.get_by_customer_email_including_stripe_customer(email.strip().lower())
+    target_business_key = (target_business_key or "").strip()
     seen_subs = set()
     for o in orders:
         sid = (o.get("stripe_subscription_id") or "").strip()
@@ -222,7 +338,11 @@ def _customer_has_blocking_captions_subscription(email: str) -> bool:
             print(f"[captions_checkout_subscription] Stripe retrieve failed for sub {sid[:14]}...: {e}")
             continue
         if _stripe_subscription_blocks_new_checkout(sub):
-            return True
+            if not target_business_key:
+                return True
+            existing_keys = _order_business_keys(o)
+            if target_business_key in existing_keys:
+                return True
     return False
 
 
@@ -317,6 +437,8 @@ def captions_checkout_subscription():
     """
     from api.auth_routes import get_current_customer
     copy_from = (request.args.get("copy_from") or "").strip()
+    business_name_raw = (request.args.get("business_name") or "").strip()
+    explicit_business_key = (request.args.get("business_key") or "").strip()
     get_pack_now = request.args.get("get_pack_now", "").strip().lower() in ("1", "true", "yes", "on")
     one_off = None
     customer = get_current_customer()
@@ -324,14 +446,6 @@ def captions_checkout_subscription():
         from urllib.parse import quote
         next_url = request.url
         signup_url = url_for("customer_signup_page") + "?next=" + quote(next_url, safe="")
-        if copy_from:
-            try:
-                from services.caption_order_service import CaptionOrderService
-                order = CaptionOrderService().get_by_token(copy_from)
-                if order and (order.get("customer_email") or "").strip():
-                    signup_url += "&email=" + quote((order.get("customer_email") or "").strip(), safe="")
-            except Exception:
-                pass
         return redirect(signup_url)
     import stripe
     currency = _parse_currency(request)
@@ -339,10 +453,14 @@ def captions_checkout_subscription():
     if not Config.STRIPE_SECRET_KEY or not price_id:
         return jsonify({"error": "Subscription not configured (STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID)"}), 503
     stripe.api_key = Config.STRIPE_SECRET_KEY
+    target_business_key = _target_business_key_from_request(copy_from, explicit_business_key, business_name_raw)
     # Prevent multiple active Captions subscriptions for the same account (each checkout = new Stripe sub + new order row).
-    if customer and (customer.get("email") or "").strip():
+    if target_business_key and customer and (customer.get("email") or "").strip():
         try:
-            if _customer_has_blocking_captions_subscription((customer.get("email") or "").strip().lower()):
+            if _customer_has_blocking_captions_subscription(
+                (customer.get("email") or "").strip().lower(),
+                target_business_key=target_business_key,
+            ):
                 return redirect(url_for("account_page") + "?subscription_duplicate=1")
         except Exception as e:
             print(f"[captions_checkout_subscription] duplicate guard failed (non-fatal): {e}")
@@ -355,6 +473,13 @@ def captions_checkout_subscription():
     metadata = {"product": "captions_subscription", "platforms": str(platforms), "include_stories": "1" if stories else "0"}
     if selected:
         metadata["selected_platforms"] = selected
+    if target_business_key.startswith("biz:"):
+        metadata["business_key"] = target_business_key[len("biz:"):]
+    normalized_business_name = _normalize_business_key(business_name_raw)
+    if normalized_business_name and not metadata.get("business_key"):
+        metadata["business_key"] = normalized_business_name
+    if business_name_raw:
+        metadata["business_name"] = business_name_raw[:120]
     if copy_from:
         metadata["copy_from"] = copy_from
         try:
@@ -364,6 +489,10 @@ def captions_checkout_subscription():
             one_off = None
         if not one_off:
             return jsonify({"error": "Base one-off order not found for this upgrade."}), 400
+        one_off_email = (one_off.get("customer_email") or "").strip().lower()
+        customer_email = (customer.get("email") or "").strip().lower()
+        if not one_off_email or not customer_email or one_off_email != customer_email:
+            return jsonify({"error": "You can only upgrade your own one-off order."}), 403
     if get_pack_now:
         # Safety guard: only allow immediate first subscription pack after the base one-off
         # has already been delivered, so customers are never charged twice for the same day.
@@ -673,11 +802,15 @@ def captions_intake_link():
                     selected_platforms = (meta.get("selected_platforms") or "").strip() or None
                     include_stories = str(meta.get("include_stories") or "").lower() in ("1", "true", "yes")
                     copy_from = (meta.get("copy_from") or "").strip() or None
+                    business_name = (meta.get("business_name") or "").strip() or None
+                    business_key = _normalize_business_key((meta.get("business_key") or "").strip())
                 else:
                     platforms_count = getattr(meta, "platforms", None)
                     selected_platforms = (getattr(meta, "selected_platforms", None) or "").strip() or None
                     include_stories = str(getattr(meta, "include_stories", "") or "").lower() in ("1", "true", "yes")
                     copy_from = (getattr(meta, "copy_from", None) or "").strip() or None
+                    business_name = (getattr(meta, "business_name", None) or "").strip() or None
+                    business_key = _normalize_business_key((getattr(meta, "business_key", None) or "").strip())
                 try:
                     platforms_count = max(1, int(platforms_count)) if platforms_count is not None else 1
                 except (TypeError, ValueError):
@@ -703,6 +836,15 @@ def captions_intake_link():
                     currency=currency,
                     upgraded_from_token=upgraded_from,
                 )
+                # Persist business context early (before full intake) so duplicate guard has stable matching keys.
+                if not business_name and business_key:
+                    business_name = business_key.replace("-", " ").title()
+                if business_name:
+                    try:
+                        order_service.update_intake_only(str(order.get("id")), {"business_name": business_name})
+                        order = order_service.get_by_id(str(order.get("id"))) or order
+                    except Exception:
+                        pass
                 print(f"[captions-intake-link] Created order from Stripe session session_id={session_id[:20]}...")
                 # Send intake email so customer gets it even if webhook never runs
                 _send_intake_email_for_order(order)
@@ -821,6 +963,7 @@ def _run_generation_and_deliver(order_id: str, *, force_redeliver: bool = False)
         print(f"[Captions] Order {order_id} already generating, skipping duplicate")
         return (True, None)
     intake = row.get("intake") or {}
+    token = (row.get("token") or "").strip()
     customer_email = (row.get("customer_email") or "").strip()
     if not customer_email:
         print(f"[Captions] No customer_email for order {order_id}, skipping")
@@ -872,8 +1015,12 @@ def _run_generation_and_deliver(order_id: str, *, force_redeliver: bool = False)
         base = (Config.BASE_URL or "").strip().rstrip("/")
         if not base.startswith("http"):
             base = "https://www.lumo22.com"
-        backup_captions_url = f"{base}/captions-download?t={token}&type=captions"
-        backup_stories_url = f"{base}/captions-download?t={token}&type=stories" if extra_attachments else None
+        if token:
+            backup_captions_url = f"{base}/api/captions-download?t={token}&type=captions"
+            backup_stories_url = f"{base}/api/captions-download?t={token}&type=stories" if extra_attachments else None
+        else:
+            backup_captions_url = f"{base}/account"
+            backup_stories_url = None
         if extra_attachments:
             body = (
                 "Hi,\n\nYour 30 Days of Social Media Captions and 30 Days of Story Ideas are ready. "
@@ -947,37 +1094,39 @@ def captions_delivery_status():
     Diagnostic: check config needed for caption generation and delivery.
     Returns JSON with status (no secrets). In production, requires ?secret=CRON_SECRET when set.
     """
-    if Config.is_production() and getattr(Config, "CRON_SECRET", None):
-        if request.args.get("secret", "").strip() != Config.CRON_SECRET:
-            return jsonify({"error": "Unauthorized"}), 401
-    from config import Config
-    provider = (getattr(Config, "AI_PROVIDER", None) or "openai").strip().lower()
-    ai_ok = False
-    ai_msg = ""
-    if provider == "anthropic":
-        key = (getattr(Config, "ANTHROPIC_API_KEY", None) or "").strip()
-        ai_ok = bool(key and len(key) > 20 and key.startswith("sk-ant"))
-        ai_msg = "ANTHROPIC_API_KEY: " + ("set" if ai_ok else "missing or invalid")
-    else:
-        key = (getattr(Config, "OPENAI_API_KEY", None) or "").strip()
-        ai_ok = bool(key and len(key) > 20 and key.startswith("sk-"))
-        ai_msg = "OPENAI_API_KEY: " + ("set" if ai_ok else "missing or invalid")
-    sg_key = (getattr(Config, "SENDGRID_API_KEY", None) or "").strip()
-    sg_ok = bool(sg_key and len(sg_key) > 20 and sg_key.startswith("SG."))
-    from_email = (getattr(Config, "FROM_EMAIL", None) or "").strip()
-    supabase_ok = bool(
-        (getattr(Config, "SUPABASE_URL", None) or "").strip()
-        and (getattr(Config, "SUPABASE_KEY", None) or "").strip()
-    )
-    return jsonify({
-        "ai_provider": provider,
-        "ai_ok": ai_ok,
-        "ai_msg": ai_msg,
-        "sendgrid_ok": sg_ok,
-        "from_email": from_email[:3] + "***" + from_email[-10:] if from_email and "@" in from_email else "(not set)",
-        "supabase_ok": supabase_ok,
-        "all_ok": ai_ok and sg_ok and bool(from_email) and supabase_ok,
-    }), 200
+    try:
+        if Config.is_production() and getattr(Config, "CRON_SECRET", None):
+            if request.args.get("secret", "").strip() != Config.CRON_SECRET:
+                return jsonify({"error": "Unauthorized"}), 401
+        provider = (getattr(Config, "AI_PROVIDER", None) or "openai").strip().lower()
+        ai_ok = False
+        ai_msg = ""
+        if provider == "anthropic":
+            key = (getattr(Config, "ANTHROPIC_API_KEY", None) or "").strip()
+            ai_ok = bool(key and len(key) > 20 and key.startswith("sk-ant"))
+            ai_msg = "ANTHROPIC_API_KEY: " + ("set" if ai_ok else "missing or invalid")
+        else:
+            key = (getattr(Config, "OPENAI_API_KEY", None) or "").strip()
+            ai_ok = bool(key and len(key) > 20 and key.startswith("sk-"))
+            ai_msg = "OPENAI_API_KEY: " + ("set" if ai_ok else "missing or invalid")
+        sg_key = (getattr(Config, "SENDGRID_API_KEY", None) or "").strip()
+        sg_ok = bool(sg_key and len(sg_key) > 20 and sg_key.startswith("SG."))
+        from_email = (getattr(Config, "FROM_EMAIL", None) or "").strip()
+        supabase_ok = bool(
+            (getattr(Config, "SUPABASE_URL", None) or "").strip()
+            and (getattr(Config, "SUPABASE_KEY", None) or "").strip()
+        )
+        return jsonify({
+            "ai_provider": provider,
+            "ai_ok": ai_ok,
+            "ai_msg": ai_msg,
+            "sendgrid_ok": sg_ok,
+            "from_email": from_email[:3] + "***" + from_email[-10:] if from_email and "@" in from_email else "(not set)",
+            "supabase_ok": supabase_ok,
+            "all_ok": ai_ok and sg_ok and bool(from_email) and supabase_ok,
+        }), 200
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)[:200]}), 500
 
 
 @captions_bp.route("/captions-deliver-test", methods=["GET"])
@@ -1150,6 +1299,13 @@ def _captions_intake_submit_impl(data):
         "include_stories": order_has_stories and (bool(data.get("include_stories")) or bool((order.get("intake") or {}).get("include_stories"))),
         "align_stories_to_captions": align_flag,
     }
+
+    launch_window_error = _validate_launch_event_window(
+        intake.get("launch_event_description") or "",
+        (order.get("pack_start_date") or "").strip(),
+    )
+    if launch_window_error:
+        return jsonify({"error": launch_window_error}), 400
 
     form_wants_stories = bool(data.get("include_stories"))
     if form_wants_stories and not order_has_stories:

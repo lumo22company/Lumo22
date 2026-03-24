@@ -188,7 +188,10 @@
           <p id="ca-required-note" style="margin: 0 0 1rem; font-size: 0.85rem; color: var(--lum-text-muted); display: none;">Required for subscription customers — you'll use this to manage billing and re-download captions.</p>
           <p id="ca-email-display" style="margin: 0 0 0.75rem; font-size: 0.9rem; color: var(--lum-text-muted); display: none;">Account for: <strong id="ca-email-text"></strong></p>
           <form id="create-account-form" style="max-width: 320px;">
-            <input type="hidden" id="ca-email" value="">
+            <label for="ca-email" style="display:block; font-size:0.9rem; margin-bottom:0.25rem;">Email</label>
+            <input type="email" id="ca-email" required autocomplete="email" style="width:100%; padding:0.5rem 0.75rem; margin-bottom:0.75rem; border-radius:6px; border:1px solid var(--lum-border);" placeholder="you@example.com">
+            <label for="ca-email-confirm" style="display:block; font-size:0.9rem; margin-bottom:0.25rem;">Confirm email</label>
+            <input type="email" id="ca-email-confirm" required autocomplete="email" style="width:100%; padding:0.5rem 0.75rem; margin-bottom:0.75rem; border-radius:6px; border:1px solid var(--lum-border);" placeholder="Re-enter your email">
             <label for="ca-password" style="display:block; font-size:0.9rem; margin-bottom:0.25rem;">Password (min 12 characters, include 1 number)</label>
             <input type="password" id="ca-password" required minlength="12" style="width:100%; padding:0.5rem 0.75rem; margin-bottom:0.75rem; border-radius:6px; border:1px solid var(--lum-border);" placeholder="At least 12 characters, 1 number">
             <label style="display:flex;align-items:flex-start;gap:0.5rem;font-size:0.85rem;cursor:pointer;margin:0 0 0.75rem;line-height:1.45;color:var(--lum-text-muted);">
@@ -366,6 +369,7 @@
         <label for="launch_event_description">Include dates or regular events.</label>
         <textarea id="launch_event_description" name="launch_event_description" data-testid="launch_event_description" placeholder="e.g. Valentine's sale 10–14 Feb, product launch 20 March, weekly tips every Tuesday" rows="4" style="min-height: 96px; resize: vertical;">{{ existing_intake.get('launch_event_description', '') }}</textarea>
         <p class="field-helper">Include dates for each (e.g. sale 10–14 Feb, launch 15 March). Multiple events? List them with dates.</p>
+        <p id="launch-date-hint" class="field-helper" style="display:none; color:#b45309; font-weight:600;"></p>
       </div>
       <div class="form-section">
         <h2>What do you usually talk about? <span style="color:#999;">(optional)</span></h2>
@@ -743,6 +747,8 @@
             var caEmail = document.getElementById('ca-email');
             var custEmail = (result.json.customer_email || '').trim().toLowerCase();
             if (caEmail && custEmail) { caEmail.value = custEmail; }
+            var caEmailConfirm = document.getElementById('ca-email-confirm');
+            if (caEmailConfirm && custEmail) { caEmailConfirm.value = custEmail; }
             var caEmailText = document.getElementById('ca-email-text');
             var caEmailDisplay = document.getElementById('ca-email-display');
             if (caEmailText && caEmailDisplay && custEmail) { caEmailText.textContent = result.json.customer_email || custEmail; caEmailDisplay.style.display = 'block'; }
@@ -937,14 +943,17 @@
         e.preventDefault();
         var emailEl = document.getElementById('ca-email');
         var email = (emailEl ? emailEl.value : '').trim();
+        var emailConfirmEl = document.getElementById('ca-email-confirm');
+        var emailConfirm = (emailConfirmEl ? emailConfirmEl.value : '').trim();
         var pwEl = document.getElementById('ca-password');
         var pw = pwEl ? pwEl.value : '';
         if (!email) { alert('Just need your email to continue.'); return; }
+        if (email.toLowerCase() !== emailConfirm.toLowerCase()) { alert('Email addresses do not match.'); return; }
         if (pw.length < 12 || !/\d/.test(pw)) { alert('Password must be at least 12 characters and include a number.'); return; }
         var caBtn = document.getElementById('ca-btn');
         if (caBtn) { caBtn.disabled = true; caBtn.textContent = 'Creating…'; }
         var caMo = document.getElementById('ca-marketing-opt-in');
-        fetch('/api/auth/create-account', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email.toLowerCase(), password: pw, marketing_opt_in: !!(caMo && caMo.checked) }) })
+        fetch('/api/auth/create-account', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email.toLowerCase(), email_confirm: emailConfirm.toLowerCase(), password: pw, marketing_opt_in: !!(caMo && caMo.checked) }) })
           .then(function(r) { return r.json(); })
           .then(function(data) {
             if (data.ok) {
@@ -1041,8 +1050,10 @@
         var reviewStep = document.getElementById('review-step');
         var reviewContent = document.getElementById('review-content');
         if (!form || !reviewStep || !reviewContent) return;
+      var launchHint = document.getElementById('launch-date-hint');
       var hintEl = document.getElementById('intake-validation-hint');
       if (hintEl) { hintEl.style.display = 'none'; hintEl.textContent = ''; }
+      if (launchHint) { launchHint.style.display = 'none'; launchHint.textContent = ''; }
         syncAudience();
         syncVoiceWords();
         if (document.querySelectorAll('.platform-btn, input[name="platform_cb"]').length) syncPlatforms();
@@ -1165,8 +1176,15 @@
             document.getElementById('ca-email').value = custEmail;
           } else {
             var errEl = document.getElementById('intake-error');
+            var launchHint = document.getElementById('launch-date-hint');
             var ctaEl = document.getElementById('intake-upgrade-cta');
             if (errEl) { errEl.textContent = result.json.error || 'Something didn\'t send — try again or email us at hello@lumo22.com.'; errEl.style.display = 'block'; }
+            if (launchHint && result.json && result.json.error && result.json.error.toLowerCase().indexOf("outside your next 30-day captions window") !== -1) {
+              launchHint.textContent = result.json.error;
+              launchHint.style.display = 'block';
+              var launchField = document.getElementById('launch_event_description');
+              if (launchField && launchField.scrollIntoView) launchField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
             if (ctaEl) {
               if (result.json.downgrade_required) {
                 var sym = result.json.new_price_symbol || '£';

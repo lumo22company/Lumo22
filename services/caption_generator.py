@@ -7,6 +7,7 @@ from config import Config
 from services.ai_provider import chat_completion
 from datetime import datetime, timedelta
 import re
+from difflib import SequenceMatcher
 
 # Month names for parsing key date from intake (e.g. "30th March", "March 30")
 _MONTH_NAMES = "january|february|march|april|may|june|july|august|september|october|november|december"
@@ -408,6 +409,173 @@ def _chunk_has_empty_blocks(content: str, include_hashtags: bool) -> bool:
     return False
 
 
+def _chunk_structure_error(
+    content: str,
+    day_start: int,
+    day_end: int,
+    expected_platform_count: int,
+    expected_platform_labels: Optional[list] = None,
+    include_hashtags: bool = True,
+    hashtag_min: int = 3,
+    hashtag_max: int = 10,
+) -> Optional[str]:
+    """
+    Return a validation error string for bad chunk structure, else None.
+    Enforces:
+    - every expected day heading appears once
+    - each day has exactly expected_platform_count platform blocks
+    - no duplicate platform label within the same day
+    - hashtags count and basic content sanity
+    - near-duplicate caption text within the same chunk
+    """
+    if not content:
+        return "Chunk is empty."
+    expected_days = set(range(day_start, day_end + 1))
+    day_matches = list(
+        re.finditer(r"^##\s*Day\s+(\d+)\s*[—\-].*$", content, re.I | re.M)
+    )
+    found_days = []
+    blocks_by_day = {}
+    for idx, m in enumerate(day_matches):
+        day_num = int(m.group(1))
+        found_days.append(day_num)
+        start = m.end()
+        end = day_matches[idx + 1].start() if idx + 1 < len(day_matches) else len(content)
+        blocks_by_day[day_num] = content[start:end]
+
+    missing = sorted(expected_days - set(found_days))
+    if missing:
+        return f"Missing day headings in chunk: {missing}"
+    duplicates = sorted({d for d in found_days if found_days.count(d) > 1 and d in expected_days})
+    if duplicates:
+        return f"Duplicate day headings in chunk: {duplicates}"
+    unexpected = sorted(d for d in set(found_days) if d not in expected_days)
+    if unexpected:
+        return f"Unexpected day headings in chunk: {unexpected}"
+
+    def _canonical_platform_label(raw: str) -> str:
+        s = (raw or "").replace("*", "").strip().lower()
+        if not s:
+            return ""
+        # Normalize punctuation/joins for robust dedupe checks.
+        s = re.sub(r"\s*&\s*", " and ", s)
+        s = re.sub(r"\s+", " ", s).strip()
+        # Canonicalize IG+FB combinations.
+        compact = s.replace(" ", "")
+        if compact in ("instagramandfacebook", "facebookandinstagram"):
+            return "instagram and facebook"
+        # If expected platform list exists, map close variants to expected labels.
+        for p in (expected_platform_labels or []):
+            pp = (p or "").strip().lower()
+            pp_norm = re.sub(r"\s*&\s*", " and ", pp)
+            pp_norm = re.sub(r"\s+", " ", pp_norm).strip()
+            if pp_norm and (s == pp_norm or s.replace(" ", "") == pp_norm.replace(" ", "")):
+                return pp_norm
+        return s
+
+    def _extract_blocks(day_block: str) -> list:
+        blocks = []
+        lines = day_block.splitlines()
+        i = 0
+        while i < len(lines):
+            line = lines[i].strip()
+            m = re.match(r"(?:\*\*)?Platform(?:\*\*)?\s*:\s*(.+)", line, re.I)
+            if not m:
+                i += 1
+                continue
+            platform_raw = (m.group(1) or "").strip()
+            start = i + 1
+            j = start
+            while j < len(lines):
+                if re.match(r"(?:\*\*)?Platform(?:\*\*)?\s*:\s*(.+)", lines[j].strip(), re.I):
+                    break
+                j += 1
+            body = "\n".join(lines[start:j]).strip()
+            blocks.append({"platform": platform_raw, "body": body})
+            i = j
+        return blocks
+
+    def _extract_caption_and_hashtags(block_body: str) -> Tuple[str, str]:
+        body = block_body or ""
+        cap_match = re.search(r"(?:\*\*)?Caption(?:\*\*)?\s*:\s*(.+?)(?=(?:\n\s*(?:\*\*)?Hashtags?(?:\*\*)?\s*:)|\Z)", body, re.I | re.S)
+        caption = (cap_match.group(1).strip() if cap_match else "").strip()
+        hash_match = re.search(r"(?:\*\*)?Hashtags?(?:\*\*)?\s*:\s*(.+)$", body, re.I | re.S)
+        hashtags = (hash_match.group(1).strip() if hash_match else "").strip()
+        return caption, hashtags
+
+    def _normalize_caption_for_similarity(text: str) -> str:
+        t = (text or "").lower()
+        t = re.sub(r"#[a-z0-9_]+", "", t)
+        t = re.sub(r"\s+", " ", t)
+        return t.strip()
+
+    def _has_placeholder(text: str) -> bool:
+        t = (text or "").lower()
+        return any(k in t for k in ["lorem ipsum", "tbd", "[insert", "coming soon", "placeholder"])
+
+    def _count_hashtags(text: str) -> int:
+        if not text:
+            return 0
+        return len(re.findall(r"#[a-z0-9_]+", text, re.I))
+
+    similarity_texts = []
+    for day_num in sorted(expected_days):
+        block = blocks_by_day.get(day_num, "")
+        blocks = _extract_blocks(block)
+        platforms = []
+        seen = set()
+        dup_platforms = []
+        if len(blocks) != expected_platform_count:
+            return (
+                f"Day {day_num} has {len(blocks)} platform block(s); "
+                f"expected {expected_platform_count}"
+            )
+        for b in blocks:
+            label = _canonical_platform_label(b.get("platform") or "")
+            if not label:
+                continue
+            platforms.append(label)
+            if label in seen:
+                dup_platforms.append(label)
+            else:
+                seen.add(label)
+            caption, hashtags = _extract_caption_and_hashtags(b.get("body") or "")
+            if not caption:
+                return f"Day {day_num} ({label}) missing caption text"
+            # Basic quality guardrails (platform-aware minimum length).
+            min_len = 80
+            if label == "tiktok":
+                # TikTok captions are intentionally short/punchy (1-3 short lines).
+                min_len = 30
+            if len(caption) < min_len:
+                return f"Day {day_num} ({label}) caption too short"
+            if _has_placeholder(caption):
+                return f"Day {day_num} ({label}) caption contains placeholder text"
+            if include_hashtags:
+                n_hash = _count_hashtags(hashtags)
+                if n_hash < hashtag_min or n_hash > hashtag_max:
+                    return (
+                        f"Day {day_num} ({label}) has {n_hash} hashtags; "
+                        f"expected {hashtag_min}-{hashtag_max}"
+                    )
+            similarity_texts.append((day_num, label, _normalize_caption_for_similarity(caption)))
+        if dup_platforms:
+            return f"Day {day_num} has duplicate platform blocks: {sorted(set(dup_platforms))}"
+    # Near-duplicate detection across whole chunk.
+    for i in range(len(similarity_texts)):
+        d1, p1, t1 = similarity_texts[i]
+        for j in range(i + 1, len(similarity_texts)):
+            d2, p2, t2 = similarity_texts[j]
+            if not t1 or not t2:
+                continue
+            ratio = SequenceMatcher(None, t1, t2).ratio()
+            if ratio >= 0.92:
+                return (
+                    f"Near-duplicate captions detected: Day {d1} ({p1}) and Day {d2} ({p2})"
+                )
+    return None
+
+
 def _validate_caption_quality(
     captions_md: str, intake: Dict[str, Any], pack_start_date: str
 ) -> list:
@@ -491,10 +659,15 @@ def _validate_story_quality(stories_md: str) -> list:
     Does not block delivery; caller may log warnings.
     """
     warnings = []
-    if not stories_md or "**Day" not in stories_md:
+    if not stories_md or not re.search(r"(?:\*\*)?Day\s+\d+\s*:(?:\*\*)?", stories_md, re.I):
         return warnings
     found_days = set()
-    for m in re.finditer(r"\*\*Day\s+(\d+)\s*:\*\*\s*(.*?)(?=\s*\*\*Day\s+\d+\s*:\*\*|$)", stories_md, re.I | re.DOTALL):
+    day_pat = r"(?:\*\*)?Day\s+(\d+)\s*:(?:\*\*)?"
+    for m in re.finditer(
+        day_pat + r"\s*(.*?)(?=\s*" + day_pat + r"|$)",
+        stories_md,
+        re.I | re.DOTALL,
+    ):
         day_num = int(m.group(1))
         content = (m.group(2) or "").strip()
         if 1 <= day_num <= 30:
@@ -512,6 +685,83 @@ def _validate_story_quality(stories_md: str) -> list:
     if missing:
         warnings.append(f"Quality check: Story ideas missing days: {sorted(missing)[:10]}{'...' if len(missing) > 10 else ''}.")
     return warnings
+
+
+def _stories_structure_error(
+    stories_md: str,
+    *,
+    hashtag_min: int = 3,
+    hashtag_max: int = 10,
+) -> Optional[str]:
+    """
+    Strict validator for stories markdown section.
+    Enforces:
+    - exactly 30 story days (1..30), each once
+    - each day has Idea, Suggested wording, Story hashtags
+    - hashtag count per day within bounds
+    - no near-duplicate suggested wording across days
+    """
+    if not stories_md or not re.search(r"(?:\*\*)?Day\s+\d+\s*:(?:\*\*)?", stories_md, re.I):
+        return "Stories output is empty or missing day entries"
+
+    day_pat = r"(?:\*\*)?Day\s+(\d+)\s*:(?:\*\*)?"
+    day_entries = list(
+        re.finditer(
+            day_pat + r"\s*(.*?)(?=\s*" + day_pat + r"|$)",
+            stories_md,
+            re.I | re.DOTALL,
+        )
+    )
+    if len(day_entries) != 30:
+        return f"Stories output has {len(day_entries)} day entries; expected 30"
+
+    day_nums = []
+    suggested_by_day = {}
+    for m in day_entries:
+        day_num = int(m.group(1))
+        content = (m.group(2) or "").strip()
+        day_nums.append(day_num)
+        if not content:
+            return f"Story Day {day_num} has no content"
+
+        idea_m = re.search(r"\bIdea\s*:\s*(.+?)(?=\bSuggested wording\s*:|\Z)", content, re.I | re.S)
+        sugg_m = re.search(r"\bSuggested wording\s*:\s*(.+?)(?=\bStory hashtags\s*:|\bHashtags?\s*:|\Z)", content, re.I | re.S)
+        hash_m = re.search(r"\b(?:Story hashtags|Hashtags?)\s*:\s*(.+)$", content, re.I | re.S)
+        idea = (idea_m.group(1).strip() if idea_m else "")
+        suggested = (sugg_m.group(1).strip() if sugg_m else "")
+        hashtags = (hash_m.group(1).strip() if hash_m else "")
+
+        if not idea:
+            return f"Story Day {day_num} missing Idea"
+        if not suggested:
+            return f"Story Day {day_num} missing Suggested wording"
+        if not hashtags:
+            return f"Story Day {day_num} missing Story hashtags"
+
+        hashtag_count = len(re.findall(r"#[a-z0-9_]+", hashtags, re.I))
+        if hashtag_count < hashtag_min or hashtag_count > hashtag_max:
+            return (
+                f"Story Day {day_num} has {hashtag_count} hashtags; "
+                f"expected {hashtag_min}-{hashtag_max}"
+            )
+
+        normalized = re.sub(r"\s+", " ", suggested.lower()).strip()
+        suggested_by_day[day_num] = normalized
+
+    if sorted(day_nums) != list(range(1, 31)):
+        return "Stories output does not contain exactly Day 1 to Day 30 once each"
+
+    # Near-duplicate suggested wording check.
+    pairs = sorted(suggested_by_day.items(), key=lambda x: x[0])
+    for i in range(len(pairs)):
+        d1, t1 = pairs[i]
+        for j in range(i + 1, len(pairs)):
+            d2, t2 = pairs[j]
+            if not t1 or not t2:
+                continue
+            if SequenceMatcher(None, t1, t2).ratio() >= 0.92:
+                return f"Near-duplicate story wording detected: Day {d1} and Day {d2}"
+    return None
 
 
 class CaptionGenerator:
@@ -541,6 +791,13 @@ class CaptionGenerator:
         include_hashtags = intake.get("include_hashtags", True)
         if isinstance(include_hashtags, str) and include_hashtags.lower() in ("false", "0", "no", "off"):
             include_hashtags = False
+        platform_raw = (intake.get("platform") or "").strip()
+        platform_list = [p.strip() for p in platform_raw.split(",") if p.strip()]
+        expected_platform_count = max(1, len(platform_list)) if platform_list else 1
+        hashtag_min = max(1, min(30, int(intake.get("hashtag_min") or 3)))
+        hashtag_max = max(0, min(30, int(intake.get("hashtag_max") or 10)))
+        if hashtag_min > hashtag_max:
+            hashtag_max = hashtag_min
         system = _build_system_prompt(intake)
         header = _build_doc_header(intake, pack_start_date=start_str)
         parts = [header]
@@ -554,9 +811,25 @@ class CaptionGenerator:
             )
             if not content:
                 raise RuntimeError(f"AI returned empty content for days {day_start}-{day_end}")
-            # Retry once if chunk has empty Caption/Hashtags blocks (incomplete output)
-            if _chunk_has_empty_blocks(content, include_hashtags):
-                retry_user = user + "\n\nIMPORTANT: Your previous response had empty Caption or Hashtags lines. You must fill every **Caption:** and every **Hashtags:** (when requested) with real, copy-paste-ready content for every platform for every day in this range. No exceptions."
+            # Retry once if chunk has incomplete/invalid structure (empty blocks, missing day/platform, duplicates).
+            chunk_err = _chunk_structure_error(
+                content,
+                day_start,
+                day_end,
+                expected_platform_count,
+                expected_platform_labels=platform_list,
+                include_hashtags=bool(include_hashtags),
+                hashtag_min=hashtag_min,
+                hashtag_max=hashtag_max,
+            )
+            if _chunk_has_empty_blocks(content, include_hashtags) or chunk_err:
+                reason = chunk_err or "empty Caption/Hashtags lines"
+                retry_user = user + (
+                    "\n\nIMPORTANT: Your previous response was invalid (" + reason + "). "
+                    "Regenerate this range exactly with strict structure: "
+                    "each expected day heading once, one platform block per platform per day, "
+                    "no duplicate platform blocks in a day, and no empty **Caption:** or **Hashtags:** lines."
+                )
                 content = chat_completion(
                     system=system,
                     user=retry_user,
@@ -565,8 +838,21 @@ class CaptionGenerator:
                 )
                 if not content:
                     raise RuntimeError(f"AI returned empty content on retry for days {day_start}-{day_end}")
-                if _chunk_has_empty_blocks(content, include_hashtags):
-                    raise RuntimeError(f"AI still returned incomplete content for days {day_start}-{day_end} (empty Caption or Hashtags). Please try again.")
+                chunk_err = _chunk_structure_error(
+                    content,
+                    day_start,
+                    day_end,
+                    expected_platform_count,
+                    expected_platform_labels=platform_list,
+                    include_hashtags=bool(include_hashtags),
+                    hashtag_min=hashtag_min,
+                    hashtag_max=hashtag_max,
+                )
+                if _chunk_has_empty_blocks(content, include_hashtags) or chunk_err:
+                    suffix = f" ({chunk_err})" if chunk_err else " (empty Caption or Hashtags)"
+                    raise RuntimeError(
+                        f"AI still returned incomplete content for days {day_start}-{day_end}{suffix}. Please try again."
+                    )
             parts.append(content)
         result = "\n".join(parts)
 
@@ -590,6 +876,22 @@ class CaptionGenerator:
                     pack_start_date=start_str,
                 )
             if stories_md:
+                story_err = _stories_structure_error(
+                    stories_md,
+                    hashtag_min=hashtag_min,
+                    hashtag_max=hashtag_max,
+                )
+                if story_err:
+                    stories_md = self._generate_stories_with_retry(
+                        intake,
+                        align_stories=align_stories,
+                        captions_md=result if align_stories else None,
+                        is_subscription_variety=bool(previous_pack_themes),
+                        pack_start_date=start_str,
+                        hashtag_min=hashtag_min,
+                        hashtag_max=hashtag_max,
+                        reason=story_err,
+                    )
                 result = result + "\n\n" + stories_md
                 for w in _validate_story_quality(stories_md):
                     print(f"[CaptionGenerator] Story quality warning: {w}")
@@ -600,11 +902,64 @@ class CaptionGenerator:
 
         return result
 
+    def _generate_stories_with_retry(
+        self,
+        intake: Dict[str, Any],
+        *,
+        align_stories: bool,
+        captions_md: Optional[str],
+        is_subscription_variety: bool,
+        pack_start_date: Optional[str],
+        hashtag_min: int,
+        hashtag_max: int,
+        reason: str,
+    ) -> str:
+        """
+        Retry stories generation once with strict format instructions.
+        Raises RuntimeError if still invalid.
+        """
+        if align_stories:
+            stories_md = self._generate_stories_aligned(
+                intake,
+                captions_md or "",
+                is_subscription_variety=is_subscription_variety,
+                pack_start_date=pack_start_date,
+                strict_note=(
+                    "Previous stories output failed validation: "
+                    + reason
+                    + ". Regenerate exactly Day 1-30 once each with complete Idea/Suggested wording/Story hashtags."
+                ),
+            )
+        else:
+            stories_md = self._generate_stories(
+                intake,
+                is_subscription_variety=is_subscription_variety,
+                pack_start_date=pack_start_date,
+                strict_note=(
+                    "Previous stories output failed validation: "
+                    + reason
+                    + ". Regenerate exactly Day 1-30 once each with complete Idea/Suggested wording/Story hashtags."
+                ),
+            )
+        if not stories_md:
+            raise RuntimeError("Stories generation failed on retry (empty output)")
+        story_err = _stories_structure_error(
+            stories_md,
+            hashtag_min=hashtag_min,
+            hashtag_max=hashtag_max,
+        )
+        if story_err:
+            raise RuntimeError(
+                f"Stories output invalid after retry (initial: {reason}; retry: {story_err})"
+            )
+        return stories_md
+
     def _generate_stories(
         self,
         intake: Dict[str, Any],
         is_subscription_variety: bool = False,
         pack_start_date: Optional[str] = None,
+        strict_note: Optional[str] = None,
     ) -> str:
         """Generate 30 one-line Story prompts for Instagram/Facebook.
 
@@ -652,6 +1007,7 @@ CRITICAL — Use ONLY this business name when naming the brand in Idea or Sugges
 Do not invent, substitute, or use example/tagline business names from training (e.g. do not replace the real name with a slogan or another company). You may use "we" / "us" / "our" where natural; if the business name appears, it must be exactly "{business}".
 Ground every suggestion in their intake (offer, audience, goal)—not generic industries from examples."""
 
+        strict_block = f"\n\nSTRICT FIX NOTE: {strict_note}\n" if strict_note else ""
         prompt = f"""Generate 30 Story prompts for Instagram/Facebook Stories. One per day (Day 1–30). Each day must have exactly three parts: Idea, Suggested wording, Story hashtags.
 
 Quality bar: Every story set must be as tailored and specific as a premium content strategist would deliver for this exact business—no generic filler, no wrong dates, no off-brand tone. Match the standard of a highly polished 30-day story plan.
@@ -680,7 +1036,8 @@ Output format — markdown only, one line per day with all three parts on that l
 **Day 30:** Idea: [short idea]. Suggested wording: [suggestion, no quotes]. Story hashtags: #tag1 #tag2 #tag3
 ---
 
-Use the exact labels "Idea:", "Suggested wording:", and "Story hashtags:" on every line. Do not put quotation marks around the Suggested wording content. Output the complete list only. No preamble."""
+Use the exact labels "Idea:", "Suggested wording:", and "Story hashtags:" on every line. Do not put quotation marks around the Suggested wording content. Output the complete list only. No preamble.
+{strict_block}"""
         try:
             content = chat_completion(
                 system=(
@@ -703,6 +1060,7 @@ Use the exact labels "Idea:", "Suggested wording:", and "Story hashtags:" on eve
         captions_md: str,
         is_subscription_variety: bool = False,
         pack_start_date: Optional[str] = None,
+        strict_note: Optional[str] = None,
     ) -> str:
         """Generate 30 Story prompts with explicit day-by-day alignment to captions.
 
@@ -769,6 +1127,7 @@ CRITICAL — Use ONLY this business name when naming the brand in Idea or Sugges
 Do not invent, substitute, or use example/tagline business names from training. If the business name appears, it must be exactly "{business}".
 Ground every suggestion in their intake and that day's caption theme—not generic industries from examples."""
 
+        strict_block = f"\n\nSTRICT FIX NOTE: {strict_note}\n" if strict_note else ""
         prompt = f"""Generate 30 Story prompts for Instagram/Facebook Stories. One per day (Day 1–30). Each day must have exactly three parts: Idea, Suggested wording, Story hashtags.
 
 Quality bar: Every story set must be as tailored and specific as a premium content strategist would deliver for this exact business—no generic filler, no wrong dates, no off-brand tone. Each day's story must support that day's caption theme.
@@ -802,7 +1161,8 @@ Output format — markdown only, one line per day with all three parts on that l
 **Day 30:** Idea: [short idea]. Suggested wording: [suggestion, no quotes]. Story hashtags: #tag1 #tag2 #tag3
 ---
 
-Use the exact labels "Idea:", "Suggested wording:", and "Story hashtags:" on every line. Do not put quotation marks around the Suggested wording content. Output the complete list only. No preamble."""
+Use the exact labels "Idea:", "Suggested wording:", and "Story hashtags:" on every line. Do not put quotation marks around the Suggested wording content. Output the complete list only. No preamble.
+{strict_block}"""
 
         try:
             content = chat_completion(
