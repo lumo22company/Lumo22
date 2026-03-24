@@ -27,8 +27,6 @@
     .auth-page .link { margin-top: 1.5rem; text-align: center; }
     .auth-page .link a { color: var(--lum-gold); text-decoration: none; }
     .auth-page .link a:hover { text-decoration: underline; }
-    .auth-page .hint { margin: -0.75rem 0 0.85rem; font-size: 0.82rem; color: var(--lum-text-muted); }
-    .auth-page .hint.ok { color: #7ddc85; }
     .auth-page .marketing-optin-row { display:flex; align-items:flex-start; gap:0.5rem; font-size:0.9rem; cursor:pointer; margin:0 0 1.25rem; line-height:1.45; padding-left:0; width:100%; }
     .auth-page .marketing-optin-row input[type="checkbox"] { width:auto; margin:0.2rem 0 0 0; padding:0; flex-shrink:0; }
     .pw-toggle { margin: -0.75rem 0 1rem; text-align: right; }
@@ -59,7 +57,6 @@
       <label for="password">Password <span style="font-weight:400;color:var(--lum-text-muted);">(min 12 characters, include 1 number)</span></label>
       <input type="password" id="password" name="password" required minlength="12" autocomplete="new-password" placeholder="At least 12 characters, 1 number">
       <div class="pw-toggle"><button type="button" id="toggle-password">Show password</button></div>
-      <p id="pw-hint" class="hint">Use at least 12 characters and include 1 number.</p>
 
       <label for="password_confirm">Confirm password</label>
       <input type="password" id="password_confirm" name="password_confirm" required minlength="12" autocomplete="new-password">
@@ -96,16 +93,7 @@
       var btn = document.getElementById('btn');
       var msg = document.getElementById('msg');
       var pwInput = document.getElementById('password');
-      var pwHint = document.getElementById('pw-hint');
       var pwToggle = document.getElementById('toggle-password');
-      if (pwInput && pwHint) {
-        pwInput.addEventListener('input', function() {
-          var v = pwInput.value || '';
-          var strongEnough = v.length >= 12 && /\d/.test(v);
-          pwHint.className = strongEnough ? 'hint ok' : 'hint';
-          pwHint.textContent = strongEnough ? 'Good password strength for this account.' : 'Use at least 12 characters and include 1 number.';
-        });
-      }
       if (pwToggle && pwInput) {
         pwToggle.addEventListener('click', function() {
           var showing = pwInput.type === 'text';
