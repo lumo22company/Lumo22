@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Something went wrong | Lumo 22</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v={{ asset_version }}">
+</head>
+<body class="lumo-landing">
+  <nav class="lumo-nav lumo-nav-scrolled">
+    <div class="lumo-nav-left">
+      <a href="/" class="lumo-nav-logo">Lumo 22</a>
+      <a href="/captions" class="lumo-nav-link">Captions</a>
+    </div>
+    <a href="/captions#pricing" class="lumo-nav-cta">View plans</a>
+  </nav>
+
+  <main id="main-content">
+  <section class="lumo-section" style="padding-top: 10rem; min-height: 50vh; text-align: center;">
+    <h1 class="lumo-section-title" style="margin-bottom: 0.5rem;">Something went wrong</h1>
+    <p class="lumo-section-desc" style="max-width: 400px; margin: 0 auto 2rem;">We're sorry — something went wrong on our end. Please try again or contact us at hello@lumo22.com.</p>
+    <a href="/" class="lumo-btn-primary btn-cta-account-style">Back to home</a>
+    <p style="margin-top: 2rem;">
+      <a href="/captions" style="color: inherit; text-decoration: underline;">Captions</a> ·
+      <a href="/captions#pricing" style="color: inherit; text-decoration: underline;">Pricing</a>
+    </p>
+  </section>
+  </main>
+
+  {% include '_footer.html' %}
+</body>
+</html>
