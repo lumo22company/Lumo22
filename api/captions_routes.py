@@ -963,6 +963,7 @@ def _run_generation_and_deliver(order_id: str, *, force_redeliver: bool = False)
         print(f"[Captions] Order {order_id} already generating, skipping duplicate")
         return (True, None)
     intake = row.get("intake") or {}
+    token = (row.get("token") or "").strip()
     customer_email = (row.get("customer_email") or "").strip()
     if not customer_email:
         print(f"[Captions] No customer_email for order {order_id}, skipping")
@@ -1014,8 +1015,12 @@ def _run_generation_and_deliver(order_id: str, *, force_redeliver: bool = False)
         base = (Config.BASE_URL or "").strip().rstrip("/")
         if not base.startswith("http"):
             base = "https://www.lumo22.com"
-        backup_captions_url = f"{base}/captions-download?t={token}&type=captions"
-        backup_stories_url = f"{base}/captions-download?t={token}&type=stories" if extra_attachments else None
+        if token:
+            backup_captions_url = f"{base}/captions-download?t={token}&type=captions"
+            backup_stories_url = f"{base}/captions-download?t={token}&type=stories" if extra_attachments else None
+        else:
+            backup_captions_url = f"{base}/account"
+            backup_stories_url = None
         if extra_attachments:
             body = (
                 "Hi,\n\nYour 30 Days of Social Media Captions and 30 Days of Story Ideas are ready. "
