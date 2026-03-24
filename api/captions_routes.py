@@ -967,7 +967,11 @@ def _run_generation_and_deliver(order_id: str, *, force_redeliver: bool = False)
     customer_email = (row.get("customer_email") or "").strip()
     if not customer_email:
         print(f"[Captions] No customer_email for order {order_id}, skipping")
-        order_service.set_failed(order_id)
+        try:
+            order_service.record_delivery_failure(order_id, "No customer_email for order")
+        except Exception as rec_err:
+            print(f"[Captions] record_delivery_failure failed: {rec_err}")
+            order_service.set_failed(order_id)
         return (False, "No customer_email for order")
 
     # For subscriptions, pass previous pack themes so this month varies (avoid repetition)
@@ -1016,6 +1020,7 @@ def _run_generation_and_deliver(order_id: str, *, force_redeliver: bool = False)
         if not base.startswith("http"):
             base = "https://www.lumo22.com"
         if token:
+            # Blueprint url_prefix is /api — links must match or email clicks 404
             backup_captions_url = f"{base}/api/captions-download?t={token}&type=captions"
             backup_stories_url = f"{base}/api/captions-download?t={token}&type=stories" if extra_attachments else None
         else:
@@ -1082,9 +1087,13 @@ def _run_generation_and_deliver(order_id: str, *, force_redeliver: bool = False)
         print(f"[Captions] DELIVERY_FAILED order_id={order_id} error={err_msg}")
         traceback.print_exc()
         try:
-            order_service.set_failed(order_id)
-        except Exception as set_err:
-            print(f"[Captions] set_failed also failed: {set_err}")
+            order_service.record_delivery_failure(order_id, err_msg)
+        except Exception as rec_err:
+            print(f"[Captions] record_delivery_failure failed: {rec_err}")
+            try:
+                order_service.set_failed(order_id)
+            except Exception as set_err:
+                print(f"[Captions] set_failed also failed: {set_err}")
         return (False, err_msg)
 
 
@@ -1197,6 +1206,74 @@ def captions_deliver_test():
     except Exception as e:
         err = _normalize_error(e)
         return jsonify({"ok": False, "error": err}), 200
+
+
+@captions_bp.route("/captions-delivery-health", methods=["GET"])
+def captions_delivery_health():
+    """
+    Operational snapshot: recent order statuses, auto-retry queue, recent failures.
+    Same auth as /api/captions-deliver-test (?secret= when CAPTIONS_DELIVER_TEST_SECRET is set).
+    Requires DB columns from database_caption_orders_delivery_retry.sql for full detail.
+    """
+    test_secret = (getattr(Config, "CAPTIONS_DELIVER_TEST_SECRET", None) or "").strip()
+    if Config.is_production() and not test_secret:
+        return jsonify({"ok": False, "error": "Set CAPTIONS_DELIVER_TEST_SECRET in environment."}), 403
+    if test_secret:
+        provided = (request.args.get("secret") or "").strip()
+        if not provided or provided != test_secret:
+            return jsonify({"ok": False, "error": "Missing or invalid ?secret="}), 403
+    try:
+        from collections import Counter
+
+        from services.caption_delivery_recovery import CAPTIONS_MAX_AUTO_DELIVERY_FAILURES
+        from services.caption_order_service import CaptionOrderService
+
+        svc = CaptionOrderService()
+        recent = (
+            svc.client.table(svc.table)
+            .select("*")
+            .order("updated_at", desc=True)
+            .limit(80)
+            .execute()
+        )
+        rows = recent.data or []
+        status_counts = Counter((r.get("status") or "").lower() for r in rows)
+        stuck = svc.get_orders_needing_first_delivery_recovery(limit=15)
+        stuck_summary = []
+        for o in stuck:
+            stuck_summary.append(
+                {
+                    "id": str(o.get("id")),
+                    "status": o.get("status"),
+                    "email": o.get("customer_email"),
+                    "delivery_failure_count": o.get("delivery_failure_count"),
+                    "delivery_last_error": ((o.get("delivery_last_error") or "")[:200] or None),
+                    "has_captions_md": bool((o.get("captions_md") or "").strip()),
+                }
+            )
+        failed_recent = [
+            {
+                "id": str(r.get("id")),
+                "email": r.get("customer_email"),
+                "updated_at": r.get("updated_at"),
+                "delivery_failure_count": r.get("delivery_failure_count"),
+                "delivery_last_error": ((r.get("delivery_last_error") or "")[:300] or None),
+            }
+            for r in rows
+            if (r.get("status") or "").lower() == "failed"
+        ][:12]
+        return jsonify(
+            {
+                "ok": True,
+                "max_auto_delivery_failures_before_stop": CAPTIONS_MAX_AUTO_DELIVERY_FAILURES,
+                "recent_sample_size": len(rows),
+                "status_counts": dict(status_counts),
+                "recovery_queue": stuck_summary,
+                "recent_failed": failed_recent,
+            }
+        ), 200
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)[:500]}), 500
 
 
 @captions_bp.route("/captions-intake", methods=["POST"])
@@ -1700,8 +1777,8 @@ def captions_resend_delivery():
         base = (Config.BASE_URL or "").strip().rstrip("/")
         if not base.startswith("http"):
             base = "https://www.lumo22.com"
-        backup_captions_url = f"{base}/captions-download?t={safe_token}&type=captions"
-        backup_stories_url = f"{base}/captions-download?t={safe_token}&type=stories" if include_stories else ""
+        backup_captions_url = f"{base}/api/captions-download?t={safe_token}&type=captions"
+        backup_stories_url = f"{base}/api/captions-download?t={safe_token}&type=stories" if include_stories else ""
         has_sub = bool(order.get("stripe_subscription_id"))
 
         if extra_attachments:

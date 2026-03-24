@@ -34,8 +34,12 @@ def test_run_generation_and_deliver_uses_order_token_for_backup_links():
         def generate(self, intake, previous_pack_themes=None, pack_start_date=None):
             return "## Day 1 - Authority\n**Platform:** Instagram & Facebook\n**Caption:** Hello world caption text long enough for tests.\n**Hashtags:** #a #b #c"
 
+    captured = {}
+
     class FakeNotif:
         def send_email_with_attachment(self, *args, **kwargs):
+            captured["html"] = kwargs.get("html_content") or ""
+            captured["body"] = (args[2] if len(args) > 2 else "") or ""
             return (True, None)
 
     with patch("services.caption_order_service.CaptionOrderService", FakeOrderService), \
@@ -52,3 +56,5 @@ def test_run_generation_and_deliver_uses_order_token_for_backup_links():
 
     assert ok is True
     assert err is None
+    combined = captured.get("html", "") + captured.get("body", "")
+    assert "/api/captions-download?t=tok-123" in combined

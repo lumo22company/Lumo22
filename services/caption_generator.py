@@ -175,7 +175,9 @@ Output format: You must respond with a single markdown document. Structure:
 2. Subtitle: "[Business name from intake, or a brief identifier] | [Current month year]"
 3. Section "---" then "INTAKE SUMMARY" then "---" then bullet lines: Business, Audience, Voice, Platform(s), Goal (from the intake).
 4. Section "---" then "CAPTIONS" then "---"
-5. For each day (1–30): "## Day N — [Category]" then for each platform (see below) repeat: "**Platform:** [exact platform label]" then "**Caption:** [first line of caption]" then a blank line then the full caption text (ready to copy-paste). If HASHTAGS_REQUESTED is true, then a blank line then "**Hashtags:** [MIN–MAX hashtags for this caption, comma-separated or space-separated]". Then "---" only after all platforms for that day are done. If HASHTAGS_REQUESTED is false, do NOT include any **Hashtags:** line.
+5. For each day (1–30): "## Day N — [Category]" then for each platform (see below) repeat: "**Platform:** [exact platform label]" then "**Caption:**" then the full caption as one block: 2–6 short paragraphs (non-TikTok) or 1–3 short lines (TikTok only)—everything the client should paste into the post, with no separate "hook line" only. If HASHTAGS_REQUESTED is true, then a blank line then "**Hashtags:** [MIN–MAX hashtags for this caption, comma-separated or space-separated]". Then "---" only after all platforms for that day are done. If HASHTAGS_REQUESTED is false, do NOT include any **Hashtags:** line.
+
+Standalone clarity (CRITICAL): Every caption must make sense on its own in the feed. Do not write dangling one-liners that rely on unstated context. Avoid opening with bare "That's…", "This is…", or "Here's the difference…" unless the same caption immediately explains what you mean with concrete detail (what you offer, who it's for, what makes it different). Authority and Educational posts still need specifics—location, service, guest experience, or a clear insight—not a vague punchline.
 
 CRITICAL — Completeness: Every day (1–30) must have exactly one caption block per platform. Never leave a **Caption:** or **Hashtags:** line empty. Every platform for every day must have a full, copy-paste-ready caption (2–6 short paragraphs, or 1–3 lines for TikTok). If HASHTAGS_REQUESTED is true, every caption must include a **Hashtags:** line with at least MIN and at most MAX hashtags. If you are generating only a range of days (e.g. 11–20), every day in that range must still have every platform complete. Do not output placeholder text or skip any day/platform.
 
@@ -191,7 +193,7 @@ Single platform: Write 30 distinct captions (one per day). Multiple platforms: W
 
 Business relevance (CRITICAL): Every caption must be clearly about THIS business—what they actually sell or do, who they serve, and their specific product or service. Do not write generic "founder", "strategy", "building a brand", or "scaling a business" captions that could apply to any company. If the business is cakes and baking, reference cakes, baking, ingredients, orders, customers, flavours, etc. If the business is coaching, reference coaching, clients, sessions, outcomes. Match the vocabulary and examples to the business type and "What they offer" from the intake. A reader should immediately understand which industry and offer the caption is for.
 
-Launch/event phasing (when LAUNCH_EVENT is provided): Days before launch = pre-launch (build anticipation, teasers, countdown). Launch day = announcement, go-live. Days after launch = post-launch (thank-you, feedback, early results — NOT hype or anticipation)."""
+Launch/event phasing (when LAUNCH_EVENT / KEY_DATE_EVENTS is provided in the user prompt): Days before launch = pre-launch (build anticipation, teasers, countdown). Launch day = announcement, go-live. Days after launch = post-launch (thank-you, feedback, early results — NOT hype or anticipation). You MUST reflect the client's named event(s), sale(s), or launch date(s) in the **Caption:** body text on the correct days—not only in the document header or intake summary. Caption copy and Story Ideas must follow the same before / on / after timeline."""
 
 
 def extract_day_categories_from_captions_md(captions_md: str) -> list:
@@ -278,6 +280,8 @@ def _build_user_prompt(
         "RELEVANCE: Every caption must be clearly about this business—their product/service, their audience, their offer. Do not write generic business/strategy/founder captions that could apply to any company. Use concrete details from the intake (e.g. if they offer cakes, reference cakes, baking, ingredients, orders; if they offer coaching, reference sessions, clients, outcomes). A reader should know which industry and offer the caption is for.",
         "",
         "VOICE: Match the client's voice (Voice / tone to use) and avoid their listed words or style (Words / style to avoid). When the goal is leads or inquiries, include a clear, low-pressure next step (e.g. link in bio, DM, book a call) where it fits naturally.",
+        "",
+        "SUBSTANCE (non-TikTok platforms): Each **Caption:** must include multiple complete sentences (at least two) and enough detail that a stranger understands the offer—never a single vague fragment. Days 1–2 set the tone: be specific about the business, location, or guest value, not a cryptic one-liner.",
     ]
     if len(platform_list) > 1:
         parts.append("")
@@ -313,6 +317,13 @@ def _build_user_prompt(
             parts.extend([
                 "",
                 f"IMPORTANT — The client's key date above falls on Day {key_date_day}. Write pre-launch/anticipation content for days 1 to {key_date_day - 1}, launch-day/announcement content for Day {key_date_day}, and post-launch/thank-you content for days {key_date_day + 1} to 30. Do not put launch-day tone on the wrong day.",
+                "",
+                "KEY_DATE_EVENTS — caption bodies: In this day range, most captions must clearly reference the client's specific event, sale, or launch (by name or unmistakable paraphrase) inside the **Caption:** text—not only in hashtags. Pre-launch days should tee up the event; the key day must announce or mark it; post-launch days should follow with thank-you, replay, or results. Do not leave KEY_DATE_EVENTS only in Story Ideas while captions stay generic.",
+            ])
+        else:
+            parts.extend([
+                "",
+                "KEY_DATE_EVENTS — caption bodies: The client listed dates or events above. Weave those specific events into **Caption:** text across the appropriate days (before / during / after as described). Captions must not ignore these events while stories mention them—keep the same timeline in both.",
             ])
 
     # Date context: Day 1 = pack_start_date so captions are date-aware and key date aligns
@@ -323,7 +334,7 @@ def _build_user_prompt(
             "DATE_CONTEXT (the client's 30 days start on a specific date; use when it adds value):",
             date_context,
             "",
-            "When DATE_CONTEXT is provided, you may reference the actual day or date where it helps (e.g. weekday, weekend, end of month). Do not force date references into every caption; use only when relevant and natural.",
+            "When KEY_DATE_EVENTS is also set, prioritize event timing from KEY_DATE_EVENTS over casual weekday mentions. When only DATE_CONTEXT applies (no KEY_DATE_EVENTS), you may reference weekday/weekend lightly; do not force a calendar date into every caption.",
         ])
 
     # Subscription variety: avoid repeating the same day-by-day category pattern as previous packs
@@ -407,6 +418,18 @@ def _chunk_has_empty_blocks(content: str, include_hashtags: bool) -> bool:
     if include_hashtags and re.search(r"\*\*Hashtags?:\*\*\s*\n", content, re.IGNORECASE):
         return True
     return False
+
+
+def _rough_sentence_count(text: str) -> int:
+    """Count sentences (. ! ?) with enough characters to be substantive (not 'OK.' only)."""
+    if not (text or "").strip():
+        return 0
+    chunks = re.split(r"[.!?]+", text)
+    return sum(1 for c in chunks if len(c.strip()) >= 12)
+
+
+def _platform_label_is_tiktok(label: str) -> bool:
+    return (label or "").strip().lower() == "tiktok"
 
 
 def _chunk_structure_error(
@@ -542,13 +565,19 @@ def _chunk_structure_error(
             caption, hashtags = _extract_caption_and_hashtags(b.get("body") or "")
             if not caption:
                 return f"Day {day_num} ({label}) missing caption text"
-            # Basic quality guardrails (platform-aware minimum length).
-            min_len = 80
-            if label == "tiktok":
-                # TikTok captions are intentionally short/punchy (1-3 short lines).
-                min_len = 30
+            # Basic quality guardrails (platform-aware minimum length + substance).
+            is_tiktok = _platform_label_is_tiktok(label)
+            min_len = 30 if is_tiktok else 200
             if len(caption) < min_len:
-                return f"Day {day_num} ({label}) caption too short"
+                return (
+                    f"Day {day_num} ({label}) caption too short "
+                    f"(min {min_len} characters for this platform)"
+                )
+            if not is_tiktok and _rough_sentence_count(caption) < 2:
+                return (
+                    f"Day {day_num} ({label}) caption must have at least 2 complete sentences "
+                    f"with specifics (not a one-liner or vague fragment)"
+                )
             if _has_placeholder(caption):
                 return f"Day {day_num} ({label}) caption contains placeholder text"
             if include_hashtags:
@@ -828,7 +857,9 @@ class CaptionGenerator:
                     "\n\nIMPORTANT: Your previous response was invalid (" + reason + "). "
                     "Regenerate this range exactly with strict structure: "
                     "each expected day heading once, one platform block per platform per day, "
-                    "no duplicate platform blocks in a day, and no empty **Caption:** or **Hashtags:** lines."
+                    "no duplicate platform blocks in a day, and no empty **Caption:** or **Hashtags:** lines. "
+                    "For Instagram, Facebook, LinkedIn, Pinterest: each **Caption:** must be at least ~200 characters "
+                    "and at least two full sentences with concrete detail—no vague one-line fragments."
                 )
                 content = chat_completion(
                     system=system,

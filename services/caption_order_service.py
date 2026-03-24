@@ -162,7 +162,11 @@ class CaptionOrderService:
         return self.update(order_id, {"intake": intake})
 
     def set_generating(self, order_id: str) -> bool:
-        return self.update(order_id, {"status": "generating"})
+        now_iso = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+        return self.update(
+            order_id,
+            {"status": "generating", "delivery_last_attempt_at": now_iso},
+        )
 
     def set_delivered(
         self,
@@ -173,7 +177,13 @@ class CaptionOrderService:
     ) -> bool:
         """Mark order delivered; optionally store PDF artifacts as base64 for reliable re-download/resend."""
         now_iso = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
-        updates = {"status": "delivered", "captions_md": captions_md, "delivered_at": now_iso}
+        updates = {
+            "status": "delivered",
+            "captions_md": captions_md,
+            "delivered_at": now_iso,
+            "delivery_failure_count": 0,
+            "delivery_last_error": None,
+        }
         if captions_pdf_bytes is not None:
             try:
                 updates["captions_pdf_base64"] = base64.b64encode(captions_pdf_bytes).decode("ascii")
@@ -203,6 +213,26 @@ class CaptionOrderService:
 
     def set_failed(self, order_id: str) -> bool:
         return self.update(order_id, {"status": "failed"})
+
+    def record_delivery_failure(self, order_id: str, error_message: str, *, max_error_len: int = 4000) -> bool:
+        """Increment delivery_failure_count, store delivery_last_error, set status failed (auto-retry respects cap)."""
+        row = self.get_by_id(order_id)
+        if not row:
+            return False
+        n = int(row.get("delivery_failure_count") or 0) + 1
+        err = (error_message or "").strip()
+        if len(err) > max_error_len:
+            err = err[: max_error_len - 3] + "..."
+        now_iso = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+        return self.update(
+            order_id,
+            {
+                "status": "failed",
+                "delivery_failure_count": n,
+                "delivery_last_error": err or None,
+                "delivery_last_attempt_at": now_iso,
+            },
+        )
 
     def hide_from_history(self, order_id: str) -> bool:
         """Mark order as hidden so it no longer appears in account history (status -> hidden)."""
@@ -313,10 +343,10 @@ class CaptionOrderService:
         from services.caption_delivery_recovery import row_needs_first_delivery_retry
 
         try:
-            # Omit "failed" here: auto-retry every 10m would burn AI credits; user can resubmit intake or use deliver-test.
+            # Include failed rows while delivery_failure_count is below cap (see row_needs_first_delivery_retry).
             result = self.client.table(self.table).select("*").in_(
-                "status", ["intake_completed", "generating"]
-            ).order("updated_at", desc=False).limit(80).execute()
+                "status", ["intake_completed", "generating", "failed"]
+            ).order("updated_at", desc=False).limit(120).execute()
         except Exception:
             return []
         rows = result.data or []
