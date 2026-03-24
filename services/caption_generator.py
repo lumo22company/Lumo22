@@ -7,6 +7,7 @@ from config import Config
 from services.ai_provider import chat_completion
 from datetime import datetime, timedelta
 import re
+from difflib import SequenceMatcher
 
 # Month names for parsing key date from intake (e.g. "30th March", "March 30")
 _MONTH_NAMES = "january|february|march|april|may|june|july|august|september|october|november|december"
@@ -413,6 +414,10 @@ def _chunk_structure_error(
     day_start: int,
     day_end: int,
     expected_platform_count: int,
+    expected_platform_labels: Optional[list] = None,
+    include_hashtags: bool = True,
+    hashtag_min: int = 3,
+    hashtag_max: int = 10,
 ) -> Optional[str]:
     """
     Return a validation error string for bad chunk structure, else None.
@@ -420,6 +425,8 @@ def _chunk_structure_error(
     - every expected day heading appears once
     - each day has exactly expected_platform_count platform blocks
     - no duplicate platform label within the same day
+    - hashtags count and basic content sanity
+    - near-duplicate caption text within the same chunk
     """
     if not content:
         return "Chunk is empty."
@@ -446,17 +453,85 @@ def _chunk_structure_error(
     if unexpected:
         return f"Unexpected day headings in chunk: {unexpected}"
 
-    platform_re = re.compile(r"(?:\*\*)?Platform(?:\*\*)?\s*:\s*(.+)", re.I)
+    def _canonical_platform_label(raw: str) -> str:
+        s = (raw or "").replace("*", "").strip().lower()
+        if not s:
+            return ""
+        # Normalize punctuation/joins for robust dedupe checks.
+        s = re.sub(r"\s*&\s*", " and ", s)
+        s = re.sub(r"\s+", " ", s).strip()
+        # Canonicalize IG+FB combinations.
+        compact = s.replace(" ", "")
+        if compact in ("instagramandfacebook", "facebookandinstagram"):
+            return "instagram and facebook"
+        # If expected platform list exists, map close variants to expected labels.
+        for p in (expected_platform_labels or []):
+            pp = (p or "").strip().lower()
+            pp_norm = re.sub(r"\s*&\s*", " and ", pp)
+            pp_norm = re.sub(r"\s+", " ", pp_norm).strip()
+            if pp_norm and (s == pp_norm or s.replace(" ", "") == pp_norm.replace(" ", "")):
+                return pp_norm
+        return s
+
+    def _extract_blocks(day_block: str) -> list:
+        blocks = []
+        lines = day_block.splitlines()
+        i = 0
+        while i < len(lines):
+            line = lines[i].strip()
+            m = re.match(r"(?:\*\*)?Platform(?:\*\*)?\s*:\s*(.+)", line, re.I)
+            if not m:
+                i += 1
+                continue
+            platform_raw = (m.group(1) or "").strip()
+            start = i + 1
+            j = start
+            while j < len(lines):
+                if re.match(r"(?:\*\*)?Platform(?:\*\*)?\s*:\s*(.+)", lines[j].strip(), re.I):
+                    break
+                j += 1
+            body = "\n".join(lines[start:j]).strip()
+            blocks.append({"platform": platform_raw, "body": body})
+            i = j
+        return blocks
+
+    def _extract_caption_and_hashtags(block_body: str) -> Tuple[str, str]:
+        body = block_body or ""
+        cap_match = re.search(r"(?:\*\*)?Caption(?:\*\*)?\s*:\s*(.+?)(?=(?:\n\s*(?:\*\*)?Hashtags?(?:\*\*)?\s*:)|\Z)", body, re.I | re.S)
+        caption = (cap_match.group(1).strip() if cap_match else "").strip()
+        hash_match = re.search(r"(?:\*\*)?Hashtags?(?:\*\*)?\s*:\s*(.+)$", body, re.I | re.S)
+        hashtags = (hash_match.group(1).strip() if hash_match else "").strip()
+        return caption, hashtags
+
+    def _normalize_caption_for_similarity(text: str) -> str:
+        t = (text or "").lower()
+        t = re.sub(r"#[a-z0-9_]+", "", t)
+        t = re.sub(r"\s+", " ", t)
+        return t.strip()
+
+    def _has_placeholder(text: str) -> bool:
+        t = (text or "").lower()
+        return any(k in t for k in ["lorem ipsum", "tbd", "[insert", "coming soon", "placeholder"])
+
+    def _count_hashtags(text: str) -> int:
+        if not text:
+            return 0
+        return len(re.findall(r"#[a-z0-9_]+", text, re.I))
+
+    similarity_texts = []
     for day_num in sorted(expected_days):
         block = blocks_by_day.get(day_num, "")
+        blocks = _extract_blocks(block)
         platforms = []
         seen = set()
         dup_platforms = []
-        for line in block.splitlines():
-            m = platform_re.match(line.strip())
-            if not m:
-                continue
-            label = (m.group(1) or "").replace("*", "").strip().lower()
+        if len(blocks) != expected_platform_count:
+            return (
+                f"Day {day_num} has {len(blocks)} platform block(s); "
+                f"expected {expected_platform_count}"
+            )
+        for b in blocks:
+            label = _canonical_platform_label(b.get("platform") or "")
             if not label:
                 continue
             platforms.append(label)
@@ -464,13 +539,36 @@ def _chunk_structure_error(
                 dup_platforms.append(label)
             else:
                 seen.add(label)
+            caption, hashtags = _extract_caption_and_hashtags(b.get("body") or "")
+            if not caption:
+                return f"Day {day_num} ({label}) missing caption text"
+            # Basic quality guardrails.
+            if len(caption) < 80:
+                return f"Day {day_num} ({label}) caption too short"
+            if _has_placeholder(caption):
+                return f"Day {day_num} ({label}) caption contains placeholder text"
+            if include_hashtags:
+                n_hash = _count_hashtags(hashtags)
+                if n_hash < hashtag_min or n_hash > hashtag_max:
+                    return (
+                        f"Day {day_num} ({label}) has {n_hash} hashtags; "
+                        f"expected {hashtag_min}-{hashtag_max}"
+                    )
+            similarity_texts.append((day_num, label, _normalize_caption_for_similarity(caption)))
         if dup_platforms:
             return f"Day {day_num} has duplicate platform blocks: {sorted(set(dup_platforms))}"
-        if len(platforms) != expected_platform_count:
-            return (
-                f"Day {day_num} has {len(platforms)} platform block(s); "
-                f"expected {expected_platform_count}"
-            )
+    # Near-duplicate detection across whole chunk.
+    for i in range(len(similarity_texts)):
+        d1, p1, t1 = similarity_texts[i]
+        for j in range(i + 1, len(similarity_texts)):
+            d2, p2, t2 = similarity_texts[j]
+            if not t1 or not t2:
+                continue
+            ratio = SequenceMatcher(None, t1, t2).ratio()
+            if ratio >= 0.92:
+                return (
+                    f"Near-duplicate captions detected: Day {d1} ({p1}) and Day {d2} ({p2})"
+                )
     return None
 
 
@@ -610,6 +708,10 @@ class CaptionGenerator:
         platform_raw = (intake.get("platform") or "").strip()
         platform_list = [p.strip() for p in platform_raw.split(",") if p.strip()]
         expected_platform_count = max(1, len(platform_list)) if platform_list else 1
+        hashtag_min = max(1, min(30, int(intake.get("hashtag_min") or 3)))
+        hashtag_max = max(0, min(30, int(intake.get("hashtag_max") or 10)))
+        if hashtag_min > hashtag_max:
+            hashtag_max = hashtag_min
         system = _build_system_prompt(intake)
         header = _build_doc_header(intake, pack_start_date=start_str)
         parts = [header]
@@ -625,7 +727,14 @@ class CaptionGenerator:
                 raise RuntimeError(f"AI returned empty content for days {day_start}-{day_end}")
             # Retry once if chunk has incomplete/invalid structure (empty blocks, missing day/platform, duplicates).
             chunk_err = _chunk_structure_error(
-                content, day_start, day_end, expected_platform_count
+                content,
+                day_start,
+                day_end,
+                expected_platform_count,
+                expected_platform_labels=platform_list,
+                include_hashtags=bool(include_hashtags),
+                hashtag_min=hashtag_min,
+                hashtag_max=hashtag_max,
             )
             if _chunk_has_empty_blocks(content, include_hashtags) or chunk_err:
                 reason = chunk_err or "empty Caption/Hashtags lines"
@@ -644,7 +753,14 @@ class CaptionGenerator:
                 if not content:
                     raise RuntimeError(f"AI returned empty content on retry for days {day_start}-{day_end}")
                 chunk_err = _chunk_structure_error(
-                    content, day_start, day_end, expected_platform_count
+                    content,
+                    day_start,
+                    day_end,
+                    expected_platform_count,
+                    expected_platform_labels=platform_list,
+                    include_hashtags=bool(include_hashtags),
+                    hashtag_min=hashtag_min,
+                    hashtag_max=hashtag_max,
                 )
                 if _chunk_has_empty_blocks(content, include_hashtags) or chunk_err:
                     suffix = f" ({chunk_err})" if chunk_err else " (empty Caption or Hashtags)"
