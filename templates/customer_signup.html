@@ -39,7 +39,7 @@
       <a href="/" class="lumo-nav-logo">Lumo 22</a>
       <a href="/captions" class="lumo-nav-link">Captions</a>
     </div>
-    <a href="/login" class="lumo-nav-cta lumo-nav-login">Log in</a>
+    <a href="/login{% if next_url %}?next={{ next_url|urlencode }}{% if prefilled_email %}&amp;email={{ prefilled_email|urlencode }}{% endif %}{% elif prefilled_email %}?email={{ prefilled_email|urlencode }}{% endif %}" class="lumo-nav-cta lumo-nav-login">Log in</a>
   </nav>
 
   <main class="auth-page">
