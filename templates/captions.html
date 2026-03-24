@@ -518,6 +518,10 @@
       if (cur !== 'gbp') q += '&currency=' + cur;
       var ref = (new URLSearchParams(window.location.search)).get('ref');
       if (ref) q += '&ref=' + encodeURIComponent(ref);
+      var businessName = (new URLSearchParams(window.location.search)).get('business_name');
+      if (businessName) q += '&business_name=' + encodeURIComponent(businessName);
+      var businessKey = (new URLSearchParams(window.location.search)).get('business_key');
+      if (businessKey) q += '&business_key=' + encodeURIComponent(businessKey);
       if (oneoffPrice) oneoffPrice.innerHTML = sym + oneoffTotal(n, stories) + ' <span>one-time</span>';
       var isValid = selected !== null;
       var targetHref = '/captions-checkout?' + q;

@@ -592,6 +592,12 @@ def captions_checkout_subscription_page():
         params["ref"] = ref
     if copy_from:
         params["copy_from"] = copy_from
+    business_name = (request.args.get("business_name") or "").strip()
+    business_key = (request.args.get("business_key") or "").strip()
+    if business_name:
+        params["business_name"] = business_name
+    if business_key:
+        params["business_key"] = business_key
     q = urlencode(params)
     api_url = f"/api/captions-checkout-subscription?{q}" if not platforms_invalid else None
     total = prices["sub"] + (platforms - 1) * prices["extra_sub"] + (prices["stories_sub"] if stories else 0)

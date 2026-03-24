@@ -193,11 +193,49 @@ def _stripe_subscription_blocks_new_checkout(sub_obj: dict) -> bool:
     return status in ("active", "trialing", "past_due")
 
 
-def _customer_has_blocking_captions_subscription(email: str) -> bool:
+def _normalize_business_key(value: str) -> str:
+    """Normalize business identifier for matching (lowercase, alnum + single hyphens)."""
+    raw = (value or "").strip().lower()
+    if not raw:
+        return ""
+    out = []
+    prev_dash = False
+    for ch in raw:
+        if ch.isalnum():
+            out.append(ch)
+            prev_dash = False
+        elif not prev_dash:
+            out.append("-")
+            prev_dash = True
+    return "".join(out).strip("-")
+
+
+def _order_business_keys(order: dict) -> set:
+    """
+    Return possible business keys for an order/subscription row.
+    Includes upgraded_from_token key and intake.business_name key when available.
+    """
+    keys = set()
+    if not isinstance(order, dict):
+        return keys
+    up = (order.get("upgraded_from_token") or "").strip()
+    if up:
+        keys.add(f"token:{up}")
+    intake = order.get("intake") or {}
+    if isinstance(intake, dict):
+        biz = _normalize_business_key((intake.get("business_name") or "").strip())
+        if biz:
+            keys.add(f"biz:{biz}")
+    return keys
+
+
+def _customer_has_blocking_captions_subscription(email: str, target_business_key: Optional[str] = None) -> bool:
     """
     True if this customer already has an active/trialing/past_due Captions subscription in Stripe.
     Each completed subscription checkout creates a new Stripe subscription + caption_orders row;
-    this guard prevents accidental duplicate monthly subscriptions for the same account.
+    this guard prevents accidental duplicate monthly subscriptions.
+    If target_business_key is provided, only blocks when an existing active subscription
+    matches that same business context (allows multiple businesses under one email).
     """
     if not email or "@" not in email:
         return False
@@ -210,6 +248,7 @@ def _customer_has_blocking_captions_subscription(email: str) -> bool:
 
     co_svc = CaptionOrderService()
     orders = co_svc.get_by_customer_email_including_stripe_customer(email.strip().lower())
+    target_business_key = (target_business_key or "").strip()
     seen_subs = set()
     for o in orders:
         sid = (o.get("stripe_subscription_id") or "").strip()
@@ -222,7 +261,11 @@ def _customer_has_blocking_captions_subscription(email: str) -> bool:
             print(f"[captions_checkout_subscription] Stripe retrieve failed for sub {sid[:14]}...: {e}")
             continue
         if _stripe_subscription_blocks_new_checkout(sub):
-            return True
+            if not target_business_key:
+                return True
+            existing_keys = _order_business_keys(o)
+            if target_business_key in existing_keys:
+                return True
     return False
 
 
@@ -317,6 +360,8 @@ def captions_checkout_subscription():
     """
     from api.auth_routes import get_current_customer
     copy_from = (request.args.get("copy_from") or "").strip()
+    business_name_raw = (request.args.get("business_name") or "").strip()
+    explicit_business_key = (request.args.get("business_key") or "").strip()
     get_pack_now = request.args.get("get_pack_now", "").strip().lower() in ("1", "true", "yes", "on")
     one_off = None
     customer = get_current_customer()
@@ -339,10 +384,24 @@ def captions_checkout_subscription():
     if not Config.STRIPE_SECRET_KEY or not price_id:
         return jsonify({"error": "Subscription not configured (STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID)"}), 503
     stripe.api_key = Config.STRIPE_SECRET_KEY
+    target_business_key = ""
+    if copy_from:
+        target_business_key = f"token:{copy_from}"
+    elif explicit_business_key:
+        _bk = _normalize_business_key(explicit_business_key)
+        if _bk:
+            target_business_key = "biz:" + _bk
+    elif business_name_raw:
+        _bk = _normalize_business_key(business_name_raw)
+        if _bk:
+            target_business_key = "biz:" + _bk
     # Prevent multiple active Captions subscriptions for the same account (each checkout = new Stripe sub + new order row).
     if customer and (customer.get("email") or "").strip():
         try:
-            if _customer_has_blocking_captions_subscription((customer.get("email") or "").strip().lower()):
+            if _customer_has_blocking_captions_subscription(
+                (customer.get("email") or "").strip().lower(),
+                target_business_key=target_business_key,
+            ):
                 return redirect(url_for("account_page") + "?subscription_duplicate=1")
         except Exception as e:
             print(f"[captions_checkout_subscription] duplicate guard failed (non-fatal): {e}")
