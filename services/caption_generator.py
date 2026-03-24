@@ -542,8 +542,12 @@ def _chunk_structure_error(
             caption, hashtags = _extract_caption_and_hashtags(b.get("body") or "")
             if not caption:
                 return f"Day {day_num} ({label}) missing caption text"
-            # Basic quality guardrails.
-            if len(caption) < 80:
+            # Basic quality guardrails (platform-aware minimum length).
+            min_len = 80
+            if label == "tiktok":
+                # TikTok captions are intentionally short/punchy (1-3 short lines).
+                min_len = 30
+            if len(caption) < min_len:
                 return f"Day {day_num} ({label}) caption too short"
             if _has_placeholder(caption):
                 return f"Day {day_num} ({label}) caption contains placeholder text"
