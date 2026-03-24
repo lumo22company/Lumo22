@@ -564,14 +564,6 @@ def captions_checkout_subscription_page():
     copy_from = (request.args.get("copy_from") or "").strip()
     if not get_current_customer():
         signup_url = url_for("customer_signup_page") + "?next=" + quote(request.full_path or "/captions-checkout-subscription", safe="")
-        if copy_from:
-            try:
-                from services.caption_order_service import CaptionOrderService
-                order = CaptionOrderService().get_by_token(copy_from)
-                if order and (order.get("customer_email") or "").strip():
-                    signup_url += "&email=" + quote((order.get("customer_email") or "").strip(), safe="")
-            except Exception:
-                pass
         return redirect(signup_url)
     platforms = _parse_platforms_from_request()
     selected = (request.args.get("selected") or request.args.get("selected_platforms") or "").strip()
@@ -609,6 +601,10 @@ def captions_checkout_subscription_page():
             add_stories_params += "&selected=" + quote(selected)
         if copy_from:
             add_stories_params += "&copy_from=" + quote(copy_from)
+        if business_name:
+            add_stories_params += "&business_name=" + quote(business_name)
+        if business_key:
+            add_stories_params += "&business_key=" + quote(business_key)
         add_stories_url = "/captions?" + add_stories_params + "#pricing"
     else:
         add_stories_url = None

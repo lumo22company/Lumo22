@@ -227,7 +227,24 @@ def _order_business_keys(order: dict) -> set:
         biz = _normalize_business_key((intake.get("business_name") or "").strip())
         if biz:
             keys.add(f"biz:{biz}")
+    # Forward-compatible: if a canonical key is later persisted directly on the row.
+    persisted = _normalize_business_key((order.get("business_key") or "").strip())
+    if persisted:
+        keys.add(f"biz:{persisted}")
     return keys
+
+
+def _target_business_key_from_request(copy_from: str, explicit_business_key: str, business_name_raw: str) -> str:
+    """Build canonical business key for duplicate-subscription guard."""
+    if copy_from:
+        return f"token:{copy_from}"
+    if explicit_business_key:
+        bk = _normalize_business_key(explicit_business_key)
+        return f"biz:{bk}" if bk else ""
+    if business_name_raw:
+        bk = _normalize_business_key(business_name_raw)
+        return f"biz:{bk}" if bk else ""
+    return ""
 
 
 def _customer_has_blocking_captions_subscription(email: str, target_business_key: Optional[str] = None) -> bool:
@@ -370,14 +387,6 @@ def captions_checkout_subscription():
         from urllib.parse import quote
         next_url = request.url
         signup_url = url_for("customer_signup_page") + "?next=" + quote(next_url, safe="")
-        if copy_from:
-            try:
-                from services.caption_order_service import CaptionOrderService
-                order = CaptionOrderService().get_by_token(copy_from)
-                if order and (order.get("customer_email") or "").strip():
-                    signup_url += "&email=" + quote((order.get("customer_email") or "").strip(), safe="")
-            except Exception:
-                pass
         return redirect(signup_url)
     import stripe
     currency = _parse_currency(request)
@@ -385,19 +394,9 @@ def captions_checkout_subscription():
     if not Config.STRIPE_SECRET_KEY or not price_id:
         return jsonify({"error": "Subscription not configured (STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID)"}), 503
     stripe.api_key = Config.STRIPE_SECRET_KEY
-    target_business_key = ""
-    if copy_from:
-        target_business_key = f"token:{copy_from}"
-    elif explicit_business_key:
-        _bk = _normalize_business_key(explicit_business_key)
-        if _bk:
-            target_business_key = "biz:" + _bk
-    elif business_name_raw:
-        _bk = _normalize_business_key(business_name_raw)
-        if _bk:
-            target_business_key = "biz:" + _bk
+    target_business_key = _target_business_key_from_request(copy_from, explicit_business_key, business_name_raw)
     # Prevent multiple active Captions subscriptions for the same account (each checkout = new Stripe sub + new order row).
-    if customer and (customer.get("email") or "").strip():
+    if target_business_key and customer and (customer.get("email") or "").strip():
         try:
             if _customer_has_blocking_captions_subscription(
                 (customer.get("email") or "").strip().lower(),
@@ -415,6 +414,13 @@ def captions_checkout_subscription():
     metadata = {"product": "captions_subscription", "platforms": str(platforms), "include_stories": "1" if stories else "0"}
     if selected:
         metadata["selected_platforms"] = selected
+    if target_business_key.startswith("biz:"):
+        metadata["business_key"] = target_business_key[len("biz:"):]
+    normalized_business_name = _normalize_business_key(business_name_raw)
+    if normalized_business_name and not metadata.get("business_key"):
+        metadata["business_key"] = normalized_business_name
+    if business_name_raw:
+        metadata["business_name"] = business_name_raw[:120]
     if copy_from:
         metadata["copy_from"] = copy_from
         try:
@@ -424,6 +430,10 @@ def captions_checkout_subscription():
             one_off = None
         if not one_off:
             return jsonify({"error": "Base one-off order not found for this upgrade."}), 400
+        one_off_email = (one_off.get("customer_email") or "").strip().lower()
+        customer_email = (customer.get("email") or "").strip().lower()
+        if not one_off_email or not customer_email or one_off_email != customer_email:
+            return jsonify({"error": "You can only upgrade your own one-off order."}), 403
     if get_pack_now:
         # Safety guard: only allow immediate first subscription pack after the base one-off
         # has already been delivered, so customers are never charged twice for the same day.
@@ -733,11 +743,15 @@ def captions_intake_link():
                     selected_platforms = (meta.get("selected_platforms") or "").strip() or None
                     include_stories = str(meta.get("include_stories") or "").lower() in ("1", "true", "yes")
                     copy_from = (meta.get("copy_from") or "").strip() or None
+                    business_name = (meta.get("business_name") or "").strip() or None
+                    business_key = _normalize_business_key((meta.get("business_key") or "").strip())
                 else:
                     platforms_count = getattr(meta, "platforms", None)
                     selected_platforms = (getattr(meta, "selected_platforms", None) or "").strip() or None
                     include_stories = str(getattr(meta, "include_stories", "") or "").lower() in ("1", "true", "yes")
                     copy_from = (getattr(meta, "copy_from", None) or "").strip() or None
+                    business_name = (getattr(meta, "business_name", None) or "").strip() or None
+                    business_key = _normalize_business_key((getattr(meta, "business_key", None) or "").strip())
                 try:
                     platforms_count = max(1, int(platforms_count)) if platforms_count is not None else 1
                 except (TypeError, ValueError):
@@ -763,6 +777,15 @@ def captions_intake_link():
                     currency=currency,
                     upgraded_from_token=upgraded_from,
                 )
+                # Persist business context early (before full intake) so duplicate guard has stable matching keys.
+                if not business_name and business_key:
+                    business_name = business_key.replace("-", " ").title()
+                if business_name:
+                    try:
+                        order_service.update_intake_only(str(order.get("id")), {"business_name": business_name})
+                        order = order_service.get_by_id(str(order.get("id"))) or order
+                    except Exception:
+                        pass
                 print(f"[captions-intake-link] Created order from Stripe session session_id={session_id[:20]}...")
                 # Send intake email so customer gets it even if webhook never runs
                 _send_intake_email_for_order(order)
