@@ -72,6 +72,48 @@ def _should_send_reminder(order: Dict[str, Any], period_end_ts: int) -> bool:
     return True
 
 
+def _is_subscription_reminder_eligible(sub: Dict[str, Any]) -> bool:
+    """True only for subscriptions that are still active and not set to cancel."""
+    status = (sub.get("status") or "").strip().lower()
+    if status not in ("active", "trialing"):
+        return False
+    if bool(sub.get("cancel_at_period_end")):
+        return False
+    if sub.get("canceled_at"):
+        return False
+    if sub.get("pause_collection"):
+        return False
+    return True
+
+
+def _has_other_ready_or_completed_orders(order_service: CaptionOrderService, current_order: Dict[str, Any]) -> bool:
+    """
+    Suppress awaiting-intake reminders when this customer already has another order that
+    is in progress/completed (or already has saved intake/captions).
+    """
+    email = (current_order.get("customer_email") or "").strip().lower()
+    current_id = str(current_order.get("id") or "")
+    if not email or "@" not in email:
+        return False
+    try:
+        others = order_service.get_by_customer_email(email)
+    except Exception:
+        return False
+    for o in others:
+        oid = str(o.get("id") or "")
+        if oid and oid == current_id:
+            continue
+        status = (o.get("status") or "").strip().lower()
+        if status in ("intake_completed", "generating", "delivered", "failed", "hidden"):
+            return True
+        intake = o.get("intake")
+        if isinstance(intake, dict) and len(intake.keys()) > 0:
+            return True
+        if (o.get("captions_md") or "").strip():
+            return True
+    return False
+
+
 def run_reminders() -> Dict[str, Any]:
     """
     For each active subscription order:
@@ -109,6 +151,9 @@ def run_reminders() -> Dict[str, Any]:
             continue
         try:
             sub = stripe.Subscription.retrieve(sub_id)
+            if not _is_subscription_reminder_eligible(sub):
+                skipped += 1
+                continue
             period_end = sub.get("current_period_end")
             if period_end is None:
                 skipped += 1
@@ -179,6 +224,9 @@ Lumo 22
             status = (order.get("status") or "").strip().lower()
             if status != "awaiting_intake":
                 continue
+            if _has_other_ready_or_completed_orders(order_service, order):
+                skipped += 1
+                continue
             email = (order.get("customer_email") or "").strip()
             token = (order.get("token") or "").strip()
             if not token or not email or "@" not in email:
@@ -206,6 +254,21 @@ Lumo 22
             if age_hours < 24.0 or age_hours >= 48.0:
                 skipped += 1
                 continue
+            # For subscription-origin awaiting orders, don't remind if subscription was canceled/paused.
+            sub_id = (order.get("stripe_subscription_id") or "").strip()
+            if sub_id:
+                try:
+                    from api.stripe_utils import is_valid_stripe_subscription_id
+                    if not is_valid_stripe_subscription_id(sub_id):
+                        skipped += 1
+                        continue
+                    sub = stripe.Subscription.retrieve(sub_id)
+                    if not _is_subscription_reminder_eligible(sub):
+                        skipped += 1
+                        continue
+                except Exception:
+                    skipped += 1
+                    continue
             intake_url = f"{base}/captions-intake?t={token}"
             subject = "Complete your form to get your captions"
             body = f"""Hi,

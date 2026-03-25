@@ -374,7 +374,7 @@ class CaptionOrderService:
     def get_awaiting_intake_orders(self) -> list:
         """Get recent orders that are still awaiting intake (for one-off intake reminders)."""
         result = self.client.table(self.table).select(
-            "id, token, customer_email, status, created_at"
+            "id, token, customer_email, status, created_at, stripe_subscription_id, intake, captions_md"
         ).eq("status", "awaiting_intake").execute()
         return result.data or []
 
