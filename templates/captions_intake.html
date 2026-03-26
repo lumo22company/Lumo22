@@ -185,7 +185,7 @@
     <h1>30 DAYS CAPTIONS — YOUR DETAILS</h1>
     <p class="sub">Complete this form so we can tailor your caption set. Your answers shape your voice, structure, and strategy for the month. The more detail you give, the better we can align your captions with your brand. Edits are free and will apply to your next pack.</p>
     {% if existing_intake %}
-    <p class="intake-edit-notice" style="margin: 0 0 1.25rem; padding: 0.75rem 1rem; background: rgba(0,0,0,0.06); border-radius: 8px; border: 2px solid var(--lum-gold, #c9a227); font-size: 0.9rem; color: #1a1a1a;">{% if is_upgrade_flow %}Your answers here will be used for your first subscription pack. Content edits (voice, topics, key dates, etc.) are free.{% else %}Any updates you make here will be reflected in your <strong>next</strong> captions and stories pack, not in packs already delivered. Edits are free; adding Story Ideas or extra platforms may require an additional charge.{% endif %}</p>
+    <p id="intake-edit-notice" class="intake-edit-notice" style="margin: 0 0 1.25rem; padding: 0.75rem 1rem; background: rgba(0,0,0,0.06); border-radius: 8px; border: 2px solid var(--lum-gold, #c9a227); font-size: 0.9rem; color: #1a1a1a;">{% if is_upgrade_flow %}Your answers here will be used for your first subscription pack. Content edits (voice, topics, key dates, etc.) are free.{% else %}Any updates you make here will be reflected in your <strong>next</strong> captions and stories pack, not in packs already delivered. Edits are free; adding Story Ideas or extra platforms may require an additional charge.{% endif %}</p>
     {% endif %}
     {% if not intake_token %}
     <p class="sub" style="margin-top: 1rem;">Use the link from your order email to complete the form. If you just purchased, check your inbox for a message from us with a personalised link.</p>
@@ -733,6 +733,8 @@
             if (ctaEl) { ctaEl.style.display = 'none'; ctaEl.innerHTML = ''; }
             var successEl = document.getElementById('intake-success');
             if (successEl) successEl.style.display = 'block';
+            var editNoticeEl = document.getElementById('intake-edit-notice');
+            if (editNoticeEl) editNoticeEl.style.display = 'none';
             var msgEl = document.getElementById('intake-success-msg');
             if (msgEl) {
               if (result.json.message) {
@@ -825,6 +827,8 @@
                               if (rs) rs.classList.remove('show');
                               var successEl = document.getElementById('intake-success');
                               if (successEl) successEl.style.display = 'block';
+                              var editNoticeEl = document.getElementById('intake-edit-notice');
+                              if (editNoticeEl) editNoticeEl.style.display = 'none';
                               var formEl = document.getElementById('captions-intake-form');
                               if (formEl) formEl.style.display = 'none';
                               var msgEl = document.getElementById('intake-success-msg');
@@ -1182,6 +1186,8 @@
             if (ctaEl) { ctaEl.style.display = 'none'; ctaEl.innerHTML = ''; }
             var successEl = document.getElementById('intake-success');
             successEl.style.display = 'block';
+            var editNoticeEl = document.getElementById('intake-edit-notice');
+            if (editNoticeEl) editNoticeEl.style.display = 'none';
             var msgEl = document.getElementById('intake-success-msg');
             if (msgEl) msgEl.textContent = result.json.message || "Your form has been updated. Your changes will be reflected in your next captions and stories pack, not in packs already delivered.";
             var formEl = document.getElementById('captions-intake-form');
