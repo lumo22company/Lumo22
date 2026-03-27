@@ -11,6 +11,14 @@
     .verify-card { max-width: 480px; margin: 0 auto; padding: 2.5rem; background: var(--lum-card-bg, rgba(255,255,255,0.03)); border-radius: 16px; border: 1px solid var(--lum-border); text-align: center; }
     .verify-card h1 { font-family: var(--font-display); font-size: 1.75rem; margin-bottom: 1rem; }
     .verify-card p { color: var(--lum-text-muted); line-height: 1.6; margin-bottom: 1.5rem; }
+    .verify-card .verify-primary-cta { margin: 1rem 0 1.25rem; text-align: center; }
+    .verify-card .verify-primary-cta .account-btn-swipe-light {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      min-width: 220px;
+    }
     .verify-card .back-links { margin-top: 1.5rem; }
     .verify-card .back-links a { color: var(--lum-gold); text-decoration: none; font-size: 0.95rem; }
     .verify-card .back-links a:hover { text-decoration: underline; }
@@ -23,7 +31,9 @@
       <a href="/" class="lumo-nav-logo">Lumo 22</a>
       <a href="/captions" class="lumo-nav-link">Captions</a>
     </div>
+    {% if not success %}
     <a href="/login" class="lumo-nav-cta lumo-nav-signup">Log in</a>
+    {% endif %}
   </nav>
 
   <section class="lumo-section verify-section">
@@ -31,13 +41,14 @@
       {% if success %}
       <h1>Email verified</h1>
       <p>Your email has been verified. You can now log in to your account.</p>
-      <div class="back-links">
+      <div class="verify-primary-cta">
         {% if next_url and next_url != '/account' %}
-        <a href="/login?next={{ next_url|urlencode }}">Log in to complete your upgrade</a>
+        <a href="/login?next={{ next_url|urlencode }}" class="account-billing-portal-link account-btn-swipe-light">Log in to complete your upgrade</a>
         {% else %}
-        <a href="/login">Log in</a>
+        <a href="/login" class="account-billing-portal-link account-btn-swipe-light">Log in</a>
         {% endif %}
-        <span>·</span>
+      </div>
+      <div class="back-links">
         <a href="/captions">View Caption Plans</a>
         <span>·</span>
         <a href="/">Lumo 22</a>
