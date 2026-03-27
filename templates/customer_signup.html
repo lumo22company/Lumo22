@@ -31,6 +31,74 @@
     .auth-page .marketing-optin-row input[type="checkbox"] { width:auto; margin:0.2rem 0 0 0; padding:0; flex-shrink:0; }
     .pw-toggle { margin: -0.75rem 0 1rem; text-align: right; }
     .pw-toggle button { background: none; border: 0; color: var(--lum-gold); cursor: pointer; font-size: 0.82rem; padding: 0; }
+    /* Post-signup: verify email — matches common “success card” pattern (clear hierarchy, readable on dark page) */
+    .signup-verify-card {
+      display: none;
+      margin-top: 0.5rem;
+      padding: 1.35rem 1.25rem;
+      background: #ffffff;
+      border: 1px solid rgba(255,255,255,0.85);
+      border-radius: 10px;
+      box-shadow: 0 8px 28px rgba(0,0,0,0.18);
+      color: #1a1a1a;
+      text-align: left;
+    }
+    .signup-verify-card.is-visible { display: block; }
+    .signup-verify-card__eyebrow {
+      margin: 0 0 0.35rem;
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #555;
+    }
+    .signup-verify-card__title {
+      margin: 0 0 0.85rem;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.5rem;
+      font-weight: 400;
+      letter-spacing: 0.03em;
+      color: #111;
+      line-height: 1.2;
+    }
+    .signup-verify-card__lead {
+      margin: 0 0 0.65rem;
+      font-size: 0.98rem;
+      line-height: 1.55;
+      color: #222;
+    }
+    .signup-verify-card__lead strong { font-weight: 700; color: #111; word-break: break-all; }
+    .signup-verify-card__body {
+      margin: 0 0 0.75rem;
+      font-size: 0.92rem;
+      line-height: 1.55;
+      color: #333;
+    }
+    .signup-verify-card__hint {
+      margin: 0 0 1rem;
+      font-size: 0.82rem;
+      line-height: 1.45;
+      color: #666;
+    }
+    .signup-verify-card__upgrade {
+      margin: 0 0 1rem;
+      padding: 0.65rem 0.75rem;
+      font-size: 0.88rem;
+      line-height: 1.45;
+      color: #333;
+      background: rgba(201, 162, 39, 0.12);
+      border-radius: 8px;
+      border: 1px solid rgba(201, 162, 39, 0.35);
+    }
+    .signup-verify-card__upgrade a { color: #1a1a1a; font-weight: 600; }
+    .signup-verify-card__actions { margin: 0; font-size: 0.95rem; }
+    .signup-verify-card__actions a {
+      color: #1a1a1a;
+      font-weight: 600;
+      text-decoration: none;
+      border-bottom: 1px solid var(--lum-gold, #c9a227);
+    }
+    .signup-verify-card__actions a:hover { color: #000; }
   </style>
 </head>
 <body class="lumo-landing">
@@ -44,6 +112,7 @@
   </nav>
 
   <main class="auth-page">
+    <div id="signup-flow-wrap">
     <h1>Create your account</h1>
     <p class="sub">One account for your Captions.</p>
 
@@ -69,11 +138,23 @@
 
       <button type="submit" class="btn" id="btn">Create account</button>
       <div id="msg" class="msg" style="display: none;"></div>
-      <div id="msg-continue" class="msg success" style="display: none; margin-top: 1rem;"></div>
     </form>
+    </div>
 
-    <p class="link">Already have an account? <a href="/login{% if _next_login %}?next={{ _next_login|urlencode }}{% if prefilled_email %}&amp;email={{ prefilled_email|urlencode }}{% endif %}{% elif prefilled_email %}?email={{ prefilled_email|urlencode }}{% endif %}">Log in</a></p>
-    <p class="link"><a href="/captions" id="back-link">← Back</a></p>
+    <div id="signup-success-panel" class="signup-verify-card" aria-live="polite">
+      <p class="signup-verify-card__eyebrow">Check your inbox</p>
+      <h2 class="signup-verify-card__title">Account created</h2>
+      <p class="signup-verify-card__lead">We’ve sent a verification link to <strong id="signup-success-email"></strong>.</p>
+      <p class="signup-verify-card__body"><strong>Next step:</strong> open that email and click the link to verify your address. After that, you can log in.</p>
+      <p class="signup-verify-card__hint">If you don’t see it within a few minutes, check your spam or promotions folder.</p>
+      <div id="signup-success-upgrade" class="signup-verify-card__upgrade" style="display: none;"></div>
+      <p class="signup-verify-card__actions" id="signup-success-login-wrap">
+        <a href="/login{% if _next_login %}?next={{ _next_login|urlencode }}{% if prefilled_email %}&amp;email={{ prefilled_email|urlencode }}{% endif %}{% elif prefilled_email %}?email={{ prefilled_email|urlencode }}{% endif %}" id="signup-success-login-link">Log in</a> — after you’ve verified your email
+      </p>
+    </div>
+
+    <p class="link" id="signup-footer-links">Already have an account? <a href="/login{% if _next_login %}?next={{ _next_login|urlencode }}{% if prefilled_email %}&amp;email={{ prefilled_email|urlencode }}{% endif %}{% elif prefilled_email %}?email={{ prefilled_email|urlencode }}{% endif %}">Log in</a></p>
+    <p class="link" id="signup-footer-back"><a href="/captions" id="back-link">← Back</a></p>
   </main>
 
   <script>
@@ -160,15 +241,37 @@
         .then(function(r) { return r.json(); })
         .then(function(data) {
           if (data.ok) {
-            msg.className = 'msg success';
-            msg.textContent = data.message || 'Check your email to verify your address — then you can log in.';
-            msg.style.display = 'block';
-            var continueEl = document.getElementById('msg-continue');
-            if (continueEl && nextVal && nextVal.indexOf('captions-checkout') !== -1) {
-              var loginNext = encodeURIComponent(nextVal);
-              continueEl.innerHTML = 'When you\'ve verified, <a href="/login?next=' + loginNext + '" style="color:inherit;font-weight:600;">log in to complete your upgrade</a>.';
-              continueEl.style.display = 'block';
+            msg.style.display = 'none';
+            var flowWrap = document.getElementById('signup-flow-wrap');
+            var panel = document.getElementById('signup-success-panel');
+            var emailStrong = document.getElementById('signup-success-email');
+            var loginLink = document.getElementById('signup-success-login-link');
+            var upgradeEl = document.getElementById('signup-success-upgrade');
+            if (emailStrong) emailStrong.textContent = email;
+            if (loginLink) {
+              var loginHref = '/login';
+              var q = [];
+              if (email) q.push('email=' + encodeURIComponent(email));
+              if (nextVal && nextVal !== '/account') q.push('next=' + encodeURIComponent(nextVal));
+              if (q.length) loginHref += '?' + q.join('&');
+              loginLink.href = loginHref;
             }
+            if (upgradeEl) {
+              if (nextVal && nextVal.indexOf('captions-checkout') !== -1) {
+                var loginNext = encodeURIComponent(nextVal);
+                upgradeEl.innerHTML = 'When you’ve verified your email, <a href="/login?next=' + loginNext + (email ? '&email=' + encodeURIComponent(email) : '') + '">log in here</a> to continue your checkout.';
+                upgradeEl.style.display = 'block';
+              } else {
+                upgradeEl.style.display = 'none';
+                upgradeEl.innerHTML = '';
+              }
+            }
+            if (flowWrap) flowWrap.style.display = 'none';
+            if (panel) panel.classList.add('is-visible');
+            var foot = document.getElementById('signup-footer-links');
+            var footBack = document.getElementById('signup-footer-back');
+            if (foot) foot.style.display = 'none';
+            if (footBack) footBack.style.display = 'block';
             btn.disabled = false;
             btn.textContent = 'Create account';
           } else {
