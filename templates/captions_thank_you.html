@@ -45,6 +45,18 @@
       <p id="thankyou-message">We've received your payment. One moment — we're preparing your next step…</p>
       <div id="thankyou-form-link" style="display: none;">
         <p id="thankyou-email-msg" style="margin-bottom: 1.25rem;"></p>
+        <div id="thankyou-wrong-email-wrap" style="display: none; margin: 0.25rem 0 1.25rem;">
+          <button type="button" id="thankyou-wrong-email-toggle" class="thankyou-cta-swipe" style="padding: 0.45rem 0.9rem;">Wrong email?</button>
+          <div id="thankyou-wrong-email-form" style="display: none; margin-top: 0.75rem; max-width: 420px;">
+            <label for="thankyou-new-email" style="display:block; font-size: 0.9rem; margin-bottom: 0.25rem;">Email</label>
+            <input type="email" id="thankyou-new-email" placeholder="your@email.com" style="width: 100%; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: #ffffff; color: #1a1a1a; font-size: 1rem; margin-bottom: 0.65rem;">
+            <label for="thankyou-new-email-confirm" style="display:block; font-size: 0.9rem; margin-bottom: 0.25rem;">Confirm email</label>
+            <input type="email" id="thankyou-new-email-confirm" placeholder="Re-enter your email" style="width: 100%; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: #ffffff; color: #1a1a1a; font-size: 1rem; margin-bottom: 0.65rem;">
+            <button type="button" id="thankyou-update-email-btn" class="lumo-btn-primary btn-cta-account-style" style="padding: 0.6rem 1.25rem;">Update email & resend link</button>
+            <p id="thankyou-update-email-error" style="display:none; margin:0.65rem 0 0; font-size:0.9rem; color:#f99;"></p>
+            <p id="thankyou-update-email-success" style="display:none; margin:0.65rem 0 0; font-size:0.9rem; color:#8c8;">Updated. We sent your intake link to the new email.</p>
+          </div>
+        </div>
         <div class="thankyou-cta-row" style="display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1.5rem;">
           <a href="#" id="intake-link" class="thankyou-cta-swipe thankyou-cta">Fill out form now</a>
           <a href="{% if current_customer %}/account{% else %}/{% endif %}" id="later-link" class="thankyou-cta-swipe">I'll do it later</a>
@@ -95,6 +107,15 @@
       var intakeLinkEl = document.getElementById('intake-link');
       var emailMsgEl = document.getElementById('thankyou-email-msg');
       var noSessionEl = document.getElementById('thankyou-no-session');
+      var recoveryToken = '';
+      var wrongEmailWrapEl = document.getElementById('thankyou-wrong-email-wrap');
+      var wrongEmailToggleEl = document.getElementById('thankyou-wrong-email-toggle');
+      var wrongEmailFormEl = document.getElementById('thankyou-wrong-email-form');
+      var wrongEmailInputEl = document.getElementById('thankyou-new-email');
+      var wrongEmailConfirmEl = document.getElementById('thankyou-new-email-confirm');
+      var wrongEmailBtnEl = document.getElementById('thankyou-update-email-btn');
+      var wrongEmailErrorEl = document.getElementById('thankyou-update-email-error');
+      var wrongEmailSuccessEl = document.getElementById('thankyou-update-email-success');
 
       if (!sessionId) {
         messageEl.style.display = 'none';
@@ -121,7 +142,7 @@
                 if (data && data.status === 'ok' && data.intake_url) {
                   noSessionEl.style.display = 'none';
                   if (emailFallbackNoSession) emailFallbackNoSession.style.display = 'none';
-                  showIntake(data.intake_url, data.customer_email || null, !!data.is_subscription, !!data.is_prefilled_from_oneoff);
+                  showIntake(data.intake_url, data.customer_email || null, !!data.is_subscription, !!data.is_prefilled_from_oneoff, data.email_recovery_token || '');
                   formLinkEl.style.display = 'block';
                 } else {
                   if (emailError) { emailError.textContent = data && data.error ? data.error : 'No order found for this email.'; emailError.style.display = 'block'; }
@@ -139,7 +160,8 @@
         return;
       }
 
-      function showIntake(url, customerEmail, isSubscription, isPrefilledFromOneoff) {
+      function showIntake(url, customerEmail, isSubscription, isPrefilledFromOneoff, emailRecoveryToken) {
+        recoveryToken = (emailRecoveryToken || recoveryToken || '');
         messageEl.style.display = 'none';
         var emailFallback = document.getElementById('thankyou-email-fallback');
         if (emailFallback) emailFallback.style.display = 'none';
@@ -173,13 +195,30 @@
         } else if (!isSubscription) {
           accountSuffix = ' On the form you can also create an account to access your captions in one place.';
         }
-        var emailText = (customerEmail
-          ? 'Thank you. We\'ve emailed you at <strong>' + escapeHtml(customerEmail) + '</strong>.'
-          : 'Thank you. We\'ve emailed you.') + prefilledEditLine + timingPart + accountSuffix;
+        var leadText = '';
+        if (isPrefilledFromOneoff) {
+          leadText = customerEmail
+            ? 'Your prefilled form is ready for <strong>' + escapeHtml(customerEmail) + '</strong>.'
+            : 'Your prefilled form is ready.';
+        } else {
+          leadText = customerEmail
+            ? 'We sent your intake link to <strong>' + escapeHtml(customerEmail) + '</strong>.'
+            : 'We sent your intake link by email.';
+        }
+        var emailText = leadText + prefilledEditLine + timingPart + accountSuffix;
         emailMsgEl.innerHTML = emailText;
         intakeLinkEl.href = url;
         intakeLinkEl.textContent = isPrefilledFromOneoff ? 'Review your form' : 'Fill out form now';
         formLinkEl.style.display = 'block';
+        if (wrongEmailWrapEl) {
+          wrongEmailWrapEl.style.display = (customerEmail && recoveryToken) ? 'block' : 'none';
+          if (wrongEmailFormEl) wrongEmailFormEl.style.display = 'none';
+          if (wrongEmailInputEl) wrongEmailInputEl.value = customerEmail || '';
+          if (wrongEmailConfirmEl) wrongEmailConfirmEl.value = '';
+          if (wrongEmailErrorEl) { wrongEmailErrorEl.style.display = 'none'; wrongEmailErrorEl.textContent = ''; }
+          if (wrongEmailSuccessEl) wrongEmailSuccessEl.style.display = 'none';
+          if (wrongEmailBtnEl) { wrongEmailBtnEl.disabled = false; wrongEmailBtnEl.textContent = 'Update email & resend link'; }
+        }
         var createAccountEl = document.getElementById('thankyou-create-account');
         if (createAccountEl) {
           if (isSubscription && !isLoggedIn && customerEmail) {
@@ -208,7 +247,7 @@
       function onResponse(data) {
         if (data && data.status === 'ok' && data.intake_url) {
           intakeShown = true;
-          showIntake(data.intake_url, data.customer_email || null, !!data.is_subscription, !!data.is_prefilled_from_oneoff);
+          showIntake(data.intake_url, data.customer_email || null, !!data.is_subscription, !!data.is_prefilled_from_oneoff, data.email_recovery_token || '');
           return true;
         }
         return false;
@@ -250,7 +289,7 @@
               .then(function(data) {
                 if (data && data.status === 'ok' && data.intake_url) {
                   intakeShown = true;
-                  showIntake(data.intake_url, data.customer_email || null, !!data.is_subscription, !!data.is_prefilled_from_oneoff);
+                  showIntake(data.intake_url, data.customer_email || null, !!data.is_subscription, !!data.is_prefilled_from_oneoff, data.email_recovery_token || '');
                   if (emailFallback) emailFallback.style.display = 'none';
                 } else {
                   if (emailError) { emailError.textContent = data && data.error ? data.error : 'No order found for this email.'; emailError.style.display = 'block'; }
@@ -346,6 +385,63 @@
             if (errEl) { errEl.textContent = 'Something went wrong. Please try again.'; errEl.style.display = 'block'; }
             signupBtn.disabled = false;
             signupBtn.textContent = 'Create account';
+          });
+        });
+      }
+
+      if (wrongEmailToggleEl && wrongEmailFormEl) {
+        wrongEmailToggleEl.addEventListener('click', function() {
+          var open = wrongEmailFormEl.style.display === 'block';
+          wrongEmailFormEl.style.display = open ? 'none' : 'block';
+          if (!open && wrongEmailInputEl) wrongEmailInputEl.focus();
+          if (wrongEmailErrorEl) { wrongEmailErrorEl.style.display = 'none'; wrongEmailErrorEl.textContent = ''; }
+          if (wrongEmailSuccessEl) wrongEmailSuccessEl.style.display = 'none';
+        });
+      }
+      if (wrongEmailBtnEl) {
+        wrongEmailBtnEl.addEventListener('click', function() {
+          var email = (wrongEmailInputEl && wrongEmailInputEl.value || '').trim().toLowerCase();
+          var emailConfirm = (wrongEmailConfirmEl && wrongEmailConfirmEl.value || '').trim().toLowerCase();
+          if (wrongEmailErrorEl) { wrongEmailErrorEl.style.display = 'none'; wrongEmailErrorEl.textContent = ''; }
+          if (wrongEmailSuccessEl) wrongEmailSuccessEl.style.display = 'none';
+          if (!sessionId || !recoveryToken) {
+            if (wrongEmailErrorEl) { wrongEmailErrorEl.textContent = 'Missing session reference. Please refresh this page.'; wrongEmailErrorEl.style.display = 'block'; }
+            return;
+          }
+          if (!email || email.indexOf('@') === -1) {
+            if (wrongEmailErrorEl) { wrongEmailErrorEl.textContent = 'Please enter a valid email.'; wrongEmailErrorEl.style.display = 'block'; }
+            return;
+          }
+          if (email !== emailConfirm) {
+            if (wrongEmailErrorEl) { wrongEmailErrorEl.textContent = 'Email addresses do not match.'; wrongEmailErrorEl.style.display = 'block'; }
+            return;
+          }
+          wrongEmailBtnEl.disabled = true;
+          wrongEmailBtnEl.textContent = 'Updating…';
+          fetch('/api/captions-correct-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_id: sessionId, recovery_token: recoveryToken, email: email, email_confirm: emailConfirm })
+          })
+          .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+          .then(function(res) {
+            if (res.ok && res.data && res.data.status === 'ok') {
+              showIntake((res.data && res.data.intake_url) || intakeLinkEl.href, email, !!res.data.is_subscription, !!res.data.is_prefilled_from_oneoff, (res.data && res.data.email_recovery_token) || '');
+              if (wrongEmailSuccessEl) wrongEmailSuccessEl.style.display = 'block';
+              if (wrongEmailFormEl) wrongEmailFormEl.style.display = 'none';
+            } else {
+              if (wrongEmailErrorEl) {
+                wrongEmailErrorEl.textContent = (res.data && res.data.error) || 'Unable to update email. Please try again.';
+                wrongEmailErrorEl.style.display = 'block';
+              }
+            }
+            wrongEmailBtnEl.disabled = false;
+            wrongEmailBtnEl.textContent = 'Update email & resend link';
+          })
+          .catch(function() {
+            if (wrongEmailErrorEl) { wrongEmailErrorEl.textContent = 'Unable to update email right now. Please try again.'; wrongEmailErrorEl.style.display = 'block'; }
+            wrongEmailBtnEl.disabled = false;
+            wrongEmailBtnEl.textContent = 'Update email & resend link';
           });
         });
       }

@@ -6,6 +6,9 @@ mode=subscription and is detected in webhook so we create order and send intake 
 """
 import os
 import time
+import hmac
+import hashlib
+import base64
 from typing import Optional
 from flask import Blueprint, request, jsonify, redirect, Response, url_for
 from urllib.parse import quote
@@ -15,6 +18,8 @@ captions_bp = Blueprint("captions", __name__, url_prefix="/api")
 
 # Cooldown for intake email resends (order_id -> last_sent_timestamp) to avoid spam
 _intake_email_sent_at = {}
+_email_change_attempts = {}
+_email_change_resend_last = {}
 
 
 def _get_referral_coupon_id():
@@ -67,6 +72,143 @@ def _parse_currency(request) -> str:
     if v in ("usd", "eur"):
         return v
     return "gbp"
+
+
+def _parse_checkout_email(request):
+    """
+    Parse checkout email fields from query params.
+    Returns (email, error). Email is normalized lowercase when valid.
+    """
+    email = (request.args.get("email") or "").strip().lower()
+    email_confirm = (request.args.get("email_confirm") or "").strip().lower()
+    if not email and not email_confirm:
+        return None, None
+    if not email or "@" not in email:
+        return None, "Please enter a valid email."
+    if email != email_confirm:
+        return None, "Email addresses do not match."
+    return email, None
+
+
+def _recovery_secret_bytes() -> bytes:
+    return ((getattr(Config, "SECRET_KEY", None) or "").strip() or "dev-recovery-secret").encode("utf-8")
+
+
+def _make_email_recovery_token(order_id: str, session_id: str, ts: Optional[int] = None) -> str:
+    ts = int(ts or time.time())
+    payload = f"{order_id}:{session_id}:{ts}"
+    sig = hmac.new(_recovery_secret_bytes(), payload.encode("utf-8"), hashlib.sha256).hexdigest()
+    raw = f"{payload}:{sig}"
+    return base64.urlsafe_b64encode(raw.encode("utf-8")).decode("ascii")
+
+
+def _verify_email_recovery_token(token: str, order_id: str, session_id: str, *, max_age_seconds: int = 1800) -> bool:
+    if not token:
+        return False
+    try:
+        decoded = base64.urlsafe_b64decode(token.encode("ascii")).decode("utf-8")
+        parts = decoded.split(":")
+        if len(parts) < 4:
+            return False
+        tok_order_id = parts[0]
+        tok_session_id = parts[1]
+        tok_ts = int(parts[2])
+        tok_sig = parts[3]
+    except Exception:
+        return False
+    if tok_order_id != str(order_id) or tok_session_id != str(session_id):
+        return False
+    if int(time.time()) - tok_ts > max_age_seconds:
+        return False
+    payload = f"{tok_order_id}:{tok_session_id}:{tok_ts}"
+    expected = hmac.new(_recovery_secret_bytes(), payload.encode("utf-8"), hashlib.sha256).hexdigest()
+    return hmac.compare_digest(tok_sig, expected)
+
+
+def _email_change_allowed(order_id: str, ip: str) -> bool:
+    now = time.time()
+    key = f"{order_id}:{ip or 'unknown'}"
+    attempts = [t for t in (_email_change_attempts.get(key) or []) if now - t <= 3600]
+    if len(attempts) >= 3:
+        _email_change_attempts[key] = attempts
+        return False
+    attempts.append(now)
+    _email_change_attempts[key] = attempts
+    return True
+
+
+def _email_resend_allowed(order_id: str, *, cooldown_seconds: int = 300) -> bool:
+    now = time.time()
+    last = float(_email_change_resend_last.get(str(order_id), 0) or 0)
+    if now - last < cooldown_seconds:
+        return False
+    _email_change_resend_last[str(order_id)] = now
+    return True
+
+
+def _public_download_expiry_seconds() -> int:
+    try:
+        raw = int(os.getenv("CAPTIONS_PUBLIC_DOWNLOAD_LINK_TTL_SECONDS", "86400"))  # 24h default
+        return max(300, min(raw, 1209600))  # clamp 5 min .. 14 days
+    except Exception:
+        return 86400
+
+
+def _public_download_expiry_hours() -> int:
+    secs = _public_download_expiry_seconds()
+    return max(1, int((secs + 3599) // 3600))
+
+
+def _make_public_download_sig(token: str, file_type: str, exp_ts: int) -> str:
+    payload = f"{token}:{file_type}:{int(exp_ts)}"
+    return hmac.new(_recovery_secret_bytes(), payload.encode("utf-8"), hashlib.sha256).hexdigest()
+
+
+def _build_public_download_url(base: str, token: str, file_type: str) -> str:
+    t = (token or "").strip()
+    ft = (file_type or "captions").strip().lower()
+    exp_ts = int(time.time()) + _public_download_expiry_seconds()
+    sig = _make_public_download_sig(t, ft, exp_ts)
+    return f"{base}/api/captions-download-public?t={quote(t)}&type={quote(ft)}&exp={exp_ts}&sig={quote(sig)}"
+
+
+def _verify_public_download_signature(token: str, file_type: str, exp_ts: int, sig: str) -> bool:
+    if not token or not sig:
+        return False
+    if int(exp_ts) < int(time.time()):
+        return False
+    expected = _make_public_download_sig(token, file_type, int(exp_ts))
+    return hmac.compare_digest((sig or "").strip(), expected)
+
+
+def _append_email_change_event(order_service, order: dict, *, old_email: str, new_email: str, ip: str, user_agent: str) -> None:
+    """
+    Best-effort audit trail for corrected checkout emails.
+    Persists to caption_orders.email_change_events when the column exists.
+    """
+    try:
+        order_id = str(order.get("id") or "").strip()
+        if not order_id:
+            return
+        current_events = order.get("email_change_events") or []
+        if not isinstance(current_events, list):
+            current_events = []
+        event = {
+            "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "old_email": (old_email or "").strip().lower() or None,
+            "new_email": (new_email or "").strip().lower() or None,
+            "ip": (ip or "").strip() or None,
+            "user_agent": (user_agent or "").strip()[:300] or None,
+            "source": "thank_you_wrong_email",
+        }
+        current_events.append(event)
+        # Keep only the latest 20 events.
+        if len(current_events) > 20:
+            current_events = current_events[-20:]
+        order_service.update(order_id, {"email_change_events": current_events})
+    except Exception as e:
+        # Non-fatal by design (e.g. column not migrated yet).
+        print(f"[captions-correct-email] audit event write skipped: {e!r}")
 
 
 def _base_url_for_redirect() -> str:
@@ -365,6 +507,9 @@ def captions_checkout():
     platforms = _parse_platforms(request)
     selected = _parse_selected_platforms(request)
     stories = _parse_stories(request)
+    checkout_email, email_error = _parse_checkout_email(request)
+    if email_error:
+        return redirect(f"{request.host_url.rstrip('/')}/captions?error=checkout_email_invalid#pricing", code=302)
     extra_price_id = (getattr(Config, "STRIPE_CAPTIONS_EXTRA_PLATFORM_PRICE_ID", None) or "").strip()
     stories_price_id = (getattr(Config, "STRIPE_CAPTIONS_STORIES_PRICE_ID", None) or "").strip()
     amounts = _CURRENCY_ADDON_AMOUNTS.get(currency, _CURRENCY_ADDON_AMOUNTS["gbp"])
@@ -419,6 +564,8 @@ def captions_checkout():
         "cancel_url": cancel_url,
         "metadata": metadata,
     }
+    if checkout_email:
+        create_params["customer_email"] = checkout_email
     if referral_coupon:
         create_params["discounts"] = [{"coupon": referral_coupon}]
     try:
@@ -426,6 +573,87 @@ def captions_checkout():
         return redirect(session.url, code=302)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@captions_bp.route("/captions-correct-email", methods=["POST"])
+def captions_correct_email():
+    """
+    Correct checkout email for a paid order and resend intake link.
+    Body: {"session_id": "...", "email": "...", "email_confirm": "..."}
+    """
+    payload = request.get_json(silent=True) or {}
+    session_id = (payload.get("session_id") or "").strip()
+    recovery_token = (payload.get("recovery_token") or "").strip()
+    new_email = (payload.get("email") or "").strip().lower()
+    confirm_email = (payload.get("email_confirm") or "").strip().lower()
+    if not session_id:
+        return jsonify({"status": "error", "error": "Missing session_id."}), 400
+    if not new_email or "@" not in new_email:
+        return jsonify({"status": "error", "error": "Please enter a valid email."}), 400
+    if new_email != confirm_email:
+        return jsonify({"status": "error", "error": "Email addresses do not match."}), 400
+    try:
+        import stripe
+        from services.caption_order_service import CaptionOrderService
+    except Exception:
+        return jsonify({"status": "error", "error": "Service unavailable."}), 503
+    order_service = CaptionOrderService()
+    order = order_service.get_by_stripe_session_id(session_id)
+    if not order:
+        return jsonify({"status": "error", "error": "Order not found yet. Please try again in a few seconds."}), 404
+    order_id = str(order.get("id") or "").strip()
+    if not order_id:
+        return jsonify({"status": "error", "error": "Order not found."}), 404
+    if not _verify_email_recovery_token(recovery_token, order_id, session_id):
+        return jsonify({"status": "error", "error": "Email correction link expired. Please refresh this page and try again."}), 403
+    client_ip = (request.headers.get("X-Forwarded-For") or request.remote_addr or "").split(",")[0].strip()
+    if not _email_change_allowed(order_id, client_ip):
+        return jsonify({"status": "error", "error": "Too many attempts. Please try again later."}), 429
+    if not _email_resend_allowed(order_id):
+        return jsonify({"status": "error", "error": "Please wait a few minutes before requesting another resend."}), 429
+    try:
+        if not (getattr(Config, "STRIPE_SECRET_KEY", None) or "").strip():
+            return jsonify({"status": "error", "error": "Stripe is not configured."}), 503
+        stripe.api_key = Config.STRIPE_SECRET_KEY.strip()
+        session = stripe.checkout.Session.retrieve(session_id)
+        payment_status = (_get_session_attr(session, "payment_status") or "").strip().lower()
+        if payment_status not in ("paid", "no_payment_required"):
+            return jsonify({"status": "error", "error": "Checkout is not completed yet."}), 400
+    except Exception as e:
+        print(f"[captions-correct-email] Stripe session verify failed: {e!r}")
+        return jsonify({"status": "error", "error": "Unable to verify checkout session."}), 400
+    try:
+        old_email = (order.get("customer_email") or "").strip().lower()
+        ok = order_service.update(order_id, {"customer_email": new_email})
+        if not ok:
+            return jsonify({"status": "error", "error": "Unable to update email."}), 500
+        try:
+            order_service.remove_from_deleted_blocklist(new_email)
+        except Exception:
+            pass
+        updated = order_service.get_by_id(order_id) or order
+        _append_email_change_event(
+            order_service,
+            updated,
+            old_email=old_email,
+            new_email=new_email,
+            ip=client_ip,
+            user_agent=(request.headers.get("User-Agent") or ""),
+        )
+        updated = order_service.get_by_id(order_id) or updated
+        _send_intake_email_for_order(updated)
+        intake_url = _build_intake_url(updated)
+        return jsonify({
+            "status": "ok",
+            "customer_email": new_email,
+            "intake_url": intake_url,
+            "email_recovery_token": _make_email_recovery_token(order_id, session_id),
+            "is_subscription": bool((updated.get("stripe_subscription_id") or "").strip()),
+            "is_prefilled_from_oneoff": bool((updated.get("upgraded_from_token") or "").strip()),
+        }), 200
+    except Exception as e:
+        print(f"[captions-correct-email] Failed to update/resend: {e!r}")
+        return jsonify({"status": "error", "error": "Could not update email right now. Please try again."}), 500
 
 
 @captions_bp.route("/captions-checkout-subscription", methods=["GET"])
@@ -467,10 +695,12 @@ def captions_checkout_subscription():
     platforms = _parse_platforms(request)
     selected = _parse_selected_platforms(request)
     stories = _parse_stories(request)
+    reminders_on = request.args.get("form_reminders", "1").strip().lower() not in ("0", "false", "no", "off")
     base = _base_url_for_redirect()
     success_url = f"{base}/captions-thank-you?session_id={{CHECKOUT_SESSION_ID}}"
     cancel_url = f"{base}/captions"
     metadata = {"product": "captions_subscription", "platforms": str(platforms), "include_stories": "1" if stories else "0"}
+    metadata["reminder_opt_out"] = "0" if reminders_on else "1"
     if selected:
         metadata["selected_platforms"] = selected
     if target_business_key.startswith("biz:"):
@@ -726,7 +956,7 @@ def _send_intake_email_for_order(order: dict) -> None:
         if upgraded_from_oneoff:
             # Upgrade-from-one-off: prefilled form already exists, so we must not send the standard receipt copy
             # that says "complete your short intake form".
-            ok = notif.send_subscription_welcome_prefilled_email(customer_email, intake_url)
+            ok = notif.send_subscription_welcome_prefilled_email(customer_email, intake_url, order=order)
             if ok:
                 print(f"[captions-intake-link] Sent subscription welcome (prefilled) email to {customer_email}")
             else:
@@ -871,6 +1101,7 @@ def captions_intake_link():
         "status": "ok",
         "intake_url": intake_url,
         "customer_email": customer_email or None,
+        "email_recovery_token": _make_email_recovery_token(str(order.get("id")), session_id),
         "is_subscription": is_subscription,
         "is_prefilled_from_oneoff": is_prefilled_from_oneoff,
     }), 200
@@ -940,9 +1171,15 @@ def captions_intake_link_by_email():
     }), 200
 
 
-def _run_generation_and_deliver(order_id: str, *, force_redeliver: bool = False):
+def _run_generation_and_deliver(
+    order_id: str,
+    *,
+    force_redeliver: bool = False,
+    force_captions_only: bool = False,
+):
     """Background: generate captions, save, email client. Runs outside request context.
-    force_redeliver: when True, regenerate and email even if status is 'delivered' (used by force-deliver endpoint)."""
+    force_redeliver: when True, regenerate and email even if status is 'delivered' (used by force-deliver endpoint).
+    force_captions_only: when True, skip stories generation and deliver captions only."""
     import traceback
     from datetime import datetime
     from services.caption_order_service import CaptionOrderService
@@ -988,7 +1225,40 @@ def _run_generation_and_deliver(order_id: str, *, force_redeliver: bool = False)
         pack_start_date = datetime.utcnow().strftime("%Y-%m-%d")
         gen = CaptionGenerator()
         print(f"[Captions] Calling AI (provider={Config.AI_PROVIDER}) for order {order_id} (Day 1 = {pack_start_date})")
-        captions_md = gen.generate(intake, previous_pack_themes=previous_pack_themes, pack_start_date=pack_start_date)
+        stories_generation_failed = False
+        stories_generation_status = "ok"
+        if force_captions_only and intake.get("include_stories"):
+            stories_generation_status = "skipped"
+        try:
+            if force_captions_only and intake.get("include_stories"):
+                intake_no_stories = dict(intake or {})
+                intake_no_stories["include_stories"] = False
+                intake_no_stories["align_stories_to_captions"] = False
+                captions_md = gen.generate(
+                    intake_no_stories,
+                    previous_pack_themes=previous_pack_themes,
+                    pack_start_date=pack_start_date,
+                )
+            else:
+                captions_md = gen.generate(intake, previous_pack_themes=previous_pack_themes, pack_start_date=pack_start_date)
+        except RuntimeError as e:
+            msg = str(e)
+            if intake.get("include_stories") and "Stories output invalid after retry" in msg:
+                # Do not block full delivery when Story Ideas generation fails repeatedly.
+                # Fallback to captions-only so the customer still receives their core pack.
+                print(f"[Captions] Stories generation failed for order {order_id}; retrying captions-only fallback: {msg}")
+                intake_no_stories = dict(intake or {})
+                intake_no_stories["include_stories"] = False
+                intake_no_stories["align_stories_to_captions"] = False
+                captions_md = gen.generate(
+                    intake_no_stories,
+                    previous_pack_themes=previous_pack_themes,
+                    pack_start_date=pack_start_date,
+                )
+                stories_generation_failed = True
+                stories_generation_status = "failed"
+            else:
+                raise
         from services.caption_pdf import build_caption_pdf, build_stories_pdf, get_logo_path
         logo_path = get_logo_path()
         try:
@@ -1014,15 +1284,18 @@ def _run_generation_and_deliver(order_id: str, *, force_redeliver: bool = False)
                     "content": stories_pdf,
                     "mime_type": "application/pdf",
                 })
+        business_name = (intake.get("business_name") or "").strip()
         subject = "Your 30 Days of Social Media Captions"
+        if business_name:
+            subject = f"{subject} — {business_name}"
         has_sub = bool(row.get("stripe_subscription_id"))
         base = (Config.BASE_URL or "").strip().rstrip("/")
         if not base.startswith("http"):
             base = "https://www.lumo22.com"
         if token:
-            # Blueprint url_prefix is /api — links must match or email clicks 404
-            backup_captions_url = f"{base}/api/captions-download?t={token}&type=captions"
-            backup_stories_url = f"{base}/api/captions-download?t={token}&type=stories" if extra_attachments else None
+            # Public backup links are signed and time-limited for non-account users.
+            backup_captions_url = _build_public_download_url(base, token, "captions")
+            backup_stories_url = _build_public_download_url(base, token, "stories") if extra_attachments else None
         else:
             backup_captions_url = f"{base}/account"
             backup_stories_url = None
@@ -1036,9 +1309,15 @@ def _run_generation_and_deliver(order_id: str, *, force_redeliver: bool = False)
                 "Hi,\n\nYour 30 Days of Social Media Captions are ready. The document is attached.\n\n"
                 "Copy each caption as you need it, or edit to fit.\n\n"
             )
+            if stories_generation_failed:
+                body += (
+                    "Note: your Story Ideas add-on was not generated successfully in this run. "
+                    "We've delivered your captions now so you can start posting.\n\n"
+                )
         if has_sub:
             body += "Deleting this email or the PDF does not cancel your subscription. To cancel, go to your account → Manage subscription.\n\n"
         body += "If attachments don't appear in your inbox, use your backup download link(s):\n"
+        body += f"For your security, these backup links expire within {_public_download_expiry_hours()} hour(s).\n"
         body += backup_captions_url + "\n"
         if backup_stories_url:
             body += backup_stories_url + "\n"
@@ -1050,6 +1329,8 @@ def _run_generation_and_deliver(order_id: str, *, force_redeliver: bool = False)
             has_subscription=has_sub,
             backup_captions_url=backup_captions_url,
             backup_stories_url=(backup_stories_url or ""),
+            backup_link_expiry_hours=_public_download_expiry_hours(),
+            business_name=business_name or None,
         )
         # Save generated artifacts first so customer can still download even if email send fails.
         stories_pdf_bytes = extra_attachments[0]["content"] if extra_attachments else None
@@ -1058,6 +1339,14 @@ def _run_generation_and_deliver(order_id: str, *, force_redeliver: bool = False)
             captions_md,
             stories_pdf_bytes=stories_pdf_bytes,
             captions_pdf_bytes=file_content_bytes if mime_type == "application/pdf" else None,
+        )
+        order_service.update(
+            order_id,
+            {
+                "stories_generation_status": (
+                    "failed" if stories_generation_failed else stories_generation_status
+                )
+            },
         )
         print(f"[Captions] Sending delivery email to {customer_email} for order {order_id}")
         ok, send_error = notif.send_email_with_attachment(
@@ -1086,6 +1375,11 @@ def _run_generation_and_deliver(order_id: str, *, force_redeliver: bool = False)
         err_msg = str(e)
         print(f"[Captions] DELIVERY_FAILED order_id={order_id} error={err_msg}")
         traceback.print_exc()
+        if "Stories output invalid after retry" in err_msg:
+            try:
+                order_service.update(order_id, {"stories_generation_status": "failed"})
+            except Exception:
+                pass
         try:
             order_service.record_delivery_failure(order_id, err_msg)
         except Exception as rec_err:
@@ -1224,6 +1518,7 @@ def captions_delivery_health():
             return jsonify({"ok": False, "error": "Missing or invalid ?secret="}), 403
     try:
         from collections import Counter
+        from datetime import datetime, timezone, timedelta
 
         from services.caption_delivery_recovery import CAPTIONS_MAX_AUTO_DELIVERY_FAILURES
         from services.caption_order_service import CaptionOrderService
@@ -1262,6 +1557,34 @@ def captions_delivery_health():
             for r in rows
             if (r.get("status") or "").lower() == "failed"
         ][:12]
+        now = datetime.now(timezone.utc)
+        stale_generating = []
+        for r in rows:
+            if (r.get("status") or "").lower() != "generating":
+                continue
+            updated = r.get("updated_at") or r.get("created_at")
+            try:
+                udt = datetime.fromisoformat(str(updated).replace("Z", "+00:00"))
+                if udt.tzinfo is None:
+                    udt = udt.replace(tzinfo=timezone.utc)
+                if udt < now - timedelta(minutes=30):
+                    stale_generating.append(
+                        {
+                            "id": str(r.get("id")),
+                            "email": r.get("customer_email"),
+                            "updated_at": r.get("updated_at"),
+                        }
+                    )
+            except Exception:
+                pass
+        error_counts = Counter(
+            ((r.get("delivery_last_error") or "").strip()[:180] for r in rows if (r.get("status") or "").lower() == "failed")
+        )
+        repeating_failures = [
+            {"error": err, "count": count}
+            for err, count in error_counts.items()
+            if err and count >= 2
+        ]
         return jsonify(
             {
                 "ok": True,
@@ -1270,10 +1593,112 @@ def captions_delivery_health():
                 "status_counts": dict(status_counts),
                 "recovery_queue": stuck_summary,
                 "recent_failed": failed_recent,
+                "alerts": {
+                    "stale_generating_over_30m": stale_generating[:12],
+                    "repeating_failed_errors": repeating_failures[:8],
+                },
             }
         ), 200
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)[:500]}), 500
+
+
+@captions_bp.route("/captions-email-change-audit", methods=["GET"])
+def captions_email_change_audit():
+    """
+    Support endpoint: recent checkout email correction events.
+    Protected with CAPTIONS_DELIVER_TEST_SECRET via ?secret=.
+    """
+    test_secret = (getattr(Config, "CAPTIONS_DELIVER_TEST_SECRET", None) or "").strip()
+    if Config.is_production() and not test_secret:
+        return jsonify({"ok": False, "error": "Set CAPTIONS_DELIVER_TEST_SECRET in environment."}), 403
+    if test_secret:
+        provided = (request.args.get("secret") or "").strip()
+        if not provided or provided != test_secret:
+            return jsonify({"ok": False, "error": "Missing or invalid ?secret="}), 403
+    try:
+        from services.caption_order_service import CaptionOrderService
+
+        limit = max(1, min(100, int(request.args.get("limit", 30) or 30)))
+        svc = CaptionOrderService()
+        recent = (
+            svc.client.table(svc.table)
+            .select("id,customer_email,status,updated_at,email_change_events")
+            .order("updated_at", desc=True)
+            .limit(200)
+            .execute()
+        )
+        rows = recent.data or []
+        events = []
+        for row in rows:
+            row_events = row.get("email_change_events") or []
+            if not isinstance(row_events, list):
+                continue
+            for ev in row_events:
+                if not isinstance(ev, dict):
+                    continue
+                events.append(
+                    {
+                        "order_id": str(row.get("id") or ""),
+                        "current_email": row.get("customer_email"),
+                        "order_status": row.get("status"),
+                        "at": ev.get("at"),
+                        "old_email": ev.get("old_email"),
+                        "new_email": ev.get("new_email"),
+                        "ip": ev.get("ip"),
+                        "user_agent": ev.get("user_agent"),
+                        "source": ev.get("source"),
+                    }
+                )
+        events.sort(key=lambda e: e.get("at") or "", reverse=True)
+        return jsonify(
+            {
+                "ok": True,
+                "count": min(limit, len(events)),
+                "events": events[:limit],
+            }
+        ), 200
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)[:500]}), 500
+
+
+@captions_bp.route("/captions-redeliver-order", methods=["POST"])
+def captions_redeliver_order():
+    """
+    Support endpoint: safely re-trigger delivery for a specific order.
+    Protected with CAPTIONS_DELIVER_TEST_SECRET in production.
+    JSON body: {"order_id":"...", "captions_only": true|false}
+    """
+    test_secret = (getattr(Config, "CAPTIONS_DELIVER_TEST_SECRET", None) or "").strip()
+    if Config.is_production() and not test_secret:
+        return jsonify({"ok": False, "error": "Set CAPTIONS_DELIVER_TEST_SECRET in environment."}), 403
+    provided = (request.args.get("secret") or "").strip()
+    if test_secret and (not provided or provided != test_secret):
+        return jsonify({"ok": False, "error": "Missing or invalid ?secret="}), 403
+    data = request.get_json(silent=True) or {}
+    order_id = str(data.get("order_id") or "").strip()
+    captions_only = bool(data.get("captions_only"))
+    if not order_id:
+        return jsonify({"ok": False, "error": "Missing order_id"}), 400
+    try:
+        from services.caption_order_service import CaptionOrderService
+
+        order_service = CaptionOrderService()
+        order = order_service.get_by_id(order_id)
+        if not order:
+            return jsonify({"ok": False, "error": "Order not found"}), 404
+        if not (order.get("intake") or {}):
+            return jsonify({"ok": False, "error": "Order has no intake yet"}), 400
+        ok, err = _run_generation_and_deliver(
+            order_id,
+            force_redeliver=True,
+            force_captions_only=captions_only,
+        )
+        if ok:
+            return jsonify({"ok": True, "message": "Redelivery completed."}), 200
+        return jsonify({"ok": False, "error": err or "Redelivery failed"}), 200
+    except Exception as e:
+        return jsonify({"ok": False, "error": _normalize_error(e)}), 500
 
 
 @captions_bp.route("/captions-intake", methods=["POST"])
@@ -1694,6 +2119,95 @@ def captions_download():
     )
 
 
+@captions_bp.route("/captions-download-public", methods=["GET"])
+def captions_download_public():
+    """
+    Download captions or stories PDF for delivered orders using a signed, expiring URL.
+    This is for backup links in delivery emails for users without accounts.
+    Query: ?t=TOKEN&type=captions|stories&exp=UNIX_TS&sig=HMAC_HEX
+    """
+    token = (request.args.get("t") or request.args.get("token") or "").strip()
+    download_type = (request.args.get("type") or "captions").strip().lower()
+    sig = (request.args.get("sig") or "").strip()
+    try:
+        exp_ts = int(request.args.get("exp") or "0")
+    except Exception:
+        exp_ts = 0
+    if not token:
+        return jsonify({"error": "Missing token"}), 400
+    if download_type not in ("captions", "stories"):
+        return jsonify({"error": "Invalid type"}), 400
+    if not _verify_public_download_signature(token, download_type, exp_ts, sig):
+        return jsonify({"error": "This backup link is invalid or expired."}), 403
+    try:
+        from services.caption_order_service import CaptionOrderService
+        order_service = CaptionOrderService()
+        order = order_service.get_by_token(token)
+    except Exception:
+        return jsonify({"error": "Could not load order"}), 500
+    if not order:
+        return jsonify({"error": "Order not found"}), 404
+    if order.get("status") != "delivered":
+        return jsonify({"error": "Captions are not ready yet."}), 400
+    captions_md = order.get("captions_md")
+    if not captions_md:
+        return jsonify({"error": "Captions file not found"}), 404
+    from datetime import datetime
+    date_str = (order.get("created_at") or "")[:10] if order.get("created_at") else datetime.utcnow().strftime("%Y-%m-%d")
+    intake = order.get("intake") or {}
+    business_name = _filename_safe((intake.get("business_name") or "").strip())
+    name_label = business_name if business_name else "Pack"
+    if download_type == "stories":
+        if not order.get("include_stories"):
+            return jsonify({"error": "This order did not include the Stories add-on"}), 400
+        import base64
+        stored_b64 = (order.get("stories_pdf_base64") or "").strip()
+        if stored_b64:
+            try:
+                pdf_bytes = base64.b64decode(stored_b64)
+            except Exception:
+                pdf_bytes = None
+        else:
+            pdf_bytes = None
+        if not pdf_bytes:
+            try:
+                from services.caption_pdf import build_stories_pdf, get_logo_path
+                logo_path = get_logo_path()
+                pdf_bytes = build_stories_pdf(captions_md, logo_path=logo_path, pack_start_date=date_str)
+            except Exception as e:
+                return jsonify({"error": "Could not build Stories PDF: {}".format(str(e))}), 500
+        if not pdf_bytes:
+            return jsonify({"error": "Stories PDF not available for this pack"}), 404
+        filename = f"{name_label}_Stories_{date_str}.pdf"
+        return Response(
+            pdf_bytes,
+            mimetype="application/pdf",
+            headers={"Content-Disposition": "attachment; filename={}".format(filename)},
+        )
+    import base64
+    stored_captions_b64 = (order.get("captions_pdf_base64") or "").strip()
+    if stored_captions_b64:
+        try:
+            pdf_bytes = base64.b64decode(stored_captions_b64)
+        except Exception:
+            pdf_bytes = None
+    else:
+        pdf_bytes = None
+    if not pdf_bytes:
+        try:
+            from services.caption_pdf import build_caption_pdf, get_logo_path
+            logo_path = get_logo_path()
+            pdf_bytes = build_caption_pdf(captions_md, logo_path=logo_path, pack_start_date=date_str)
+        except Exception as e:
+            return jsonify({"error": "Could not build PDF: {}".format(str(e))}), 500
+    filename = f"{name_label}_Captions_{date_str}.pdf"
+    return Response(
+        pdf_bytes,
+        mimetype="application/pdf",
+        headers={"Content-Disposition": "attachment; filename={}".format(filename)},
+    )
+
+
 @captions_bp.route("/captions-resend-delivery", methods=["POST"])
 def captions_resend_delivery():
     """
@@ -1777,36 +2291,45 @@ def captions_resend_delivery():
         base = (Config.BASE_URL or "").strip().rstrip("/")
         if not base.startswith("http"):
             base = "https://www.lumo22.com"
-        backup_captions_url = f"{base}/api/captions-download?t={safe_token}&type=captions"
-        backup_stories_url = f"{base}/api/captions-download?t={safe_token}&type=stories" if include_stories else ""
+        backup_captions_url = _build_public_download_url(base, safe_token, "captions")
+        backup_stories_url = _build_public_download_url(base, safe_token, "stories") if include_stories else ""
         has_sub = bool(order.get("stripe_subscription_id"))
 
         if extra_attachments:
             body = (
                 "Hi,\n\nYour 30 Days of Social Media Captions and 30 Days of Story Ideas are attached.\n\n"
                 "If attachments don't appear in your inbox, use your backup download link(s):\n"
+                f"For your security, these backup links expire within {_public_download_expiry_hours()} hour(s).\n"
                 f"{backup_captions_url}\n{backup_stories_url}\n\n"
             )
         else:
             body = (
                 "Hi,\n\nYour 30 Days of Social Media Captions are attached.\n\n"
                 "If attachments don't appear in your inbox, use your backup download link:\n"
+                f"For your security, this backup link expires within {_public_download_expiry_hours()} hour(s).\n"
                 f"{backup_captions_url}\n\n"
             )
         if has_sub:
             body += "Deleting this email or the PDF does not cancel your subscription. To cancel, go to your account -> Manage subscription.\n\n"
         body += "Lumo 22\n"
 
+        intake = order.get("intake") if isinstance(order.get("intake"), dict) else {}
+        business_name = (intake.get("business_name") or "").strip() if intake else ""
         html_body = _captions_delivery_email_html(
             bool(extra_attachments),
             has_subscription=has_sub,
             backup_captions_url=backup_captions_url,
             backup_stories_url=backup_stories_url,
+            backup_link_expiry_hours=_public_download_expiry_hours(),
+            business_name=business_name or None,
         )
         notif = NotificationService()
+        subject = "Your 30 Days of Social Media Captions"
+        if business_name:
+            subject = f"{subject} — {business_name}"
         ok, send_error = notif.send_email_with_attachment(
             email,
-            "Your 30 Days of Social Media Captions",
+            subject,
             body,
             filename="30_Days_Captions.pdf",
             file_content_bytes=captions_pdf,
@@ -1822,7 +2345,7 @@ def captions_resend_delivery():
 
 
 def _get_subscription_pause_info(stripe_subscription_id: str):
-    """Fetch subscription from Stripe; return {paused, resumes_at, cancel_at_period_end, ends_at}."""
+    """Fetch subscription from Stripe; return pause + cancellation state for dashboard badges."""
     from api.stripe_utils import is_valid_stripe_subscription_id
     if not stripe_subscription_id or not Config.STRIPE_SECRET_KEY or not is_valid_stripe_subscription_id(stripe_subscription_id):
         return None
@@ -1831,7 +2354,13 @@ def _get_subscription_pause_info(stripe_subscription_id: str):
         from datetime import datetime
         stripe.api_key = Config.STRIPE_SECRET_KEY
         sub = stripe.Subscription.retrieve(stripe_subscription_id.strip())
-        out = {"paused": False, "resumes_at": None, "cancel_at_period_end": False, "ends_at": None}
+        out = {
+            "paused": False,
+            "resumes_at": None,
+            "cancel_at_period_end": False,  # scheduled cancellation
+            "cancelled_now": False,         # immediate cancellation already effective
+            "ends_at": None,
+        }
         # Pause info
         pc = sub.get("pause_collection")
         if pc and isinstance(pc, dict):
@@ -1852,6 +2381,16 @@ def _get_subscription_pause_info(stripe_subscription_id: str):
             if cancel_ts:
                 try:
                     dt = datetime.utcfromtimestamp(cancel_ts)
+                    out["ends_at"] = dt.strftime("%d %b %Y")
+                except (TypeError, ValueError, OSError):
+                    pass
+        # Immediate cancellation
+        if (sub.get("status") or "").strip().lower() == "canceled":
+            out["cancelled_now"] = True
+            ended_ts = sub.get("ended_at") or sub.get("canceled_at") or sub.get("cancel_at")
+            if ended_ts:
+                try:
+                    dt = datetime.utcfromtimestamp(ended_ts)
                     out["ends_at"] = dt.strftime("%d %b %Y")
                 except (TypeError, ValueError, OSError):
                     pass
@@ -2045,6 +2584,68 @@ def captions_restart_subscription():
         return jsonify({"ok": False, "error": (str(e) or "Could not resume")[:200]}), 400
     except stripe.error.StripeError as e:
         return jsonify({"ok": False, "error": str(e)[:200]}), 400
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@captions_bp.route("/captions/cancel-subscription", methods=["POST"])
+def captions_cancel_subscription():
+    """
+    Cancel a caption subscription immediately. Requires login.
+    Body: { "order_id": "..." }
+    """
+    from api.auth_routes import get_current_customer
+    import stripe
+
+    customer = get_current_customer()
+    if not customer:
+        return jsonify({"ok": False, "error": "Not logged in"}), 401
+    email = (customer.get("email") or "").strip().lower()
+    if not email or "@" not in email:
+        return jsonify({"ok": False, "error": "Invalid customer"}), 400
+    if not Config.STRIPE_SECRET_KEY:
+        return jsonify({"ok": False, "error": "Billing not configured"}), 503
+
+    try:
+        data = request.get_json() or {}
+        order_id = (data.get("order_id") or "").strip()
+        if not order_id:
+            return jsonify({"ok": False, "error": "order_id required"}), 400
+
+        from services.caption_order_service import CaptionOrderService
+        from api.stripe_utils import is_valid_stripe_subscription_id
+
+        order_service = CaptionOrderService()
+        order = order_service.get_by_id(order_id)
+        if not order:
+            return jsonify({"ok": False, "error": "Order not found"}), 404
+        order_email = (order.get("customer_email") or "").strip().lower()
+        if order_email != email:
+            return jsonify({"ok": False, "error": "This order does not belong to your account"}), 403
+
+        sub_id = (order.get("stripe_subscription_id") or "").strip()
+        if not sub_id:
+            return jsonify({"ok": False, "error": "This order is not a subscription"}), 400
+        if not is_valid_stripe_subscription_id(sub_id):
+            return jsonify({"ok": False, "error": "Invalid subscription"}), 400
+
+        stripe.api_key = Config.STRIPE_SECRET_KEY
+        sub = stripe.Subscription.retrieve(sub_id)
+        if (sub.get("status") or "").strip().lower() == "canceled":
+            return jsonify({"ok": True, "message": "Subscription is already cancelled."}), 200
+
+        # Immediate cancellation (no end-of-period scheduling).
+        stripe.Subscription.delete(sub_id)
+        # Stop pre-pack reminders for this order.
+        order_service.update(order_id, {"reminder_opt_out": True})
+        return jsonify({"ok": True, "message": "Subscription cancelled immediately."}), 200
+    except stripe.error.InvalidRequestError as e:
+        msg = str(e).lower()
+        if "no such" in msg or "deleted" in msg or "canceled" in msg or "cancel" in msg:
+            return jsonify({"ok": False, "error": "This subscription is no longer active."}), 400
+        return jsonify({"ok": False, "error": (str(e) or "Could not cancel")[:200]}), 400
+    except stripe.error.StripeError as e:
+        return jsonify({"ok": False, "error": (str(e) or "Stripe error")[:200]}), 400
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
 
@@ -2259,11 +2860,29 @@ def _run_stuck_first_deliveries(max_orders: int = 5) -> dict:
         thread.daemon = False
         thread.start()
         triggered += 1
+    salvage = order_service.get_orders_needing_captions_only_salvage(limit=max(1, min(3, max_orders)))
+    salvage_triggered = 0
+    for order in salvage:
+        order_id = order.get("id")
+        if not order_id:
+            continue
+        thread = threading.Thread(
+            target=_run_generation_and_deliver,
+            args=(str(order_id),),
+            kwargs={"force_captions_only": True},
+        )
+        thread.daemon = False
+        thread.start()
+        salvage_triggered += 1
     if triggered:
         print(f"[Captions recovery] started delivery threads for {triggered} stuck order(s)")
+    if salvage_triggered:
+        print(f"[Captions recovery] started captions-only salvage for {salvage_triggered} failed order(s)")
     return {
         "stuck_first_delivery_triggered": triggered,
+        "captions_only_salvage_triggered": salvage_triggered,
         "stuck_order_ids": [o.get("id") for o in stuck if o.get("id")],
+        "salvage_order_ids": [o.get("id") for o in salvage if o.get("id")],
     }
 
 

@@ -412,6 +412,13 @@ def captions_intake_page():
                         if be and ce and be == ce:
                             src_intake = bo.get("intake") or {}
                 merged = {**src_intake, **db_intake}
+                # Upgrade flow: default the prefilled subscription intake to the plan they
+                # actually chose at checkout (platform selection + stories add-on), so PDFs
+                # reflect the upgraded configuration even if they don't edit these fields.
+                selected_for_sub = (order.get("selected_platforms") or "").strip()
+                if selected_for_sub:
+                    merged["platform"] = selected_for_sub
+                merged["include_stories"] = bool(order.get("include_stories"))
                 if (merged.get("business_name") or "").strip() and not (db_intake.get("business_name") or "").strip():
                     oid = order.get("id")
                     if oid and svc_auth.update_intake_only(str(oid), merged):
@@ -443,6 +450,10 @@ def captions_intake_page():
                 pass
     # Prefill platform from order (chosen at checkout) when they haven't saved intake yet
     prefilled_platform = (existing_intake.get("platform") or "").strip() if existing_intake else ""
+    if order and (order.get("stripe_subscription_id") or "").strip() and (order.get("upgraded_from_token") or "").strip():
+        selected_for_sub = (selected_platforms or "").strip()
+        if selected_for_sub:
+            prefilled_platform = selected_for_sub
     if not prefilled_platform and selected_platforms:
         prefilled_platform = selected_platforms
     if is_upgrade_flow and upgrade_selected:
@@ -568,6 +579,7 @@ def captions_checkout_subscription_page():
     platforms = _parse_platforms_from_request()
     selected = (request.args.get("selected") or request.args.get("selected_platforms") or "").strip()
     stories = request.args.get("stories", "").strip().lower() in ("1", "true", "yes", "on")
+    reminders_on = request.args.get("form_reminders", "1").strip().lower() not in ("0", "false", "no", "off")
     currency = (request.args.get("currency") or "gbp").strip().lower()
     if currency not in CAPTIONS_DISPLAY_PRICES:
         currency = "gbp"
@@ -579,6 +591,10 @@ def captions_checkout_subscription_page():
         params["selected"] = selected
     if stories:
         params["stories"] = "1"
+    if reminders_on:
+        params["form_reminders"] = "1"
+    else:
+        params["form_reminders"] = "0"
     ref = (request.args.get("ref") or "").strip()
     if ref:
         params["ref"] = ref
@@ -642,6 +658,7 @@ def captions_checkout_subscription_page():
         is_upgrade_from_oneoff=bool(copy_from),
         first_charge_date=first_charge_date_str,
         can_get_pack_now=can_get_pack_now,
+        form_reminders_on=reminders_on,
     )
 
 
@@ -1069,9 +1086,20 @@ def _account_context():
 def _get_subscription_billing(caption_orders):
     """
     Build payment_methods list and per-subscription default for account page.
-    Returns { "payment_methods": [{ id, brand, last4 }], "subscription_payment_methods": { sub_id: { id, brand, last4 } } }.
+    Returns:
+    {
+      "payment_methods": [{ id, brand, last4 }],
+      "subscription_payment_methods": { sub_id: { id, brand, last4 } },
+      "subscription_pricing": {
+        sub_id: {
+          currency, symbol, standard_monthly, effective_monthly,
+          discount_type, discount_percent, discount_amount,
+          discount_duration, discount_end
+        }
+      }
+    }.
     """
-    out = {"payment_methods": [], "subscription_payment_methods": {}}
+    out = {"payment_methods": [], "subscription_payment_methods": {}, "subscription_pricing": {}}
     if not caption_orders or not getattr(Config, "STRIPE_SECRET_KEY", None):
         return out
     stripe_customer_id = None
@@ -1099,7 +1127,10 @@ def _get_subscription_billing(caption_orders):
             if not sub_id or not is_valid_stripe_subscription_id(sub_id):
                 continue
             try:
-                sub = stripe.Subscription.retrieve(sub_id, expand=["default_payment_method"])
+                sub = stripe.Subscription.retrieve(
+                    sub_id,
+                    expand=["default_payment_method", "items.data.price", "discount.coupon"],
+                )
                 pm = sub.get("default_payment_method")
                 if pm and isinstance(pm, dict):
                     card = pm.get("card") or {}
@@ -1110,8 +1141,75 @@ def _get_subscription_billing(caption_orders):
                     }
                 else:
                     out["subscription_payment_methods"][sub_id] = None
+
+                # Real Stripe pricing context (supports temporary discounts).
+                try:
+                    items = ((sub.get("items") or {}).get("data") or [])
+                    subtotal_minor = 0
+                    currency = "gbp"
+                    for item in items:
+                        if not isinstance(item, dict):
+                            continue
+                        price = item.get("price") or {}
+                        unit_amount = int(price.get("unit_amount") or 0)
+                        qty = int(item.get("quantity") or 1)
+                        subtotal_minor += max(0, unit_amount) * max(1, qty)
+                        if price.get("currency"):
+                            currency = str(price.get("currency")).strip().lower()
+                    symbols = {"gbp": "£", "usd": "$", "eur": "€"}
+                    symbol = symbols.get(currency, "£")
+                    standard_monthly = round(subtotal_minor / 100.0, 2)
+                    effective_monthly = standard_monthly
+                    discount_type = None
+                    discount_percent = None
+                    discount_amount = None
+                    discount_duration = None
+                    discount_end = None
+
+                    discount = sub.get("discount")
+                    if isinstance(discount, dict):
+                        coupon = discount.get("coupon") or {}
+                        percent_off = coupon.get("percent_off")
+                        amount_off = coupon.get("amount_off")
+                        if percent_off is not None:
+                            try:
+                                discount_percent = float(percent_off)
+                                effective_monthly = round(
+                                    max(0.0, standard_monthly * (1.0 - (discount_percent / 100.0))),
+                                    2,
+                                )
+                                discount_type = "percent"
+                            except Exception:
+                                pass
+                        elif amount_off is not None:
+                            try:
+                                discount_amount = round(float(amount_off) / 100.0, 2)
+                                effective_monthly = round(
+                                    max(0.0, standard_monthly - float(discount_amount)),
+                                    2,
+                                )
+                                discount_type = "amount"
+                            except Exception:
+                                pass
+                        discount_duration = (coupon.get("duration") or "").strip().lower() or None
+                        discount_end = discount.get("end")
+
+                    out["subscription_pricing"][sub_id] = {
+                        "currency": currency,
+                        "symbol": symbol,
+                        "standard_monthly": standard_monthly,
+                        "effective_monthly": effective_monthly,
+                        "discount_type": discount_type,
+                        "discount_percent": discount_percent,
+                        "discount_amount": discount_amount,
+                        "discount_duration": discount_duration,
+                        "discount_end": discount_end,
+                    }
+                except Exception:
+                    out["subscription_pricing"][sub_id] = None
             except Exception:
                 out["subscription_payment_methods"][sub_id] = None
+                out["subscription_pricing"][sub_id] = None
     except Exception:
         pass
     return out

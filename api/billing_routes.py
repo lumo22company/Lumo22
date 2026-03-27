@@ -31,6 +31,42 @@ def _subscription_monthly_price(currency: str, platforms: int, include_stories: 
     return (prices["symbol"], amount)
 
 
+def _normalize_platform_list(raw: str) -> list[str]:
+    """Normalize comma-separated platform labels into supported unique values."""
+    allowed = ["Instagram & Facebook", "LinkedIn", "TikTok", "Pinterest"]
+    seen = set()
+    out = []
+    parts = [p.strip() for p in (raw or "").split(",") if p.strip()]
+    for p in parts:
+        if p in ("Instagram", "Facebook"):
+            p = "Instagram & Facebook"
+        if p in allowed and p not in seen:
+            seen.add(p)
+            out.append(p)
+    return out
+
+
+def _coerce_platform_selection(raw: str, desired_count: int) -> str:
+    """
+    Ensure selected platforms string aligns with desired count (1-4).
+    When count increases, append unused defaults in a stable order.
+    """
+    desired = max(1, min(4, int(desired_count or 1)))
+    defaults = ["Instagram & Facebook", "LinkedIn", "TikTok", "Pinterest"]
+    items = _normalize_platform_list(raw)
+    if not items:
+        items = ["Instagram & Facebook"]
+    # Fill up when moving to a higher platform count.
+    for p in defaults:
+        if len(items) >= desired:
+            break
+        if p not in items:
+            items.append(p)
+    # Trim if count reduced.
+    items = items[:desired]
+    return ", ".join(items)
+
+
 def subscription_platforms_and_stories_from_stripe(sub_obj: dict) -> tuple[int, bool]:
     """
     Parse a Stripe subscription object (from API or webhook event) into our plan shape.
@@ -297,6 +333,7 @@ def add_stories_to_subscription():
                     account_url=_account_url(),
                     new_price_display=f"{new_sym}{new_amt}",
                     old_price_display=f"{old_sym}{old_amt}",
+                    business_name=((order.get("intake") or {}).get("business_name") or None),
                 )
             except Exception as e:
                 print(f"[billing] Plan change confirmation email failed: {e}")
@@ -409,7 +446,21 @@ def reduce_subscription():
         msg = getattr(e, "user_message", None) or str(e) or "Stripe error"
         return jsonify({"ok": False, "error": msg}), 400
 
-    co_svc.update(order["id"], {"platforms_count": new_platforms, "include_stories": new_stories})
+    selected_raw = (order.get("selected_platforms") or "").strip()
+    intake_existing = order.get("intake") if isinstance(order.get("intake"), dict) else {}
+    intake_platform_raw = (intake_existing.get("platform") or "").strip() if intake_existing else ""
+    selected_source = intake_platform_raw or selected_raw
+    selected_synced = _coerce_platform_selection(selected_source, new_platforms)
+    updates = {
+        "platforms_count": new_platforms,
+        "include_stories": new_stories,
+        "selected_platforms": selected_synced,
+    }
+    updated_intake = dict(intake_existing or {})
+    updated_intake["platform"] = selected_synced
+    updated_intake["include_stories"] = new_stories
+    updates["intake"] = updated_intake
+    co_svc.update(order["id"], updates)
 
     customer_email = (order.get("customer_email") or "").strip()
     if customer_email and "@" in customer_email:
@@ -442,6 +493,7 @@ def reduce_subscription():
                 account_url=_account_url(),
                 new_price_display=f"{new_sym}{new_amt}",
                 old_price_display=f"{old_sym}{old_amt}",
+                business_name=((order.get("intake") or {}).get("business_name") or None),
             )
         except Exception as e:
             print(f"[billing] Plan change confirmation email failed: {e}")
@@ -584,6 +636,7 @@ def change_subscription_plan():
                 account_url=_account_url(),
                 new_price_display=f"{new_sym}{new_amt}",
                 old_price_display=f"{old_sym}{old_amt}",
+                business_name=((order.get("intake") or {}).get("business_name") or None),
             )
         except Exception as e:
             print(f"[billing] Plan change confirmation email failed: {e}")

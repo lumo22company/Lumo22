@@ -646,8 +646,49 @@
       if (errEl) errEl.style.display = 'none';
       return true;
     }
+    function isOneOffCheckoutHref(href) {
+      var h = href || '';
+      return h.indexOf('/captions-checkout?') !== -1 && h.indexOf('/captions-checkout-subscription?') === -1;
+    }
+    function askCheckoutEmail(defaultEmail) {
+      var first = window.prompt('Email', defaultEmail || '');
+      if (first === null) return null;
+      var email = (first || '').trim().toLowerCase();
+      if (!email || email.indexOf('@') === -1) {
+        window.alert('Please enter a valid email.');
+        return null;
+      }
+      var second = window.prompt('Confirm email', email);
+      if (second === null) return null;
+      var emailConfirm = (second || '').trim().toLowerCase();
+      if (email !== emailConfirm) {
+        window.alert('Email addresses do not match.');
+        return null;
+      }
+      try { sessionStorage.setItem('captions_checkout_email', email); } catch (e) {}
+      return email;
+    }
+    function appendCheckoutEmailParams(href, email) {
+      try {
+        var u = new URL(href, window.location.origin);
+        u.searchParams.set('email', email);
+        u.searchParams.set('email_confirm', email);
+        return u.pathname + u.search + u.hash;
+      } catch (e) {
+        var joiner = href.indexOf('?') === -1 ? '?' : '&';
+        return href + joiner + 'email=' + encodeURIComponent(email) + '&email_confirm=' + encodeURIComponent(email);
+      }
+    }
     function handleCtaClick(e) {
       if (!validateAndGo(this)) e.preventDefault();
+      if (e.defaultPrevented) return;
+      if (!isOneOffCheckoutHref(this.href || '')) return;
+      e.preventDefault();
+      var rememberedEmail = '';
+      try { rememberedEmail = (sessionStorage.getItem('captions_checkout_email') || '').trim().toLowerCase(); } catch (err) {}
+      var email = askCheckoutEmail(rememberedEmail);
+      if (!email) return;
+      window.location.href = appendCheckoutEmailParams(this.href, email);
     }
     if (oneoffCta && oneoffCta.href && oneoffCta.href.indexOf('captions-checkout') !== -1) {
       oneoffCta.addEventListener('click', handleCtaClick);

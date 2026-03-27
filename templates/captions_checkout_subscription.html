@@ -22,6 +22,13 @@
     .checkout-card .back a { color: var(--lum-text-muted); text-decoration: none; font-size: 0.95rem; }
     .checkout-card .back a:hover { color: var(--lum-text); }
     .checkout-order-summary { color: #fff; font-weight: 600; font-size: 1rem; margin-bottom: 0; }
+    .checkout-reminder-optin {
+      margin: 1rem 0 0.5rem;
+      padding: 1rem;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 8px;
+    }
   </style>
 </head>
 <body class="lumo-landing">
@@ -61,6 +68,15 @@
       </div>
       {% endif %}
       {% endif %}
+      <div class="checkout-reminder-optin">
+        <label style="display:flex; align-items:flex-start; gap:0.7rem; cursor:pointer;">
+          <input type="checkbox" id="form-reminders-checkbox" name="form_reminders" value="1" {% if form_reminders_on|default(true) %}checked{% endif %} style="margin-top:0.2rem;">
+          <span style="color:#fff;">
+            <strong>Send me form reminder emails before each pack</strong><br>
+            <span style="font-size:0.9rem; color:var(--lum-text-muted);">Useful if you have upcoming events, launches, or promotions and want your next captions tailored to them. You can switch reminders off anytime in your account.</span>
+          </span>
+        </label>
+      </div>
       <p class="price-note">New 30-day caption pack each month. Renews monthly until you cancel. Cancel anytime from your Stripe customer portal. You’ll complete a short form after payment; your captions are ready within 15 minutes.</p>
 
       {% if not platforms_invalid|default(false) %}
@@ -81,19 +97,30 @@
   {% if not platforms_invalid|default(false) %}
   {% include '_terms_modal.html' %}
   {% endif %}
-  {% if is_upgrade_from_oneoff|default(false) and can_get_pack_now|default(false) and api_url %}
+  {% if api_url %}
   <script>
     (function() {
       var btn = document.getElementById('btn-continue');
-      var checkbox = document.getElementById('get-pack-now-checkbox');
-      if (!btn || !checkbox) return;
-      var apiUrl = (btn.getAttribute('data-api-url') || '').replace(/&?get_pack_now=1/, '');
+      if (!btn) return;
+      var getPackNowCheckbox = document.getElementById('get-pack-now-checkbox');
+      var remindersCheckbox = document.getElementById('form-reminders-checkbox');
+      var apiUrl = (btn.getAttribute('data-api-url') || '')
+        .replace(/&?get_pack_now=1/g, '')
+        .replace(/&?form_reminders=(0|1)/g, '');
+
       function updateLink() {
-        btn.href = checkbox.checked
-          ? apiUrl + (apiUrl.indexOf('?') !== -1 ? '&' : '?') + 'get_pack_now=1'
-          : apiUrl;
+        var parts = [];
+        if (getPackNowCheckbox && getPackNowCheckbox.checked) parts.push('get_pack_now=1');
+        if (remindersCheckbox && remindersCheckbox.checked) {
+          parts.push('form_reminders=1');
+        } else {
+          parts.push('form_reminders=0');
+        }
+        btn.href = apiUrl + (parts.length ? ((apiUrl.indexOf('?') !== -1 ? '&' : '?') + parts.join('&')) : '');
       }
-      checkbox.addEventListener('change', updateLink);
+      if (getPackNowCheckbox) getPackNowCheckbox.addEventListener('change', updateLink);
+      if (remindersCheckbox) remindersCheckbox.addEventListener('change', updateLink);
+      updateLink();
     })();
   </script>
   {% endif %}

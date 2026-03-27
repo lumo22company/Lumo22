@@ -412,11 +412,35 @@ def _chunk_has_empty_blocks(content: str, include_hashtags: bool) -> bool:
     """Return True if markdown has empty **Caption:** or **Hashtags:** lines (indicates incomplete AI output)."""
     if not content or "**Caption:**" not in content:
         return True
-    # Empty Caption: "**Caption:**" followed by optional spaces and newline (no real text)
-    if re.search(r"\*\*Caption:\*\*\s*\n", content, re.IGNORECASE):
-        return True
-    if include_hashtags and re.search(r"\*\*Hashtags?:\*\*\s*\n", content, re.IGNORECASE):
-        return True
+    # Detect truly empty blocks (allowing blank lines after label). A caption is only empty
+    # if there is no non-whitespace text before the next section marker.
+    caption_label_re = r"(?:\*\*\s*Caption\s*:\s*\*\*|Caption[ \t]*:)"
+    hashtag_label_re = r"(?:\*\*\s*Hashtags?\s*:\s*\*\*|Hashtags?[ \t]*:)"
+    platform_label_re = r"(?:\*\*\s*Platform\s*:\s*\*\*|Platform[ \t]*:)"
+    for m in re.finditer(caption_label_re, content, re.I):
+        start = m.end()
+        next_markers = [
+            re.search(r"\n\s*" + hashtag_label_re, content[start:], re.I),
+            re.search(r"\n\s*" + platform_label_re, content[start:], re.I),
+            re.search(r"\n\s*##\s*Day\s+\d+\b", content[start:], re.I),
+            re.search(r"\n\s*---\s*$", content[start:], re.I | re.M),
+        ]
+        next_positions = [start + mm.start() for mm in next_markers if mm]
+        end = min(next_positions) if next_positions else len(content)
+        if not (content[start:end] or "").strip():
+            return True
+    if include_hashtags:
+        for m in re.finditer(hashtag_label_re, content, re.I):
+            start = m.end()
+            next_markers = [
+                re.search(r"\n\s*" + platform_label_re, content[start:], re.I),
+                re.search(r"\n\s*##\s*Day\s+\d+\b", content[start:], re.I),
+                re.search(r"\n\s*---\s*$", content[start:], re.I | re.M),
+            ]
+            next_positions = [start + mm.start() for mm in next_markers if mm]
+            end = min(next_positions) if next_positions else len(content)
+            if not (content[start:end] or "").strip():
+                return True
     return False
 
 
@@ -840,35 +864,11 @@ class CaptionGenerator:
             )
             if not content:
                 raise RuntimeError(f"AI returned empty content for days {day_start}-{day_end}")
-            # Retry once if chunk has incomplete/invalid structure (empty blocks, missing day/platform, duplicates).
-            chunk_err = _chunk_structure_error(
-                content,
-                day_start,
-                day_end,
-                expected_platform_count,
-                expected_platform_labels=platform_list,
-                include_hashtags=bool(include_hashtags),
-                hashtag_min=hashtag_min,
-                hashtag_max=hashtag_max,
-            )
-            if _chunk_has_empty_blocks(content, include_hashtags) or chunk_err:
-                reason = chunk_err or "empty Caption/Hashtags lines"
-                retry_user = user + (
-                    "\n\nIMPORTANT: Your previous response was invalid (" + reason + "). "
-                    "Regenerate this range exactly with strict structure: "
-                    "each expected day heading once, one platform block per platform per day, "
-                    "no duplicate platform blocks in a day, and no empty **Caption:** or **Hashtags:** lines. "
-                    "For Instagram, Facebook, LinkedIn, Pinterest: each **Caption:** must be at least ~200 characters "
-                    "and at least two full sentences with concrete detail—no vague one-line fragments."
-                )
-                content = chat_completion(
-                    system=system,
-                    user=retry_user,
-                    temperature=0.5,
-                    max_tokens=self.MAX_TOKENS_PER_CHUNK,
-                )
-                if not content:
-                    raise RuntimeError(f"AI returned empty content on retry for days {day_start}-{day_end}")
+            # Retry up to 3 times if chunk has incomplete/invalid structure
+            # (empty blocks, missing day/platform, duplicates). This reduces
+            # transient provider-format failures that otherwise block delivery.
+            chunk_err = None
+            for attempt in range(3):
                 chunk_err = _chunk_structure_error(
                     content,
                     day_start,
@@ -879,11 +879,33 @@ class CaptionGenerator:
                     hashtag_min=hashtag_min,
                     hashtag_max=hashtag_max,
                 )
-                if _chunk_has_empty_blocks(content, include_hashtags) or chunk_err:
+                has_empty = _chunk_has_empty_blocks(content, include_hashtags)
+                if not has_empty and not chunk_err:
+                    break
+                if attempt >= 2:
                     suffix = f" ({chunk_err})" if chunk_err else " (empty Caption or Hashtags)"
                     raise RuntimeError(
                         f"AI still returned incomplete content for days {day_start}-{day_end}{suffix}. Please try again."
                     )
+                reason = chunk_err or "empty Caption/Hashtags lines"
+                retry_user = user + (
+                    "\n\nIMPORTANT: Your previous response was invalid (" + reason + "). "
+                    "Regenerate this range exactly with strict structure: "
+                    "each expected day heading once, one platform block per platform per day, "
+                    "no duplicate platform blocks in a day, and no empty **Caption:** or **Hashtags:** lines. "
+                    "If hashtags are requested, each **Hashtags:** line must contain real hashtags starting with # "
+                    f"and the count must be between {hashtag_min} and {hashtag_max}. "
+                    "For Instagram, Facebook, LinkedIn, Pinterest: each **Caption:** must be at least ~200 characters "
+                    "and at least two full sentences with concrete detail—no vague one-line fragments."
+                )
+                content = chat_completion(
+                    system=system,
+                    user=retry_user,
+                    temperature=0.35,
+                    max_tokens=self.MAX_TOKENS_PER_CHUNK,
+                )
+                if not content:
+                    raise RuntimeError(f"AI returned empty content on retry for days {day_start}-{day_end}")
             parts.append(content)
         result = "\n".join(parts)
 

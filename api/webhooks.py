@@ -10,6 +10,8 @@ webhook_bp = Blueprint('webhooks', __name__, url_prefix='/webhooks')
 
 # --- Stripe (30 Days Captions) ---
 CAPTIONS_AMOUNT_PENCE = 9700  # £97
+_plan_change_email_dedupe = {}
+_PLAN_CHANGE_DEDUPE_TTL_SECONDS = 60 * 60  # 1 hour
 
 def _sanitize_base_url(raw: str) -> str:
     """Remove non-printable ASCII (e.g. newline from env) so URLs are valid."""
@@ -28,6 +30,47 @@ def _sanitize_for_email(text: str) -> str:
     return re.sub(r"[\x00-\x09\x0b-\x1f\x7f]", "", text)
 
 
+def _format_paid_amount(amount_total, currency: str) -> str:
+    """Format Stripe amount_total for customer-facing email copy."""
+    if amount_total is None:
+        return ""
+    try:
+        amt = int(amount_total)
+    except (TypeError, ValueError):
+        return ""
+    curr = (currency or "gbp").strip().lower()
+    if curr == "usd":
+        return f"${amt / 100:.2f}"
+    if curr == "eur":
+        return f"€{amt / 100:.2f}"
+    if curr == "gbp":
+        return f"£{amt / 100:.2f}"
+    return f"{amt / 100:.2f} {curr.upper()}"
+
+
+def _coerce_platform_selection(raw: str, desired_count: int) -> str:
+    """Normalize selected platforms and align count to subscription plan size."""
+    desired = max(1, min(4, int(desired_count or 1)))
+    defaults = ["Instagram & Facebook", "LinkedIn", "TikTok", "Pinterest"]
+    parts = [p.strip() for p in (raw or "").split(",") if p.strip()]
+    normalized = []
+    seen = set()
+    for p in parts:
+        if p in ("Instagram", "Facebook"):
+            p = "Instagram & Facebook"
+        if p in defaults and p not in seen:
+            seen.add(p)
+            normalized.append(p)
+    if not normalized:
+        normalized = ["Instagram & Facebook"]
+    for p in defaults:
+        if len(normalized) >= desired:
+            break
+        if p not in normalized:
+            normalized.append(p)
+    return ", ".join(normalized[:desired])
+
+
 def _should_send_plan_change_email(
     prev_attrs: dict,
     old_platforms: int,
@@ -39,14 +82,32 @@ def _should_send_plan_change_email(
     Guard plan-change confirmations to true plan changes only.
     Prevents false positives from unrelated subscription.updated events.
     """
-    if old_platforms != new_platforms or old_stories != new_stories:
-        return True
-    if not isinstance(prev_attrs, dict) or not prev_attrs:
-        return False
-    # Only treat as plan change if Stripe says items changed.
-    if "items" in prev_attrs:
-        return True
-    return False
+    # Only send when the effective plan actually changed.
+    # This avoids duplicate "plan updated" emails when the app endpoint already
+    # synced the order and Stripe later emits subscription.updated with items in previous_attributes.
+    return (old_platforms != new_platforms) or (old_stories != new_stories)
+
+
+def _plan_change_dedupe_key(sub_id: str, email: str, new_platforms: int, new_stories: bool) -> str:
+    """Stable key for webhook plan-change confirmation dedupe."""
+    return f"{(sub_id or '').strip().lower()}|{(email or '').strip().lower()}|{int(new_platforms)}|{1 if new_stories else 0}"
+
+
+def _plan_change_email_recently_sent(dedupe_key: str, now_ts: float | None = None) -> bool:
+    """True when this plan-change email key was sent recently in this process."""
+    now = float(now_ts if now_ts is not None else time.time())
+    # Opportunistic cleanup to keep dict bounded.
+    stale_before = now - _PLAN_CHANGE_DEDUPE_TTL_SECONDS
+    stale = [k for k, sent_at in _plan_change_email_dedupe.items() if sent_at < stale_before]
+    for k in stale:
+        _plan_change_email_dedupe.pop(k, None)
+    sent_at = _plan_change_email_dedupe.get(dedupe_key)
+    return bool(sent_at and (now - sent_at) < _PLAN_CHANGE_DEDUPE_TTL_SECONDS)
+
+
+def _mark_plan_change_email_sent(dedupe_key: str, now_ts: float | None = None) -> None:
+    """Record this plan-change key as sent for TTL-based dedupe."""
+    _plan_change_email_dedupe[dedupe_key] = float(now_ts if now_ts is not None else time.time())
 
 
 def _is_captions_subscription_payment(session) -> bool:
@@ -162,10 +223,12 @@ def _handle_captions_payment(session):
         platforms_count = meta.get("platforms")
         selected_platforms = meta.get("selected_platforms")
         include_stories = meta.get("include_stories") in ("1", "true", "yes")
+        reminder_opt_out = str(meta.get("reminder_opt_out") or "").strip().lower() in ("1", "true", "yes", "on")
     else:
         platforms_count = getattr(meta, "platforms", None)
         selected_platforms = getattr(meta, "selected_platforms", None)
         include_stories = getattr(meta, "include_stories", None) in ("1", "true", "yes")
+        reminder_opt_out = str(getattr(meta, "reminder_opt_out", "") or "").strip().lower() in ("1", "true", "yes", "on")
     try:
         platforms_count = max(1, int(platforms_count)) if platforms_count is not None else 1
     except (TypeError, ValueError):
@@ -193,6 +256,12 @@ def _handle_captions_payment(session):
             if updates:
                 order_service.update(existing["id"], updates)
                 order = {**existing, **updates}
+        if stripe_subscription_id and isinstance(meta, dict) and "reminder_opt_out" in meta:
+            try:
+                order_service.update(order["id"], {"reminder_opt_out": bool(reminder_opt_out)})
+                order["reminder_opt_out"] = bool(reminder_opt_out)
+            except Exception:
+                pass
     else:
         try:
             copy_from = (meta.get("copy_from") or "").strip() if isinstance(meta, dict) else getattr(meta, "copy_from", None) or ""
@@ -212,6 +281,12 @@ def _handle_captions_payment(session):
             print(f"[Stripe webhook] Failed to create order in Supabase: {e}")
             raise
         order_created_here = True
+        if stripe_subscription_id:
+            try:
+                order_service.update(order["id"], {"reminder_opt_out": bool(reminder_opt_out)})
+                order["reminder_opt_out"] = bool(reminder_opt_out)
+            except Exception as e:
+                print(f"[Stripe webhook] Could not persist reminder_opt_out on create: {e}")
         print(f"[Stripe webhook] Order created id={order.get('id')} token=...{order['token'][-6:]}")
     token = order["token"]
     base = _sanitize_base_url(Config.BASE_URL or "")
@@ -260,14 +335,24 @@ def _handle_captions_payment(session):
                 print(f"[Stripe webhook] Sending subscription upgrade confirmation (trial) to {customer_email}")
                 ok = False
                 try:
-                    ok = notif.send_subscription_upgrade_confirmation_email(customer_email, intake_url, first_charge_date_str)
+                    ok = notif.send_subscription_upgrade_confirmation_email(
+                        customer_email,
+                        intake_url,
+                        first_charge_date_str,
+                        order=order,
+                    )
                 except Exception as send_err:
                     print(f"[Stripe webhook] Upgrade confirmation send failed ({send_err}), retrying with fallback URL")
                     fallback_url = f"https://lumo-22-production.up.railway.app/captions-intake?t={safe_token}"
                     if copy_from:
                         fallback_url += f"&copy_from={copy_from}"
                     try:
-                        ok = notif.send_subscription_upgrade_confirmation_email(customer_email, fallback_url, first_charge_date_str)
+                        ok = notif.send_subscription_upgrade_confirmation_email(
+                            customer_email,
+                            fallback_url,
+                            first_charge_date_str,
+                            order=order,
+                        )
                     except Exception as fallback_err:
                         print(f"[Stripe webhook] Fallback also failed: {fallback_err}")
                         raise
@@ -280,14 +365,26 @@ def _handle_captions_payment(session):
                 print(f"[Stripe webhook] Sending subscription welcome (prefilled) email to {customer_email}")
                 ok = False
                 try:
-                    ok = notif.send_subscription_welcome_prefilled_email(customer_email, intake_url)
+                    amount_paid = _format_paid_amount(amount_total, (order.get("currency") or "gbp"))
+                    ok = notif.send_subscription_welcome_prefilled_email(
+                        customer_email,
+                        intake_url,
+                        order=order,
+                        amount_paid=amount_paid,
+                    )
                 except Exception as send_err:
                     print(f"[Stripe webhook] Send failed ({send_err}), retrying with hardcoded fallback URL")
                     fallback_url = f"https://lumo-22-production.up.railway.app/captions-intake?t={safe_token}"
                     if copy_from:
                         fallback_url += f"&copy_from={copy_from}"
                     try:
-                        ok = notif.send_subscription_welcome_prefilled_email(customer_email, fallback_url)
+                        amount_paid = _format_paid_amount(amount_total, (order.get("currency") or "gbp"))
+                        ok = notif.send_subscription_welcome_prefilled_email(
+                            customer_email,
+                            fallback_url,
+                            order=order,
+                            amount_paid=amount_paid,
+                        )
                     except Exception as fallback_err:
                         print(f"[Stripe webhook] Fallback send also failed: {fallback_err}")
                         raise
@@ -458,6 +555,7 @@ def _send_captions_subscription_cancelled_confirmation(sub_id: str, sub_obj: dic
             captions_url,
             plan_summary=plan_summary,
             price_display=price_display,
+            business_name=((order.get("intake") or {}).get("business_name") if isinstance(order, dict) else None),
         )
         if ok:
             print(f"[Stripe webhook] cancel confirmation email sent → {customer_email} (sub …{sub_id[-8:]})")
@@ -668,8 +766,10 @@ def stripe_webhook():
             base = (Config.BASE_URL or "https://www.lumo22.com").strip().rstrip("/")
             if not base.startswith("http"):
                 base = "https://" + base
-            # Plan change via Stripe billing portal: send confirmation email with explicit pricing
+            # Plan change via Stripe billing portal: sync stored plan fields and send confirmation email.
             from api.billing_routes import _subscription_monthly_price, subscription_platforms_and_stories_from_stripe
+            from services.caption_order_service import CaptionOrderService
+            order_service = CaptionOrderService()
             if customer_email and "@" in customer_email:
                 account_url = base + "/account"
                 try:
@@ -677,6 +777,21 @@ def stripe_webhook():
                     old_platforms = max(1, int(order.get("platforms_count", 1)))
                     old_stories = bool(order.get("include_stories"))
                     new_platforms, new_stories = subscription_platforms_and_stories_from_stripe(sub_obj)
+                    intake_existing = order.get("intake") if isinstance(order.get("intake"), dict) else {}
+                    selected_source = (intake_existing.get("platform") or "").strip() or (order.get("selected_platforms") or "").strip()
+                    selected_synced = _coerce_platform_selection(selected_source, new_platforms)
+                    updated_intake = dict(intake_existing or {})
+                    updated_intake["platform"] = selected_synced
+                    updated_intake["include_stories"] = new_stories
+                    order_service.update(
+                        order["id"],
+                        {
+                            "platforms_count": new_platforms,
+                            "include_stories": new_stories,
+                            "selected_platforms": selected_synced,
+                            "intake": updated_intake,
+                        },
+                    )
                     if not _should_send_plan_change_email(
                         prev_attrs if isinstance(prev_attrs, dict) else {},
                         old_platforms,
@@ -705,6 +820,13 @@ def stripe_webhook():
                     old_sym, old_amt = _subscription_monthly_price(currency, old_platforms, old_stories)
                     new_sym, new_amt = _subscription_monthly_price(currency, new_platforms, new_stories)
                     notif = NotificationService()
+                    dedupe_key = _plan_change_dedupe_key(sub_id, customer_email, new_platforms, new_stories)
+                    if _plan_change_email_recently_sent(dedupe_key):
+                        print(
+                            f"[Stripe webhook] subscription.updated: plan-change email deduped for {sub_id[:20]}... "
+                            f"({new_platforms} platforms, stories={1 if new_stories else 0})"
+                        )
+                        return jsonify({"received": True}), 200
                     notif.send_plan_change_confirmation_email(
                         customer_email,
                         change_summary=change_summary,
@@ -712,7 +834,9 @@ def stripe_webhook():
                         account_url=account_url,
                         new_price_display=f"{new_sym}{new_amt}",
                         old_price_display=f"{old_sym}{old_amt}",
+                        business_name=((order.get("intake") or {}).get("business_name") if isinstance(order, dict) else None),
                     )
+                    _mark_plan_change_email_sent(dedupe_key)
                     print(f"[Stripe webhook] Plan change confirmation sent to {customer_email}")
                 except Exception as e:
                     print(f"[Stripe webhook] Plan change confirmation email failed: {e}")
@@ -801,7 +925,12 @@ def stripe_webhook():
                         if order and one_off:
                             intake = one_off.get("intake") if isinstance(one_off.get("intake"), dict) else None
                             if intake:
-                                order_service.save_intake(order["id"], intake)
+                                synced_intake = dict(intake)
+                                selected = (order.get("selected_platforms") or "").strip()
+                                if selected:
+                                    synced_intake["platform"] = selected
+                                synced_intake["include_stories"] = bool(order.get("include_stories"))
+                                order_service.save_intake(order["id"], synced_intake)
                                 thread = threading.Thread(target=_run_generation_and_deliver, args=(order["id"],))
                                 thread.daemon = False
                                 thread.start()

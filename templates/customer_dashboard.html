@@ -575,17 +575,7 @@
             }
           });
           </script>
-          {% elif billing_accounts %}
-          <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
-          <a href="/api/billing/portal?order_token={{ billing_accounts[0].order_token }}" class="account-billing-portal-link account-btn-swipe-dark">Manage billing</a>
-          <span class="account-settings-desc" style="margin: 0; font-size: 0.9rem; color: #fff;">— cancel immediately, update card, or view invoices</span>
-          </div>
-      {% else %}
-          <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
-          <a href="/api/billing/portal" class="account-billing-portal-link account-btn-swipe-dark">Manage billing</a>
-          <span class="account-settings-desc" style="margin: 0; font-size: 0.9rem; color: #fff;">— cancel immediately, update card, or view invoices</span>
-          </div>
-      {% endif %}
+          {% endif %}
         </div>
         {% for o in sub_orders %}
         {% set pause_biz = (o.get('intake') or {}).get('business_name', '') %}
@@ -651,11 +641,27 @@
             </div>
             {% set _platforms = (o.get('platforms_count') or 1)|int %}
             {% set _has_stories = o.get('include_stories') %}
+            {% set _plan_currency = (o.get('currency') or 'gbp')|lower %}
+            {% set _pricing_map = (subscription_billing.get('subscription_pricing') or {}) if subscription_billing else {} %}
+            {% set _pricing = _pricing_map.get(sub_id) if _pricing_map else None %}
+            {% set _eff_monthly = _pricing.get('effective_monthly') if _pricing else None %}
+            {% set _std_monthly = _pricing.get('standard_monthly') if _pricing else None %}
+            {% set _disc_type = _pricing.get('discount_type') if _pricing else None %}
+            {% set _disc_pct = _pricing.get('discount_percent') if _pricing else None %}
+            {% set _disc_amt = _pricing.get('discount_amount') if _pricing else None %}
+            {% set _disc_duration = _pricing.get('discount_duration') if _pricing else None %}
             <button type="button"
                     class="account-billing-portal-link account-btn-swipe-light account-change-plan-btn"
                     data-order-token="{{ o.get('token', '') }}"
                     data-platforms="{{ _platforms }}"
                     data-has-stories="{{ '1' if _has_stories else '0' }}"
+                    data-currency="{{ _plan_currency }}"
+                    data-effective-monthly="{{ _eff_monthly if _eff_monthly is not none else '' }}"
+                    data-standard-monthly="{{ _std_monthly if _std_monthly is not none else '' }}"
+                    data-discount-type="{{ _disc_type or '' }}"
+                    data-discount-percent="{{ _disc_pct if _disc_pct is not none else '' }}"
+                    data-discount-amount="{{ _disc_amt if _disc_amt is not none else '' }}"
+                    data-discount-duration="{{ _disc_duration or '' }}"
                     onclick="showChangePlanModal(this)">Change plan</button>
           </div>
           <div class="account-settings-row" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid rgba(0,0,0,0.06);">
@@ -692,8 +698,10 @@
               <div class="account-settings-desc">Included in this subscription. You'll receive Stories with each pack.<br>You can also remove Story Ideas from the Edit form.</div>
             </div>
             {% set _platforms = (o.get('platforms_count') or 1)|int %}
-{% set _new_price = 79 + (_platforms - 1) * 19 %}
-<button type="button" class="account-remove-stories-btn account-billing-portal-link account-btn-swipe-light" data-order-token="{{ o.get('token', '') }}" data-platforms-count="{{ _platforms }}" data-new-price="{{ _new_price }}" data-new-price-symbol="£" onclick="showRemoveStoriesModal(this)">Remove Story Ideas</button>
+            {% set _remove_currency = (o.get('currency') or 'gbp')|lower %}
+            {% set _remove_p = captions_prices.get(_remove_currency, captions_prices['gbp']) %}
+            {% set _new_price = _remove_p.get('sub', 79) + (_platforms - 1) * _remove_p.get('extra_sub', 19) %}
+<button type="button" class="account-remove-stories-btn account-billing-portal-link account-btn-swipe-light" data-order-token="{{ o.get('token', '') }}" data-platforms-count="{{ _platforms }}" data-new-price="{{ _new_price }}" data-new-price-symbol="{{ _remove_p.get('symbol', '£') }}" onclick="showRemoveStoriesModal(this)">Remove Story Ideas</button>
           </div>
           {% endif %}
           {% if not (o.get('subscription_pause') or {}).get('paused') and o.get('has_delivered_pack') %}
@@ -1209,8 +1217,26 @@
         token: null,
         oldPlatforms: 1,
         oldStories: false,
-        currency: 'gbp'
+        currency: 'gbp',
+        currentEffectiveMonthly: null,
+        currentStandardMonthly: null,
+        discountType: '',
+        discountPercent: null,
+        discountAmount: null,
+        discountDuration: ''
       };
+
+      function applyActiveDiscount(rawAmount) {
+        var amt = parseFloat(rawAmount || 0);
+        if (!isFinite(amt) || amt < 0) amt = 0;
+        if (changePlanState.discountType === 'percent' && isFinite(changePlanState.discountPercent)) {
+          return Math.max(0, amt * (1 - (changePlanState.discountPercent / 100)));
+        }
+        if (changePlanState.discountType === 'amount' && isFinite(changePlanState.discountAmount)) {
+          return Math.max(0, amt - changePlanState.discountAmount);
+        }
+        return amt;
+      }
 
       function updateChangePlanPrice() {
         var priceEl = document.getElementById('change-plan-price');
@@ -1234,9 +1260,18 @@
         var base = p.sub;
         var extraPer = p.extra_sub;
         var storiesPer = p.stories_sub;
-        var current = base + Math.max(0, changePlanState.oldPlatforms - 1) * extraPer + (changePlanState.oldStories ? storiesPer : 0);
-        var next = base + Math.max(0, newPlatforms - 1) * extraPer + (newStories ? storiesPer : 0);
-        priceEl.innerHTML = 'Current: <strong>' + (p.symbol || '£') + current + '/month</strong>. New: <strong>' + (p.symbol || '£') + next + '/month</strong>.';
+        var fallbackCurrentStandard = base + Math.max(0, changePlanState.oldPlatforms - 1) * extraPer + (changePlanState.oldStories ? storiesPer : 0);
+        var currentStandard = isFinite(changePlanState.currentStandardMonthly) ? changePlanState.currentStandardMonthly : fallbackCurrentStandard;
+        var currentEffective = isFinite(changePlanState.currentEffectiveMonthly) ? changePlanState.currentEffectiveMonthly : applyActiveDiscount(currentStandard);
+        var nextStandard = base + Math.max(0, newPlatforms - 1) * extraPer + (newStories ? storiesPer : 0);
+        var nextEffective = applyActiveDiscount(nextStandard);
+        var sym = (p.symbol || '£');
+        function fmt(v) { return (Math.round((v + Number.EPSILON) * 100) / 100).toFixed(2).replace(/\.00$/, ''); }
+        var line = 'Current billed: <strong>' + sym + fmt(currentEffective) + '/month</strong>. New billed: <strong>' + sym + fmt(nextEffective) + '/month</strong>.';
+        if (changePlanState.discountType && changePlanState.discountDuration !== 'forever') {
+          line += ' After discount ends, price will be <strong>' + sym + fmt(nextStandard) + '/month</strong>.';
+        }
+        priceEl.innerHTML = line;
       }
 
       window.showChangePlanModal = function(btn) {
@@ -1249,6 +1284,16 @@
         changePlanState.oldPlatforms = platforms;
         changePlanState.oldStories = hasStories;
         changePlanState.currency = (btn.getAttribute('data-currency') || 'gbp').toLowerCase();
+        var effRaw = parseFloat(btn.getAttribute('data-effective-monthly') || '');
+        var stdRaw = parseFloat(btn.getAttribute('data-standard-monthly') || '');
+        var discPctRaw = parseFloat(btn.getAttribute('data-discount-percent') || '');
+        var discAmtRaw = parseFloat(btn.getAttribute('data-discount-amount') || '');
+        changePlanState.currentEffectiveMonthly = isFinite(effRaw) ? effRaw : null;
+        changePlanState.currentStandardMonthly = isFinite(stdRaw) ? stdRaw : null;
+        changePlanState.discountType = (btn.getAttribute('data-discount-type') || '').toLowerCase();
+        changePlanState.discountPercent = isFinite(discPctRaw) ? discPctRaw : null;
+        changePlanState.discountAmount = isFinite(discAmtRaw) ? discAmtRaw : null;
+        changePlanState.discountDuration = (btn.getAttribute('data-discount-duration') || '').toLowerCase();
         var sel = document.getElementById('change-plan-platforms');
         var cb = document.getElementById('change-plan-stories');
         var errEl = document.getElementById('change-plan-error');
@@ -1302,16 +1347,7 @@
           btn.textContent = 'Updating…';
         }
         if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
-        if (priceEl && CAPTIONS_PRICES) {
-          var currency = (document.querySelector('.account-change-plan-btn[data-order-token=\"' + changePlanState.token + '\"]') || {}).getAttribute ? (document.querySelector('.account-change-plan-btn[data-order-token=\"' + changePlanState.token + '\"]').getAttribute('data-currency') || 'gbp').toLowerCase() : 'gbp';
-          var p = CAPTIONS_PRICES[currency] || CAPTIONS_PRICES.gbp;
-          var base = p.sub;
-          var extraPer = p.extra_sub;
-          var storiesPer = p.stories_sub;
-          var current = base + Math.max(0, changePlanState.oldPlatforms - 1) * extraPer + (changePlanState.oldStories ? storiesPer : 0);
-          var next = base + Math.max(0, newPlatforms - 1) * extraPer + (newStories ? storiesPer : 0);
-          priceEl.innerHTML = 'Current: <strong>' + (p.symbol || '£') + current + '/month</strong>. New: <strong>' + (p.symbol || '£') + next + '/month</strong>.';
-        }
+        if (priceEl && CAPTIONS_PRICES) updateChangePlanPrice();
         fetch('/api/billing/change-subscription-plan', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

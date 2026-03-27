@@ -11,6 +11,51 @@
     .verify-card { max-width: 480px; margin: 0 auto; padding: 2.5rem; background: var(--lum-card-bg, rgba(255,255,255,0.03)); border-radius: 16px; border: 1px solid var(--lum-border); text-align: center; }
     .verify-card h1 { font-family: var(--font-display); font-size: 1.75rem; margin-bottom: 1rem; }
     .verify-card p { color: var(--lum-text-muted); line-height: 1.6; margin-bottom: 1.5rem; }
+    .verify-card .account-billing-portal-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.85rem 1.25rem;
+      border-radius: var(--radius-btn, 8px);
+      line-height: 1.2;
+      text-decoration: none;
+    }
+    .verify-card .account-btn-swipe-light {
+      position: relative;
+      overflow: hidden;
+      z-index: 1;
+      background: transparent !important;
+      color: #ffffff !important;
+      border: 2px solid rgba(255, 255, 255, 0.35) !important;
+      transition: color 0.25s ease-out, border-color 0.25s ease-out;
+      font-family: var(--font-body) !important;
+      font-weight: 600 !important;
+      font-size: 0.7rem !important;
+      letter-spacing: 0.2em !important;
+      text-transform: uppercase !important;
+    }
+    .verify-card .account-btn-swipe-light::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: var(--lum-gold, #fff200);
+      transform: scaleX(0);
+      transform-origin: left center;
+      transition: transform 0.35s ease-out;
+      z-index: -1;
+    }
+    .verify-card .account-btn-swipe-light:hover {
+      color: #000000 !important;
+      border-color: var(--lum-gold, #fff200) !important;
+      text-decoration: none;
+      transform: none !important;
+    }
+    .verify-card .account-btn-swipe-light:hover::before {
+      transform: scaleX(1);
+    }
     .verify-card .verify-primary-cta { margin: 1rem 0 1.25rem; text-align: center; }
     .verify-card .verify-primary-cta .account-btn-swipe-light {
       display: inline-flex;
@@ -23,6 +68,22 @@
     .verify-card .back-links a { color: var(--lum-gold); text-decoration: none; font-size: 0.95rem; }
     .verify-card .back-links a:hover { text-decoration: underline; }
     .verify-card .back-links span { color: var(--lum-text-subtle); margin: 0 0.5rem; }
+    .verify-card .verify-fail-actions {
+      margin-top: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      align-items: center;
+    }
+    .verify-card .verify-fail-actions .account-btn-swipe-light {
+      min-width: 220px;
+      justify-content: center;
+      text-decoration: none;
+    }
+    .verify-card .verify-fail-home {
+      margin-top: 1.25rem;
+      text-align: center;
+    }
   </style>
 </head>
 <body class="lumo-landing">
@@ -31,9 +92,6 @@
       <a href="/" class="lumo-nav-logo">Lumo 22</a>
       <a href="/captions" class="lumo-nav-link">Captions</a>
     </div>
-    {% if not success %}
-    <a href="/login" class="lumo-nav-cta lumo-nav-signup">Log in</a>
-    {% endif %}
   </nav>
 
   <section class="lumo-section verify-section">
@@ -55,12 +113,12 @@
       </div>
       {% else %}
       <h1>Verification failed</h1>
-      <p>{{ error or "This link is invalid or has expired. Please request a new verification email from the signup page." }}</p>
-      <div class="back-links">
-        <a href="/signup">Sign up again</a>
-        <span>·</span>
-        <a href="/login">Log in</a>
-        <span>·</span>
+      <p>{{ error or "This link is invalid or has expired." }}</p>
+      <p>Log in and click "Resend verification email" to get a fresh verification link.</p>
+      <div class="verify-fail-actions">
+        <a href="/login" class="account-billing-portal-link account-btn-swipe-light">Log in</a>
+      </div>
+      <div class="back-links verify-fail-home">
         <a href="/">Lumo 22</a>
       </div>
       {% endif %}

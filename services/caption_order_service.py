@@ -364,6 +364,39 @@ class CaptionOrderService:
                 break
         return out
 
+    def get_orders_needing_captions_only_salvage(self, limit: int = 5) -> list:
+        """
+        Failed first-pack orders where stories repeatedly failed and no captions were delivered.
+        These can be retried in captions-only mode to avoid blocking core delivery.
+        """
+        try:
+            result = (
+                self.client.table(self.table)
+                .select("*")
+                .eq("status", "failed")
+                .is_("captions_md", "null")
+                .eq("stories_generation_status", "failed")
+                .order("updated_at", desc=False)
+                .limit(120)
+                .execute()
+            )
+        except Exception:
+            return []
+        rows = result.data or []
+        out = []
+        for row in rows:
+            intake = row.get("intake")
+            if not intake or not isinstance(intake, dict):
+                continue
+            if not (intake.get("business_name") or "").strip():
+                continue
+            if not (row.get("stripe_session_id") or "").strip():
+                continue
+            out.append(row)
+            if len(out) >= limit:
+                break
+        return out
+
     def get_active_subscription_orders(self) -> list:
         """Get caption orders that have an active Stripe subscription (for reminder emails)."""
         result = self.client.table(self.table).select(

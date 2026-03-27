@@ -178,14 +178,18 @@ def run_reminders() -> Dict[str, Any]:
                 continue
 
             intake_url = f"{base}/captions-intake?t={token}"
+            intake = order.get("intake") if isinstance(order.get("intake"), dict) else {}
+            business_name = (intake.get("business_name") or "").strip() if intake else ""
             # Subscribers must log in first; link goes to login with next=intake so after login they land on the form
             from urllib.parse import quote
             login_url = f"{base}/login?next={quote(intake_url, safe='')}"
             account_url = f"{base}/account"
             subject = "Update your form before your next pack"
+            if business_name:
+                subject = f"{subject} — {business_name}"
             body = f"""Hi,
 
-Your next 30 Days of Social Media Captions pack is coming soon. You can update your preferences (business details, voice, platforms) anytime before we generate it.
+{f"Business: {business_name}\n" if business_name else ""}Your next 30 Days of Social Media Captions pack is coming soon. You can update your preferences (business details, voice, platforms) anytime before we generate it.
 
 Do you have an event, promotion or something else coming up? Use your form to tell us about it and we'll tailor your captions to fit.
 
@@ -202,7 +206,7 @@ You can turn these reminders off in your account: {account_url}
 Lumo 22
 """
             from services.notifications import _captions_reminder_email_html
-            html_body = _captions_reminder_email_html(login_url, account_url)
+            html_body = _captions_reminder_email_html(login_url, account_url, business_name=business_name or None)
             ok = notif.send_email(email, subject, body, html_body=html_body)
             if ok:
                 # Store period end as ISO for TIMESTAMPTZ (Postgres)
@@ -271,9 +275,13 @@ Lumo 22
                     continue
             intake_url = f"{base}/captions-intake?t={token}"
             subject = "Complete your form to get your captions"
+            intake = order.get("intake") if isinstance(order.get("intake"), dict) else {}
+            business_name = (intake.get("business_name") or "").strip() if intake else ""
+            if business_name:
+                subject = f"{subject} — {business_name}"
             body = f"""Hi,
 
-Thanks for your order of 30 Days of Social Media Captions.
+{f"Business: {business_name}\n" if business_name else ""}Thanks for your order of 30 Days of Social Media Captions.
 
 Before we can start writing, we need a few details about your business, audience, and voice.
 
@@ -288,7 +296,7 @@ This takes about 5–10 minutes. Once it's done, we'll generate your captions an
 Lumo 22
 """
             from services.notifications import _captions_intake_reminder_email_html
-            html_body = _captions_intake_reminder_email_html(intake_url)
+            html_body = _captions_intake_reminder_email_html(intake_url, business_name=business_name or None)
             ok = notif.send_email(email, subject, body, html_body=html_body)
             if ok:
                 sent += 1
