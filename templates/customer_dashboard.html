@@ -175,7 +175,6 @@
                 <a href="/api/captions-download?t={{ o.token }}&type=stories" class="account-btn-link account-btn-link--secondary">Download stories</a>
               </span>
             {% endif %}
-              <button type="button" class="account-btn-link account-btn-link--secondary" data-token="{{ o.token }}" onclick="resendPackEmail(this)">Resend email</button>
               <button type="button" class="account-btn-link account-history-delete" data-token="{{ o.token }}" data-is-subscription="{{ '1' if is_sub else '0' }}" onclick="showDeletePackModal(this)" aria-label="Delete pack from history">Delete</button>
             </div>
           </div>
@@ -210,7 +209,8 @@
           {% set label = (biz|title) if biz else (o.created_at[:10] if o.created_at else 'Subscription') %}
           {# Status can stay awaiting_intake after update_intake_only (prefill sync); use intake business_name as source of truth #}
           {% set _needs_first_submit = (o.status == 'awaiting_intake' and not biz) %}
-          {% set _edit_cancelled = (o.get('subscription_pause') or {}).get('cancel_at_period_end') %}
+          {% set _edit_pause = (o.get('subscription_pause') or {}) %}
+          {% set _edit_cancelled = _edit_pause.get('cancel_at_period_end') or _edit_pause.get('cancelled_now') %}
           <li style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
               {% if _needs_first_submit %}
             <a href="/captions-intake?t={{ o.token }}" class="account-billing-portal-link account-btn-swipe-light">Complete the form — {{ label }}</a>
@@ -218,7 +218,7 @@
             <a href="/captions-intake?t={{ o.token }}" class="account-billing-portal-link account-btn-swipe-light">Edit form — {{ label }}</a>
             {% endif %}
             {% if _edit_cancelled %}
-            <span class="account-cancel-badge" style="font-size: 0.75rem; font-weight: 500; color: #c45c00; padding: 0.2rem 0.5rem; background: rgba(196,92,0,0.12); border-radius: 10px;">Cancelled — ends {{ (o.get('subscription_pause') or {}).get('ends_at') or 'at period end' }}</span>
+            <span class="account-cancel-badge" style="font-size: 0.75rem; font-weight: 500; color: #c45c00; padding: 0.2rem 0.5rem; background: rgba(196,92,0,0.12); border-radius: 10px;">Cancelled{% if _edit_pause.get('ends_at') %} — {{ _edit_pause.get('ends_at') }}{% endif %}</span>
             {% endif %}
           </li>
           {% endfor %}
@@ -538,9 +538,8 @@
         {% endif %}
         {% if sub_orders %}
         <ul class="account-section-desc" style="margin: 0 0 1.25rem; padding-left: 1.25rem; line-height: 1.7; color: #ffffff;">
-          <li>Cancel your subscription, update your billing info, or view invoices in Stripe’s secure portal.</li>
-          <li>If you cancel, you'll still have access to your past captions in your account.</li>
-          <li>Removing or deleting a PDF from your history does not cancel your subscription. Use Manage billing below to cancel.</li>
+          <li>Cancel your subscription (effective immediately), update your billing info, or view invoices in Stripe’s secure portal.</li>
+          <li>Removing or deleting a PDF from your history does not cancel your subscription. Use Manage billing below to cancel immediately.</li>
           <li>Use a different card for each subscription—add or update cards via Manage billing, then choose which card to use for each.</li>
           <li>Pause billing for one month and manage form reminders below.</li>
           <li><strong>Platforms (add, change, or reduce)</strong> and <strong>Story Ideas (add or remove)</strong> — use the buttons below, or Edit form to change platforms and remove Story Ideas.</li>
@@ -553,7 +552,8 @@
               <option value="">— Show all —</option>
               {% for o in sub_orders %}
               {% set _flabel = ((o.get('intake') or {}).get('business_name', '')|title) if (o.get('intake') or {}).get('business_name') else ((o.get('created_at') or '')[:10] if o.get('created_at') else 'Subscription') %}
-              {% set _fcancelled = (o.get('subscription_pause') or {}).get('cancel_at_period_end') %}
+              {% set _fpause = (o.get('subscription_pause') or {}) %}
+              {% set _fcancelled = _fpause.get('cancel_at_period_end') or _fpause.get('cancelled_now') %}
               <option value="{{ o.get('token', '') }}">{{ _flabel }}{% if _fcancelled %} (Cancelled){% endif %}</option>
               {% endfor %}
             </select>
@@ -578,12 +578,12 @@
           {% elif billing_accounts %}
           <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
           <a href="/api/billing/portal?order_token={{ billing_accounts[0].order_token }}" class="account-billing-portal-link account-btn-swipe-dark">Manage billing</a>
-          <span class="account-settings-desc" style="margin: 0; font-size: 0.9rem; color: #fff;">— cancel subscription, update card, or view invoices</span>
+          <span class="account-settings-desc" style="margin: 0; font-size: 0.9rem; color: #fff;">— cancel immediately, update card, or view invoices</span>
           </div>
       {% else %}
           <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
           <a href="/api/billing/portal" class="account-billing-portal-link account-btn-swipe-dark">Manage billing</a>
-          <span class="account-settings-desc" style="margin: 0; font-size: 0.9rem; color: #fff;">— cancel subscription, update card, or view invoices</span>
+          <span class="account-settings-desc" style="margin: 0; font-size: 0.9rem; color: #fff;">— cancel immediately, update card, or view invoices</span>
           </div>
       {% endif %}
         </div>
@@ -592,26 +592,28 @@
         {% set pause_label = (pause_biz|title) if pause_biz else ((o.get('created_at') or '')[:10] if o.get('created_at') else 'Subscription') %}
         {% set sub_id = (o.get('stripe_subscription_id') or '')|trim %}
         {% set current_pm = (subscription_billing.get('subscription_payment_methods') or {}).get(sub_id) if subscription_billing else None %}
-        {% set _cancelled = (o.get('subscription_pause') or {}).get('cancel_at_period_end') %}
+        {% set _pause_state = (o.get('subscription_pause') or {}) %}
+        {% set _cancelled = _pause_state.get('cancel_at_period_end') or _pause_state.get('cancelled_now') %}
+        {% set _cancelled_scheduled = _pause_state.get('cancel_at_period_end') %}
         <div class="account-pause-block" data-order-token="{{ o.get('token', '') }}" style="margin-bottom: 1rem;">
           <div class="account-pause-panel-title" style="font-size: 0.9rem; font-weight: 600; color: #000; margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(0,0,0,0.08); display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
             {{ pause_label }}
             {% if _cancelled %}
-            <span class="account-cancel-badge" style="font-size: 0.8rem; font-weight: 500; color: #c45c00; padding: 0.25rem 0.6rem; background: rgba(196,92,0,0.12); border-radius: 12px;">Cancelled — ends {{ (o.get('subscription_pause') or {}).get('ends_at') or 'at period end' }}</span>
+            <span class="account-cancel-badge" style="font-size: 0.8rem; font-weight: 500; color: #c45c00; padding: 0.25rem 0.6rem; background: rgba(196,92,0,0.12); border-radius: 12px;">Cancelled{% if _pause_state.get('ends_at') %} — {{ _pause_state.get('ends_at') }}{% endif %}</span>
             {% endif %}
           </div>
-          {% if _cancelled %}
+          {% if _cancelled_scheduled %}
           <div class="account-settings-row account-add-stories-row" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid rgba(0,0,0,0.06);">
             <div class="account-add-stories-text" style="flex: 1;">
               <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Resume subscription</div>
-              <div class="account-settings-desc">Your subscription will renew again at the end of your billing period.</div>
+              <div class="account-settings-desc">Your subscription will renew again if you resume before it ends.</div>
             </div>
             {% set _resume_platforms = (o.get('platforms_count') or 1)|int %}
             {% set _resume_stories = o.get('include_stories') %}
             {% set _resume_currency = (o.get('currency') or 'gbp')|lower %}
             {% set _resume_p = captions_prices.get(_resume_currency, captions_prices['gbp']) %}
             {% set _resume_total = _resume_p.get('sub', 79) + (_resume_platforms - 1) * _resume_p.get('extra_sub', 19) + (_resume_p.get('stories_sub', 17) if _resume_stories else 0) %}
-            {% set _resume_ends = (o.get('subscription_pause') or {}).get('ends_at') or 'at period end' %}
+            {% set _resume_ends = _pause_state.get('ends_at') or 'at period end' %}
             <button type="button" class="account-billing-portal-link account-btn-swipe-light account-restart-btn" style="flex-shrink: 0;" data-order-id="{{ o.get('id', '') }}" data-ends-at="{{ _resume_ends }}" data-price="{{ _resume_p.get('symbol', '£') }}{{ _resume_total }}" onclick="showResumeSubscriptionModal(this)">Resume subscription</button>
           </div>
           {% endif %}
@@ -718,8 +720,8 @@
           {% endif %}
           <div class="account-settings-row" style="padding: 1rem 0 0; border-bottom: none;">
             <div>
-              <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">{% if _cancelled %}Manage billing{% else %}Cancel or manage billing{% endif %}</div>
-              <div class="account-settings-desc">{% if _cancelled %}Update your card or view invoices.{% else %}Cancel this subscription, update your card, or view invoices.{% endif %}</div>
+              <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Manage billing</div>
+              <div class="account-settings-desc">Cancel immediately, update your card, or view invoices.</div>
             </div>
             <a href="/api/billing/portal?order_token={{ o.get('token', '') }}" class="account-billing-portal-link account-btn-swipe-light">Manage billing</a>
           </div>
@@ -873,7 +875,7 @@
       <div class="account-delete-modal-box">
         <h2 id="delete-pack-modal-title" class="account-delete-modal-title">Remove pack from history?</h2>
         <p class="account-delete-modal-text">Are you sure you want to remove this pack from your history? Once removed, it cannot be undone.</p>
-        <p id="delete-pack-sub-note" class="account-delete-modal-text" style="display: none; font-size: 0.9rem; margin-top: 0.75rem; padding: 0.75rem 1rem; background: rgba(180, 40, 40, 0.5); border: 1px solid rgba(200, 60, 60, 0.95); border-radius: 8px; color: #fff;">Deleting or removing the PDF does not cancel your subscription. To cancel, go to Manage subscription.</p>
+        <p id="delete-pack-sub-note" class="account-delete-modal-text" style="display: none; font-size: 0.9rem; margin-top: 0.75rem; padding: 0.75rem 1rem; background: rgba(180, 40, 40, 0.5); border: 1px solid rgba(200, 60, 60, 0.95); border-radius: 8px; color: #fff;">Removing a pack from history does not cancel any active subscription. To cancel billing, go to Manage subscription.</p>
         <div class="account-delete-modal-buttons">
           <button type="button" class="account-delete-modal-btn account-delete-modal-keep" onclick="closeDeletePackModal()">Cancel</button>
           <button type="button" class="account-delete-modal-btn account-delete-modal-confirm" id="delete-pack-confirm-btn">Remove from history</button>
@@ -1410,41 +1412,6 @@
       })();
       window.showDeletePackModal = showDeletePackModal;
       window.closeDeletePackModal = closeDeletePackModal;
-
-      function resendPackEmail(btn) {
-        if (!btn) return;
-        var token = btn.getAttribute('data-token');
-        if (!token) return;
-        var original = btn.textContent || 'Resend email';
-        btn.disabled = true;
-        btn.textContent = 'Sending...';
-        fetch('/api/captions-resend-delivery', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'same-origin',
-          body: JSON.stringify({ token: token })
-        })
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          if (data && data.ok) {
-            btn.textContent = 'Sent';
-            setTimeout(function() {
-              btn.disabled = false;
-              btn.textContent = original;
-            }, 1800);
-            return;
-          }
-          alert((data && data.error) ? data.error : 'Could not resend email');
-          btn.disabled = false;
-          btn.textContent = original;
-        })
-        .catch(function() {
-          alert('Something went wrong - try again.');
-          btn.disabled = false;
-          btn.textContent = original;
-        });
-      }
-      window.resendPackEmail = resendPackEmail;
 
       (function initHistoryFilters() {
         var list = document.querySelector('.account-history-list');
