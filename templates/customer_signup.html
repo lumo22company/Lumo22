@@ -53,14 +53,14 @@
       <label for="email">Email</label>
       <input type="email" id="email" name="email" required autocomplete="email" placeholder="you@example.com" value="{{ prefilled_email|default('', true)|e }}">
       <label for="email_confirm">Confirm email</label>
-      <input type="email" id="email_confirm" name="email_confirm" required autocomplete="email" placeholder="Re-enter your email" value="{{ prefilled_email|default('', true)|e }}">
+      <input type="email" id="email_confirm" name="email_confirm" required autocomplete="email" placeholder="Re-enter your email" value="">
 
       <label for="password">Password <span style="font-weight:400;color:var(--lum-text-muted);">(min 12 characters, include 1 number)</span></label>
       <input type="password" id="password" name="password" required minlength="12" autocomplete="new-password" placeholder="At least 12 characters, 1 number">
-      <div class="pw-toggle"><button type="button" id="toggle-password">Show password</button></div>
 
       <label for="password_confirm">Confirm password</label>
       <input type="password" id="password_confirm" name="password_confirm" required minlength="12" autocomplete="new-password">
+      <div class="pw-toggle"><button type="button" id="toggle-password">Show password</button></div>
 
       <label class="marketing-optin-row">
         <input type="checkbox" id="marketing_opt_in" name="marketing_opt_in" value="1">
@@ -94,11 +94,14 @@
       var btn = document.getElementById('btn');
       var msg = document.getElementById('msg');
       var pwInput = document.getElementById('password');
+      var pwConfirmInput = document.getElementById('password_confirm');
       var pwToggle = document.getElementById('toggle-password');
-      if (pwToggle && pwInput) {
+      if (pwToggle && pwInput && pwConfirmInput) {
         pwToggle.addEventListener('click', function() {
           var showing = pwInput.type === 'text';
-          pwInput.type = showing ? 'password' : 'text';
+          var nextType = showing ? 'password' : 'text';
+          pwInput.type = nextType;
+          pwConfirmInput.type = nextType;
           pwToggle.textContent = showing ? 'Show password' : 'Hide password';
         });
       }
