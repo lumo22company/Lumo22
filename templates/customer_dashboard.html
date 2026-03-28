@@ -51,8 +51,8 @@
       </div>
       {% endif %}
       {% if request.args.get('subscription_duplicate') == '1' %}
-      <div class="account-info-panel" style="margin-bottom: 1rem; background: rgba(201,162,39,0.15); border: 1px solid rgba(201,162,39,0.35);">
-        <p style="margin: 0; color: #333;"><strong>You already have an active Captions subscription.</strong> You don’t need to pay again. Use <a href="/account/pause">Manage subscription</a> to change your plan, card, or cancel. If you see more than one subscription below, cancel the extras in Stripe (Manage billing) so you’re only charged once.</p>
+      <div class="account-info-panel account-subscription-duplicate-alert" style="margin-bottom: 1rem; background: rgba(160, 32, 32, 0.95); border: 1px solid rgba(220, 80, 80, 0.85); border-radius: 8px; padding: 1rem 1.1rem;">
+        <p style="margin: 0; color: #ffffff; line-height: 1.55;"><strong style="color: #ffffff;">You already have an active Captions subscription.</strong> You don’t need to pay again. Use <a href="/account/pause" style="color: var(--lum-gold, #fff200); font-weight: 600; text-decoration: underline;">Manage subscription</a> to change your plan, card, or cancel. If you see more than one subscription below, cancel the extras in Stripe ({% if billing_accounts and billing_accounts[0].order_token %}<a href="/api/billing/portal?order_token={{ billing_accounts[0].order_token }}" style="color: var(--lum-gold, #fff200); font-weight: 600; text-decoration: underline;">{% else %}<a href="/api/billing/portal" style="color: var(--lum-gold, #fff200); font-weight: 600; text-decoration: underline;">{% endif %}Manage billing</a>) so you’re only charged once.</p>
       </div>
       {% endif %}
 
