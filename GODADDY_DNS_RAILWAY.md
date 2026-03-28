@@ -86,9 +86,25 @@ In **Railway** → Variables, set `BASE_URL=https://www.lumo22.com` (no trailing
 
 ## Summary
 
-| Type  | Name | Value |
-|-------|------|--------|
-| CNAME | `www` | `lumo-22-production.up.railway.app` |
-| CNAME | `@`   | `lumo-22-production.up.railway.app` |
+| Type   | Name | Value |
+|--------|------|--------|
+| CNAME  | `www` | `lumo-22-production.up.railway.app` (or whatever **Railway → Domains** shows) |
+| Apex `@` | See Railway | GoDaddy often **cannot** use CNAME on `@`. Use **Forwarding** (section 4) **or** the **A / ALIAS** records Railway gives you when you add **Custom domain → lumo22.com** — not arbitrary parking IPs. |
 
 If Railway shows different values for your project, use those instead.
+
+---
+
+## 8. If `https://lumo22.com/captions` is still 404 (verify DNS)
+
+Your app only runs after traffic reaches **Railway**. Check from a terminal:
+
+```bash
+dig +short www.lumo22.com
+dig +short lumo22.com A
+```
+
+- **Working www:** `www` should resolve toward **`…up.railway.app`** (then Railway edge, e.g. `151.101.x.x`).
+- **Broken apex:** If `lumo22.com` **A** records are **GoDaddy / AWS parking** (e.g. `3.33.x`, `15.197.x`) and **not** Railway’s records, **HTTPS hits GoDaddy first** — you get a generic 404 on paths like `/captions`, and **no Flask code can fix that** until DNS changes.
+
+**Fix:** In **Railway** → service → **Settings** → **Networking** / **Domains** → add custom domain **`lumo22.com`** (apex) if it is not already there. Copy the **exact DNS records** Railway shows for the apex. In **GoDaddy → DNS**, replace the **`@` A records** that point to parking with Railway’s values (or follow their ALIAS/CNAME flattening instructions if available). **Forwarding** and **conflicting `@` A records** often fight each other — resolve conflicts so apex either **forwards cleanly** to `https://www.lumo22.com` **or** points **directly** at Railway, not both.
