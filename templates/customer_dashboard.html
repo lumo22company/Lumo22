@@ -193,6 +193,12 @@
         <h2>Edit form</h2>
         {% set edit_form_orders = caption_orders|selectattr('stripe_subscription_id')|list if caption_orders else [] %}
         {% if edit_form_orders %}
+        <p class="account-section-desc" style="margin: 0 0 1.25rem; line-height: 1.65; color: rgba(255,255,255,0.92);">
+          <strong>Subscription captions only.</strong> <strong>Edit form</strong> here is for <strong>monthly subscription</strong> orders (listed below)—so you can refresh your details for your <strong>next</strong> pack. One-off purchases don’t appear here; use the link in your order email for that form, or subscribe if you want ongoing edits from this account.
+          {% if one_off_orders %}
+          <span style="display: block; margin-top: 0.65rem; font-size: 0.95rem; color: rgba(255,255,255,0.82);">You also have a one-off on this account—it isn’t listed below.{% if subscribe_options %} <a href="/account/upgrade" style="color: #e8d48b; font-weight: 600;">Upgrade to subscription</a> to continue editing from your account.{% endif %}</span>
+          {% endif %}
+        </p>
         <ul class="account-section-desc" style="margin: 0 0 1.25rem; padding-left: 1.25rem; line-height: 1.7; color: #ffffff;">
           <li>Update your voice, topics, and preferences.</li>
           <li>Have a launch, sale, or event coming up? Add it in the Key date section and we’ll tailor your next pack to match.</li>

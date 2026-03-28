@@ -710,6 +710,79 @@ def _date_for_day(pack_start_date: Optional[str], day_num: int) -> str:
         return ""
 
 
+def _month_token_to_num(tok: str) -> Optional[int]:
+    """Map 'Jan', 'January', 'apr', etc. to 1–12."""
+    if not tok:
+        return None
+    key = tok.strip().lower()[:3]
+    months = {
+        "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
+        "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12,
+    }
+    return months.get(key)
+
+
+def _strip_one_leading_date_if_matches(theme: str, target_date) -> Optional[str]:
+    """
+    If theme starts with a weekday + day month year that equals target_date, return the rest.
+    Matches forms like 'Mon 6 Apr 2026 — ...' or 'Monday 06 April 2026 — ...'.
+    """
+    if not theme:
+        return None
+    from datetime import datetime
+
+    m = re.match(
+        r"^(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\s+"
+        r"(\d{1,2})\s+"
+        r"(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+"
+        r"(\d{4})\s*"
+        r"(?:[—–\-]\s*|\s+)?",
+        theme.strip(),
+        re.I,
+    )
+    if not m:
+        return None
+    day_i = int(m.group(1))
+    mon_i = _month_token_to_num(m.group(2))
+    year_i = int(m.group(3))
+    if mon_i is None:
+        return None
+    try:
+        parsed = datetime(year_i, mon_i, day_i).date()
+    except ValueError:
+        return None
+    if parsed != target_date:
+        return None
+    return theme.strip()[m.end() :].strip()
+
+
+def _strip_redundant_date_from_theme(theme: str, pack_start_date: Optional[str], day_num: int) -> str:
+    """
+    When the AI puts calendar dates in ## Day headings, the theme string can duplicate the date
+    we inject in the PDF (Day N — date — theme). Strip leading date(s) that match this pack day.
+    """
+    if not theme or not pack_start_date or day_num < 1:
+        return (theme or "").strip()
+    try:
+        from datetime import datetime, timedelta
+        start = datetime.strptime(pack_start_date.strip()[:10], "%Y-%m-%d")
+        target = (start + timedelta(days=day_num - 1)).date()
+    except ValueError:
+        return theme.strip()
+
+    t = theme.strip()
+    for _ in range(4):
+        nxt = _strip_one_leading_date_if_matches(t, target)
+        if nxt is None:
+            break
+        t = nxt
+        if t.startswith("—") or t.startswith("–"):
+            t = t[1:].strip()
+        elif t.startswith("-"):
+            t = t[1:].strip()
+    return t.strip()
+
+
 def _cover_and_days_to_dict(cover: Dict, days: List, pack_start_date: Optional[str] = None) -> Dict[str, Any]:
     """Convert parsed (cover, days) to dict format for build_caption_pdf_from_dict. Optionally add date_str per day."""
     days_data = []
@@ -717,6 +790,7 @@ def _cover_and_days_to_dict(cover: Dict, days: List, pack_start_date: Optional[s
         m = re.match(r"day\s+(\d+)\s*[—\-:\s]+(.+)", day_heading.strip(), re.I)
         day_num = int(m.group(1)) if m else len(days_data) + 1
         theme = (m.group(2) if m else "").strip()
+        theme = _strip_redundant_date_from_theme(theme, pack_start_date, day_num)
         date_str = _date_for_day(pack_start_date, day_num)
         posts = []
         for cap in caption_list:

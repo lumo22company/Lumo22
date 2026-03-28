@@ -456,6 +456,9 @@ def captions_intake_page():
             prefilled_platform = selected_for_sub
     if not prefilled_platform and selected_platforms:
         prefilled_platform = selected_platforms
+    # Checkout links often use ?platforms=1 without ?selected=; Stripe metadata then omits selected_platforms.
+    if not prefilled_platform and order and platforms_count == 1:
+        prefilled_platform = "Instagram & Facebook"
     if is_upgrade_flow and upgrade_selected:
         prefilled_platform = upgrade_selected
     # Normalise legacy "Instagram" / "Facebook" to grouped "Instagram & Facebook"

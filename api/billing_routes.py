@@ -603,7 +603,23 @@ def change_subscription_plan():
         msg = getattr(e, "user_message", None) or str(e) or "Stripe error"
         return jsonify({"ok": False, "error": msg}), 400
 
-    co_svc.update(order["id"], {"platforms_count": new_platforms, "include_stories": new_stories})
+    # Keep DB + intake aligned with Stripe (same as reduce_subscription) so Get pack sooner display
+    # and PDF generation see the same platform count and labels.
+    selected_raw = (order.get("selected_platforms") or "").strip()
+    intake_existing = order.get("intake") if isinstance(order.get("intake"), dict) else {}
+    intake_platform_raw = (intake_existing.get("platform") or "").strip() if intake_existing else ""
+    selected_source = intake_platform_raw or selected_raw
+    selected_synced = _coerce_platform_selection(selected_source, new_platforms)
+    updates = {
+        "platforms_count": new_platforms,
+        "include_stories": new_stories,
+        "selected_platforms": selected_synced,
+    }
+    updated_intake = dict(intake_existing or {})
+    updated_intake["platform"] = selected_synced
+    updated_intake["include_stories"] = new_stories
+    updates["intake"] = updated_intake
+    co_svc.update(order["id"], updates)
 
     customer_email = (order.get("customer_email") or "").strip()
     if customer_email and "@" in customer_email:

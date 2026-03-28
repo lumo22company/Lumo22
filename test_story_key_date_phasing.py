@@ -85,8 +85,9 @@ def test_stories_receive_key_date_phasing_when_launch_event_set():
 
     # Must specify which day is launch day (Day 7 for 27 March when pack starts 21 March)
     assert "Day 7" in user_prompt, "Must tell AI key date falls on Day 7"
-    assert "pre-launch" in user_prompt.lower() or "days 1 to 6" in user_prompt
-    assert "post-launch" in user_prompt.lower() or "days 8 to 30" in user_prompt
+    low = user_prompt.lower()
+    assert "pre-launch" in low or "pre-event" in low or "days 1 to 6" in user_prompt or "days **1**–**6**" in user_prompt
+    assert "post-launch" in low or "post-event" in low or "days 8 to 30" in user_prompt or "days **8**–**30**" in user_prompt
 
     # Must warn against inventing wrong dates
     assert "do not invent" in user_prompt.lower() or "do not say" in user_prompt.lower()

@@ -1,0 +1,55 @@
+E2E: Stripe test-mode payment flows (manual)
+============================================
+
+Prerequisites
+- Stripe Dashboard: Test mode ON; use test keys in .env for local/Railway test env.
+- Test card: 4242 4242 4242 4242, any future expiry, any CVC, any postcode.
+- Replace BASE with your app URL (e.g. https://www.lumo22.com or http://127.0.0.1:5000).
+
+Also run (no payment) PDF quality matrix:
+  python3 scripts/e2e_captions_quality_matrix.py
+
+Print checkout URLs from config:
+  python3 scripts/e2e_captions_quality_matrix.py --print-flows
+
+
+Flows to exercise
+-----------------
+
+1) One-off · GBP · 1 platform · no stories
+   BASE/captions-checkout?platforms=1&currency=gbp
+   → T&Cs → Pay → Thank-you → Intake → Submit → Email with captions PDF.
+
+2) One-off · GBP · 1 platform · Story Ideas add-on
+   BASE/captions-checkout?platforms=1&currency=gbp&stories=1
+   → Same; confirm Story Ideas PDF attached / linked.
+
+3) One-off · GBP · 2 platforms (must select two platforms on /captions when invalid)
+   BASE/captions-checkout?platforms=2&currency=gbp&stories=1
+   → Complete selected platforms on pricing page if required.
+
+4) One-off · USD
+   BASE/captions-checkout?platforms=1&currency=usd
+
+5) One-off · EUR + stories
+   BASE/captions-checkout?platforms=1&currency=eur&stories=1
+
+6) Subscription · GBP (requires account: sign in first)
+   BASE/captions-checkout-subscription?platforms=1&currency=gbp
+
+7) Subscription · GBP + stories
+   BASE/captions-checkout-subscription?platforms=1&currency=gbp&stories=1
+
+8) One-off → Subscription upgrade (after one-off order exists and token known)
+   BASE/captions-checkout-subscription?copy_from=ORDER_TOKEN&platforms=1&currency=gbp
+   Replace ORDER_TOKEN with the real intake token from the one-off order email/link.
+
+9) Webhook: confirm checkout.session.completed creates order + intake email (Stripe CLI or Dashboard logs).
+
+
+What to verify per flow
+-----------------------
+- Correct amount in Stripe Checkout (matches cart).
+- Thank-you redirect and intake link open.
+- Submit intake → delivery email with PDF(s); open PDFs for tone and structure.
+- Subscription: duplicate-business guard if applicable; welcome/upgrade emails with itemised pricing.

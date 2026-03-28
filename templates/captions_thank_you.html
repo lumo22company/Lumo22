@@ -142,7 +142,7 @@
                 if (data && data.status === 'ok' && data.intake_url) {
                   noSessionEl.style.display = 'none';
                   if (emailFallbackNoSession) emailFallbackNoSession.style.display = 'none';
-                  showIntake(data.intake_url, data.customer_email || null, !!data.is_subscription, !!data.is_prefilled_from_oneoff, data.email_recovery_token || '');
+                  showIntake(data.intake_url, data.customer_email || null, !!data.is_subscription, !!data.is_prefilled_from_oneoff, data.email_recovery_token || '', !!data.subscription_first_pack_immediate);
                   formLinkEl.style.display = 'block';
                 } else {
                   if (emailError) { emailError.textContent = data && data.error ? data.error : 'No order found for this email.'; emailError.style.display = 'block'; }
@@ -160,14 +160,28 @@
         return;
       }
 
-      function showIntake(url, customerEmail, isSubscription, isPrefilledFromOneoff, emailRecoveryToken) {
+      function showIntake(url, customerEmail, isSubscription, isPrefilledFromOneoff, emailRecoveryToken, firstPackImmediate) {
         recoveryToken = (emailRecoveryToken || recoveryToken || '');
+        firstPackImmediate = !!firstPackImmediate;
         messageEl.style.display = 'none';
         var emailFallback = document.getElementById('thankyou-email-fallback');
         if (emailFallback) emailFallback.style.display = 'none';
         var isLoggedIn = (document.body.getAttribute('data-current-customer') || '').toLowerCase() === 'true';
         var prefilledEditLine = '';
-        if (isPrefilledFromOneoff) {
+        var timingPart = '';
+        var accountSuffix = '';
+        var leadText = '';
+
+        if (firstPackImmediate && isSubscription && isPrefilledFromOneoff) {
+          leadText = customerEmail
+            ? 'Your subscription is active. Your first pack is on the way — we\'ll email <strong>' + escapeHtml(customerEmail) + '</strong> shortly (usually within a few minutes).'
+            : 'Your subscription is active. Your first pack is on the way — we\'ll email you shortly (usually within a few minutes).';
+          if (isLoggedIn) {
+            prefilledEditLine = ' Your details are carried over from your one-off pack; open the form to review or edit anytime, or manage your subscription from your account.';
+          } else {
+            prefilledEditLine = ' Your details are carried over from your one-off pack; open the form to review or edit anytime.';
+          }
+        } else if (isPrefilledFromOneoff) {
           if (isSubscription && isLoggedIn) {
             prefilledEditLine = customerEmail
               ? ' Your form is already filled from your one-off pack; you can edit it anytime and manage your subscription from your account.'
@@ -181,30 +195,45 @@
               ? ' Your form is already filled from your one-off pack; you can edit it anytime in your account.'
               : ' Your form is prefilled from your one-off pack; you can edit it anytime in your account.';
           }
-        } else {
-          prefilledEditLine = customerEmail
-            ? ' Fill in the short form to get started.'
-            : ' Fill in the form to get started.';
-        }
-        var timingPart = isPrefilledFromOneoff ? '' : ' Your captions are usually ready within 15 minutes.';
-        var accountSuffix = '';
-        if (isSubscription && !isLoggedIn) {
-          accountSuffix = ' Create your account below (set a password) so you can log in and manage your subscription. We\'ll send a verification link to your email.';
-        } else if (isSubscription && isLoggedIn && !isPrefilledFromOneoff) {
-          accountSuffix = ' You can manage your subscription from your account.';
-        } else if (!isSubscription) {
-          accountSuffix = ' On the form you can also create an account to access your captions in one place.';
-        }
-        var leadText = '';
-        if (isPrefilledFromOneoff) {
+          timingPart = '';
+          if (isSubscription && !isLoggedIn) {
+            accountSuffix = ' Create your account below (set a password) so you can log in and manage your subscription. We\'ll send a verification link to your email.';
+          } else if (!isSubscription) {
+            accountSuffix = ' On the form you can also create an account to access your captions in one place.';
+          }
           leadText = customerEmail
             ? 'Your prefilled form is ready for <strong>' + escapeHtml(customerEmail) + '</strong>.'
             : 'Your prefilled form is ready.';
         } else {
+          prefilledEditLine = customerEmail
+            ? ' Fill in the short form to get started.'
+            : ' Fill in the form to get started.';
+          timingPart = ' Your captions are usually ready within 15 minutes.';
+          if (isSubscription && !isLoggedIn) {
+            accountSuffix = ' Create your account below (set a password) so you can log in and manage your subscription. We\'ll send a verification link to your email.';
+          } else if (isSubscription && isLoggedIn && !isPrefilledFromOneoff) {
+            accountSuffix = ' You can manage your subscription from your account.';
+          } else if (!isSubscription) {
+            accountSuffix = ' On the form you can also create an account to access your captions in one place.';
+          }
           leadText = customerEmail
             ? 'We sent your intake link to <strong>' + escapeHtml(customerEmail) + '</strong>.'
             : 'We sent your intake link by email.';
         }
+
+        if (firstPackImmediate && isSubscription && isPrefilledFromOneoff) {
+          if (isSubscription && !isLoggedIn) {
+            accountSuffix = ' Create your account below (set a password) so you can log in and manage your subscription. We\'ll send a verification link to your email.';
+          }
+        }
+
+        var sectionLabel = document.querySelector('.thankyou-section .lumo-section-label');
+        var sectionTitle = document.querySelector('.thankyou-section .lumo-section-title');
+        if (sectionLabel && sectionTitle && firstPackImmediate && isSubscription && isPrefilledFromOneoff) {
+          sectionLabel.textContent = 'Subscription confirmed';
+          sectionTitle.textContent = 'Your first pack is on the way';
+        }
+
         var emailText = leadText + prefilledEditLine + timingPart + accountSuffix;
         emailMsgEl.innerHTML = emailText;
         intakeLinkEl.href = url;
@@ -247,7 +276,7 @@
       function onResponse(data) {
         if (data && data.status === 'ok' && data.intake_url) {
           intakeShown = true;
-          showIntake(data.intake_url, data.customer_email || null, !!data.is_subscription, !!data.is_prefilled_from_oneoff, data.email_recovery_token || '');
+          showIntake(data.intake_url, data.customer_email || null, !!data.is_subscription, !!data.is_prefilled_from_oneoff, data.email_recovery_token || '', !!data.subscription_first_pack_immediate);
           return true;
         }
         return false;
@@ -289,7 +318,7 @@
               .then(function(data) {
                 if (data && data.status === 'ok' && data.intake_url) {
                   intakeShown = true;
-                  showIntake(data.intake_url, data.customer_email || null, !!data.is_subscription, !!data.is_prefilled_from_oneoff, data.email_recovery_token || '');
+                  showIntake(data.intake_url, data.customer_email || null, !!data.is_subscription, !!data.is_prefilled_from_oneoff, data.email_recovery_token || '', !!data.subscription_first_pack_immediate);
                   if (emailFallback) emailFallback.style.display = 'none';
                 } else {
                   if (emailError) { emailError.textContent = data && data.error ? data.error : 'No order found for this email.'; emailError.style.display = 'block'; }
@@ -426,7 +455,7 @@
           .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
           .then(function(res) {
             if (res.ok && res.data && res.data.status === 'ok') {
-              showIntake((res.data && res.data.intake_url) || intakeLinkEl.href, email, !!res.data.is_subscription, !!res.data.is_prefilled_from_oneoff, (res.data && res.data.email_recovery_token) || '');
+              showIntake((res.data && res.data.intake_url) || intakeLinkEl.href, email, !!res.data.is_subscription, !!res.data.is_prefilled_from_oneoff, (res.data && res.data.email_recovery_token) || '', !!(res.data && res.data.subscription_first_pack_immediate));
               if (wrongEmailSuccessEl) wrongEmailSuccessEl.style.display = 'block';
               if (wrongEmailFormEl) wrongEmailFormEl.style.display = 'none';
             } else {

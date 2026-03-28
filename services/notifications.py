@@ -17,6 +17,8 @@ BRAND_BLACK = "#000000"
 BRAND_GOLD = "#fff200"
 BRAND_TEXT = "#000000"
 BRAND_MUTED = "#9a9a96"
+# Use on #fafafa (or similar) panels — muted grey on light grey is hard to read in email clients
+BRAND_TEXT_ON_LIGHT_GREY_PANEL = "#000000"
 BRAND_TEXT_ON_DARK = "#F5F5F2"
 BRAND_FONT = "Century Gothic, CenturyGothic, Apple Gothic, sans-serif"
 
@@ -259,27 +261,53 @@ def _build_subscription_upgrade_pricing_summary(
         symbol, base, extra, stories = "£", 79, 19, 17
     platforms = max(1, min(4, int(order.get("platforms_count") or 1)))
     stories_included = bool(order.get("include_stories"))
-    monthly_total = base + ((platforms - 1) * extra) + (stories if stories_included else 0)
-    platforms_label = "1 platform" if platforms == 1 else f"{platforms} platforms"
-    stories_label = "Included" if stories_included else "Not included"
+    extras = platforms - 1
+    extra_monthly = extras * extra
+    platforms_monthly = base + extra_monthly
+    stories_monthly = stories if stories_included else 0
+    monthly_total = platforms_monthly + stories_monthly
     text_lines = [
         "Upgrade details:",
-        f"- New subscription plan: {symbol}{monthly_total}/month",
-        f"- Platforms: {platforms_label}",
-        f"- Story Ideas: {stories_label}",
+        f"- Base (1 platform): {symbol}{base}/month",
     ]
+    if extras >= 1:
+        if extras == 1:
+            text_lines.append(
+                f"- Additional platform (1 × {symbol}{extra}): {symbol}{extra_monthly}/month"
+            )
+        else:
+            text_lines.append(
+                f"- Additional platforms ({extras} × {symbol}{extra}): {symbol}{extra_monthly}/month"
+            )
+    if stories_included:
+        text_lines.append(f"- Story Ideas: {symbol}{stories_monthly}/month")
+    else:
+        text_lines.append("- Story Ideas: Not included")
+    text_lines.append(f"- Monthly total: {symbol}{monthly_total}/month")
     html_lines = [
         "<strong style=\"color:" + BRAND_TEXT + ";\">Upgrade details</strong>",
-        f"New subscription plan: {symbol}{monthly_total}/month",
-        f"Platforms: {html.escape(platforms_label)}",
-        f"Story Ideas: {stories_label}",
+        f"Base (1 platform): {symbol}{base}/month",
     ]
+    if extras >= 1:
+        if extras == 1:
+            html_lines.append(
+                f"Additional platform (1 × {symbol}{extra}): {symbol}{extra_monthly}/month"
+            )
+        else:
+            html_lines.append(
+                f"Additional platforms ({extras} × {symbol}{extra}): {symbol}{extra_monthly}/month"
+            )
+    if stories_included:
+        html_lines.append(f"Story Ideas: {symbol}{stories_monthly}/month")
+    else:
+        html_lines.append("Story Ideas: Not included")
+    html_lines.append(f"Monthly total: {symbol}{monthly_total}/month")
     if charged_today:
         text_lines.append(f"- Charged today: {charged_today}")
         html_lines.append(f"Charged today: {html.escape(charged_today)}")
     text_block = "\n".join(text_lines)
     html_block = (
-        f"""<p style="margin:0 0 16px; font-size:14px; color:{BRAND_MUTED}; border:1px solid rgba(0,0,0,0.08); """
+        f"""<p style="margin:0 0 16px; font-size:14px; color:{BRAND_TEXT_ON_LIGHT_GREY_PANEL}; border:1px solid rgba(0,0,0,0.08); """
         f"""border-radius:8px; padding:16px; background:#fafafa;">"""
         + "<br>".join(html_lines)
         + "</p>"
@@ -303,7 +331,7 @@ def _order_receipt_email_html(
         if amount_paid:
             lines.append(f"<strong>Amount paid:</strong> {html.escape(amount_paid)}")
         if lines:
-            receipt_block = f"""<p style="margin:0 0 16px; font-size:14px; color:{BRAND_MUTED}; border:1px solid rgba(0,0,0,0.08); border-radius:8px; padding:16px; background:#fafafa;"><strong style="color:{BRAND_TEXT};">Order details</strong><br>{'<br>'.join(lines)}</p>
+            receipt_block = f"""<p style="margin:0 0 16px; font-size:14px; color:{BRAND_TEXT_ON_LIGHT_GREY_PANEL}; border:1px solid rgba(0,0,0,0.08); border-radius:8px; padding:16px; background:#fafafa;"><strong>Order details</strong><br>{'<br>'.join(lines)}</p>
 """
     business_line = ""
     safe_business = _sanitize_email_value(business_name or "")

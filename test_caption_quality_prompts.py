@@ -85,6 +85,9 @@ def test_service_intake_without_key_date_gets_quality_instructions():
     # No launch-event intake block (DATE_CONTEXT may still mention KEY_DATE_EVENTS in guidance text)
     assert "KEY_DATE_EVENTS (user included dates in description):" not in user_prompt
     assert "Clean Home" in user_prompt or "cleaning" in user_prompt.lower()
+    assert "DATE_ALIGNMENT" in user_prompt
+    assert "as we head into the weekend" in user_prompt.lower()
+    assert "Calendar-day alignment" in sys_prompt
 
 
 def test_validate_caption_quality_flags_wrong_month():

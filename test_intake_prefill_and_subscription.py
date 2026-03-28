@@ -260,6 +260,35 @@ def test_subscription_checkout_guest_redirects_to_signup():
     print("PASS: guest subscription checkout redirects to /signup with next=")
 
 
+def test_oneoff_prefills_platform_when_order_has_no_selected_platforms():
+    """Single-platform one-off orders from /captions-checkout?platforms=1 often have no selected_platforms in DB."""
+    from app import app
+
+    order = {
+        "id": "ord-x",
+        "token": "tok-no-sel",
+        "customer_email": "u@ex.com",
+        "platforms_count": 1,
+        "selected_platforms": None,
+        "include_stories": False,
+        "stripe_subscription_id": None,
+        "intake": None,
+    }
+
+    class FakeService:
+        def get_by_token(self, tok):
+            return order if tok == "tok-no-sel" else None
+
+    with app.test_client() as client:
+        with patch("services.caption_order_service.CaptionOrderService", FakeService):
+            r = client.get("/captions-intake?t=tok-no-sel")
+
+    assert r.status_code == 200
+    html = r.data.decode("utf-8")
+    assert 'id="platform"' in html
+    assert "Instagram &amp; Facebook" in html
+
+
 if __name__ == "__main__":
     # Patch at module level - app imports CaptionOrderService in the route
     # We need to patch where it's used: in app.captions_intake_page it's "from services.caption_order_service import CaptionOrderService"
@@ -272,4 +301,5 @@ if __name__ == "__main__":
     test_subscribe_url_includes_stories_when_paid()
     test_no_subscribe_url_for_subscription()
     test_subscription_checkout_guest_redirects_to_signup()
+    test_oneoff_prefills_platform_when_order_has_no_selected_platforms()
     print("\nAll tests passed.")

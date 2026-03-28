@@ -2,10 +2,10 @@
 Generate 30 Days of Social Media Captions using AI (OpenAI or Anthropic Claude).
 Uses the product framework: Authority, Educational, Brand Personality, Soft Promotion, Engagement.
 """
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Any, Optional, Tuple, List
 from config import Config
 from services.ai_provider import chat_completion
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import re
 from difflib import SequenceMatcher
 
@@ -77,6 +77,248 @@ def _parse_key_date_from_text(text: str, pack_start_date: str) -> Optional[int]:
     return None
 
 
+def _calendar_date_to_pack_day(pack_start_date: str, event_date: date) -> Optional[int]:
+    """Map a calendar date to 1-based pack day (1–30) or None if outside the window."""
+    try:
+        start = datetime.strptime(pack_start_date.strip()[:10], "%Y-%m-%d").date()
+    except ValueError:
+        return None
+    delta = (event_date - start).days
+    if 0 <= delta < 30:
+        return delta + 1
+    return None
+
+
+def _parse_event_range_dates(text: str, pack_start_date: str) -> Optional[Tuple[date, date]]:
+    """
+    Parse same-month ranges like '12-13 April', '12–13 April', '12 and 13 April' (optional year).
+    Returns (start_date, end_date) with start <= end, or None.
+    """
+    if not text or not pack_start_date:
+        return None
+    try:
+        start = datetime.strptime(pack_start_date.strip()[:10], "%Y-%m-%d")
+        default_year = start.year
+    except ValueError:
+        return None
+    text_lower = text.strip().lower()
+    # 12-13 april, 12–13 april (hyphen/en dash/em dash)
+    m = re.search(
+        r"(\d{1,2})\s*[-–—]\s*(\d{1,2})\s*(" + _MONTH_NAMES + r")(?:\s+(\d{4}))?",
+        text_lower,
+    )
+    if m:
+        d1, d2 = int(m.group(1)), int(m.group(2))
+        month_num = _MONTH_NUM.get(m.group(3))
+        year = int(m.group(4)) if m.group(4) else default_year
+        if month_num:
+            try:
+                da = datetime(year, month_num, d1).date()
+                db = datetime(year, month_num, d2).date()
+                return (da, db) if da <= db else (db, da)
+            except ValueError:
+                pass
+    # "12 and 13 april"
+    m2 = re.search(
+        r"(\d{1,2})\s+and\s+(\d{1,2})\s+(" + _MONTH_NAMES + r")(?:\s+(\d{4}))?",
+        text_lower,
+    )
+    if m2:
+        d1, d2 = int(m2.group(1)), int(m2.group(2))
+        month_num = _MONTH_NUM.get(m2.group(3))
+        year = int(m2.group(4)) if m2.group(4) else default_year
+        if month_num:
+            try:
+                da = datetime(year, month_num, d1).date()
+                db = datetime(year, month_num, d2).date()
+                return (da, db) if da <= db else (db, da)
+            except ValueError:
+                pass
+    return None
+
+
+def _resolve_event_pack_bounds(
+    pack_start_date: str, launch_desc_raw: str
+) -> Optional[Tuple[date, date, int, int]]:
+    """
+    Map intake launch text to calendar bounds and pack days.
+    Returns (first_cal_date, last_cal_date, first_pack_day, last_pack_day) or None.
+    """
+    raw = (launch_desc_raw or "").strip()
+    if not raw or not pack_start_date:
+        return None
+    range_t = _parse_event_range_dates(raw, pack_start_date)
+    if range_t:
+        da, db = range_t
+    else:
+        kd = _parse_key_date_from_text(raw, pack_start_date)
+        if kd is None:
+            return None
+        try:
+            start = datetime.strptime(pack_start_date.strip()[:10], "%Y-%m-%d")
+            da = (start + timedelta(days=kd - 1)).date()
+            db = da
+        except ValueError:
+            return None
+    sd = _calendar_date_to_pack_day(pack_start_date, da)
+    ed = _calendar_date_to_pack_day(pack_start_date, db)
+    if sd is None or ed is None:
+        return None
+    if ed < sd:
+        sd, ed = ed, sd
+        da, db = db, da
+    return (da, db, sd, ed)
+
+
+def _event_calendar_allows_weekend_phrase(da: date, db: date) -> bool:
+    """
+    True if "this weekend" / "next weekend" is a fair anchor for the event dates.
+    Saturday–Sunday pair, or a single day on Saturday or Sunday.
+    """
+    if da != db:
+        return da.weekday() == 5 and db.weekday() == 6 and (db - da).days == 1
+    return da.weekday() in (5, 6)
+
+
+def _build_event_calendar_strict_block(pack_start_date: str, launch_desc_raw: str) -> Optional[str]:
+    """
+    Strict EVENT_CALENDAR + COUNTDOWN_RULES for prompts when dates are parseable.
+    Handles single-day (from _parse_key_date_from_text) or multi-day ranges (12–13 April).
+    """
+    bounds = _resolve_event_pack_bounds(pack_start_date, launch_desc_raw)
+    if not bounds:
+        return None
+    da, db, sd, ed = bounds
+    lines: List[str] = [
+        "EVENT_CALENDAR (strict — captions AND Story Ideas must match; do not invent weekdays or different dates):",
+        f"- First event calendar day: **{da.strftime('%a %d %b %Y')}** → Pack Day **{sd}**.",
+    ]
+    if db != da:
+        lines.append(f"- Last event calendar day in this window: **{db.strftime('%a %d %b %Y')}** → Pack Day **{ed}**.")
+    lines.append("")
+    lines.append("PHASING for this event:")
+    if sd > 1:
+        lines.append(f"- Pack Days **1**–**{sd - 1}**: pre-event (teasers, anticipation, countdowns only).")
+    lines.append(
+        f"- Pack Days **{sd}**–**{ed}**: event is ON (live, ongoing, or spanning these dates) — not “tomorrow” or “in 48 hours” for this same event."
+    )
+    if ed < 30:
+        lines.append(f"- Pack Days **{ed + 1}**–**30**: post-event (thank-you, replay, what’s next).")
+    w_first = da.strftime("%A")
+    w_last = db.strftime("%A")
+    if db != da:
+        pre_clause = (
+            f"On **pre-event** days (Pack Days **1**–**{sd - 1}**), when you name which days the event happens, use **only** "
+            f"**{w_first}** and **{w_last}** (or neutral wording: “the dates above”, the month/day from KEY_DATE_EVENTS) — "
+            "do **not** say “Saturday and Sunday”, “this weekend” in a way that implies Sat–Sun, or any other weekday pair that contradicts DATE_CONTEXT."
+            if sd > 1
+            else "The event starts on Pack Day 1; do not describe the event dates using weekdays that contradict DATE_CONTEXT."
+        )
+        wk_lock = (
+            f"WEEKDAY_LOCK — The event runs **{w_first} {da.day}** → **{w_last} {db.day}** ({da.strftime('%b')} / same month). "
+            + pre_clause
+        )
+    else:
+        wk_lock = (
+            f"WEEKDAY_LOCK — The event is on **{w_first} {da.strftime('%d %b %Y')}**. "
+            f"Pre-event copy must not name a different weekday for the event (e.g. do not say “Monday launch” if the event is on **{w_first}** per DATE_CONTEXT)."
+        )
+    if _event_calendar_allows_weekend_phrase(da, db):
+        if db == da:
+            weekend_note = (
+                f"WEEKEND_WORDING — Single-day event on **{w_first}**. "
+                "“This weekend” / “next weekend” are acceptable if they match that date in DATE_CONTEXT."
+            )
+        else:
+            weekend_note = (
+                "WEEKEND_WORDING — The event is **Saturday and Sunday** (see DATE_CONTEXT). "
+                "Phrases like “this weekend” / “next weekend” are acceptable as primary time anchors when they match those dates."
+            )
+    else:
+        weekend_note = (
+            "WEEKEND_WORDING — The event is **not** a Saturday–Sunday pair. "
+            "Do **not** use “this weekend” or “next weekend” as the **main** hook for when the event happens—lead with the weekdays in WEEKDAY_LOCK or explicit calendar dates first. "
+            "Incidental use of “weekend” is OK only if the sentence already names the real days (e.g. “Sunday and Monday …”) so it cannot be read as Sat–Sun."
+        )
+    lines.extend([
+        "",
+        wk_lock,
+        "",
+        weekend_note,
+        "",
+        "COUNTDOWN_RULES (use DATE_CONTEXT for every Pack Day):",
+        f"- Do **not** say the event is “tomorrow”, “in 48 hours”, “tonight’s your last chance before Monday launch”, or similar if Pack Day **{sd}**–**{ed}** is already on or inside the event window above — those phrases are for days **before** {da.strftime('%a %d %b')}.",
+        "- “48 hours until …” must refer to a moment **two calendar days before** the first event day; only use it on the Pack Day that DATE_CONTEXT shows is exactly two days before that first day — never on the first event day itself.",
+        "- “Tomorrow” on Pack Day N must mean the **next calendar day** in DATE_CONTEXT (compare the Day N and Day N+1 lines — do not invent a different weekday).",
+        "- Follow **WEEKEND_WORDING** above for “this weekend” / “next weekend” (allowed only when WEEKEND_WORDING says so).",
+        "- Story Idea lines must follow the **same** timeline as captions (no conflicting launch days).",
+    ])
+    return "\n".join(lines)
+
+
+def _build_key_date_events_story_block(
+    start_str: str, launch_desc_raw: str, launch_desc: str
+) -> str:
+    """KEY_DATE_EVENTS + EVENT_CALENDAR + IMPORTANT for story prompts (same phasing as captions)."""
+    if not launch_desc:
+        return ""
+    key_date_day = (
+        _parse_key_date_from_text(launch_desc_raw or launch_desc, start_str)
+        if (launch_desc_raw or launch_desc)
+        else None
+    )
+    event_bounds = _resolve_event_pack_bounds(start_str, launch_desc_raw) if launch_desc_raw else None
+    event_strict = _build_event_calendar_strict_block(start_str, launch_desc_raw) if launch_desc_raw else None
+    parts = [
+        "",
+        "",
+        "KEY_DATE_EVENTS (user included dates in description):",
+        launch_desc,
+        "",
+        "Phase story content by the dates above: BEFORE = anticipation, teasers, countdown; ON/DURING = announce, promote; AFTER = thank-you, feedback. Do not put launch-day tone on the wrong day. Use the actual dates from DATE_CONTEXT when mentioning when events happen—do not invent different dates or weekdays.",
+    ]
+    if event_strict:
+        parts.extend(["", event_strict])
+    if event_bounds is not None:
+        _da, _db, sd, ed = event_bounds
+        if sd == ed:
+            pre_w = (
+                f"Pre-launch/anticipation stories: days **1**–**{sd - 1}**."
+                if sd > 1
+                else "Pre-launch: none (the event starts on Day 1)."
+            )
+            post_w = (
+                f"Post-event stories: days **{sd + 1}**–**30**."
+                if sd < 30
+                else "Post-event: none (the event falls on the last pack day)."
+            )
+            parts.extend([
+                "",
+                f"IMPORTANT — The event is one calendar day: Pack Day **{sd}** ({_da.strftime('%a %d %b %Y')}). {pre_w} On-event: Day **{sd}**. {post_w} Idea and Suggested wording must match DATE_CONTEXT and COUNTDOWN_RULES (no wrong weekdays; no “Monday launch” if the event is on Saturday/Sunday per DATE_CONTEXT).",
+            ])
+        else:
+            pre_w = (
+                f"Pre-event stories: days **1**–**{sd - 1}**."
+                if sd > 1
+                else "Pre-event: none (the event starts on Day 1)."
+            )
+            post_w = (
+                f"Post-event stories: days **{ed + 1}**–**30**."
+                if ed < 30
+                else "Post-event: none (the event ends on the last pack day)."
+            )
+            parts.extend([
+                "",
+                f"IMPORTANT — The event spans **Pack Days {sd}–{ed}** (calendar: {_da.strftime('%a %d %b')}–{_db.strftime('%a %d %b %Y')}). {pre_w} On-event: **{sd}**–**{ed}**. {post_w} Do not imply the preview is “tomorrow” or “Monday” when DATE_CONTEXT shows otherwise. Match captions’ timeline exactly.",
+            ])
+    elif key_date_day is not None:
+        parts.extend([
+            "",
+            f"IMPORTANT — The client's key date above falls on Day {key_date_day}. Write pre-launch/anticipation stories for days 1 to {key_date_day - 1}, launch-day/announcement for Day {key_date_day}, and post-launch/thank-you for days {key_date_day + 1} to 30. Suggested wording must reference the correct dates (e.g. if launch is Day 7 = Fri 27 Mar, do not say \"opens in April\" on Day 7).",
+        ])
+    return "\n".join(parts)
+
+
 def _build_date_context(pack_start_date: str) -> Optional[str]:
     """If pack_start_date is YYYY-MM-DD, return a 30-day calendar string for the prompt. Else return None."""
     s = (pack_start_date or "").strip()
@@ -91,6 +333,49 @@ def _build_date_context(pack_start_date: str) -> Optional[str]:
         d = start + timedelta(days=i)
         lines.append(f"Day {i + 1} = {d.strftime('%a %d %b %Y')}")
     return "\n".join(lines)
+
+
+def _build_date_alignment_weekend_block(pack_start_date: str) -> str:
+    """
+    Rules so each day's caption matches the real calendar day in DATE_CONTEXT.
+    Prevents e.g. 'As we head into the final weekend' on a Sunday post.
+    """
+    s = (pack_start_date or "").strip()
+    if not s:
+        return ""
+    try:
+        start = datetime.strptime(s[:10], "%Y-%m-%d")
+    except ValueError:
+        return ""
+    first_sunday: Optional[Tuple[int, datetime]] = None
+    for i in range(30):
+        d = start + timedelta(days=i)
+        if d.weekday() == 6:
+            first_sunday = (i + 1, d)
+            break
+    ex = ""
+    if first_sunday:
+        dn, dt = first_sunday
+        ex = (
+            f" For example, Pack Day **{dn}** is **{dt.strftime('%A %d %b')}** — "
+            "do not write that day's caption as if the weekend is still *ahead*."
+        )
+    return (
+        "DATE_ALIGNMENT (CRITICAL — each ## Day N **Caption:** is for the calendar day listed in DATE_CONTEXT; "
+        "the client's PDF shows that date beside the post, so the copy must read correctly **on that day**):"
+        "\n- **Weekend / 'this weekend':** Do **not** use \"as we head into the weekend\", \"ahead of the weekend\", "
+        "\"leading up to … weekend\", or \"this weekend\" as **still upcoming** when DATE_CONTEXT for **that same Day N** "
+        "is **Saturday** or **Sunday** — the reader is already in the weekend. Prefer \"today\", \"this Saturday\", "
+        "\"this Sunday\", or speak to guests who are here **now**."
+        "\n- **Sunday:** Never open as if the weekend hasn't started (e.g. avoid \"As we head into the final weekend …\" "
+        "when the post day is Sunday). You may still state opening hours (e.g. open Saturday, closed Sunday) — factual — "
+        "but the **narrative time** must match the post day."
+        "\n- **Monday–Friday:** Weekend-forward lines (e.g. \"this weekend\") are fine when the calendar day is before Saturday; "
+        "**Friday** is natural for teeing up the weekend."
+        "\n- **Month phrases:** \"Final weekend of [month]\" must match the calendar: if the post falls **during** that weekend, "
+        "do not frame it as if you are still *before* it."
+        + ex
+    )
 
 
 CAPTION_CATEGORIES = [
@@ -175,7 +460,7 @@ Output format: You must respond with a single markdown document. Structure:
 2. Subtitle: "[Business name from intake, or a brief identifier] | [Current month year]"
 3. Section "---" then "INTAKE SUMMARY" then "---" then bullet lines: Business, Audience, Voice, Platform(s), Goal (from the intake).
 4. Section "---" then "CAPTIONS" then "---"
-5. For each day (1–30): "## Day N — [Category]" then for each platform (see below) repeat: "**Platform:** [exact platform label]" then "**Caption:**" then the full caption as one block: 2–6 short paragraphs (non-TikTok) or 1–3 short lines (TikTok only)—everything the client should paste into the post, with no separate "hook line" only. If HASHTAGS_REQUESTED is true, then a blank line then "**Hashtags:** [MIN–MAX hashtags for this caption, comma-separated or space-separated]". Then "---" only after all platforms for that day are done. If HASHTAGS_REQUESTED is false, do NOT include any **Hashtags:** line.
+5. For each day (1–30): "## Day N — [Category name only]" then for each platform (see below) repeat: "**Platform:** [exact platform label]" then "**Caption:**" then the full caption as one block: 2–6 short paragraphs (non-TikTok) or 1–3 short lines (TikTok only)—everything the client should paste into the post, with no separate "hook line" only. If HASHTAGS_REQUESTED is true, then a blank line then "**Hashtags:** [MIN–MAX hashtags for this caption, comma-separated or space-separated]". Then "---" only after all platforms for that day are done. If HASHTAGS_REQUESTED is false, do NOT include any **Hashtags:** line.
 
 Standalone clarity (CRITICAL): Every caption must make sense on its own in the feed. Do not write dangling one-liners that rely on unstated context. Avoid opening with bare "That's…", "This is…", or "Here's the difference…" unless the same caption immediately explains what you mean with concrete detail (what you offer, who it's for, what makes it different). Authority and Educational posts still need specifics—location, service, guest experience, or a clear insight—not a vague punchline.
 
@@ -191,9 +476,15 @@ Hashtag guidance (when HASHTAGS_REQUESTED is true): Every single caption MUST in
 
 Single platform: Write 30 distinct captions (one per day). Multiple platforms: Write 30 × [number of platforms] distinct captions — for each day, one caption per platform. Rotate through the five categories across days so the mix is balanced (roughly 6 days per category). Every caption must be tailored to the client's business, audience, voice, the platform it is for, and goal. Each caption must also be linguistically distinct: vary your vocabulary, sentence openings, and structure so the full set avoids repetition and feels varied. When a business name is provided, use it naturally where it fits (e.g. sign-offs, occasional mentions like "At [name] we...") — don't force it into every caption. No placeholder text. No "[insert X]". Each caption should be 2–6 short paragraphs (or 1–3 lines for TikTok days), copy-paste ready.
 
+Day headings (CRITICAL): Each line must be exactly `## Day N — [one of the five category names]`. Do not put calendar dates, weekdays, or "6 Apr 2026"-style text in the day heading—the client's PDF adds dates automatically; dates in the heading duplicate in the exported PDF.
+
+Calendar-day alignment (CRITICAL): The user prompt includes **DATE_CONTEXT** (and may include **DATE_ALIGNMENT**). Each **Caption:** for Day N must read correctly **on the calendar day** for that N. If that day is **Saturday** or **Sunday**, do **not** use "heading into the weekend", "ahead of the weekend", or "this weekend" as something still **in the future**. On **Sunday**, never imply the weekend has not started yet. **Friday** and **Mon–Thu** may tee up the weekend when natural.
+
+Named people (CRITICAL): Do not invent specific names of employees, customers, collaborators, or fictional staff unless the intake explicitly names them. Use generic roles (e.g. "our team", "the grower", "a customer") instead.
+
 Business relevance (CRITICAL): Every caption must be clearly about THIS business—what they actually sell or do, who they serve, and their specific product or service. Do not write generic "founder", "strategy", "building a brand", or "scaling a business" captions that could apply to any company. If the business is cakes and baking, reference cakes, baking, ingredients, orders, customers, flavours, etc. If the business is coaching, reference coaching, clients, sessions, outcomes. Match the vocabulary and examples to the business type and "What they offer" from the intake. A reader should immediately understand which industry and offer the caption is for.
 
-Launch/event phasing (when LAUNCH_EVENT / KEY_DATE_EVENTS is provided in the user prompt): Days before launch = pre-launch (build anticipation, teasers, countdown). Launch day = announcement, go-live. Days after launch = post-launch (thank-you, feedback, early results — NOT hype or anticipation). You MUST reflect the client's named event(s), sale(s), or launch date(s) in the **Caption:** body text on the correct days—not only in the document header or intake summary. Caption copy and Story Ideas must follow the same before / on / after timeline."""
+Launch/event phasing (when LAUNCH_EVENT / KEY_DATE_EVENTS is provided in the user prompt): If the user prompt includes **EVENT_CALENDAR**, **WEEKDAY_LOCK**, **WEEKEND_WORDING**, or **COUNTDOWN_RULES**, treat them as authoritative: multi-day windows stay “on-event” for every Pack Day in that window—do not use “tomorrow”, “48 hours”, or “Monday launch” in ways that contradict **DATE_CONTEXT**. Follow **WEEKEND_WORDING** for when “this weekend” / “next weekend” are allowed. When **WEEKDAY_LOCK** lists the weekdays (e.g. Sunday–Monday), never substitute “Saturday and Sunday” or imply Sat–Sun. Otherwise: days before launch = pre-launch; launch / event days = announcement, go-live; days after = post-launch (thank-you, feedback — NOT hype or anticipation). You MUST reflect the client's named event(s), sale(s), or launch date(s) in the **Caption:** body text on the correct days—not only in the document header or intake summary. Caption copy and Story Ideas must follow the same before / on / after timeline."""
 
 
 def extract_day_categories_from_captions_md(captions_md: str) -> list:
@@ -279,6 +570,8 @@ def _build_user_prompt(
         "",
         "RELEVANCE: Every caption must be clearly about this business—their product/service, their audience, their offer. Do not write generic business/strategy/founder captions that could apply to any company. Use concrete details from the intake (e.g. if they offer cakes, reference cakes, baking, ingredients, orders; if they offer coaching, reference sessions, clients, outcomes). A reader should know which industry and offer the caption is for.",
         "",
+        "Do not invent specific people's names (employees, customers, or collaborators) unless the intake explicitly names them. Use generic roles (e.g. our team, the person who packs your order) instead.",
+        "",
         "VOICE: Match the client's voice (Voice / tone to use) and avoid their listed words or style (Words / style to avoid). When the goal is leads or inquiries, include a clear, low-pressure next step (e.g. link in bio, DM, book a call) where it fits naturally.",
         "",
         "SUBSTANCE (non-TikTok platforms): Each **Caption:** must include multiple complete sentences (at least two) and enough detail that a stranger understands the offer—never a single vague fragment. Days 1–2 set the tone: be specific about the business, location, or guest value, not a cryptic one-liner.",
@@ -305,6 +598,8 @@ def _build_user_prompt(
     launch_desc_raw = (intake.get("launch_event_description") or "").strip()
     launch_desc = _normalize_intake_case(launch_desc_raw, sentence_case=True) if launch_desc_raw else ""
     key_date_day = _parse_key_date_from_text(launch_desc_raw or launch_desc, start_str) if (launch_desc_raw or launch_desc) else None
+    event_bounds = _resolve_event_pack_bounds(start_str, launch_desc_raw) if launch_desc_raw else None
+    event_strict = _build_event_calendar_strict_block(start_str, launch_desc_raw) if launch_desc_raw else None
     if launch_desc:
         parts.extend([
             "",
@@ -313,7 +608,45 @@ def _build_user_prompt(
             "",
             "Phase content by the dates above: BEFORE = anticipation, teasers; ON/DURING = announce, promote; AFTER = thank-you, feedback. Support multiple events if listed.",
         ])
-        if key_date_day is not None:
+        if event_strict:
+            parts.extend(["", event_strict])
+        if event_bounds is not None:
+            _da, _db, sd, ed = event_bounds
+            if sd == ed:
+                pre_w = (
+                    f"Pre-launch/anticipation: days **1**–**{sd - 1}**."
+                    if sd > 1
+                    else "Pre-launch: none (the event starts on Day 1)."
+                )
+                post_w = (
+                    f"Post-event: days **{sd + 1}**–**30**."
+                    if sd < 30
+                    else "Post-event: none (the event falls on the last pack day)."
+                )
+                parts.extend([
+                    "",
+                    f"IMPORTANT — The client's event window is a single calendar day: Pack Day **{sd}** ({_da.strftime('%a %d %b %Y')}). {pre_w} On-event: Day **{sd}**. {post_w} Follow EVENT_CALENDAR and COUNTDOWN_RULES above; do not contradict DATE_CONTEXT.",
+                    "",
+                    "KEY_DATE_EVENTS — caption bodies: Most captions in those phases must clearly reference the client's specific event, sale, or launch inside the **Caption:** text—not only in hashtags. Do not leave KEY_DATE_EVENTS only in Story Ideas while captions stay generic.",
+                ])
+            else:
+                pre_w = (
+                    f"Pre-event: days **1**–**{sd - 1}**."
+                    if sd > 1
+                    else "Pre-event: none (the event starts on Day 1)."
+                )
+                post_w = (
+                    f"Post-event: days **{ed + 1}**–**30**."
+                    if ed < 30
+                    else "Post-event: none (the event ends on the last pack day)."
+                )
+                parts.extend([
+                    "",
+                    f"IMPORTANT — The client's event spans **Pack Days {sd}–{ed}** (calendar: {_da.strftime('%a %d %b')}–{_db.strftime('%a %d %b %Y')}). {pre_w} On-event (live / spanning dates): **{sd}**–**{ed}**. {post_w} Do not treat only Day {sd} as “launch” and Day {ed} as after the event. Follow EVENT_CALENDAR and COUNTDOWN_RULES above.",
+                    "",
+                    "KEY_DATE_EVENTS — caption bodies: Most captions in those phases must clearly reference the client's specific event, sale, or launch inside the **Caption:** text—not only in hashtags. Do not leave KEY_DATE_EVENTS only in Story Ideas while captions stay generic.",
+                ])
+        elif key_date_day is not None:
             parts.extend([
                 "",
                 f"IMPORTANT — The client's key date above falls on Day {key_date_day}. Write pre-launch/anticipation content for days 1 to {key_date_day - 1}, launch-day/announcement content for Day {key_date_day}, and post-launch/thank-you content for days {key_date_day + 1} to 30. Do not put launch-day tone on the wrong day.",
@@ -329,12 +662,15 @@ def _build_user_prompt(
     # Date context: Day 1 = pack_start_date so captions are date-aware and key date aligns
     date_context = _build_date_context(start_str)
     if date_context:
+        align_block = _build_date_alignment_weekend_block(start_str)
         parts.extend([
             "",
             "DATE_CONTEXT (the client's 30 days start on a specific date; use when it adds value):",
             date_context,
             "",
-            "When KEY_DATE_EVENTS is also set, prioritize event timing from KEY_DATE_EVENTS over casual weekday mentions. When only DATE_CONTEXT applies (no KEY_DATE_EVENTS), you may reference weekday/weekend lightly; do not force a calendar date into every caption.",
+            align_block,
+            "",
+            "When KEY_DATE_EVENTS is also set, prioritize event timing from KEY_DATE_EVENTS over casual weekday mentions. When only DATE_CONTEXT applies (no KEY_DATE_EVENTS), you may reference weekday/weekend lightly; do not force a calendar date into every caption — but **DATE_ALIGNMENT** above still applies (each day must match its weekday).",
         ])
 
     # Subscription variety: avoid repeating the same day-by-day category pattern as previous packs
@@ -641,6 +977,16 @@ def _validate_caption_quality(
     launch_desc = (intake.get("launch_event_description") or "").strip()
     if not launch_desc:
         return warnings
+    bounds = _resolve_event_pack_bounds(pack_start_date, launch_desc)
+    if bounds:
+        da_b, db_b, _, _ = bounds
+        if not _event_calendar_allows_weekend_phrase(da_b, db_b) and re.search(
+            r"\b(this|next)\s+weekend\b", captions_md, re.I
+        ):
+            warnings.append(
+                "Quality check: Caption text uses “this weekend” or “next weekend” but the "
+                "EVENT_CALENDAR is not a Saturday–Sunday event—review wording against DATE_CONTEXT."
+            )
     key_date_day = _parse_key_date_from_text(launch_desc, pack_start_date)
     if key_date_day is None:
         return warnings
@@ -1037,21 +1383,9 @@ DATE_CONTEXT (their 30 days start on a specific date; use when relevant, e.g. we
 You may reference the actual day/date where it helps (e.g. Monday tip, weekend post). Use only when natural.
 """
         # Key date phasing: stories must align with launch/event dates (same as captions)
-        key_date_block = ""
         launch_desc_raw = (intake.get("launch_event_description") or "").strip()
         launch_desc = n(launch_desc_raw, sentence_case=True) if launch_desc_raw else ""
-        key_date_day = _parse_key_date_from_text(launch_desc_raw or launch_desc, start_str) if (launch_desc_raw or launch_desc) else None
-        if launch_desc:
-            key_date_block = f"""
-
-KEY_DATE_EVENTS (user included dates in description):
-{launch_desc}
-
-Phase story content by the dates above: BEFORE = anticipation, teasers, countdown; ON/DURING = announce, promote; AFTER = thank-you, feedback. Do not put launch-day tone on the wrong day. Use the actual dates from DATE_CONTEXT when mentioning when events happen—do not invent different dates."""
-            if key_date_day is not None:
-                key_date_block += f"""
-
-IMPORTANT — The client's key date above falls on Day {key_date_day}. Write pre-launch/anticipation stories for days 1 to {key_date_day - 1}, launch-day/announcement for Day {key_date_day}, and post-launch/thank-you for days {key_date_day + 1} to 30. Suggested wording must reference the correct dates (e.g. if launch is Day 7 = Fri 27 Mar, do not say "opens in April" on Day 7)."""
+        key_date_block = _build_key_date_events_story_block(start_str, launch_desc_raw, launch_desc)
         variety_note = ""
         if is_subscription_variety:
             variety_note = "\n\nThis client receives packs monthly; vary story types and angles (polls, BTS, tips, testimonials, etc.) so this month feels fresh and not repetitive with previous packs.\n"
@@ -1156,21 +1490,9 @@ DATE_CONTEXT (their 30 days start on a specific date; use when relevant):
 You may reference the actual day/date where it helps. Use only when natural.
 """
         # Key date phasing: stories must align with launch/event dates (same as captions)
-        key_date_block = ""
         launch_desc_raw = (intake.get("launch_event_description") or "").strip()
         launch_desc = n(launch_desc_raw, sentence_case=True) if launch_desc_raw else ""
-        key_date_day = _parse_key_date_from_text(launch_desc_raw or launch_desc, start_str) if (launch_desc_raw or launch_desc) else None
-        if launch_desc:
-            key_date_block = f"""
-
-KEY_DATE_EVENTS (user included dates in description):
-{launch_desc}
-
-Phase story content by the dates above. Use the actual dates from DATE_CONTEXT when mentioning when events happen—do not invent different dates."""
-            if key_date_day is not None:
-                key_date_block += f"""
-
-IMPORTANT — The client's key date above falls on Day {key_date_day}. Suggested wording must reference the correct dates (e.g. if launch is Day 7 = Fri 27 Mar, do not say "opens in April" on Day 7)."""
+        key_date_block = _build_key_date_events_story_block(start_str, launch_desc_raw, launch_desc)
         variety_note = ""
         if is_subscription_variety:
             variety_note = "\n\nThis client receives packs monthly; vary story types and angles (polls, BTS, tips, testimonials, etc.) so this month feels fresh and not repetitive with previous packs.\n"

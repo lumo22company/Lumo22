@@ -506,6 +506,8 @@ def captions_checkout():
     stripe.api_key = Config.STRIPE_SECRET_KEY
     platforms = _parse_platforms(request)
     selected = _parse_selected_platforms(request)
+    if not selected and platforms == 1:
+        selected = "Instagram & Facebook"
     stories = _parse_stories(request)
     checkout_email, email_error = _parse_checkout_email(request)
     if email_error:
@@ -643,13 +645,21 @@ def captions_correct_email():
         updated = order_service.get_by_id(order_id) or updated
         _send_intake_email_for_order(updated)
         intake_url = _build_intake_url(updated)
+        is_sub = bool((updated.get("stripe_subscription_id") or "").strip())
+        is_pref = bool((updated.get("upgraded_from_token") or "").strip())
+        subscription_first_pack_immediate = (
+            is_sub
+            and is_pref
+            and _stripe_checkout_get_pack_now(session_id)
+        )
         return jsonify({
             "status": "ok",
             "customer_email": new_email,
             "intake_url": intake_url,
             "email_recovery_token": _make_email_recovery_token(order_id, session_id),
-            "is_subscription": bool((updated.get("stripe_subscription_id") or "").strip()),
-            "is_prefilled_from_oneoff": bool((updated.get("upgraded_from_token") or "").strip()),
+            "is_subscription": is_sub,
+            "is_prefilled_from_oneoff": is_pref,
+            "subscription_first_pack_immediate": subscription_first_pack_immediate,
         }), 200
     except Exception as e:
         print(f"[captions-correct-email] Failed to update/resend: {e!r}")
@@ -694,6 +704,8 @@ def captions_checkout_subscription():
             print(f"[captions_checkout_subscription] duplicate guard failed (non-fatal): {e}")
     platforms = _parse_platforms(request)
     selected = _parse_selected_platforms(request)
+    if not selected and platforms == 1:
+        selected = "Instagram & Facebook"
     stories = _parse_stories(request)
     reminders_on = request.args.get("form_reminders", "1").strip().lower() not in ("0", "false", "no", "off")
     base = _base_url_for_redirect()
@@ -926,6 +938,24 @@ def _get_session_attr(session, key, default=None):
     return getattr(session, key, default)
 
 
+def _stripe_checkout_get_pack_now(session_id: Optional[str]) -> bool:
+    """
+    True when Checkout Session metadata has get_pack_now (upgrade: charge today + first subscription pack generated now).
+    Used on thank-you page so copy can confirm the first pack is on the way vs deferred billing.
+    """
+    if not session_id or not (getattr(Config, "STRIPE_SECRET_KEY", None) or "").strip():
+        return False
+    try:
+        import stripe
+        stripe.api_key = Config.STRIPE_SECRET_KEY.strip()
+        session = stripe.checkout.Session.retrieve(session_id)
+        meta = _get_session_attr(session, "metadata") or {}
+        v = meta.get("get_pack_now", "") if hasattr(meta, "get") else getattr(meta, "get_pack_now", "") or ""
+        return str(v).strip().lower() in ("1", "true", "yes", "on")
+    except Exception:
+        return False
+
+
 def _build_intake_url(order: dict) -> str:
     """Build intake URL for an order, including copy_from when order was upgraded from one-off."""
     token = (order.get("token") or "").strip()
@@ -1096,6 +1126,11 @@ def captions_intake_link():
     # Only send intake email when WE created the order (fallback); if order existed, webhook already sent
     is_subscription = bool((order.get("stripe_subscription_id") or "").strip())
     is_prefilled_from_oneoff = bool((order.get("upgraded_from_token") or "").strip())
+    subscription_first_pack_immediate = (
+        is_subscription
+        and is_prefilled_from_oneoff
+        and _stripe_checkout_get_pack_now(session_id)
+    )
     print(f"[captions-intake-link] Returning intake_url for session_id={session_id[:20]}...")
     return jsonify({
         "status": "ok",
@@ -1104,6 +1139,7 @@ def captions_intake_link():
         "email_recovery_token": _make_email_recovery_token(str(order.get("id")), session_id),
         "is_subscription": is_subscription,
         "is_prefilled_from_oneoff": is_prefilled_from_oneoff,
+        "subscription_first_pack_immediate": subscription_first_pack_immediate,
     }), 200
 
 
@@ -1162,12 +1198,20 @@ def captions_intake_link_by_email():
                 _intake_email_sent_at[str(order_id)] = now
     is_subscription = bool((order.get("stripe_subscription_id") or "").strip())
     is_prefilled_from_oneoff = bool((order.get("upgraded_from_token") or "").strip())
+    sid = (order.get("stripe_session_id") or "").strip()
+    subscription_first_pack_immediate = (
+        bool(sid)
+        and is_subscription
+        and is_prefilled_from_oneoff
+        and _stripe_checkout_get_pack_now(sid)
+    )
     return jsonify({
         "status": "ok",
         "intake_url": intake_url,
         "customer_email": email,
         "is_subscription": is_subscription,
         "is_prefilled_from_oneoff": is_prefilled_from_oneoff,
+        "subscription_first_pack_immediate": subscription_first_pack_immediate,
     }), 200
 
 
@@ -1801,6 +1845,12 @@ def _captions_intake_submit_impl(data):
         "include_stories": order_has_stories and (bool(data.get("include_stories")) or bool((order.get("intake") or {}).get("include_stories"))),
         "align_stories_to_captions": align_flag,
     }
+    if not (intake.get("platform") or "").strip():
+        fb = (order.get("selected_platforms") or "").strip()
+        if not fb and order_platforms_count == 1:
+            fb = "Instagram & Facebook"
+        if fb:
+            intake["platform"] = fb
 
     launch_window_error = _validate_launch_event_window(
         intake.get("launch_event_description") or "",
