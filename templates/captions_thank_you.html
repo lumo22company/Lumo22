@@ -40,10 +40,10 @@
       <p class="lumo-section-label">Order confirmed</p>
       <h1 class="lumo-section-title">Thanks for your order</h1>
     </div>
-    <div class="thankyou-card" id="thankyou-box">
+    <div class="thankyou-card" id="thankyou-box" aria-busy="true" data-preparing="true">
       <h1>30 Days of Social Media Captions</h1>
-      <p id="thankyou-message">We've received your payment. One moment — we're preparing your next step…</p>
-      <div id="thankyou-form-link" style="display: none;">
+      <p id="thankyou-message" role="status" aria-live="polite"><span class="thankyou-spinner" aria-hidden="true"></span> We've received your payment. We're preparing your secure form link — this usually takes a few seconds.</p>
+      <div id="thankyou-form-link" style="display: none;" aria-hidden="true">
         <p id="thankyou-email-msg" style="margin-bottom: 1.25rem;"></p>
         <div id="thankyou-wrong-email-wrap" style="display: none; margin: 0.25rem 0 1.25rem;">
           <button type="button" id="thankyou-wrong-email-toggle" class="thankyou-cta-swipe" style="padding: 0.45rem 0.9rem;">Wrong email?</button>
@@ -58,7 +58,7 @@
           </div>
         </div>
         <div class="thankyou-cta-row" style="display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1.5rem;">
-          <a href="#" id="intake-link" class="thankyou-cta-swipe thankyou-cta">Fill out form now</a>
+          <a href="#" id="intake-link" class="thankyou-cta-swipe thankyou-cta" aria-disabled="true">Fill out form now</a>
           <a href="{% if current_customer %}/account{% else %}/{% endif %}" id="later-link" class="thankyou-cta-swipe">I'll do it later</a>
         </div>
         <div id="thankyou-create-account" style="display: none; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.15);">
@@ -118,6 +118,11 @@
       var wrongEmailSuccessEl = document.getElementById('thankyou-update-email-success');
 
       if (!sessionId) {
+        var thankyouBoxNoSession = document.getElementById('thankyou-box');
+        if (thankyouBoxNoSession) {
+          thankyouBoxNoSession.setAttribute('aria-busy', 'false');
+          thankyouBoxNoSession.setAttribute('data-preparing', 'false');
+        }
         messageEl.style.display = 'none';
         noSessionEl.style.display = 'block';
         noSessionEl.innerHTML = 'Your order is confirmed. Check your email for the form link. If you don\'t see it, enter the email you used below to get your link.';
@@ -163,6 +168,11 @@
       function showIntake(url, customerEmail, isSubscription, isPrefilledFromOneoff, emailRecoveryToken, firstPackImmediate) {
         recoveryToken = (emailRecoveryToken || recoveryToken || '');
         firstPackImmediate = !!firstPackImmediate;
+        var thankyouBox = document.getElementById('thankyou-box');
+        if (thankyouBox) {
+          thankyouBox.setAttribute('aria-busy', 'false');
+          thankyouBox.setAttribute('data-preparing', 'false');
+        }
         messageEl.style.display = 'none';
         var emailFallback = document.getElementById('thankyou-email-fallback');
         if (emailFallback) emailFallback.style.display = 'none';
@@ -237,8 +247,10 @@
         var emailText = leadText + prefilledEditLine + timingPart + accountSuffix;
         emailMsgEl.innerHTML = emailText;
         intakeLinkEl.href = url;
+        intakeLinkEl.removeAttribute('aria-disabled');
         intakeLinkEl.textContent = isPrefilledFromOneoff ? 'Review your form' : 'Fill out form now';
         formLinkEl.style.display = 'block';
+        formLinkEl.setAttribute('aria-hidden', 'false');
         if (wrongEmailWrapEl) {
           wrongEmailWrapEl.style.display = (customerEmail && recoveryToken) ? 'block' : 'none';
           if (wrongEmailFormEl) wrongEmailFormEl.style.display = 'none';
@@ -295,6 +307,11 @@
 
       function showFallback() {
         if (intakeShown) return;
+        var thankyouBox = document.getElementById('thankyou-box');
+        if (thankyouBox) {
+          thankyouBox.setAttribute('aria-busy', 'false');
+          thankyouBox.setAttribute('data-preparing', 'false');
+        }
         messageEl.innerHTML = 'Your order is confirmed. We\'ve sent the form link to your email—please check your inbox (and spam folder). You can also <a href="#" id="thankyou-refresh" style="color: var(--lum-gold); font-weight: 600;">refresh this page</a> to try again.';
         var refreshLink = document.getElementById('thankyou-refresh');
         if (refreshLink) refreshLink.addEventListener('click', function(e) { e.preventDefault(); window.location.reload(); });
@@ -348,12 +365,13 @@
           })
           .catch(function() {});
       }, 1500);
+      // Give webhook + DB time before suggesting email-only recovery (link often arrives first).
       setTimeout(function() {
         if (intakeShown) return;
         showFallback();
-      }, 20000);
-      // Keep polling up to 35s; if link arrives after fallback, showIntake hides fallback and shows buttons
-      setTimeout(function() { clearInterval(interval); }, 35000);
+      }, 45000);
+      // Keep polling ~90s; if link arrives after fallback, showIntake still reveals the primary CTAs
+      setTimeout(function() { clearInterval(interval); }, 90000);
 
       var signupBtn = document.getElementById('signup-btn');
       if (signupBtn) {

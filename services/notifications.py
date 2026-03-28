@@ -444,7 +444,7 @@ def _intake_link_email_html(intake_url: str, order_summary: Optional[str] = None
     summary_block = ""
     if order_summary and order_summary.strip():
         summary_escaped = html.escape(order_summary.strip()).replace("\n", "<br>\n")
-        summary_block = f"""<p style="margin:0 0 16px; font-size:14px; color:{BRAND_MUTED};"><strong style="color:{BRAND_TEXT};">Order confirmation</strong><br>Here's what you ordered:<br>{summary_escaped}</p>
+        summary_block = f"""<p style="margin:0 0 16px; font-size:14px; line-height:1.6; color:{BRAND_BLACK};"><strong>Order confirmation</strong><br>Here's what you ordered:<br>{summary_escaped}</p>
 """
     account_line = "On the form you can also create an account to access your captions and manage your subscription in one place." if is_subscription else "On the form you can also create an account to access your captions in one place."
     business_line = ""

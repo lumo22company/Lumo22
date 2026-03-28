@@ -353,6 +353,68 @@ def _normalize_business_key(value: str) -> str:
     return "".join(out).strip("-")
 
 
+def seed_intake_business_from_stripe_metadata(order_service, order: dict, meta) -> dict:
+    """
+    If Stripe checkout metadata includes business_name or business_key, merge intake.business_name early
+    so receipt and intake emails can show the brand. Does not overwrite an existing intake.business_name.
+    """
+    if not order or not isinstance(order, dict):
+        return order
+    oid = order.get("id")
+    if not oid:
+        return order
+    intake = order.get("intake") if isinstance(order.get("intake"), dict) else {}
+    if (intake.get("business_name") or "").strip():
+        return order
+    if isinstance(meta, dict):
+        md = meta
+    elif meta is not None and hasattr(meta, "get"):
+        md = {"business_name": meta.get("business_name"), "business_key": meta.get("business_key")}
+    else:
+        md = {}
+    business_name = (md.get("business_name") or "").strip() or None
+    business_key = _normalize_business_key((md.get("business_key") or "").strip())
+    if not business_name and business_key:
+        business_name = business_key.replace("-", " ").title()
+    if not business_name:
+        return order
+    name = business_name[:120]
+    merged = dict(intake or {})
+    merged["business_name"] = name
+    try:
+        order_service.update_intake_only(str(oid), merged)
+        return order_service.get_by_id(str(oid)) or {**order, "intake": merged}
+    except Exception:
+        return {**order, "intake": merged}
+
+
+def enrich_order_intake_from_checkout_session(order_service, order: dict) -> dict:
+    """
+    If intake has no business_name yet, load Stripe Checkout Session metadata and seed intake.
+    Covers the race where the customer opens the intake link before the payment webhook has run.
+    """
+    if not order or not isinstance(order, dict):
+        return order
+    intake = order.get("intake") if isinstance(order.get("intake"), dict) else {}
+    if (intake.get("business_name") or "").strip():
+        return order
+    sid = (order.get("stripe_session_id") or "").strip()
+    if not sid:
+        return order
+    try:
+        import stripe
+
+        if not (getattr(Config, "STRIPE_SECRET_KEY", None) or "").strip():
+            return order
+        stripe.api_key = Config.STRIPE_SECRET_KEY.strip()
+        session = stripe.checkout.Session.retrieve(sid)
+        meta = session.get("metadata") if isinstance(session, dict) else getattr(session, "metadata", None) or {}
+        return seed_intake_business_from_stripe_metadata(order_service, order, meta)
+    except Exception as e:
+        print(f"[enrich_order_intake_from_checkout_session] non-fatal: {e!r}")
+        return order
+
+
 def _order_business_keys(order: dict) -> set:
     """
     Return possible business keys for an order/subscription row.
@@ -555,9 +617,18 @@ def captions_checkout():
                 },
                 "quantity": 1,
             })
+    business_name_raw = (request.args.get("business_name") or "").strip()
+    explicit_business_key = (request.args.get("business_key") or "").strip()
     metadata = {"product": "captions", "platforms": str(platforms), "include_stories": "1" if stories else "0"}
     if selected:
         metadata["selected_platforms"] = selected
+    normalized_business_name = _normalize_business_key(business_name_raw)
+    if normalized_business_name and not explicit_business_key:
+        metadata["business_key"] = normalized_business_name
+    elif explicit_business_key:
+        metadata["business_key"] = _normalize_business_key(explicit_business_key)
+    if business_name_raw:
+        metadata["business_name"] = business_name_raw[:120]
     referral_coupon = _get_referral_coupon_id()
     create_params = {
         "mode": "payment",
@@ -1062,15 +1133,11 @@ def captions_intake_link():
                     selected_platforms = (meta.get("selected_platforms") or "").strip() or None
                     include_stories = str(meta.get("include_stories") or "").lower() in ("1", "true", "yes")
                     copy_from = (meta.get("copy_from") or "").strip() or None
-                    business_name = (meta.get("business_name") or "").strip() or None
-                    business_key = _normalize_business_key((meta.get("business_key") or "").strip())
                 else:
                     platforms_count = getattr(meta, "platforms", None)
                     selected_platforms = (getattr(meta, "selected_platforms", None) or "").strip() or None
                     include_stories = str(getattr(meta, "include_stories", "") or "").lower() in ("1", "true", "yes")
                     copy_from = (getattr(meta, "copy_from", None) or "").strip() or None
-                    business_name = (getattr(meta, "business_name", None) or "").strip() or None
-                    business_key = _normalize_business_key((getattr(meta, "business_key", None) or "").strip())
                 try:
                     platforms_count = max(1, int(platforms_count)) if platforms_count is not None else 1
                 except (TypeError, ValueError):
@@ -1096,15 +1163,8 @@ def captions_intake_link():
                     currency=currency,
                     upgraded_from_token=upgraded_from,
                 )
-                # Persist business context early (before full intake) so duplicate guard has stable matching keys.
-                if not business_name and business_key:
-                    business_name = business_key.replace("-", " ").title()
-                if business_name:
-                    try:
-                        order_service.update_intake_only(str(order.get("id")), {"business_name": business_name})
-                        order = order_service.get_by_id(str(order.get("id"))) or order
-                    except Exception:
-                        pass
+                # Persist business context early (before full intake) so emails and duplicate guard have stable keys.
+                order = seed_intake_business_from_stripe_metadata(order_service, order, meta)
                 print(f"[captions-intake-link] Created order from Stripe session session_id={session_id[:20]}...")
                 # Send intake email so customer gets it even if webhook never runs
                 _send_intake_email_for_order(order)

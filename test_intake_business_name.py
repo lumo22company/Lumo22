@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Test that business_name flows through intake form → API → caption generator."""
 import sys
+from unittest.mock import MagicMock, patch
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -105,6 +106,61 @@ def test_no_platform_prompt_no_rotation_instruction():
     print("✓ No platform: rotation instruction not added")
 
 
+def test_enrich_intake_from_checkout_session_seeds_when_webhook_late():
+    """If DB intake has no business_name yet, enrich loads Stripe session metadata and seeds."""
+    from unittest.mock import MagicMock, patch
+    from api.captions_routes import enrich_order_intake_from_checkout_session
+
+    mock_svc = MagicMock()
+    order = {"id": "ord-1", "stripe_session_id": "cs_test_abc", "intake": {}}
+    fake_session = {"metadata": {"business_name": "Stripe Early Ltd"}}
+    updated = {"id": "ord-1", "stripe_session_id": "cs_test_abc", "intake": {"business_name": "Stripe Early Ltd"}}
+    mock_svc.get_by_id.return_value = updated
+
+    with patch("stripe.checkout.Session.retrieve", return_value=fake_session):
+        with patch("api.captions_routes.Config") as cfg:
+            cfg.STRIPE_SECRET_KEY = "sk_test_fake"
+            out = enrich_order_intake_from_checkout_session(mock_svc, order)
+
+    assert mock_svc.update_intake_only.called
+    call_intake = mock_svc.update_intake_only.call_args[0][1]
+    assert call_intake.get("business_name") == "Stripe Early Ltd"
+    assert out.get("intake", {}).get("business_name") == "Stripe Early Ltd"
+    print("✓ enrich_order_intake_from_checkout_session seeds from Stripe when intake empty")
+
+
+def test_enrich_intake_skips_when_name_already_set():
+    from unittest.mock import MagicMock, patch
+    from api.captions_routes import enrich_order_intake_from_checkout_session
+
+    mock_svc = MagicMock()
+    order = {"id": "ord-1", "stripe_session_id": "cs_x", "intake": {"business_name": "Already Here"}}
+    with patch("stripe.checkout.Session.retrieve") as mock_retrieve:
+        out = enrich_order_intake_from_checkout_session(mock_svc, order)
+    mock_retrieve.assert_not_called()
+    assert out == order
+    print("✓ enrich skips Stripe when business_name already in intake")
+
+
+def test_oneoff_checkout_puts_business_name_in_stripe_metadata():
+    """Optional pre-checkout business name is passed to Stripe metadata for webhook → intake seeding."""
+    from app import app
+
+    fake_session = MagicMock()
+    fake_session.url = "https://checkout.stripe.com/fake"
+    with app.test_client() as client:
+        with patch("stripe.checkout.Session.create") as mock_create:
+            mock_create.return_value = fake_session
+            with patch("api.captions_routes._get_referral_coupon_id") as mock_coupon:
+                mock_coupon.return_value = None
+                r = client.get("/api/captions-checkout?platforms=1&business_name=Acme%20Bakery")
+    assert r.status_code == 302, r.status_code
+    md = mock_create.call_args[1]["metadata"]
+    assert md.get("business_name") == "Acme Bakery"
+    assert md.get("business_key") == "acme-bakery"
+    print("✓ One-off checkout includes business_name in Stripe metadata")
+
+
 if __name__ == "__main__":
     test_caption_generator_prompt()
     test_caption_generator_no_business_name()
@@ -112,4 +168,7 @@ if __name__ == "__main__":
     test_multi_platform_prompt_includes_rotation_instruction()
     test_single_platform_prompt_includes_rotation_instruction()
     test_no_platform_prompt_no_rotation_instruction()
+    test_enrich_intake_from_checkout_session_seeds_when_webhook_late()
+    test_enrich_intake_skips_when_name_already_set()
+    test_oneoff_checkout_puts_business_name_in_stripe_metadata()
     print("\nAll checks passed.")

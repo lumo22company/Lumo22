@@ -21,6 +21,14 @@
     .checkout-card .back a { color: var(--lum-text-muted); text-decoration: none; font-size: 0.95rem; }
     .checkout-card .back a:hover { color: var(--lum-text); }
     .checkout-order-summary { color: #fff; font-weight: 600; font-size: 1rem; margin-bottom: 0; }
+    .checkout-business-field { margin-top: 1.25rem; }
+    .checkout-business-field label { display: block; font-size: 0.85rem; color: var(--lum-text-muted); margin-bottom: 0.4rem; }
+    .checkout-business-field input {
+      width: 100%; box-sizing: border-box; padding: 0.65rem 0.85rem; border-radius: 8px;
+      border: 1px solid var(--lum-border, rgba(255,255,255,0.12)); background: rgba(0,0,0,0.25);
+      color: #fff; font-family: inherit; font-size: 1rem;
+    }
+    .checkout-business-field input::placeholder { color: rgba(255,255,255,0.35); }
   </style>
 </head>
 <body class="lumo-landing">
@@ -47,6 +55,10 @@
       <p style="color: var(--lum-text-muted); margin: 1.25rem 0 0;">You’ll complete a short form after payment so we can tailor your captions. Ready within 15 minutes of submitting the form.</p>
 
       {% if not platforms_invalid|default(false) %}
+      <div class="checkout-business-field">
+        <label for="checkout-business-name">Business or brand name <span style="font-weight:400;opacity:.85;">(optional)</span></label>
+        <input type="text" id="checkout-business-name" name="business_name" maxlength="120" autocomplete="organization" placeholder="Shown in your order confirmation emails" value="{{ checkout_business_name|default('')|e }}">
+      </div>
       <p style="font-size: 0.9rem; color: var(--lum-text-muted); margin: 1rem 0 0;">You must read and accept the Terms &amp; Conditions to proceed.</p>
       {% endif %}
 
@@ -54,7 +66,7 @@
         {% if platforms_invalid %}
         <a href="/captions#pricing" class="lumo-btn-primary btn-cta-account-style">Back to select platforms</a>
         {% else %}
-        <a href="{{ api_url|default('/api/captions-checkout?platforms=1') }}" id="btn-continue" class="lumo-btn-primary js-terms-checkout btn-cta-account-style">Next step — read &amp; accept terms</a>
+        <a href="{{ api_url|default('/api/captions-checkout?platforms=1') }}" id="btn-continue" class="lumo-btn-primary js-terms-checkout btn-cta-account-style" data-api-url="{{ api_url|default('/api/captions-checkout?platforms=1') }}">Next step — read &amp; accept terms</a>
         {% endif %}
       </div>
     </div>
@@ -63,6 +75,33 @@
   {% include '_footer.html' %}
   {% if not platforms_invalid|default(false) %}
   {% include '_terms_modal.html' %}
+  <script>
+    (function() {
+      var btn = document.getElementById('btn-continue');
+      var input = document.getElementById('checkout-business-name');
+      if (!btn || !input) return;
+      var baseUrl = (btn.getAttribute('data-api-url') || btn.getAttribute('href') || '').trim();
+      function stripBusinessParams(url) {
+        return url
+          .replace(/[&?]business_name=[^&]*/g, '')
+          .replace(/[&?]business_key=[^&]*/g, '')
+          .replace(/\?&/g, '?')
+          .replace(/[?&]$/, '');
+      }
+      function updateLink() {
+        var u = stripBusinessParams(baseUrl);
+        var name = (input.value || '').trim();
+        if (name) {
+          var sep = u.indexOf('?') !== -1 ? '&' : '?';
+          u = u + sep + 'business_name=' + encodeURIComponent(name.slice(0, 120));
+        }
+        btn.setAttribute('href', u);
+      }
+      input.addEventListener('input', updateLink);
+      input.addEventListener('change', updateLink);
+      updateLink();
+    })();
+  </script>
   {% endif %}
 </body>
 </html>

@@ -288,6 +288,16 @@ def _handle_captions_payment(session):
             except Exception as e:
                 print(f"[Stripe webhook] Could not persist reminder_opt_out on create: {e}")
         print(f"[Stripe webhook] Order created id={order.get('id')} token=...{order['token'][-6:]}")
+    # Merge checkout business name into intake before any emails (receipt / intake link).
+    try:
+        from api.captions_routes import seed_intake_business_from_stripe_metadata
+
+        meta_for_seed = meta if isinstance(meta, dict) else {}
+        if not meta_for_seed and meta is not None and hasattr(meta, "get"):
+            meta_for_seed = {"business_name": meta.get("business_name"), "business_key": meta.get("business_key")}
+        order = seed_intake_business_from_stripe_metadata(order_service, order, meta_for_seed)
+    except Exception as e:
+        print(f"[Stripe webhook] seed intake business_name (non-fatal): {e}")
     token = order["token"]
     base = _sanitize_base_url(Config.BASE_URL or "")
     if not base or not base.startswith("http"):

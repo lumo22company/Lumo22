@@ -29,6 +29,14 @@
       border: 1px solid rgba(255, 255, 255, 0.18);
       border-radius: 8px;
     }
+    .checkout-business-field { margin-top: 1rem; }
+    .checkout-business-field label { display: block; font-size: 0.85rem; color: var(--lum-text-muted); margin-bottom: 0.4rem; }
+    .checkout-business-field input {
+      width: 100%; box-sizing: border-box; padding: 0.65rem 0.85rem; border-radius: 8px;
+      border: 1px solid var(--lum-border, rgba(255,255,255,0.12)); background: rgba(0,0,0,0.25);
+      color: #fff; font-family: inherit; font-size: 1rem;
+    }
+    .checkout-business-field input::placeholder { color: rgba(255,255,255,0.35); }
   </style>
 </head>
 <body class="lumo-landing">
@@ -72,14 +80,18 @@
         <label style="display:flex; align-items:flex-start; gap:0.7rem; cursor:pointer;">
           <input type="checkbox" id="form-reminders-checkbox" name="form_reminders" value="1" {% if form_reminders_on|default(true) %}checked{% endif %} style="margin-top:0.2rem;">
           <span style="color:#fff;">
-            <strong>Send me form reminder emails before each pack</strong><br>
-            <span style="font-size:0.9rem; color:var(--lum-text-muted);">Useful if you have upcoming events, launches, or promotions and want your next captions tailored to them. You can switch reminders off anytime in your account.</span>
+            <strong>Send me update form reminders so captions can be tailored for the month ahead</strong><br>
+            <span style="font-size:0.9rem; color:var(--lum-text-muted);">We'll email you before each pack so you can refresh your details—helpful if you have events, launches, or promotions. You can turn this off anytime in your account.</span>
           </span>
         </label>
       </div>
       <p class="price-note">New 30-day caption pack each month. Renews monthly until you cancel. Cancel anytime from your Stripe customer portal. You’ll complete a short form after payment; your captions are ready within 15 minutes.</p>
 
       {% if not platforms_invalid|default(false) %}
+      <div class="checkout-business-field">
+        <label for="checkout-business-name">Business or brand name <span style="font-weight:400;opacity:.85;">(optional)</span></label>
+        <input type="text" id="checkout-business-name" name="business_name" maxlength="120" autocomplete="organization" placeholder="Shown in your order confirmation emails" value="{{ checkout_business_name|default('')|e }}">
+      </div>
       <p style="font-size: 0.9rem; color: #fff; margin: 1rem 0 0;">You must read and accept the Terms &amp; Conditions to proceed.</p>
       {% endif %}
 
@@ -104,9 +116,14 @@
       if (!btn) return;
       var getPackNowCheckbox = document.getElementById('get-pack-now-checkbox');
       var remindersCheckbox = document.getElementById('form-reminders-checkbox');
+      var businessInput = document.getElementById('checkout-business-name');
       var apiUrl = (btn.getAttribute('data-api-url') || '')
         .replace(/&?get_pack_now=1/g, '')
-        .replace(/&?form_reminders=(0|1)/g, '');
+        .replace(/&?form_reminders=(0|1)/g, '')
+        .replace(/[&?]business_name=[^&]*/g, '')
+        .replace(/[&?]business_key=[^&]*/g, '')
+        .replace(/\?&/g, '?')
+        .replace(/[?&]$/, '');
 
       function updateLink() {
         var parts = [];
@@ -116,10 +133,17 @@
         } else {
           parts.push('form_reminders=0');
         }
-        btn.href = apiUrl + (parts.length ? ((apiUrl.indexOf('?') !== -1 ? '&' : '?') + parts.join('&')) : '');
+        var bn = businessInput && (businessInput.value || '').trim();
+        if (bn) parts.push('business_name=' + encodeURIComponent(bn.slice(0, 120)));
+        var u = apiUrl + (parts.length ? ((apiUrl.indexOf('?') !== -1 ? '&' : '?') + parts.join('&')) : '');
+        btn.href = u;
       }
       if (getPackNowCheckbox) getPackNowCheckbox.addEventListener('change', updateLink);
       if (remindersCheckbox) remindersCheckbox.addEventListener('change', updateLink);
+      if (businessInput) {
+        businessInput.addEventListener('input', updateLink);
+        businessInput.addEventListener('change', updateLink);
+      }
       updateLink();
     })();
   </script>

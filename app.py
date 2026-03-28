@@ -352,9 +352,13 @@ def captions_intake_page():
     if token:
         try:
             from services.caption_order_service import CaptionOrderService
+            from api.captions_routes import enrich_order_intake_from_checkout_session
+
             svc = CaptionOrderService()
             order = svc.get_by_token(token)
             if order:
+                # Stripe metadata may arrive before webhook seeds DB — fetch session once so the form prefills on first paint.
+                order = enrich_order_intake_from_checkout_session(svc, order)
                 if order.get("intake"):
                     existing_intake = order.get("intake") or {}
                 platforms_count = max(1, int(order.get("platforms_count", 1)))
@@ -547,6 +551,12 @@ def captions_checkout_page():
     ref = (request.args.get("ref") or "").strip()
     if ref:
         params["ref"] = ref
+    business_name = (request.args.get("business_name") or "").strip()
+    business_key = (request.args.get("business_key") or "").strip()
+    if business_name:
+        params["business_name"] = business_name
+    if business_key:
+        params["business_key"] = business_key
     q = urlencode(params)
     api_url = f"/api/captions-checkout?{q}" if not platforms_invalid else None
     total = prices["oneoff"] + (platforms - 1) * prices["extra_oneoff"] + (prices["stories_oneoff"] if stories else 0)
@@ -566,6 +576,7 @@ def captions_checkout_page():
         add_stories_url=add_stories_url,
         add_platforms_url=add_platforms_url,
         back_to_captions_url=back_to_captions_url,
+        checkout_business_name=business_name,
     )
 
 
@@ -662,6 +673,7 @@ def captions_checkout_subscription_page():
         first_charge_date=first_charge_date_str,
         can_get_pack_now=can_get_pack_now,
         form_reminders_on=reminders_on,
+        checkout_business_name=business_name,
     )
 
 
