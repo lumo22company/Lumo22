@@ -1,0 +1,31 @@
+# Optional: deploy via Railway CLI using a project token.
+# Prefer Railway dashboard → connect GitHub repo → deploy on push to main (see docs/RAILWAY_DEPLOY.md).
+# Enable this path only by setting repo variable RAILWAY_DEPLOY_VIA_ACTIONS=true AND secret RAILWAY_TOKEN.
+# Do not use together with Railway's built-in GitHub deploy or you may get two deploys per push.
+
+name: Deploy to Railway
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: railway-deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: ${{ vars.RAILWAY_DEPLOY_VIA_ACTIONS == 'true' }}
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/railwayapp/cli:latest
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      # Production Lumo 22 web service — update if you recreate the service (Railway URL …/service/<id>)
+      RAILWAY_SERVICE_ID: b0dd1b06-756a-4329-a681-120e7f4cde6e
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Railway
+        run: railway up --service "$RAILWAY_SERVICE_ID"

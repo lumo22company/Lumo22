@@ -160,6 +160,10 @@ The system is designed to scale:
 - Can handle 1000+ leads/month on free tier
 - Scales to 10,000+ leads/month with paid tiers
 
+## 🚢 Deployment (Railway)
+
+Production uses **Railway**. Auto-deploy from GitHub: connect the repo in the Railway service settings (branch `main`). Full steps and an optional GitHub Actions path are in **[docs/RAILWAY_DEPLOY.md](docs/RAILWAY_DEPLOY.md)**.
+
 ## 🆘 Support
 
 For issues or questions, check the documentation in each module or review the code comments.
