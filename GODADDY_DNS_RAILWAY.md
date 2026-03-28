@@ -59,15 +59,24 @@ After DNS propagates, anyone opening **lumo22.com** will be redirected to **http
 
 ---
 
-## 5. Use www in BASE_URL
+## 5. Why GoDaddy “forwarding” alone may not fix `/captions` on the apex
+
+- **Forwarding** only applies when traffic hits **GoDaddy’s** forwarding layer first.
+- If your **@** (apex) DNS points **directly at Railway** (A/ALIAS/CNAME to `*.up.railway.app`), browsers talk to **Railway first** — GoDaddy forwarding is **never used** for those requests.
+- The app **redirects** `lumo22.com` → `https://www.lumo22.com` (301, same path and query) so deep links work even when DNS bypasses GoDaddy.
+
+**Still set forwarding in GoDaddy** (301, forward only, **https://www.lumo22.com** — not `http://`, which adds an extra hop). It helps visitors who resolve the apex through GoDaddy’s stack.
+
+---
+
+## 6. Use www in BASE_URL
 
 Set **BASE_URL** to the canonical domain that works for all paths:
 - **BASE_URL=https://www.lumo22.com** (recommended; www CNAME goes straight to Railway)
-- Apex (lumo22.com) forwards to www but can 404 on subpaths like /captions with some setups.
 
 In **Railway** → Variables, set `BASE_URL=https://www.lumo22.com` (no trailing slash). Do the same in `.env` for local tests.
 
-## 6. Check
+## 7. Check
 
 - Wait 5–30 minutes (sometimes up to a few hours).
 - Open **https://www.lumo22.com** and **https://lumo22.com** — both should load your app.

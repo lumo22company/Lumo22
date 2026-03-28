@@ -87,6 +87,19 @@ def test_home_and_captions_load():
         assert c.get("/captions").status_code == 200
 
 
+def test_apex_host_redirects_to_www():
+    """Apex Host (including :port) redirects to www so deep links work when DNS bypasses GoDaddy forwarding."""
+    from app import app
+    with app.test_client() as c:
+        r = c.get("/captions", headers={"Host": "lumo22.com"})
+        assert r.status_code == 301
+        assert r.headers.get("Location", "").startswith("https://www.lumo22.com/captions")
+        r2 = c.get("/captions", headers={"Host": "lumo22.com:443"})
+        assert r2.status_code == 301
+        assert "www.lumo22.com" in r2.headers.get("Location", "")
+        assert c.get("/captions", headers={"Host": "www.lumo22.com"}).status_code == 200
+
+
 def test_login_required_for_delete_account():
     """Delete account returns 401 when not logged in."""
     from app import app

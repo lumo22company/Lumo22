@@ -103,12 +103,24 @@ def add_security_headers(response):
     return response
 
 
+def _request_public_hostname():
+    """Hostname from Host header (strip port, trailing FQDN dot). Do not use X-Forwarded-Host — mis-set values could break www."""
+    raw = (request.host or "").strip().lower()
+    if not raw:
+        return ""
+    return raw.split(":")[0].rstrip(".")
+
+
 @app.before_request
 def redirect_bare_domain_to_www():
-    """Redirect lumo22.com (no www) to www.lumo22.com so Stripe success/cancel URLs land on the host that serves the app."""
-    host = (request.host or "").strip().lower()
-    if host == "lumo22.com":
-        return redirect("https://www.lumo22.com" + (request.full_path or "/"), code=302)
+    """Redirect lumo22.com (no www) to www.lumo22.com.
+
+    GoDaddy apex *forwarding* is skipped when DNS @ points straight at Railway; this keeps /captions etc. working.
+    """
+    if _request_public_hostname() != "lumo22.com":
+        return None
+    dest = "https://www.lumo22.com" + (request.full_path or "/")
+    return redirect(dest, code=301)
 
 
 @app.context_processor
