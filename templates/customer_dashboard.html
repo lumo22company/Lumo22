@@ -105,9 +105,8 @@
           </div>
           <div class="account-info-row{% if request.args.get('billing') == 'no_sub' %} account-info-row--no-divider-below{% endif %}">
             <div>
-              <span class="account-info-label">Billing</span>
-              <div class="account-info-value">Payment method, invoices, subscription</div>
-              <p style="font-size:0.88rem; color:#555; margin:0.35rem 0 0; max-width:520px; line-height:1.45;">Use <strong>Manage billing</strong> (Stripe) to <strong>cancel or change</strong> your subscription, update your card, or download invoices. Deleting your Lumo 22 account below does <strong>not</strong> cancel subscription charges — cancel billing here first if needed.</p>
+              <span class="account-info-label">Manage Billing</span>
+              <div class="account-info-value">Edit payment method, view invoices, cancel subscription.</div>
             </div>
             <div class="account-info-actions">
               {% if billing_accounts and billing_accounts|length > 1 %}
@@ -135,7 +134,7 @@
           <div class="account-info-row account-info-row--delete">
             <div>
               <span class="account-info-label">Delete account</span>
-              <div class="account-info-value">Permanently delete your account and associated data. This cannot be undone.</div>
+              <div class="account-info-value">Permanently delete your account and associated data. This cannot be undone. Deleting your account does not cancel your subscription.</div>
             </div>
             <div class="account-info-actions">
               <form id="account-delete-form" action="/api/auth/delete-account" method="POST" class="account-delete-form" style="margin: 0; display: inline;">
