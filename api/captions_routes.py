@@ -788,11 +788,6 @@ def captions_checkout_subscription():
         metadata["selected_platforms"] = selected
     if target_business_key.startswith("biz:"):
         metadata["business_key"] = target_business_key[len("biz:"):]
-    normalized_business_name = _normalize_business_key(business_name_raw)
-    if normalized_business_name and not metadata.get("business_key"):
-        metadata["business_key"] = normalized_business_name
-    if business_name_raw:
-        metadata["business_name"] = business_name_raw[:120]
     if copy_from:
         metadata["copy_from"] = copy_from
         try:
@@ -806,6 +801,18 @@ def captions_checkout_subscription():
         customer_email = (customer.get("email") or "").strip().lower()
         if not one_off_email or not customer_email or one_off_email != customer_email:
             return jsonify({"error": "You can only upgrade your own one-off order."}), 403
+        # Upgrade URLs omit business_name; copy from the one-off intake so Stripe metadata
+        # and webhook emails (subject, receipt, welcome) include the business name.
+        if not (business_name_raw or "").strip():
+            io = one_off.get("intake") if isinstance(one_off.get("intake"), dict) else {}
+            bn = (io.get("business_name") or "").strip()
+            if bn:
+                business_name_raw = bn
+    normalized_business_name = _normalize_business_key(business_name_raw)
+    if normalized_business_name and not metadata.get("business_key"):
+        metadata["business_key"] = normalized_business_name
+    if (business_name_raw or "").strip():
+        metadata["business_name"] = business_name_raw[:120]
     if get_pack_now:
         # Safety guard: only allow immediate first subscription pack after the base one-off
         # has already been delivered, so customers are never charged twice for the same day.

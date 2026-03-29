@@ -439,6 +439,41 @@ LANGUAGE_INSTRUCTIONS = {
 }
 
 
+def _stories_language_user_block(lang: str) -> str:
+    """Reinforce that story body text must match caption_language (same as feed captions in the pack)."""
+    return (
+        f'\nLANGUAGE_MATCH (CRITICAL): The caption pack language is "{lang}". '
+        "Write every Idea, every Suggested wording line, and all hashtag wording in that language only—"
+        "the same language as the client's captions. The fixed English labels "
+        '("Idea:", "Suggested wording:", "Story hashtags:") are required format only. '
+        "Do not write story content in a different language based on audience location, business country, "
+        "or intake examples unless the caption language explicitly is that language.\n"
+    )
+
+
+def _build_stories_system_prompt(intake: Dict[str, Any], *, aligned_with_captions: bool) -> str:
+    """System prompt for story generation; mirrors caption language so stories are not written in another language."""
+    lang = (intake.get("caption_language") or "English (UK)").strip()
+    lang_instruction = LANGUAGE_INSTRUCTIONS.get(lang, LANGUAGE_INSTRUCTIONS["English (UK)"])
+    aligned = (
+        "You align each day's story with that day's caption theme from an existing captions plan. "
+        if aligned_with_captions
+        else ""
+    )
+    return (
+        "You write concise Story prompts (Idea, Suggested wording, Story hashtags). "
+        f"{aligned}"
+        "Quality bar: as tailored as a premium 30-day story plan. "
+        "Always respect INTAKE exactly: use only the client's real business name and offer—never fictional or example brands.\n\n"
+        f"{lang_instruction}\n\n"
+        f'CRITICAL — Single language for all story content: caption language is "{lang}". '
+        "Write every Idea, every Suggested wording line, and hashtag text in that language only. "
+        'Fixed English labels ("Idea:", "Suggested wording:", "Story hashtags:") are structural; '
+        f'all words after those labels must be in "{lang}", matching the captions pack. '
+        "Do not switch language for story body text based on audience geography or business location."
+    )
+
+
 def _role_line_for_intake(intake: Dict[str, Any]) -> str:
     """Build a tailored role line so the AI is framed as an expert for this type of business."""
     business_type = (intake.get("business_type") or "").strip()
@@ -1569,7 +1604,7 @@ Ground every suggestion in their intake (offer, audience, goal)—not generic in
 
 Quality bar: Every story set must be as tailored and specific as a premium content strategist would deliver for this exact business—no generic filler, no wrong dates, no off-brand tone. Match the standard of a highly polished 30-day story plan.
 
-{lang_instruction}
+{lang_instruction}{_stories_language_user_block(lang)}
 
 INTAKE:
 - Business: {business}
@@ -1597,11 +1632,7 @@ Use the exact labels "Idea:", "Suggested wording:", and "Story hashtags:" on eve
 {strict_block}"""
         try:
             content = chat_completion(
-                system=(
-                    "You write concise Story prompts (Idea, Suggested wording, Story hashtags). "
-                    "Quality bar: as tailored as a premium 30-day story plan. "
-                    "Always respect INTAKE exactly: use only the client's real business name and offer—never fictional or example brands."
-                ),
+                system=_build_stories_system_prompt(intake, aligned_with_captions=False),
                 user=prompt,
                 temperature=0.7,
                 max_tokens=3500,
@@ -1680,7 +1711,7 @@ Ground every suggestion in their intake and that day's caption theme—not gener
 
 Quality bar: Every story set must be as tailored and specific as a premium content strategist would deliver for this exact business—no generic filler, no wrong dates, no off-brand tone. Each day's story must support that day's caption theme.
 
-{lang_instruction}
+{lang_instruction}{_stories_language_user_block(lang)}
 
 INTAKE:
 - Business: {business}
@@ -1714,11 +1745,7 @@ Use the exact labels "Idea:", "Suggested wording:", and "Story hashtags:" on eve
 
         try:
             content = chat_completion(
-                system=(
-                    "You write concise Story prompts aligned with an existing captions plan. "
-                    "Quality bar: as tailored as a premium 30-day story plan. "
-                    "Each day: Idea, Suggested wording, Story hashtags. Use only the client's real business name from INTAKE—never fictional brands."
-                ),
+                system=_build_stories_system_prompt(intake, aligned_with_captions=True),
                 user=prompt,
                 temperature=0.7,
                 max_tokens=3500,

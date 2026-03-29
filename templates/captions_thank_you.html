@@ -187,23 +187,28 @@
             ? 'Your subscription is active. Your first pack is on the way — we\'ll email <strong>' + escapeHtml(customerEmail) + '</strong> shortly (usually within a few minutes).'
             : 'Your subscription is active. Your first pack is on the way — we\'ll email you shortly (usually within a few minutes).';
           if (isLoggedIn) {
-            prefilledEditLine = ' Your details are carried over from your one-off pack; open the form to review or edit anytime, or manage your subscription from your account.';
+            prefilledEditLine = ' Your details are carried over from your one-off pack — open the form to review or edit anytime, and manage your subscription from your account.';
           } else {
             prefilledEditLine = ' Your details are carried over from your one-off pack; open the form to review or edit anytime.';
           }
         } else if (isPrefilledFromOneoff) {
           if (isSubscription && isLoggedIn) {
-            prefilledEditLine = customerEmail
-              ? ' Your form is already filled from your one-off pack; you can edit it anytime and manage your subscription from your account.'
-              : ' Your form is prefilled from your one-off pack; you can edit it anytime and manage your subscription from your account.';
+            leadText = customerEmail
+              ? 'Your subscription form for <strong>' + escapeHtml(customerEmail) + '</strong> includes your one-off answers — open it to review or edit anytime, and manage your subscription from your account.'
+              : 'Your subscription form includes your one-off answers — open it to review or edit anytime, and manage your subscription from your account.';
+            prefilledEditLine = '';
           } else if (isSubscription) {
-            prefilledEditLine = customerEmail
-              ? ' Your form is already filled from your one-off pack.'
-              : ' Your form is prefilled from your one-off pack.';
+            leadText = customerEmail
+              ? 'Your form for <strong>' + escapeHtml(customerEmail) + '</strong> is ready with your one-off answers.'
+              : 'Your form is ready with your one-off answers.';
+            prefilledEditLine = '';
           } else {
-            prefilledEditLine = customerEmail
-              ? ' Your form is already filled from your one-off pack; you can edit it anytime in your account.'
-              : ' Your form is prefilled from your one-off pack; you can edit it anytime in your account.';
+            leadText = customerEmail
+              ? 'Your form for <strong>' + escapeHtml(customerEmail) + '</strong> is ready with your one-off answers.'
+              : 'Your form is ready with your one-off answers.';
+            prefilledEditLine = isLoggedIn
+              ? ' Open it to review or edit anytime in your account.'
+              : '';
           }
           timingPart = '';
           if (isSubscription && !isLoggedIn) {
@@ -213,9 +218,6 @@
               ? ''
               : ' On the form you can also create an account to access your captions in one place.';
           }
-          leadText = customerEmail
-            ? 'Your prefilled form is ready for <strong>' + escapeHtml(customerEmail) + '</strong>.'
-            : 'Your prefilled form is ready.';
         } else {
           if (isLoggedIn && !isSubscription) {
             prefilledEditLine = ' Open the form to get started — we\'ll tailor your pack from your answers.';

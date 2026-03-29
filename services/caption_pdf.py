@@ -1,7 +1,7 @@
 """
 Generate a PDF from the 30 Days Captions markdown.
 Matches 30_Days_Captions.pdf design: Lumo 22, title, subtitle, one-line metadata,
-day sections with Platform / Caption / Hashtags inline, footer "-- n of N --".
+day sections with Platform / Suggested hook / Hashtags inline, footer "-- n of N --".
 """
 import os
 import re
@@ -278,7 +278,7 @@ def _make_story_table_vertical(cover: Dict, days: List, normal_style, heading_st
             hashtags_val = _strip_label(cap.get("hashtags", ""), "Hashtags", also=["Hashtag"])
             data.extend([
                 [Paragraph("<nobr>Platform:</nobr>", lbl), Paragraph(_escape_and_breaks(platform_val), tight_style)],
-                [Paragraph("<nobr>Caption:</nobr>", lbl), Paragraph(_escape_and_breaks(caption_val), tight_style)],
+                [Paragraph("<nobr>Suggested hook:</nobr>", lbl), Paragraph(_escape_and_breaks(caption_val), tight_style)],
                 [Paragraph("<nobr>Hashtags:</nobr>", lbl), Paragraph(_escape_and_breaks(hashtags_val), tight_style)],
             ])
             if j < len(caption_list) - 1:
@@ -885,8 +885,7 @@ def _build_legacy_story(captions_md: str, logo_path: Optional[str], normal, head
             text = _escape(text)
             text = re.sub(r"\*\*([^*]+)\*\*:", lambda m: f"<b>{m.group(1).strip().title()}</b>: ", text)
             text = re.sub(r"\*\*([^*]+)\*\*", r"\1", text)
-            text = re.sub(r"<b>SUGGESTED HOOK</b>", "<b>Caption</b>", text, flags=re.I)
-            text = text.replace("Suggested hook:", "Caption:").replace("suggested hook:", "Caption:")
+            text = re.sub(r"<b>SUGGESTED HOOK</b>", "<b>Suggested hook</b>", text, flags=re.I)
             text = re.sub(r"(<b>Platform</b>\s*:\s*)Platform\s*:\s*", r"\1", text, flags=re.I)
             text = re.sub(r"(<b>Caption</b>\s*:\s*)Caption\s*:\s*", r"\1", text, flags=re.I)
             text = text.replace("\n", "<br/>")
