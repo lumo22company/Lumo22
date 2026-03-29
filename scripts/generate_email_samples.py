@@ -67,8 +67,16 @@ def main():
         "order_receipt.html",
         "Order receipt (thanks for your order)",
         _order_receipt_email_html(
-            order_summary="• One-off (£97)\n• 2 platforms\n• 30 Days Story Ideas included",
+            order={
+                "platforms_count": 2,
+                "stripe_subscription_id": None,
+                "include_stories": False,
+                "selected_platforms": "Instagram, LinkedIn",
+                "currency": "gbp",
+            },
             amount_paid="£126.00",
+            amount_total_minor=12600,
+            currency="gbp",
         ),
     ))
 

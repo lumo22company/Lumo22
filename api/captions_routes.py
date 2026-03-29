@@ -1282,7 +1282,8 @@ def _run_generation_and_deliver(
     force_captions_only: bool = False,
 ):
     """Background: generate captions, save, email client. Runs outside request context.
-    force_redeliver: when True, regenerate and email even if status is 'delivered' (used by force-deliver endpoint).
+    force_redeliver: when True, regenerate and email even if status is 'delivered', and retry even if
+    status is 'generating' (support redeliver). Otherwise stale generating (>25m) still retries like recovery cron.
     force_captions_only: when True, skip stories generation and deliver captions only."""
     import traceback
     from datetime import datetime
@@ -1301,8 +1302,34 @@ def _run_generation_and_deliver(
         print(f"[Captions] Order {order_id} already delivered, skipping duplicate")
         return (True, None)
     if status == "generating":
-        print(f"[Captions] Order {order_id} already generating, skipping duplicate")
-        return (True, None)
+        # In-flight run: skip. Stuck "generating" (worker died): allow retry after 25m (same rule as
+        # row_needs_first_delivery_retry). Support/cron redeliver uses force_redeliver to bypass.
+        allow_retry = force_redeliver
+        if not allow_retry:
+            from datetime import timedelta, timezone
+
+            updated = row.get("updated_at") or row.get("created_at")
+            if updated:
+                try:
+                    now = datetime.now(timezone.utc)
+                    if isinstance(updated, str):
+                        udt = datetime.fromisoformat(updated.replace("Z", "+00:00"))
+                    else:
+                        udt = updated
+                    if udt.tzinfo is None:
+                        udt = udt.replace(tzinfo=timezone.utc)
+                    allow_retry = udt < now - timedelta(minutes=25)
+                except Exception:
+                    allow_retry = True
+            else:
+                allow_retry = True
+        if not allow_retry:
+            print(f"[Captions] Order {order_id} already generating, skipping duplicate")
+            return (True, None)
+        if force_redeliver:
+            print(f"[Captions] Order {order_id} force redeliver: retrying despite generating status")
+        else:
+            print(f"[Captions] Order {order_id} stale generating (>25m); retrying delivery")
     intake = row.get("intake") or {}
     token = (row.get("token") or "").strip()
     customer_email = (row.get("customer_email") or "").strip()

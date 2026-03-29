@@ -209,22 +209,30 @@
           if (isSubscription && !isLoggedIn) {
             accountSuffix = ' Create your account below (set a password) so you can log in and manage your subscription. We\'ll send a verification link to your email.';
           } else if (!isSubscription) {
-            accountSuffix = ' On the form you can also create an account to access your captions in one place.';
+            accountSuffix = isLoggedIn
+              ? ''
+              : ' On the form you can also create an account to access your captions in one place.';
           }
           leadText = customerEmail
             ? 'Your prefilled form is ready for <strong>' + escapeHtml(customerEmail) + '</strong>.'
             : 'Your prefilled form is ready.';
         } else {
-          prefilledEditLine = customerEmail
-            ? ' Fill in the short form to get started.'
-            : ' Fill in the form to get started.';
-          timingPart = ' Your captions are usually ready within 15 minutes.';
-          if (isSubscription && !isLoggedIn) {
-            accountSuffix = ' Create your account below (set a password) so you can log in and manage your subscription. We\'ll send a verification link to your email.';
-          } else if (isSubscription && isLoggedIn && !isPrefilledFromOneoff) {
-            accountSuffix = ' You can manage your subscription from your account.';
-          } else if (!isSubscription) {
-            accountSuffix = ' On the form you can also create an account to access your captions in one place.';
+          if (isLoggedIn && !isSubscription) {
+            prefilledEditLine = ' Open the form to get started — we\'ll tailor your pack from your answers.';
+            timingPart = ' Your captions are usually ready within 15 minutes.';
+            accountSuffix = ' When they\'re ready, you\'ll find them in your account and by email.';
+          } else {
+            prefilledEditLine = customerEmail
+              ? ' Fill in the short form to get started.'
+              : ' Fill in the form to get started.';
+            timingPart = ' Your captions are usually ready within 15 minutes.';
+            if (isSubscription && !isLoggedIn) {
+              accountSuffix = ' Create your account below (set a password) so you can log in and manage your subscription. We\'ll send a verification link to your email.';
+            } else if (isSubscription && isLoggedIn && !isPrefilledFromOneoff) {
+              accountSuffix = ' You can manage your subscription from your account.';
+            } else if (!isSubscription) {
+              accountSuffix = ' On the form you can also create an account to access your captions in one place.';
+            }
           }
           leadText = customerEmail
             ? 'We sent your intake link to <strong>' + escapeHtml(customerEmail) + '</strong>.'
@@ -248,7 +256,7 @@
         emailMsgEl.innerHTML = emailText;
         intakeLinkEl.href = url;
         intakeLinkEl.removeAttribute('aria-disabled');
-        intakeLinkEl.textContent = isPrefilledFromOneoff ? 'Review your form' : 'Fill out form now';
+        intakeLinkEl.textContent = isPrefilledFromOneoff ? 'Review your form' : (isLoggedIn ? 'Open form' : 'Fill out form now');
         formLinkEl.style.display = 'block';
         formLinkEl.setAttribute('aria-hidden', 'false');
         if (wrongEmailWrapEl) {

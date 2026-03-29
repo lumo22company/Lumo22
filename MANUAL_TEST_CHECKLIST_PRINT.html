@@ -118,6 +118,47 @@
   </table>
 </div>
 
+<!-- ========== EXAMPLE 4 ========== -->
+<div class="section page-break">
+  <h2>Example 4: Riverside Events Co. — multiple key dates (calendar alignment)</h2>
+  <p><em>Tests: KEY_DATE_EVENTS with several milestones; a <strong>date range</strong> in the same field (18–19 April) drives strict EVENT_CALENDAR / IMPORTANT; other dates (8 Apr, 25 Apr) rely on KEY_DATE_EVENTS + “support multiple events” — captions and stories should still phase them correctly</em></p>
+  <table>
+    <tr><th>Field</th><th>Value</th></tr>
+    <tr><td>Business name</td><td>Riverside Events Co.</td></tr>
+    <tr><td>Business type</td><td>Service business</td></tr>
+    <tr><td>What you offer</td><td>We plan small corporate and community events on the riverfront: registrations, AV, and on-the-day coordination.</td></tr>
+    <tr><td>Operating hours</td><td>Mon–Fri 9am–6pm</td></tr>
+    <tr><td>Audience — checkboxes</td><td>☑ Small business owners ☐ Founders ☐ Marketing leads ☐ Creatives ☐ Consumers</td></tr>
+    <tr><td>Audience — Other</td><td>HR leads, office managers, local business associations</td></tr>
+    <tr><td>Consumer age</td><td>30–55</td></tr>
+    <tr><td>What they care about</td><td>Smooth RSVPs, clear run-of-show, no last-minute surprises</td></tr>
+    <tr><td>Voice — checkboxes</td><td>☑ Professional ☑ Warm ☑ Concise ☐ etc.</td></tr>
+    <tr><td>Voice — Other</td><td><em>Leave blank</em></td></tr>
+    <tr><td>Words to avoid</td><td>Corporate jargon, “synergy”</td></tr>
+    <tr><td>Language</td><td>English (UK)</td></tr>
+    <tr><td>Platform</td><td>Instagram & Facebook, LinkedIn</td></tr>
+    <tr><td>Include stories</td><td>Yes</td></tr>
+    <tr><td>Align stories to captions</td><td>Yes</td></tr>
+    <tr><td>Include hashtags</td><td>Yes</td></tr>
+    <tr><td>Goal</td><td>Launch visibility</td></tr>
+    <tr><td>Key date</td><td><strong>Early-bird registration closes 8 April. Main two-day summit 18–19 April. Thank-you / replay session 25 April.</strong></td></tr>
+    <tr><td>Usual topics</td><td>Behind-the-scenes setup, speaker spotlights, attendee tips</td></tr>
+  </table>
+  <div class="note">
+    <strong>How to line this up (important):</strong> Pack Day 1 is the calendar day generation runs (when you submit the intake). For a strict check, submit the form on <strong>28 March 2026</strong> so DATE_CONTEXT matches the table below. If you submit on another day, shift all expectations by the same number of days (the PDF’s Day headers still show real dates).
+  </div>
+  <p><strong>Expected mapping when Day 1 = Sat 28 Mar 2026:</strong></p>
+  <table>
+    <tr><th>Real date</th><th>Pack day</th><th>What to check in captions &amp; stories</th></tr>
+    <tr><td>8 Apr</td><td>12</td><td>Early-bird / registration closing — should read as <strong>before</strong> the summit (teaser, urgency, not post-summit)</td></tr>
+    <tr><td>18–19 Apr</td><td>22–23</td><td><strong>Strict block:</strong> summit live across both days (Sat–Sun). Follow EVENT_CALENDAR / COUNTDOWN_RULES — no “tomorrow’s summit” on day 23; weekend wording OK if it matches DATE_CONTEXT</td></tr>
+    <tr><td>25 Apr</td><td>29</td><td>Thank-you / replay — clearly <strong>after</strong> the summit; not launch hype</td></tr>
+  </table>
+  <div class="note">
+    <strong>Quality check:</strong> ☐ The <strong>18–19 April</strong> range drives the structured IMPORTANT / EVENT_CALENDAR lines; <strong>8 Apr</strong> and <strong>25 Apr</strong> stay in KEY_DATE_EVENTS — all three should appear in caption bodies in the right part of the month. ☐ Stories match captions on timing. ☐ On days 22–23, copy fits a two-day summit, not a single launch pulse only on day 22.
+  </div>
+</div>
+
 <!-- ========== MANUAL TEST FLOWS ========== -->
 <div class="section page-break">
   <h2>Manual test flows</h2>
@@ -180,6 +221,7 @@
   <ul>
     <li>☐ <strong>Captions:</strong> Business-specific language, not generic "founder/strategy"</li>
     <li>☐ <strong>Key date:</strong> Launch day content uses correct month (e.g. April not May)</li>
+    <li>☐ <strong>Multiple key dates:</strong> Each listed milestone appears in the right phase (before / during / after); if one line is a range, both days sound “on-event”</li>
     <li>☐ <strong>Stories:</strong> Same date phasing — teasers before, announce on day, thank-you after</li>
     <li>☐ <strong>Brand name:</strong> Real business name used, not substituted</li>
     <li>☐ <strong>Variety:</strong> No repetitive openers or phrases across days</li>

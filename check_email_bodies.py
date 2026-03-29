@@ -107,7 +107,17 @@ def main():
 
     # Order receipt
     body = "Hi,\n\nThanks for your order. We've received your payment for 30 Days of Social Media Captions."
-    html = _order_receipt_email_html(order_summary="• One-off (£97)", amount_paid="£97.00")
+    html = _order_receipt_email_html(
+        order={
+            "platforms_count": 1,
+            "stripe_subscription_id": None,
+            "include_stories": False,
+            "currency": "gbp",
+        },
+        amount_paid="£97.00",
+        amount_total_minor=9700,
+        currency="gbp",
+    )
     check("Order receipt (plain)", body)
     check("Order receipt (HTML)", html, min_len=50)
 

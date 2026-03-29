@@ -1,59 +1,41 @@
-# See your changes after redeploy (no Git)
+# See your changes after redeploy
 
 Your landing page uses **only** `static/css/landing.css` and the scripts in `static/js/`. The app serves `templates/landing.html` at `/`.
 
-**Redeploys not updating?** Use **`railway up`** from your project folder in Terminal (not the dashboard “Redeploy” button). Dashboard redeploys build from GitHub; if you haven’t pushed, old code goes live. After `railway up`, wait for the build to finish, then hard refresh (Cmd+Shift+R). Open `/debug-deploy` on your live URL to confirm the new `asset_version` is running.
+## Recommended: Git + Railway (GitHub)
 
-## Why “nothing changes” after redeploy (most likely)
+1. **Commit and push** your changes to the branch Railway builds from (usually **`main`**):
+   ```bash
+   git add -A
+   git commit -m "Describe your change"
+   git push
+   ```
+2. Railway (when connected to GitHub) will build and deploy from that push.
+3. After the deploy finishes, **hard refresh** (Cmd+Shift+R). Open `/debug-deploy` on your live URL to confirm the new `asset_version` is running.
 
-**Railway is probably building from a Git repo (e.g. GitHub).** When you click “Redeploy” in the dashboard, it rebuilds from the **last commit in that repo**. The code you edit in Cursor is on your machine only—if you don’t push to that repo, redeploy keeps serving the same old code. So your updates never go live.
+## If Railway still shows old code
 
-**Fix: Deploy the folder you’re actually editing** using the Railway CLI so the current files (including `templates/`, `static/`, `app.py`) are what get deployed.
+**Dashboard “Redeploy”** often rebuilds from the **last commit GitHub has**. If you only edited locally and didn’t push, the live site won’t change until you **push** (or use the CLI upload below).
+
+## Manual CLI upload (fallback)
+
+Upload the **exact folder you’re editing** without relying on GitHub:
+
+1. Install Railway CLI: https://docs.railway.app/develop/cli  
+2. From the project root (contains `app.py`, `templates/`, `static/`):
+   ```bash
+   railway up --no-gitignore
+   ```
+3. Wait for the build, then hard refresh and check **`/debug-deploy`** or View Source for the deploy fingerprint.
+
+Use this when GitHub isn’t connected, you need to ship uncommitted files, or you were told to deploy via CLI.
 
 ---
 
-## Deploy your current project folder (so changes show up)
+## Why “nothing changes” after redeploy (common causes)
 
-1. **Install Railway CLI** (if needed): https://docs.railway.app/develop/cli  
-   - Mac: `brew install railway`  
-   - Or: `npm i -g @railway/cli`
-
-2. **In Terminal, go to your project folder** (the one that contains `app.py`, `templates/`, `static/`):
-   ```bash
-   cd /Users/sophieoverment/LUMO22
-   ```
-
-3. **Log in and link the project** (one-time):
-   ```bash
-   railway login
-   railway link
-   ```
-   When prompted, pick the project/environment that runs this site.
-
-4. **Deploy the current folder** (this uploads the code you have now):
-   ```bash
-   railway up
-   ```
-   Wait for the deploy to finish.
-
-5. **Check that the deploy used new code**  
-   - Open your live site and do **View Page Source** (e.g. right‑click → View Page Source).  
-   - Near the top of the `<body>` you should see a comment like:
-     `<!-- deploy fingerprint: v=1736... -->`  
-   - The value after `v=` includes a timestamp and the CSS file’s mtime. After `railway up`, this value should **change** if the new code is really running.  
-   - Or open **`https://your-site.up.railway.app/debug-deploy`** — it returns JSON with `asset_version` and `landing_css_first_line` so you can confirm the running app has your latest CSS.
-
-6. **Hard refresh** the page (e.g. **Cmd+Shift+R** on Mac) so the browser doesn’t use cached CSS/JS.
-
-**If nothing changes after redeploy:**  
-- Use **`railway up`** from the project folder (Terminal), not the “Redeploy” button in the Railway dashboard. The dashboard often rebuilds from GitHub; if you haven’t pushed, the old code is what gets deployed.  
-- After `railway up`, wait for the build to finish, then hard refresh and check View Source for the new fingerprint.
-
----
-
-## If you prefer to keep using the dashboard “Redeploy” button
-
-Then the code Railway builds **must** come from the place your project is connected to (e.g. GitHub). So you’d need to get your local files into that repo (e.g. commit and push from the repo clone). Since you’re not using Git, the simplest way to see your changes is to use **Railway CLI** and `railway up` from the folder you edit (steps above).
+- **GitHub deploy:** You didn’t **push** — Railway built an old commit.
+- **Wrong deploy path:** Use **`railway up`** from the project folder you actually edit, not a stale clone elsewhere.
 
 ---
 

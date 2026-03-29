@@ -84,12 +84,26 @@ def main():
         print("Email already lowercase; account should show this order after refresh.")
 
     # 2) Run generation and delivery (same as after form submit)
+    # Stuck "generating" rows used to no-op here; force_redeliver bypasses that guard.
+    force = status == "generating"
     print("Running caption generation and sending delivery email ...")
     try:
         from api.captions_routes import _run_generation_and_deliver
-        _run_generation_and_deliver(str(order_id))
+        ok, err = _run_generation_and_deliver(str(order_id), force_redeliver=force)
         print()
-        print("Done. Check your inbox (and spam) for the PDF. Refresh your account page to see this order.")
+        if status == "delivered" and not force:
+            print(
+                "This order is already marked delivered, so no new generation was started.\n"
+                "If the PDF never arrived, check spam; open your Lumo account for backup download links;\n"
+                "or ask support to resend the delivery email for this order."
+            )
+        elif ok and not err:
+            print("Done. Check your inbox (and spam) for the PDF. Refresh your account page to see this order.")
+        elif ok and err:
+            print(f"Pack saved but email may have failed: {err}\nUse your account backup links or ask support to resend.")
+        else:
+            print(f"Delivery did not complete: {err or 'unknown error'}")
+            sys.exit(1)
     except Exception as e:
         print()
         print(f"Delivery failed: {e}")

@@ -378,6 +378,33 @@ def _build_date_alignment_weekend_block(pack_start_date: str) -> str:
     )
 
 
+def _build_deadline_alignment_block(pack_start_date: str) -> str:
+    """
+    Rules so registration / early-bird deadlines align with the calendar day in DATE_CONTEXT.
+    Prevents e.g. 'registration closes on 8 April' on a post dated 10 April (deadline already passed).
+    """
+    s = (pack_start_date or "").strip()
+    if not s:
+        return ""
+    try:
+        datetime.strptime(s[:10], "%Y-%m-%d")
+    except ValueError:
+        return ""
+    return (
+        "DEADLINE_AND_REGISTRATION_ALIGNMENT (CRITICAL — each **Caption:** is read **on** the calendar day "
+        "for that Day N in **DATE_CONTEXT**; the PDF prints that date beside the post):\n"
+        "- If you mention **registration closes**, **early-bird ends**, **deadline**, **last chance to register**, "
+        "or similar, the **calendar date** of that deadline must be **on or after** the post day for that Day N "
+        "when using **future / present** wording (e.g. “closes on…”, “ends…”, “register by…”).\n"
+        "- If the real deadline is **before** the post day, use **past tense** or reframe: e.g. “Early-bird has closed; "
+        "general registration is still open”, “You’ve missed the early rate — tickets still available”, not "
+        "“closes on [earlier date]” as if it were still upcoming.\n"
+        "- Do not invent a random calendar date for urgency that falls **before** the post day while sounding like a live deadline.\n"
+        "- Event dates (e.g. when the summit runs) may be after the post day; only **deadline / registration / offer-end** "
+        "dates must follow the rule above."
+    )
+
+
 CAPTION_CATEGORIES = [
     "Authority / Expertise",
     "Educational / Value",
@@ -479,6 +506,8 @@ Single platform: Write 30 distinct captions (one per day). Multiple platforms: W
 Day headings (CRITICAL): Each line must be exactly `## Day N — [one of the five category names]`. Do not put calendar dates, weekdays, or "6 Apr 2026"-style text in the day heading—the client's PDF adds dates automatically; dates in the heading duplicate in the exported PDF.
 
 Calendar-day alignment (CRITICAL): The user prompt includes **DATE_CONTEXT** (and may include **DATE_ALIGNMENT**). Each **Caption:** for Day N must read correctly **on the calendar day** for that N. If that day is **Saturday** or **Sunday**, do **not** use "heading into the weekend", "ahead of the weekend", or "this weekend" as something still **in the future**. On **Sunday**, never imply the weekend has not started yet. **Friday** and **Mon–Thu** may tee up the weekend when natural.
+
+Deadlines and registration (CRITICAL): When **DATE_CONTEXT** and/or **DEADLINE_AND_REGISTRATION_ALIGNMENT** are in the user prompt, do **not** state a **registration close**, **early-bird end**, or **deadline** on a **calendar date before** that Day N’s post date while making it sound like the deadline is still **upcoming** (e.g. “closes on 8 April” on a 10 April post). Use past tense or move the deadline to on/after the post day.
 
 Named people (CRITICAL): Do not invent specific names of employees, customers, collaborators, or fictional staff unless the intake explicitly names them. Use generic roles (e.g. "our team", "the grower", "a customer") instead.
 
@@ -663,6 +692,7 @@ def _build_user_prompt(
     date_context = _build_date_context(start_str)
     if date_context:
         align_block = _build_date_alignment_weekend_block(start_str)
+        deadline_block = _build_deadline_alignment_block(start_str)
         parts.extend([
             "",
             "DATE_CONTEXT (the client's 30 days start on a specific date; use when it adds value):",
@@ -670,7 +700,9 @@ def _build_user_prompt(
             "",
             align_block,
             "",
-            "When KEY_DATE_EVENTS is also set, prioritize event timing from KEY_DATE_EVENTS over casual weekday mentions. When only DATE_CONTEXT applies (no KEY_DATE_EVENTS), you may reference weekday/weekend lightly; do not force a calendar date into every caption — but **DATE_ALIGNMENT** above still applies (each day must match its weekday).",
+            deadline_block,
+            "",
+            "When KEY_DATE_EVENTS is also set, prioritize event timing from KEY_DATE_EVENTS over casual weekday mentions. When only DATE_CONTEXT applies (no KEY_DATE_EVENTS), you may reference weekday/weekend lightly; do not force a calendar date into every caption — but **DATE_ALIGNMENT** and **DEADLINE_AND_REGISTRATION_ALIGNMENT** above still apply.",
         ])
 
     # Subscription variety: avoid repeating the same day-by-day category pattern as previous packs
@@ -963,6 +995,139 @@ def _chunk_structure_error(
                     f"Near-duplicate captions detected: Day {d1} ({p1}) and Day {d2} ({p2})"
                 )
     return None
+
+
+def _strip_stories_section_from_captions_md(md: str) -> str:
+    """Remove Story Ideas appendix so day-splitting only sees caption days."""
+    if not md:
+        return md
+    idx = md.find("\n## 30 Story Ideas")
+    if idx == -1:
+        idx = md.find("\n## 30 story ideas")
+    return md[:idx] if idx != -1 else md
+
+
+def _split_caption_md_by_day(md: str) -> Dict[int, str]:
+    """Map day number (1–30) to markdown block starting at ## Day N."""
+    md = _strip_stories_section_from_captions_md(md)
+    blocks: Dict[int, str] = {}
+    pat = re.compile(r"^##\s*Day\s+(\d+)\s*[—\-]", re.M)
+    matches = list(pat.finditer(md))
+    for i, m in enumerate(matches):
+        try:
+            day_num = int(m.group(1))
+        except ValueError:
+            continue
+        if not (1 <= day_num <= 30):
+            continue
+        start = m.start()
+        end = matches[i + 1].start() if i + 1 < len(matches) else len(md)
+        blocks[day_num] = md[start:end]
+    return blocks
+
+
+def _calendar_date_from_day_month(day: int, month_word: str, year: int) -> Optional[date]:
+    mw = (month_word or "").strip().lower()
+    if not mw:
+        return None
+    for full_name, mnum in _MONTH_NUM.items():
+        if full_name == mw or full_name.startswith(mw[: min(3, len(mw))]):
+            try:
+                return date(year, mnum, day)
+            except ValueError:
+                return None
+    return None
+
+
+def _has_future_deadline_before_post_day(text: str, post_date: date) -> bool:
+    """
+    True if copy uses future-style registration/close wording tied to a calendar date
+    strictly before post_date (incoherent on the post day).
+    """
+    if not text or not post_date:
+        return False
+    tl = text.lower()
+    if re.search(
+        r"\b(already\s+closed|has\s+closed|have\s+closed|registration\s+(?:has\s+)?ended|"
+        r"early[- ]bird\s+(?:has\s+)?ended|past\s+the\s+early[- ]bird|"
+        r"early[- ]bird\s+window\s+(?:has\s+)?closed|you\s+missed\s+the\s+early[- ]bird)\b",
+        tl,
+    ):
+        return False
+    year = post_date.year
+    patterns = [
+        # registration closes on 8 April / early-bird registration closes on 8 April
+        (
+            re.compile(
+                r"(?is)\b(?:early[- ]bird\s+)?registration\s+closes\s*(?:on|by|before)?\s*(?:the\s+)?"
+                r"(\d{1,2})(?:st|nd|rd|th)?\s+(?:of\s+)?(january|february|march|april|may|june|july|august|september|october|november|december)\b"
+            ),
+            "dm",
+        ),
+        (
+            re.compile(
+                r"(?is)\bcloses\s+on\s+(?:the\s+)?(\d{1,2})(?:st|nd|rd|th)?\s+(?:of\s+)?"
+                r"(january|february|march|april|may|june|july|august|september|october|november|december)\b"
+            ),
+            "dm",
+        ),
+        (
+            re.compile(
+                r"(?is)\b(?:early[- ]bird\s+)?registration\s+closes\s+(?:on|by|before)?\s*"
+                r"(january|february|march|april|may|june|july|august|september|october|november|december)\s+"
+                r"(\d{1,2})(?:st|nd|rd|th)?\b"
+            ),
+            "md",
+        ),
+        (
+            re.compile(
+                r"(?is)\bearly[- ]bird\s+(?:registration\s+)?(?:closes|ends)\s*(?:on|by)?\s*"
+                r"(\d{1,2})(?:st|nd|rd|th)?\s+(january|february|march|april|may|june|july|august|september|october|november|december)\b"
+            ),
+            "dm",
+        ),
+        (
+            re.compile(
+                r"(?is)\bregister\s+(?:by|before)\s*(?:the\s+)?(\d{1,2})(?:st|nd|rd|th)?\s+"
+                r"(january|february|march|april|may|june|july|august|september|october|november|december)\b"
+            ),
+            "dm",
+        ),
+    ]
+    for rx, mode in patterns:
+        for m in rx.finditer(text):
+            if mode == "dm":
+                d_, mo = int(m.group(1)), m.group(2)
+            else:
+                mo, d_ = m.group(1), int(m.group(2))
+            dt = _calendar_date_from_day_month(d_, mo, year)
+            if dt and dt < post_date:
+                return True
+    return False
+
+
+def _validate_deadline_vs_post_dates(captions_md: str, pack_start_date: str) -> List[str]:
+    """Warn when a day's caption implies a live deadline before that day's calendar date."""
+    warnings: List[str] = []
+    if not captions_md or not pack_start_date:
+        return warnings
+    try:
+        start = datetime.strptime(pack_start_date.strip()[:10], "%Y-%m-%d").date()
+    except ValueError:
+        return warnings
+    blocks = _split_caption_md_by_day(captions_md)
+    for day_num in range(1, 31):
+        block = blocks.get(day_num)
+        if not block:
+            continue
+        post_date = start + timedelta(days=day_num - 1)
+        if _has_future_deadline_before_post_day(block, post_date):
+            warnings.append(
+                f"Quality check: Day {day_num} ({post_date.strftime('%a %d %b %Y')}) may state a "
+                f"registration/deadline as still upcoming on a date before the post day — revise tense or dates "
+                f"(DEADLINE_AND_REGISTRATION_ALIGNMENT)."
+            )
+    return warnings
 
 
 def _validate_caption_quality(
@@ -1298,6 +1463,8 @@ class CaptionGenerator:
         # Post-generation validation: log quality warnings (does not block delivery)
         for w in _validate_caption_quality(result, intake, start_str):
             print(f"[CaptionGenerator] Quality warning: {w}")
+        for w in _validate_deadline_vs_post_dates(result, start_str):
+            print(f"[CaptionGenerator] Quality warning: {w}")
 
         return result
 
@@ -1375,10 +1542,13 @@ class CaptionGenerator:
         date_context = _build_date_context(start_str)
         date_block = ""
         if date_context:
+            deadline_block = _build_deadline_alignment_block(start_str)
             date_block = f"""
 
 DATE_CONTEXT (their 30 days start on a specific date; use when relevant, e.g. weekday/weekend):
 {date_context}
+
+{deadline_block}
 
 You may reference the actual day/date where it helps (e.g. Monday tip, weekend post). Use only when natural.
 """
@@ -1482,10 +1652,13 @@ Use the exact labels "Idea:", "Suggested wording:", and "Story hashtags:" on eve
         date_context = _build_date_context(start_str)
         date_block = ""
         if date_context:
+            deadline_block = _build_deadline_alignment_block(start_str)
             date_block = f"""
 
 DATE_CONTEXT (their 30 days start on a specific date; use when relevant):
 {date_context}
+
+{deadline_block}
 
 You may reference the actual day/date where it helps. Use only when natural.
 """

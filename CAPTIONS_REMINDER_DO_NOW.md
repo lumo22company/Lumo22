@@ -16,4 +16,4 @@ Reminders run **inside your main app** at 9am UTC daily (APScheduler). No separa
 
 ---
 
-**Deploy (no Git):** Run `railway up` from your project folder to deploy. See **DEPLOY_AND_SEE_CHANGES.md**.
+**Deploy:** Commit and push to `main` if Railway is linked to GitHub, or run **`railway up --no-gitignore`** from the project folder. See **DEPLOY_AND_SEE_CHANGES.md** and **AGENTS.md**.

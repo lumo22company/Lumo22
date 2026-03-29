@@ -49,9 +49,19 @@ def main():
     base = "https://www.lumo22.com"
 
     # 1. Order receipt
-    html = _order_receipt_email_html("• Subscription (£79/mo)\n• 2 platforms", "£96.00")
+    html = _order_receipt_email_html(
+        order={
+            "platforms_count": 2,
+            "stripe_subscription_id": "sub_sample",
+            "include_stories": False,
+            "currency": "gbp",
+        },
+        amount_paid="£98.00",
+        amount_total_minor=9800,
+        currency="gbp",
+    )
     check("Order receipt (with details)", html)
-    html = _order_receipt_email_html(None, None)
+    html = _order_receipt_email_html()
     check("Order receipt (no details)", html)
 
     # 2. Intake link
@@ -64,7 +74,8 @@ def main():
         check(f"Captions delivery (stories={has_stories}, sub={has_sub})", html)
 
     # 4. Pre-pack reminder
-    html = _captions_reminder_email_html(f"{base}/login?next=" + __import__("urllib.parse").quote(f"{base}/captions-intake?t=x", safe=""), f"{base}/account")
+    from urllib.parse import quote as _urlquote
+    html = _captions_reminder_email_html(f"{base}/login?next=" + _urlquote(f"{base}/captions-intake?t=x", safe=""), f"{base}/account")
     check("Pre-pack reminder", html)
 
     # 5. Intake reminder (awaiting_intake)

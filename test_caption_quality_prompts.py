@@ -86,6 +86,7 @@ def test_service_intake_without_key_date_gets_quality_instructions():
     assert "KEY_DATE_EVENTS (user included dates in description):" not in user_prompt
     assert "Clean Home" in user_prompt or "cleaning" in user_prompt.lower()
     assert "DATE_ALIGNMENT" in user_prompt
+    assert "DEADLINE_AND_REGISTRATION_ALIGNMENT" in user_prompt
     assert "as we head into the weekend" in user_prompt.lower()
     assert "Calendar-day alignment" in sys_prompt
 
@@ -122,3 +123,47 @@ We're opening our pop-up this Saturday 27 March. Come visit.
 """
     warnings = _validate_caption_quality(captions_md, intake, "2026-03-21")
     assert len(warnings) == 0
+
+
+def test_validate_deadline_vs_post_flags_closes_before_post_day():
+    """Registration deadline before the post day (future tense) should warn."""
+    from services.caption_generator import _validate_deadline_vs_post_dates
+
+    # Day 1 = 29 Mar 2026 → Day 13 = Fri 10 Apr 2026 (same as user report pattern)
+    captions_md = """
+## Day 13 — Soft Promotion
+**Platform:** Instagram & Facebook
+**Caption:** Early-bird registration closes on 8 April. The summit is Saturday 18 April.
+---
+"""
+    w = _validate_deadline_vs_post_dates(captions_md, "2026-03-29")
+    assert len(w) >= 1
+    assert "Day 13" in w[0]
+
+
+def test_validate_deadline_vs_post_silent_when_deadline_after_post_day():
+    """Deadline after post day should not trigger deadline alignment warning."""
+    from services.caption_generator import _validate_deadline_vs_post_dates
+
+    captions_md = """
+## Day 13 — Soft Promotion
+**Platform:** Instagram & Facebook
+**Caption:** Early-bird registration closes on 12 April. Summit Saturday 18 April.
+---
+"""
+    w = _validate_deadline_vs_post_dates(captions_md, "2026-03-29")
+    assert len(w) == 0
+
+
+def test_validate_deadline_vs_post_silent_past_tense():
+    """Past tense (closed on) before post day should not warn."""
+    from services.caption_generator import _validate_deadline_vs_post_dates
+
+    captions_md = """
+## Day 13 — Soft Promotion
+**Platform:** Instagram & Facebook
+**Caption:** Early-bird registration closed on 8 April. General tickets still available.
+---
+"""
+    w = _validate_deadline_vs_post_dates(captions_md, "2026-03-29")
+    assert len(w) == 0
