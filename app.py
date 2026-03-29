@@ -36,7 +36,7 @@ def _consume_login_token(token: str):
 from api.routes import api_bp
 from api.webhooks import webhook_bp
 from api.captions_routes import captions_bp
-from api.auth_routes import auth_bp, get_current_customer
+from api.auth_routes import auth_bp, get_current_customer, set_customer_session
 from api.passkey_routes import passkey_bp
 from api.billing_routes import billing_bp
 from services.login_guard import check_locked, record_failure, clear_failures
@@ -741,9 +741,21 @@ def customer_login_required(f):
         if not customer and request.args.get("login_token"):
             data = _consume_login_token(request.args.get("login_token", "").strip())
             if data:
-                session.permanent = True
-                session["customer_id"] = data["customer_id"]
-                session["customer_email"] = data["email"]
+                try:
+                    from services.customer_auth_service import CustomerAuthService
+                    _c = CustomerAuthService().get_by_email(data["email"])
+                    if _c and str(_c.get("id")) == str(data["customer_id"]):
+                        set_customer_session(_c)
+                    else:
+                        session.permanent = True
+                        session["customer_id"] = data["customer_id"]
+                        session["customer_email"] = data["email"]
+                        session["auth_version"] = 0
+                except Exception:
+                    session.permanent = True
+                    session["customer_id"] = data["customer_id"]
+                    session["customer_email"] = data["email"]
+                    session["auth_version"] = 0
                 # Render the page in this response so session cookie is set here (no second request needed)
                 return f(*args, **kwargs)
         if not get_current_customer():
@@ -863,9 +875,7 @@ def customer_login_page():
                 return render_template('customer_login.html', login_error='Please verify your email before logging in. Check your inbox or request a new verification link.', needs_verification=True, verification_email=email, next_url=next_url)
             svc.update_last_login(customer['id'])
             clear_failures(email, client_ip)
-            session.permanent = True
-            session['customer_id'] = str(customer['id'])
-            session['customer_email'] = customer['email']
+            set_customer_session(customer)
             # One-time token so account page can set session even if cookie from this response does not persist
             login_token = _create_login_token(customer['id'], customer['email'])
             account_url = url_for('account_page') + '?login_token=' + login_token
@@ -957,9 +967,7 @@ def change_email_confirm_page():
         # Log them in with new email
         customer = svc.get_by_email(new_email)
         if customer:
-            session.permanent = True
-            session['customer_id'] = str(customer['id'])
-            session['customer_email'] = customer['email']
+            set_customer_session(customer)
         return redirect(url_for('account_page') + '?email_changed=1', code=302)
     except Exception as e:
         import logging
@@ -1240,6 +1248,15 @@ def _get_subscription_billing(caption_orders):
     except Exception:
         pass
     return out
+
+
+@app.route('/account/change-password')
+@customer_login_required
+def account_change_password_page():
+    """Logged in: enter current password and new password (not the email reset flow)."""
+    if not get_current_customer():
+        return redirect(url_for('customer_login_page'))
+    return render_template('change_password_logged_in.html')
 
 
 @app.route('/account')

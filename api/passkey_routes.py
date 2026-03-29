@@ -326,9 +326,8 @@ def login_finish():
     cred_svc.update_sign_count(str(row.get("id")), int(verified.new_sign_count))
 
     auth_svc.update_last_login(customer["id"])
-    session.permanent = True
-    session["customer_id"] = str(customer["id"])
-    session["customer_email"] = customer["email"]
+    from api.auth_routes import set_customer_session
+    set_customer_session(customer)
     clear_failures((customer.get("email") or "").strip().lower(), _client_ip())
 
     return jsonify({"ok": True, "email": customer["email"]}), 200

@@ -46,8 +46,16 @@ def _email_typo_hint(email: str):
     return f"{local}@{fixed}"
 
 
+def set_customer_session(customer: dict) -> None:
+    """Store logged-in customer in Flask session. auth_version invalidates all sessions on password reset."""
+    session.permanent = True
+    session["customer_id"] = str(customer["id"])
+    session["customer_email"] = customer["email"]
+    session["auth_version"] = int(customer.get("auth_version") or 0)
+
+
 def get_current_customer():
-    """Get current logged-in customer from session."""
+    """Get current logged-in customer from session. Clears session if auth_version mismatches DB (password changed elsewhere)."""
     customer_id = session.get("customer_id")
     email = session.get("customer_email")
     if not customer_id or not email:
@@ -55,8 +63,16 @@ def get_current_customer():
     try:
         svc = CustomerAuthService()
         customer = svc.get_by_email(email)
-        if customer and str(customer.get("id")) == str(customer_id):
-            return customer
+        if not customer or str(customer.get("id")) != str(customer_id):
+            return None
+        db_ver = int(customer.get("auth_version") or 0)
+        sess_ver = int(session.get("auth_version") or 0)
+        if db_ver != sess_ver:
+            session.pop("customer_id", None)
+            session.pop("customer_email", None)
+            session.pop("auth_version", None)
+            return None
+        return customer
     except Exception:
         pass
     return None
@@ -228,6 +244,7 @@ def logout():
     """Clear session and redirect to home so logout works with or without JS."""
     session.pop("customer_id", None)
     session.pop("customer_email", None)
+    session.pop("auth_version", None)
     return redirect("/", code=302)
 
 
@@ -484,6 +501,33 @@ def forgot_password_status():
     }), 200
 
 
+@auth_bp.route("/change-password", methods=["POST"])
+def change_password_logged_in():
+    """Change password while logged in: requires current password. Other sessions signed out via auth_version."""
+    customer = get_current_customer()
+    if not customer:
+        return jsonify({"ok": False, "error": "Not logged in"}), 401
+    try:
+        data = request.get_json() or {}
+        current_pw = (data.get("current_password") or "").strip()
+        new_pw = (data.get("new_password") or "").strip()
+        if not current_pw or not new_pw:
+            return jsonify({"ok": False, "error": "Current and new password are required."}), 400
+        svc = CustomerAuthService()
+        ok, err = svc.change_password_with_current(str(customer["id"]), current_pw, new_pw)
+        if not ok:
+            return jsonify({"ok": False, "error": err}), 400
+        fresh = svc.get_by_email(customer["email"])
+        if fresh:
+            set_customer_session(fresh)
+        return jsonify({
+            "ok": True,
+            "message": "Password updated. Other devices were signed out for security.",
+        }), 200
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
 @auth_bp.route("/reset-password", methods=["POST"])
 def reset_password():
     """Reset password using token from email."""
@@ -499,7 +543,10 @@ def reset_password():
         ok, err = svc.reset_password(token, password)
         if not ok:
             return jsonify({"ok": False, "error": err}), 400
-        return jsonify({"ok": True, "message": "Password updated. You can now log in."}), 200
+        return jsonify({
+            "ok": True,
+            "message": "Password updated. You can now log in. For security, other devices were signed out.",
+        }), 200
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
 

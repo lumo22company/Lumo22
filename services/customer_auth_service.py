@@ -312,12 +312,42 @@ class CustomerAuthService:
 
         try:
             pw_hash = generate_password_hash(new_password, method="scrypt")
+            new_ver = int(customer.get("auth_version") or 0) + 1
             self.client.table(self.table).update({
                 "password_hash": pw_hash,
                 "password_reset_token": None,
                 "password_reset_expires": None,
+                "auth_version": new_ver,
                 "updated_at": datetime.utcnow().isoformat(),
             }).eq("id", customer["id"]).execute()
+            return (True, None)
+        except Exception as e:
+            return (False, str(e))
+
+    def change_password_with_current(
+        self, customer_id: str, current_password: str, new_password: str
+    ) -> Tuple[bool, Optional[str]]:
+        """Logged-in user: verify current password, set new password, bump auth_version."""
+        customer = self.get_by_id(customer_id)
+        if not customer:
+            return (False, "Account not found.")
+        if not self.verify_password(customer, current_password):
+            return (False, "Current password is incorrect.")
+        if current_password == new_password:
+            return (False, "New password must be different from your current password.")
+        ok, err = validate_password(new_password)
+        if not ok:
+            return (False, err)
+        try:
+            pw_hash = generate_password_hash(new_password, method="scrypt")
+            new_ver = int(customer.get("auth_version") or 0) + 1
+            self.client.table(self.table).update({
+                "password_hash": pw_hash,
+                "password_reset_token": None,
+                "password_reset_expires": None,
+                "auth_version": new_ver,
+                "updated_at": datetime.utcnow().isoformat(),
+            }).eq("id", str(customer_id)).execute()
             return (True, None)
         except Exception as e:
             return (False, str(e))
