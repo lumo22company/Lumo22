@@ -50,6 +50,50 @@ def test_referral_coupon_not_applied_when_no_ref_no_referred_customer():
     print("PASS: no referral discount when no ref / not referred (mocked)")
 
 
+def test_referral_coupon_via_get_by_referral_code_not_mocked_coupon_fn():
+    """Integration: _get_referral_coupon_id + valid ref + STRIPE_REFERRAL_COUPON_ID → Session discounts."""
+    from app import app
+    from api.captions_routes import Config as CaptionsConfig
+    from unittest.mock import MagicMock
+
+    fake_session = MagicMock()
+    fake_session.url = "https://checkout.stripe.com/fake"
+    with app.test_client() as client:
+        with patch("stripe.checkout.Session.create") as mock_create:
+            mock_create.return_value = fake_session
+            with patch.object(CaptionsConfig, "STRIPE_REFERRAL_COUPON_ID", "coupon_env_referral"):
+                with patch(
+                    "services.customer_auth_service.CustomerAuthService.get_by_referral_code",
+                    return_value={"id": "uuid-referrer", "email": "r@example.com"},
+                ):
+                    r = client.get("/api/captions-checkout?platforms=1&ref=VALIDREF1")
+    assert r.status_code == 302, r.status_code
+    call_kw = mock_create.call_args[1]
+    assert call_kw.get("discounts") == [{"coupon": "coupon_env_referral"}]
+
+
+def test_referral_coupon_not_applied_when_ref_unknown():
+    """Integration: ref present but not in DB → no coupon on Session."""
+    from app import app
+    from api.captions_routes import Config as CaptionsConfig
+    from unittest.mock import MagicMock
+
+    fake_session = MagicMock()
+    fake_session.url = "https://checkout.stripe.com/fake"
+    with app.test_client() as client:
+        with patch("stripe.checkout.Session.create") as mock_create:
+            mock_create.return_value = fake_session
+            with patch.object(CaptionsConfig, "STRIPE_REFERRAL_COUPON_ID", "coupon_env_referral"):
+                with patch(
+                    "services.customer_auth_service.CustomerAuthService.get_by_referral_code",
+                    return_value=None,
+                ):
+                    r = client.get("/api/captions-checkout?platforms=1&ref=NOTREAL01")
+    assert r.status_code == 302
+    call_kw = mock_create.call_args[1]
+    assert not call_kw.get("discounts")
+
+
 if __name__ == "__main__":
     test_referral_coupon_applied_when_ref_valid()
     test_referral_coupon_not_applied_when_no_ref_no_referred_customer()
