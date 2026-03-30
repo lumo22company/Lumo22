@@ -763,7 +763,7 @@
         <h2>Refer a friend</h2>
         {% if referral_code %}
         <p class="account-section-desc">Share your referral link — your friend gets 10% off their first purchase. You get 10% off your next billing period for each friend who buys. Discounts don't stack: two referrals = 10% off your next two periods.</p>
-        <div class="account-referral-block" id="referral-share-root" data-captions-url="{{ base_url }}/captions?ref={{ referral_code }}">
+        <div class="account-referral-block" id="referral-share-root">
           <label class="account-settings-label" for="referral-link">Your referral link</label>
           <div class="referral-row" style="display: flex; gap: 0.75rem; align-items: center; margin-top: 0.5rem;">
             <input type="text" id="referral-link" readonly value="{{ base_url }}/signup?ref={{ referral_code }}" class="referral-input" style="flex: 1; padding: 0.6rem 0.9rem; font-size: 0.9rem; border: 1px solid rgba(0,0,0,0.15); border-radius: 12px; background: #f8f8f6; color: #111;">
@@ -775,10 +775,10 @@
             <button type="button" id="referral-copy-code-btn" class="dfd-btn dfd-btn-secondary referral-copy account-btn-swipe-light" onclick="copyReferralCode()">Copy code</button>
           </div>
           <label class="account-settings-label" for="referral-share-email-btn" style="margin-top: 0.75rem; display: block;">Quick share</label>
-          <p class="account-settings-desc" style="margin-top: 0.35rem; margin-bottom: 0;">Opens your email app or messages with a draft that includes your signup link, captions link, and code.</p>
+          <p class="account-settings-desc" style="margin-top: 0.35rem; margin-bottom: 0;">Opens your email app or messages with a ready-to-send draft — one link plus your code, and what the discount is for.</p>
           <div class="referral-share-actions">
-            <button type="button" id="referral-share-email-btn" class="dfd-btn dfd-btn-secondary account-btn-swipe-light" onclick="shareReferralByEmail()">Share by email</button>
-            <button type="button" id="referral-share-sms-btn" class="dfd-btn dfd-btn-secondary account-btn-swipe-light" onclick="shareReferralByText()">Share by text</button>
+            <a id="referral-share-email-btn" class="dfd-btn dfd-btn-secondary referral-copy account-btn-swipe-light referral-share-native" href="{{ referral_mailto_href }}">Share by email</a>
+            <a id="referral-share-sms-btn" class="dfd-btn dfd-btn-secondary referral-copy account-btn-swipe-light referral-share-native" href="{{ referral_sms_href }}">Share by text</a>
           </div>
         {% if referral_discount_credits|default(0) > 0 %}
         <p class="account-settings-desc" style="margin-top: 0.75rem; color: var(--lum-gold); font-weight: 600;">You have {{ referral_discount_credits }} referral credit{{ 's' if referral_discount_credits != 1 else '' }} — 10% off your next {{ referral_discount_credits }} billing period{{ 's' if referral_discount_credits != 1 else '' }}.</p>
@@ -1089,49 +1089,9 @@
         } catch (e) {}
       }
 
-      function _referralShareParts() {
-        var linkEl = document.getElementById('referral-link');
-        var codeEl = document.getElementById('referral-code');
-        var root = document.getElementById('referral-share-root');
-        var captions = '';
-        if (root && root.getAttribute('data-captions-url')) {
-          captions = String(root.getAttribute('data-captions-url')).trim();
-        }
-        return {
-          signupUrl: linkEl ? String(linkEl.value || '').trim() : '',
-          captionsUrl: captions,
-          code: codeEl ? String(codeEl.value || '').trim() : ''
-        };
-      }
-
-      function shareReferralByEmail() {
-        var p = _referralShareParts();
-        if (!p.signupUrl) return;
-        var subject = '10% off Lumo 22 — join with my link';
-        var body = 'Hi,\n\nI thought you might like Lumo 22 for social media captions and story ideas.\n\n' +
-          'You can get 10% off your first purchase using these links:\n\n' +
-          'Sign up: ' + p.signupUrl + '\n' +
-          (p.captionsUrl ? ('Captions (30 days): ' + p.captionsUrl + '\n') : '') +
-          '\nOr use my referral code at checkout: ' + p.code + '\n\n' +
-          '—';
-        window.location.href = 'mailto:?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
-      }
-
-      function shareReferralByText() {
-        var p = _referralShareParts();
-        if (!p.signupUrl) return;
-        var cap = p.captionsUrl || '';
-        var text = '10% off Lumo 22 — Sign up: ' + p.signupUrl +
-          (cap ? (' Captions: ' + cap) : '') +
-          ' Code: ' + p.code;
-        window.location.href = 'sms:?body=' + encodeURIComponent(text);
-      }
-
-      /* Inline onclick= only sees globals; these handlers live inside the IIFE above. */
+      /* Share by email/text use server-built mailto:/sms: hrefs on <a> (reliable; JS mailto was flaky). */
       window.copyReferralLink = copyReferralLink;
       window.copyReferralCode = copyReferralCode;
-      window.shareReferralByEmail = shareReferralByEmail;
-      window.shareReferralByText = shareReferralByText;
 
       function formatResumeDate() {
         var d = new Date();

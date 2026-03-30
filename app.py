@@ -978,6 +978,46 @@ def change_email_confirm_page():
 _ACCOUNT_SECTIONS = frozenset({"information", "history", "edit-form", "upgrade", "pause", "refer"})
 
 
+def _referral_share_mailto_href(base_url: str, code: str) -> str:
+    """Pre-built mailto: URI for refer-a-friend (avoids JS mailto issues; works as a real link)."""
+    from urllib.parse import quote
+
+    b = (base_url or "").strip().rstrip("/")
+    c = (code or "").strip()
+    if not b or not c:
+        return ""
+    link = f"{b}/signup?ref={c}"
+    subject = "10% off Lumo 22 — your friend invited you"
+    body = (
+        "Hi,\n\n"
+        "I'm inviting you to try Lumo 22 — 30 days of social media captions (and optional story ideas) written for your business.\n\n"
+        "What this is: Lumo 22's refer-a-friend offer.\n"
+        "The discount: 10% off your first purchase.\n"
+        "How to use it: Open the link below to sign up or buy. You can also enter the code at checkout — the discount applies when you use this link or code.\n\n"
+        f"{link}\n\n"
+        f"Your code: {c}\n\n"
+        "—"
+    )
+    return "mailto:?subject=" + quote(subject, safe="") + "&body=" + quote(body, safe="")
+
+
+def _referral_share_sms_href(base_url: str, code: str) -> str:
+    """Pre-built sms: URI with one link + code and short context."""
+    from urllib.parse import quote
+
+    b = (base_url or "").strip().rstrip("/")
+    c = (code or "").strip()
+    if not b or not c:
+        return ""
+    link = f"{b}/signup?ref={c}"
+    text = (
+        "Hi — I'm sharing Lumo 22 (30 days of social captions for your business). "
+        "10% off your first purchase: use this link or enter the code at checkout. "
+        f"Link: {link}  Code: {c}"
+    )
+    return "sms:?body=" + quote(text, safe="")
+
+
 def _account_context():
     """Load customer and account data for dashboard. Returns dict for template."""
     customer = get_current_customer()
@@ -1101,6 +1141,7 @@ def _account_context():
     base = (Config.BASE_URL or request.url_root or "").strip().rstrip("/")
     if base and not base.startswith("http"):
         base = "https://" + base
+    rc = (referral_code or "").strip()
     return {
         "customer": customer,
         "caption_orders": caption_orders,
@@ -1113,8 +1154,10 @@ def _account_context():
         "one_off_orders": one_off_orders,
         "captions_prices": CAPTIONS_DISPLAY_PRICES,
         "base_url": base,
-        "referral_code": referral_code or "",
+        "referral_code": rc,
         "referral_discount_credits": int(customer.get("referral_discount_credits") or 0),
+        "referral_mailto_href": _referral_share_mailto_href(base, rc) if rc else "",
+        "referral_sms_href": _referral_share_sms_href(base, rc) if rc else "",
     }
 
 

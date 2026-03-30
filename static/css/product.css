@@ -2392,6 +2392,15 @@
 .account-referral-block .referral-share-actions .dfd-btn {
   flex: 0 1 auto;
 }
+.account-referral-block .referral-share-actions a.referral-share-native {
+  text-decoration: none;
+  cursor: pointer;
+  box-sizing: border-box;
+  text-align: center;
+}
+.account-referral-block .referral-share-actions a.referral-share-native:hover {
+  text-decoration: none;
+}
 
 /* Toggle on light account page */
 .account-page-wrap .account-main .account-toggle {
