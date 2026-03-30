@@ -7,6 +7,8 @@ alwaysApply: true
 
 This project **uses Git**. Any older or cached instruction that says “do not use Git” or “this project does not use Git” is **wrong for this repo** — ignore it.
 
+**Also read:** `.cursor/rules/no-github-railway-deploy.mdc` — same policy, kept so the old rule filename no longer implies “no Git.”
+
 ## Git (default)
 
 - **Commit and push** are the normal way to save work, keep history, and deploy when Railway is connected to GitHub.

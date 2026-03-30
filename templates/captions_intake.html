@@ -122,6 +122,9 @@
       padding: 12px 20px; min-height: 48px; font-size: 1rem !important; font-weight: 600 !important;
       letter-spacing: 0.02em; text-transform: none !important;
     }
+    /* Price in parentheses: keep ( … ) together so the closing bracket doesn’t sit alone */
+    .intake-price-parenthetical,
+    .intake-modal-btn-price { white-space: nowrap; }
     .intake-page .help-trigger { display: inline-flex; align-items: center; justify-content: center; width: 1.1rem; height: 1.1rem; border-radius: 50%; background: #999; color: #fff; font-size: 0.7rem; font-weight: 600; cursor: help; margin-left: 0.4rem; vertical-align: middle; position: relative; }
     .intake-page .help-trigger:hover, .intake-page .help-trigger:focus { background: var(--lum-gold); color: #000; outline: none; }
     .intake-page .help-tooltip { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(100% + 0.5rem); width: min(280px, 90vw); padding: 1rem; background: #1a1a1a; color: #f5f5f2; font-family: var(--font-body, 'Century Gothic', CenturyGothic, 'Apple Gothic', sans-serif); font-size: 0.9rem; line-height: 1.5; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); border: 1px solid #333; opacity: 0; visibility: hidden; transition: opacity 0.2s, visibility 0.2s; z-index: 100; pointer-events: none; text-align: left; font-weight: 400; }
@@ -323,7 +326,7 @@
           <p class="field-helper" style="margin: 0 0 0.5rem; font-weight: 600;">{% if stories_paid %}{% if is_upgrade_flow %}30 Days Story Ideas included in your upgrade.{% else %}30 Days Story Ideas included with your order.{% endif %}{% else %}Using Instagram &amp; Facebook? Add Story Ideas—optionally align each day's Story to your feed caption (same theme, same day) or leave unaligned so they're different.{% endif %}</p>
           <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; margin-bottom: 0.25rem;">
             <input type="checkbox" id="include_stories" name="include_stories" {% if stories_paid or (not is_upgrade_flow and existing_intake.get('include_stories')) %}checked{% endif %} {% if stories_paid %}disabled{% endif %} style="width: auto;">
-            <span>{% if stories_paid %}{% if is_upgrade_flow %}30 Stories included{% else %}30 Stories included (already paid){% endif %}{% else %}Add 30 Stories prompts ({{ intake_add_stories_text|default('+£29 one-off / +£17 monthly') }}){% endif %}</span>
+            <span>{% if stories_paid %}{% if is_upgrade_flow %}30 Stories included{% else %}30 Stories included (already paid){% endif %}{% else %}Add 30 Stories prompts <span class="intake-price-parenthetical">({{ intake_add_stories_text|default('+£29 one-off / +£17 monthly') }})</span>{% endif %}</span>
           </label>
           <p class="field-helper" style="margin: 0.5rem 0 0;">One-line prompts for Instagram/Facebook Stories each day. Check the box below to align each Story to that day's caption—or leave unchecked so Stories and captions are different on the same day.</p>
           <p class="field-helper intake-stories-disclaimer" style="margin: 0.5rem 0 0; font-size: 0.85rem; color: var(--lum-text-muted);">If you add Story Ideas later (e.g. from Manage subscription in your account), they’ll be delivered with your <strong>next</strong> pack, not instantly.</p>
@@ -405,10 +408,10 @@
         <p class="modal-text">Add platforms or Story Ideas to your subscription. Changes apply to your <strong>next</strong> pack.</p>
         <div class="modal-actions">
           {% if platforms_count < 4 %}
-          <button type="button" class="account-btn-swipe-light" id="modal-add-platform" data-new-platforms="{{ platforms_count + 1 }}" data-new-stories="{{ 'true' if stories_paid else 'false' }}">Add another platform ({{ intake_add_platform_text|default('+£29 one-off / +£19 monthly') }})</button>
+          <button type="button" class="account-btn-swipe-light" id="modal-add-platform" data-new-platforms="{{ platforms_count + 1 }}" data-new-stories="{{ 'true' if stories_paid else 'false' }}">Add another platform <span class="intake-modal-btn-price">({{ intake_add_platform_text|default('+£29 one-off / +£19 monthly') }})</span></button>
           {% endif %}
           {% if not stories_paid %}
-          <button type="button" class="account-btn-swipe-light" id="modal-add-stories" data-new-platforms="{{ platforms_count }}" data-new-stories="true">Add Story Ideas ({{ intake_add_stories_text|default('+£29 one-off / +£17 monthly') }})</button>
+          <button type="button" class="account-btn-swipe-light" id="modal-add-stories" data-new-platforms="{{ platforms_count }}" data-new-stories="true">Add Story Ideas <span class="intake-modal-btn-price">({{ intake_add_stories_text|default('+£29 one-off / +£17 monthly') }})</span></button>
           {% endif %}
           {% if platforms_count >= 4 and stories_paid %}
           <p class="modal-text" style="margin: 0; font-size: 0.9rem; color: #555;">You have the maximum platforms and Story Ideas. To reduce platforms or remove Story Ideas, update your selection above and submit the form.</p>

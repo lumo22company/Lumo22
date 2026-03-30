@@ -14,8 +14,11 @@
   <style>
     /* Match intake form checkbox format for visibility */
     .captions-checkbox-group { display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem; margin-bottom: 0.25rem; }
-    .captions-checkbox-label { display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 400; font-size: 0.95rem; color: inherit; line-height: 1.4; }
-    .captions-checkbox-label input { width: auto; min-width: 1.15rem; min-height: 1.15rem; margin: 0; cursor: pointer; accent-color: #fff200; flex-shrink: 0; vertical-align: middle; align-self: center; }
+    .captions-checkbox-label { display: inline-flex; align-items: flex-start; gap: 0.5rem; cursor: pointer; font-weight: 400; font-size: 0.95rem; color: inherit; line-height: 1.4; max-width: 100%; }
+    .captions-checkbox-label input { width: auto; min-width: 1.15rem; min-height: 1.15rem; margin: 0.15rem 0 0; cursor: pointer; accent-color: #fff200; flex-shrink: 0; vertical-align: middle; align-self: flex-start; }
+    /* Keep “( … )” with the price so the closing bracket can’t wrap alone */
+    .captions-checkbox-label-text { min-width: 0; flex: 1 1 auto; }
+    .captions-price-parenthetical { white-space: nowrap; }
     .captions-stories-wrap { margin-top: 1rem; padding: 1rem; background: rgba(255,255,255,0.12); border-radius: 8px; border: 1px solid rgba(255,255,255,0.25); }
     .captions-stories-wrap .captions-checkbox-label { margin-bottom: 0.25rem; }
     .captions-stories-wrap .captions-checkbox-label + p { font-size: 0.85rem; color: var(--lum-text-muted); margin: 0.5rem 0 0; line-height: 1.4; }
@@ -223,7 +226,7 @@
   <section class="product-section product-section--dark captions-reveal" id="pricing" data-reveal>
     <div class="product-section-inner">
       <h2 class="product-section-title" data-reveal>Choose your plan</h2>
-      <p class="product-section-desc" data-reveal>One-off pack or monthly subscription. Same form and delivery. Cancel anytime on subscription. <a href="#refer-a-friend" style="color: var(--lum-gold); text-decoration: none;">Refer a friend</a> — they get 10% off their first purchase, you get 10% off your next month.</p>
+      <p class="product-section-desc" data-reveal>One-off pack or monthly subscription. Same form and delivery. Cancel anytime on subscription. <a href="#refer-a-friend" style="color: var(--lum-gold); text-decoration: none;">Refer a friend</a> — they enter your code at Stripe checkout (Add promotion code) for 10% off their first purchase; you get 10% off your next subscription month when they buy.</p>
       <p id="pricing-outcome-copy" class="product-section-desc" data-reveal style="margin-top: 0.4rem; color: var(--lum-text);">Most clients use this to save hours each month and keep posting consistently with 30 post-ready captions (plus optional Story Ideas).</p>
       {% if currencies_available|default([])|length > 1 %}
       <div class="captions-currency-wrap" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 1rem;">
@@ -258,7 +261,7 @@
           {% if stories_addon_available|default(false) %}
           <div id="captions-stories-wrap" class="captions-stories-wrap" style="display: none;">
             <p id="captions-stories-headline" style="font-size: 0.95rem; font-weight: 600; margin: 0 0 0.5rem; color: inherit;">Add Story Ideas for Instagram &amp; Facebook—align each to that day's caption or keep them separate.</p>
-            <label class="captions-checkbox-label"><input type="checkbox" id="captions-stories-cb" name="stories"> Add 30 Days Story Ideas (<span id="captions-stories-price-label">+£29 one-off / +£17 monthly</span>)</label>
+            <label class="captions-checkbox-label"><input type="checkbox" id="captions-stories-cb" name="stories"><span class="captions-checkbox-label-text">Add 30 Days Story Ideas <span class="captions-price-parenthetical">(<span id="captions-stories-price-label">+£29 one-off / +£17 monthly</span>)</span></span></label>
             <p>One-line prompts for Instagram/Facebook Stories each day. After payment, your intake form asks whether to align each Story with that day's caption or keep them independent—you don't choose that here at checkout.</p>
             <p class="captions-stories-disclaimer" style="font-size: 0.8rem; color: var(--lum-text-muted); margin: 0.5rem 0 0; line-height: 1.4;">If you add Story Ideas later (e.g. from Manage subscription in your account), they’ll be delivered with your <strong>next</strong> pack, not instantly.</p>
           </div>
@@ -268,8 +271,8 @@
         <p style="font-size: 0.8rem; color: var(--lum-text-muted); margin: 0.5rem 0 0;">Your choice will be prefilled on the form after payment.</p>
       </div>
       <div class="captions-ref-code-wrap" id="captions-ref-code-wrap" style="max-width: 600px; margin: 0 auto 1.25rem; padding: 1rem 1.25rem; background: rgba(255,242,0,0.08); border-radius: 10px; border: 1px solid rgba(255,242,0,0.25);">
-        <label for="captions-ref-code-input" style="display: block; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.35rem;">Have a friend's referral code?</label>
-        <p style="font-size: 0.8rem; color: var(--lum-text-muted); margin: 0 0 0.5rem;">Enter it here so your 10% friend discount applies at checkout (same as opening your friend's link).</p>
+        <label for="captions-ref-code-input" style="display: block; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.35rem;">Have a referral code?</label>
+        <p style="font-size: 0.8rem; color: var(--lum-text-muted); margin: 0 0 0.5rem;"><strong>Enter it at checkout</strong> on the Stripe payment page under “Add promotion code” to get your 10% discount. Saving a code here only adds <code style="font-size:0.85em;">?ref=</code> to the link for sign-up attribution — it does not apply the discount by itself.</p>
         <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
           <input type="text" id="captions-ref-code-input" name="referral_code" autocomplete="off" maxlength="32" placeholder="e.g. AB12CD34" inputmode="text" autocapitalize="characters" style="flex: 1; min-width: 160px; padding: 0.55rem 0.75rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.25); color: inherit; font-size: 1rem;" />
           <button type="button" id="captions-ref-code-apply" class="dfd-btn dfd-btn-secondary captions-btn-swipe" style="flex-shrink: 0;">Apply</button>
@@ -293,7 +296,7 @@
             <li>Cancel anytime</li>
           </ul>
           <div class="dfd-pricing-footer">
-            <a href="/captions-checkout-subscription?platforms=1" id="captions-sub-cta" class="dfd-btn dfd-btn-accent captions-btn-swipe">Subscribe<span class="captions-sub-price"> — £79/month</span></a>
+            <a href="/captions-checkout-subscription?platforms=1" id="captions-sub-cta" class="dfd-btn dfd-btn-accent captions-btn-swipe">Subscribe</a>
           </div>
         </div>
         {% endif %}
@@ -379,7 +382,15 @@
         </details>
         <details class="dfd-faq-item" id="refer-a-friend">
           <summary class="dfd-faq-question">How does refer-a-friend work?</summary>
-          <p class="dfd-faq-answer">Share your referral link from your account (Refer a friend). When a friend signs up and buys captions using your link, they get 10% off their first purchase. You get 10% off your next captions subscription billing period for each friend who completes a purchase. Discounts don't stack: two referrals = 10% off your next two billing periods (one 10% off per period), not 20% off one period. If they only have your code, they can enter it under “Have a friend's referral code?” on this page before checkout.</p>
+          <p class="dfd-faq-answer">Share your link and code from your account (Refer a friend). When someone buys captions, they <strong>enter your code at checkout</strong> on the Stripe payment page (Add promotion code) for 10% off their first qualifying purchase. You get 10% off your next captions subscription billing period for each friend who completes a purchase. Discounts don't stack: two referrals = 10% off your next two billing periods (one 10% off per period), not 20% off one period. Saving a code in the box above only helps sign-up attribution — the discount always applies when they type the code in Stripe.</p>
+        </details>
+        <details class="dfd-faq-item">
+          <summary class="dfd-faq-question">How many times can someone use a referral code?</summary>
+          <p class="dfd-faq-answer">The friend discount is meant for a <strong>first-time use</strong> per customer, as set on the underlying Stripe coupon (usually “once” — e.g. first payment for a one-off, or first subscription invoice). Stripe applies and records that. We don’t run a separate “coupon police” queue; you can see redemptions in your Stripe Dashboard, and we log referrer rewards when a purchase completes.</p>
+        </details>
+        <details class="dfd-faq-item">
+          <summary class="dfd-faq-question">Do I need a Lumo account to use a friend’s referral code?</summary>
+          <p class="dfd-faq-answer">The <strong>code is entered on Stripe’s payment page</strong>—that’s what applies the 10% off. For a <strong>one-off</strong> purchase you can complete checkout without a Lumo account (we use the email from Stripe). For a <strong>subscription</strong>, you’ll already be in the account flow before checkout. Saving a code in the box on this page only adds <code style="font-size:0.85em;">?ref=</code> to links for sign-up attribution; it doesn’t replace entering the code at checkout.</p>
         </details>
         <details class="dfd-faq-item">
           <summary class="dfd-faq-question">I have a product launch, sale, or event. Can you tailor the captions?</summary>
@@ -501,16 +512,6 @@
       }
       return r ? r.toUpperCase() : '';
     }
-    /** Matches refer-a-friend: 10% off the friend's first captions payment (one-off or first subscription invoice). */
-    var REFERRAL_FIRST_DISCOUNT = 0.1;
-    function formatMoney(sym, amount) {
-      var x = Math.round(amount * 100) / 100;
-      if (Math.abs(x - Math.round(x)) < 0.001) return sym + Math.round(x);
-      return sym + x.toFixed(2);
-    }
-    function referralFirstPaymentPrice(total) {
-      return total * (1 - REFERRAL_FIRST_DISCOUNT);
-    }
     syncRefUrlAndStorage();
     if (!sel) return;
     function prices() { return CAPTIONS_PRICES[getCurrency()] || CAPTIONS_PRICES.gbp; }
@@ -570,13 +571,7 @@
       if (businessKey) q += '&business_key=' + encodeURIComponent(businessKey);
       var oo = oneoffTotal(n, stories);
       var stMonthly = subTotal(n, stories);
-      if (oneoffPrice) {
-        if (ref) {
-          oneoffPrice.innerHTML = formatMoney(sym, referralFirstPaymentPrice(oo)) + ' <span>one-time</span>';
-        } else {
-          oneoffPrice.innerHTML = sym + oo + ' <span>one-time</span>';
-        }
-      }
+      if (oneoffPrice) oneoffPrice.innerHTML = sym + oo + ' <span>one-time</span>';
       var isValid = selected !== null;
       var targetHref = '/captions-checkout?' + q;
       var subQ = q;
@@ -590,24 +585,10 @@
       }
       var stickyOneoff = document.getElementById('captions-sticky-oneoff-cta');
       if (stickyOneoff) stickyOneoff.href = isValid ? targetHref : '#pricing';
-      if (subPrice) {
-        if (ref) {
-          subPrice.innerHTML = formatMoney(sym, referralFirstPaymentPrice(stMonthly)) + ' <span>first month</span><div style="font-size:0.95rem;font-weight:500;margin-top:0.4rem;color:var(--lum-text-muted);line-height:1.35;">' + formatMoney(sym, stMonthly) + ' <span>/month</span> thereafter</div>';
-        } else {
-          subPrice.innerHTML = sym + stMonthly + ' <span>/month</span>';
-        }
-      }
+      if (subPrice) subPrice.innerHTML = sym + stMonthly + ' <span>/month</span>';
       if (subSave) subSave.textContent = 'Save ' + sym + (oo - stMonthly) + ' vs one-off';
       if (subCta) {
         subCta.href = isValid ? subHref : '#pricing';
-        var priceSpan = subCta.querySelector('.captions-sub-price');
-        if (priceSpan) {
-          if (ref) {
-            priceSpan.textContent = ' — ' + formatMoney(sym, referralFirstPaymentPrice(stMonthly)) + ' first month, then ' + sym + stMonthly + '/mo';
-          } else {
-            priceSpan.textContent = ' — ' + sym + stMonthly + '/month';
-          }
-        }
         subCta.classList.toggle('btn-disabled', !isValid);
         subCta.setAttribute('tabindex', isValid ? '0' : '-1');
       }
@@ -723,7 +704,7 @@
             var qs = params.toString();
             history.replaceState({}, '', window.location.pathname + (qs ? '?' + qs : '') + window.location.hash);
             input.value = code;
-            showMsg('Applied — your 10% discount will be included when you continue to checkout.', false);
+            showMsg('Saved for this visit — use the same code in Stripe at checkout under “Add promotion code”.', false);
             refreshClearVisibility();
             updateLinks();
           })

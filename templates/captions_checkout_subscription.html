@@ -53,6 +53,7 @@
       <h1 style="text-transform: uppercase;">30 Days of Social Media Captions — Subscription</h1>
       <h2 class="checkout-selection-heading" style="font-size: 0.85rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--lum-text-muted); margin: 1rem 0 0.5rem;">Your selection</h2>
       <p class="price" id="checkout-price">{{ currency_symbol|default('£') }}{{ total_sub|default(79) }} <span>/month</span></p>
+      <p style="font-size: 0.85rem; color: var(--lum-text-muted); margin: 0.35rem 0 0;">Have a referral code? <strong>Enter it at checkout</strong> on the Stripe payment page under “Add promotion code”.</p>
       {% if platforms_invalid|default(false) %}
       <p class="checkout-platform-error" style="margin-bottom: 1rem; padding: 0.75rem 1rem; background: rgba(220,50,50,0.15); border: 1px solid rgba(220,50,50,0.4); border-radius: 8px; color: #ff9999; font-size: 0.9rem;">Please go back and select which {{ platforms }} platform(s) you want on the captions page.</p>
       {% else %}
@@ -62,7 +63,7 @@
       {% endif %}
       {% if is_upgrade_from_oneoff|default(false) %}
       <p style="font-size: 0.9rem; color: #fff; margin: 1.5rem 0 1rem; padding: 0.75rem 1rem; background: #000; border-radius: 8px; border: 2px solid #fff;">Upgrading from one-off? Your first subscription pack will be delivered <strong>30 days after your one-off pack is delivered</strong>, so you get continuous content with no overlap. <strong>Your form will be prefilled</strong> with your answers from your one-off pack—even if you add more platforms or Story Ideas here. You can edit your form anytime in your account.</p>
-      <p style="font-size: 0.9rem; color: var(--lum-text-muted); margin: 0 0 0.5rem;">You won't be charged today. You'll be charged <strong>{{ currency_symbol|default('£') }}{{ total_sub|default(79) }}/month</strong> when your first subscription pack is ready{% if first_charge_date %} (on {{ first_charge_date }}){% else %} (30 days after your one-off pack is delivered){% endif %}. By continuing you agree to this.</p>
+      <p style="font-size: 0.9rem; color: var(--lum-text-muted); margin: 0 0 0.5rem;">You won't be charged today. You'll be charged <strong>{{ currency_symbol|default('£') }}{{ total_sub|default(79) }}/month</strong> when your first subscription pack is ready{% if first_charge_date %} (on {{ first_charge_date }}){% else %} (30 days after your one-off pack is delivered){% endif %}. Enter a friend’s promotion code on the Stripe payment page if you have one. By continuing you agree to this.</p>
       <p style="font-size: 0.9rem; color: var(--lum-text-muted); margin: 0 0 0.75rem;">After your first pack is delivered, you can get your next pack sooner from your account.</p>
       {% if can_get_pack_now|default(false) %}
       <div id="get-pack-now-option" style="margin: 1rem 0 1rem; padding: 1rem; background: rgba(255,242,0,0.08); border: 1px solid rgba(255,242,0,0.35); border-radius: 8px;">

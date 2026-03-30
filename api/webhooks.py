@@ -422,15 +422,47 @@ def _handle_captions_payment(session):
             else:
                 print(f"[Stripe webhook] intake-link email sent to {customer_email}")
 
-    # Referrer reward: if the purchaser was referred (has account with referred_by_customer_id), give referrer one credit.
+    # Referrer reward: signup referral (referred_by) and/or friend's promotion code at Checkout. No credit if self-referral.
     try:
         from services.customer_auth_service import CustomerAuthService
+        from services.stripe_referral_promotion import get_promotion_code_str_from_checkout_session
+
         auth_svc = CustomerAuthService()
         buyer = auth_svc.get_by_email(customer_email)
-        if buyer and buyer.get("referred_by_customer_id"):
-            referrer_id = str(buyer["referred_by_customer_id"])
-            if auth_svc.increment_referral_discount_credits(referrer_id):
-                print(f"[Stripe webhook] Referrer reward: +1 credit for customer {referrer_id[:8]}... (referred friend paid)")
+        buyer_email = (customer_email or "").strip().lower()
+        sess_dict = session if isinstance(session, dict) else _stripe_nested_to_dict(session)
+        promo_str = get_promotion_code_str_from_checkout_session(sess_dict)
+        promo_owner = auth_svc.get_by_referral_code(promo_str) if promo_str else None
+        if promo_owner and (promo_owner.get("email") or "").strip().lower() == buyer_email:
+            print("[Stripe webhook] Referrer reward skipped: checkout email matches promotion code owner (self-referral).")
+        else:
+            referrer_id = None
+            if buyer and buyer.get("referred_by_customer_id"):
+                referrer_id = str(buyer["referred_by_customer_id"]).strip()
+            if not referrer_id and promo_owner:
+                referrer_id = str(promo_owner.get("id") or "").strip()
+            if referrer_id and auth_svc.increment_referral_discount_credits(referrer_id):
+                print(f"[Stripe webhook] Referrer reward: +1 credit for customer {referrer_id[:8]}... (friend paid)")
+                try:
+                    from services.notifications import NotificationService
+
+                    referrer_row = auth_svc.get_by_id(referrer_id)
+                    ref_email = (referrer_row.get("email") or "").strip() if referrer_row else ""
+                    if ref_email:
+                        base = _sanitize_base_url(Config.BASE_URL or "")
+                        if not base or not base.startswith("http"):
+                            base = "https://www.lumo22.com"
+                        account_refer_url = f"{base}/account/refer"
+                        credits_total = int((referrer_row or {}).get("referral_discount_credits") or 0)
+                        notif_ref = NotificationService()
+                        if notif_ref.send_referral_referrer_reward_email(
+                            ref_email, account_refer_url, credits_total
+                        ):
+                            print(f"[Stripe webhook] Referrer reward email sent")
+                        else:
+                            print(f"[Stripe webhook] Referrer reward email failed (non-fatal)")
+                except Exception as email_err:
+                    print(f"[Stripe webhook] Referrer reward email (non-fatal): {email_err}")
     except Exception as e:
         print(f"[Stripe webhook] Referrer credit increment failed (non-fatal): {e}")
 

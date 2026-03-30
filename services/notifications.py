@@ -778,6 +778,31 @@ def _email_change_verification_html(confirm_url: str) -> str:
     return _email_wrapper(content)
 
 
+def _referral_referrer_reward_email_html(account_refer_url: str, credits_total: int) -> str:
+    """Email to referrer when a friend’s purchase earns them a referral credit."""
+    import html
+
+    safe_url = html.escape(account_refer_url, quote=True)
+    if credits_total <= 1:
+        credits_line = (
+            "You have <strong>1</strong> referral credit — 10% off your next captions subscription billing period."
+        )
+    else:
+        credits_line = (
+            f"You now have <strong>{credits_total}</strong> referral credits — 10% off your next "
+            f"{credits_total} billing periods (one discount per period)."
+        )
+    content = f"""<p style="margin:0 0 16px;">Hi,</p>
+<p style="margin:0 0 16px;">Good news — someone completed a qualifying captions purchase through your referral. We've added a referral credit to your account.</p>
+<p style="margin:0 0 16px;">{credits_line}</p>
+<p style="margin:0 0 16px;">View your credits and share your code anytime:</p>
+<p style="margin:0 0 24px;"><a href="{safe_url}" style="display:inline-block; padding:14px 28px; background:{BRAND_GOLD}; color:{BRAND_BLACK}; text-decoration:none; border-radius:10px; font-weight:600;">Refer a friend</a></p>
+<p style="margin:0 0 8px; font-size:14px; color:{BRAND_MUTED};">Or copy this link:</p>
+<p style="margin:0 0 16px; font-size:13px; word-break:break-all; color:#333;">{safe_url}</p>
+<p style="margin:0;">— Lumo 22</p>"""
+    return _email_wrapper(content)
+
+
 def _sanitize_email_value(s: str) -> str:
     """Remove control chars so SendGrid doesn't raise 'Invalid non-printable ASCII'."""
     if not s or not isinstance(s, str):
@@ -900,6 +925,39 @@ If you didn't request this, you can ignore this email. Your password will stay t
 — Lumo 22
 """
         html_body = _password_reset_email_html(reset_url)
+        return self.send_email(to_email, subject, body, html_body=html_body)
+
+    def send_referral_referrer_reward_email(
+        self, to_email: str, account_refer_url: str, credits_total: int
+    ) -> bool:
+        """Notify referrer that a qualifying purchase earned them a credit (signup ref and/or code at checkout)."""
+        account_refer_url = (account_refer_url or "").strip()
+        if not account_refer_url.startswith("http"):
+            print("[SendGrid] Referral reward email NOT sent: invalid account_refer_url")
+            return False
+        credits_total = max(1, int(credits_total or 1))
+        subject = "You earned a Lumo 22 referral credit"
+        if credits_total == 1:
+            credits_plain = (
+                "You have 1 referral credit — 10% off your next captions subscription billing period."
+            )
+        else:
+            credits_plain = (
+                f"You now have {credits_total} referral credits — 10% off your next {credits_total} "
+                "billing periods (one discount per period)."
+            )
+        body = f"""Hi,
+
+Good news — someone completed a qualifying captions purchase through your referral. We've added a referral credit to your account.
+
+{credits_plain}
+
+View your credits and share your code anytime:
+{account_refer_url}
+
+— Lumo 22
+"""
+        html_body = _referral_referrer_reward_email_html(account_refer_url, credits_total)
         return self.send_email(to_email, subject, body, html_body=html_body)
 
     def send_welcome_and_verification_email(self, to_email: str, verify_url: str) -> bool:

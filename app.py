@@ -268,6 +268,17 @@ CAPTIONS_DISPLAY_PRICES = {
     "eur": {"symbol": "€", "oneoff": 109, "sub": 89, "extra_oneoff": 32, "extra_sub": 22, "stories_oneoff": 32, "stories_sub": 19},
 }
 
+def _format_checkout_money(symbol: str, amount) -> str:
+    """Format amount with symbol; omit decimals when whole-number currency units."""
+    try:
+        x = float(amount)
+    except (TypeError, ValueError):
+        x = 0.0
+    x = round(x * 100) / 100
+    if abs(x - round(x)) < 0.001:
+        return f"{symbol}{int(round(x))}"
+    return f"{symbol}{x:.2f}"
+
 
 @app.route('/captions')
 def captions_page():
@@ -572,6 +583,7 @@ def captions_checkout_page():
     q = urlencode(params)
     api_url = f"/api/captions-checkout?{q}" if not platforms_invalid else None
     total = prices["oneoff"] + (platforms - 1) * prices["extra_oneoff"] + (prices["stories_oneoff"] if stories else 0)
+    sym = prices["symbol"]
     captions_prefill = "?" + q + "#pricing"
     back_to_captions_url = "/captions" + captions_prefill
     add_stories_url = ("/captions?stories=1&platforms=" + str(platforms) + "&currency=" + currency + ("&selected=" + quote(selected) if selected else "") + "#pricing") if not stories else None
@@ -583,7 +595,9 @@ def captions_checkout_page():
         stories=stories,
         api_url=api_url,
         total_oneoff=total,
-        currency_symbol=prices["symbol"],
+        checkout_total_display=_format_checkout_money(sym, total),
+        referral_discount_applies=False,
+        currency_symbol=sym,
         platforms_invalid=platforms_invalid,
         add_stories_url=add_stories_url,
         add_platforms_url=add_platforms_url,
@@ -635,6 +649,7 @@ def captions_checkout_subscription_page():
     q = urlencode(params)
     api_url = f"/api/captions-checkout-subscription?{q}" if not platforms_invalid else None
     total = prices["sub"] + (platforms - 1) * prices["extra_sub"] + (prices["stories_sub"] if stories else 0)
+    sym = prices["symbol"]
     captions_prefill = "?" + q + "#pricing"
     back_to_captions_url = "/captions" + captions_prefill
     if not stories:
@@ -676,7 +691,10 @@ def captions_checkout_subscription_page():
         stories=stories,
         api_url=api_url,
         total_sub=total,
-        currency_symbol=prices["symbol"],
+        referral_discount_applies=False,
+        sub_first_month_display=None,
+        sub_thereafter_display=None,
+        currency_symbol=sym,
         platforms_invalid=platforms_invalid,
         add_stories_url=add_stories_url,
         add_platforms_url=add_platforms_url,
@@ -993,12 +1011,11 @@ def _referral_share_mailto_href(base_url: str, code: str) -> str:
         "Hi,\n\n"
         "I'm inviting you to try Lumo 22 — 30 days of social media captions (and optional story ideas) written for your business.\n\n"
         "What this is: Lumo 22's refer-a-friend offer.\n"
-        "The discount: 10% off your first purchase.\n"
-        "How to use it: Use either link below (your discount is included automatically). "
-        "Or, on the Captions page, use “Have a friend's referral code?” and enter your code before you pay — you don't type it into the Stripe payment page.\n\n"
+        "The discount: 10% off your first purchase — applied only when you enter the code below on the Stripe payment page under “Add promotion code”. Visiting a link does not apply the discount by itself.\n"
+        "Links below are just to get to the site or sign up; they don’t take the place of entering the code at checkout.\n\n"
         f"Sign up: {link_signup}\n"
         f"Captions (buy): {link_captions}\n\n"
-        f"Your code: {c}\n\n"
+        f"Your code (enter at Stripe checkout): {c}\n\n"
         "—"
     )
     return "mailto:?subject=" + quote(subject, safe="") + "&body=" + quote(body, safe="")
@@ -1014,9 +1031,9 @@ def _referral_share_sms_href(base_url: str, code: str) -> str:
         return ""
     link_captions = f"{b}/captions?ref={c}"
     text = (
-        "Hi — Lumo 22: 30 days of social captions for your business. 10% off first purchase. "
-        f"Use this link (discount included): {link_captions} "
-        f"Or on lumo22.com/captions use 'Have a friend's referral code?' before paying—not on the card page. Code: {c}"
+        "Hi — Lumo 22: 30 days of social captions. 10% off first purchase — enter this code at Stripe checkout under Add promotion code: "
+        f"{c} "
+        f"(Opening a link alone doesn’t apply the discount.) Start here: {link_captions}"
     )
     return "sms:?body=" + quote(text, safe="")
 

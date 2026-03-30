@@ -24,8 +24,9 @@ _email_change_resend_last = {}
 
 def _get_referral_coupon_id():
     """
-    If the customer is referred (ref= in query and valid, or logged-in with referred_by_customer_id),
-    return the configured Stripe referral coupon ID; else None.
+    Legacy: auto-applied coupon on Checkout Session. Refer-a-friend now uses Stripe Promotion Codes
+    (one per referrer) entered on the Stripe payment page — see allow_promotion_codes on Session.create.
+    Kept for tests and optional call sites; captions checkout no longer applies this automatically.
     """
     coupon_id = (getattr(Config, "STRIPE_REFERRAL_COUPON_ID", None) or "").strip()
     if not coupon_id:
@@ -645,18 +646,16 @@ def captions_checkout():
         metadata["business_key"] = _normalize_business_key(explicit_business_key)
     if business_name_raw:
         metadata["business_name"] = business_name_raw[:120]
-    referral_coupon = _get_referral_coupon_id()
     create_params = {
         "mode": "payment",
         "line_items": line_items,
         "success_url": success_url,
         "cancel_url": cancel_url,
         "metadata": metadata,
+        "allow_promotion_codes": True,
     }
     if checkout_email:
         create_params["customer_email"] = checkout_email
-    if referral_coupon:
-        create_params["discounts"] = [{"coupon": referral_coupon}]
     try:
         session = stripe.checkout.Session.create(**create_params)
         return redirect(session.url, code=302)
@@ -909,13 +908,13 @@ def captions_checkout_subscription():
                 },
                 "quantity": 1,
             })
-    referral_coupon = _get_referral_coupon_id()
     create_params = {
         "mode": "subscription",
         "line_items": line_items,
         "success_url": success_url,
         "cancel_url": cancel_url,
         "metadata": metadata,
+        "allow_promotion_codes": True,
     }
     if subscription_data:
         create_params["subscription_data"] = subscription_data
@@ -936,8 +935,6 @@ def captions_checkout_subscription():
                 }
             except Exception as e:
                 print(f"[captions_checkout_subscription] custom_text for billing anchor: {e}")
-    if referral_coupon:
-        create_params["discounts"] = [{"coupon": referral_coupon}]
     if customer and (customer.get("email") or "").strip():
         create_params["customer_email"] = (customer.get("email") or "").strip()
     try:

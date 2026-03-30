@@ -762,7 +762,7 @@
       <section class="account-section-block">
         <h2>Refer a friend</h2>
         {% if referral_code %}
-        <p class="account-section-desc">Share your referral link — your friend gets 10% off their first purchase. You get 10% off your next billing period for each friend who buys. Discounts don't stack: two referrals = 10% off your next two periods.</p>
+        <p class="account-section-desc">The <strong>10% friend discount</strong> is applied only when they <strong>enter your code at Stripe checkout</strong> (Add promotion code)—not from opening a link alone. Your link includes <code style="font-size:0.9em;">?ref=</code> so sign-up can be attributed to you; it does not apply the discount. Share your link or code; you get 10% off your next billing period for each friend who completes a purchase. Discounts don't stack: two referrals = 10% off your next two periods.</p>
         <div class="account-referral-block" id="referral-share-root">
           <label class="account-settings-label" for="referral-link">Your referral link</label>
           <div class="referral-row" style="display: flex; gap: 0.75rem; align-items: center; margin-top: 0.5rem;">
@@ -775,7 +775,7 @@
             <button type="button" id="referral-copy-code-btn" class="dfd-btn dfd-btn-secondary referral-copy account-btn-swipe-light" onclick="copyReferralCode()">Copy code</button>
           </div>
           <label class="account-settings-label" for="referral-share-email-btn" style="margin-top: 0.75rem; display: block;">Quick share</label>
-          <p class="account-settings-desc" style="margin-top: 0.35rem; margin-bottom: 0;">Opens your email app or messages with a ready-to-send draft — one link plus your code, and what the discount is for.</p>
+          <p class="account-settings-desc" style="margin-top: 0.35rem; margin-bottom: 0;">Opens your email or messages with a draft that tells them to enter your code at Stripe checkout—the discount isn’t applied by the link alone.</p>
           <div class="referral-share-actions">
             <a id="referral-share-email-btn" class="dfd-btn dfd-btn-secondary referral-copy account-btn-swipe-light referral-share-native" href="{{ referral_mailto_href }}">Share by email</a>
             <a id="referral-share-sms-btn" class="dfd-btn dfd-btn-secondary referral-copy account-btn-swipe-light referral-share-native" href="{{ referral_sms_href }}">Share by text</a>

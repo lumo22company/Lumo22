@@ -1,100 +1,54 @@
 #!/usr/bin/env python3
 """
-Test that referral discount (Stripe coupon) is applied at captions checkout when:
-- ref= is in the URL and matches a valid referrer, or
-- customer is logged in and has referred_by_customer_id set.
+Refer-a-friend: discounts are entered on Stripe Checkout (promotion codes), not auto-applied on Session.create.
 """
 import sys
 from unittest.mock import patch, MagicMock
 
 
-def test_referral_coupon_applied_when_ref_valid():
-    """When ref=VALIDCODE is in query and referrer exists, Session.create is called with discounts."""
+def test_checkout_allows_promotion_codes_no_auto_discount():
+    """Captions one-off checkout enables Stripe promotion codes; does not auto-apply coupon."""
     from app import app
+
     fake_session = MagicMock()
     fake_session.url = "https://checkout.stripe.com/fake"
     with app.test_client() as client:
         with patch("stripe.checkout.Session.create") as mock_create:
             mock_create.return_value = fake_session
-            with patch("api.captions_routes._get_referral_coupon_id") as mock_get_coupon:
-                mock_get_coupon.return_value = "coupon_referral10"
-                r = client.get("/api/captions-checkout?platforms=1&ref=FRIEND01")
+            r = client.get("/api/captions-checkout?platforms=1&ref=FRIEND01")
     if r.status_code != 302:
         print("FAIL: expected 302 redirect, got", r.status_code)
         sys.exit(1)
     call_kw = mock_create.call_args[1]
-    if call_kw.get("discounts") != [{"coupon": "coupon_referral10"}]:
-        print("FAIL: expected discounts=[{\"coupon\": \"coupon_referral10\"}], got", call_kw.get("discounts"))
+    if not call_kw.get("allow_promotion_codes"):
+        print("FAIL: expected allow_promotion_codes=True, got", call_kw.get("allow_promotion_codes"))
         sys.exit(1)
-    print("PASS: referral coupon applied when ref valid (mocked)")
+    if call_kw.get("discounts"):
+        print("FAIL: expected no automatic discounts, got", call_kw.get("discounts"))
+        sys.exit(1)
+    print("PASS: one-off checkout allows promotion codes, no auto discount")
 
 
-def test_referral_coupon_not_applied_when_no_ref_no_referred_customer():
-    """When no ref and no referred customer, Session.create is called without discounts."""
+def test_subscription_checkout_allows_promotion_codes():
+    """Subscription checkout allows promotion codes."""
     from app import app
-    fake_session = MagicMock()
-    fake_session.url = "https://checkout.stripe.com/fake"
-    with app.test_client() as client:
-        with patch("stripe.checkout.Session.create") as mock_create:
-            mock_create.return_value = fake_session
-            with patch("api.captions_routes._get_referral_coupon_id") as mock_get_coupon:
-                mock_get_coupon.return_value = None
-                r = client.get("/api/captions-checkout?platforms=1")
-    if r.status_code != 302:
-        print("FAIL: expected 302, got", r.status_code)
-        sys.exit(1)
-    call_kw = mock_create.call_args[1]
-    if "discounts" in call_kw and call_kw["discounts"]:
-        print("FAIL: expected no discounts, got", call_kw.get("discounts"))
-        sys.exit(1)
-    print("PASS: no referral discount when no ref / not referred (mocked)")
-
-
-def test_referral_coupon_via_get_by_referral_code_not_mocked_coupon_fn():
-    """Integration: _get_referral_coupon_id + valid ref + STRIPE_REFERRAL_COUPON_ID → Session discounts."""
-    from app import app
-    from api.captions_routes import Config as CaptionsConfig
-    from unittest.mock import MagicMock
+    from unittest.mock import patch, MagicMock
 
     fake_session = MagicMock()
     fake_session.url = "https://checkout.stripe.com/fake"
     with app.test_client() as client:
         with patch("stripe.checkout.Session.create") as mock_create:
             mock_create.return_value = fake_session
-            with patch.object(CaptionsConfig, "STRIPE_REFERRAL_COUPON_ID", "coupon_env_referral"):
-                with patch(
-                    "services.customer_auth_service.CustomerAuthService.get_by_referral_code",
-                    return_value={"id": "uuid-referrer", "email": "r@example.com"},
-                ):
-                    r = client.get("/api/captions-checkout?platforms=1&ref=VALIDREF1")
+            with patch("api.auth_routes.get_current_customer", return_value={"id": "u1", "email": "a@b.com"}):
+                r = client.get("/api/captions-checkout-subscription?platforms=1")
     assert r.status_code == 302, r.status_code
     call_kw = mock_create.call_args[1]
-    assert call_kw.get("discounts") == [{"coupon": "coupon_env_referral"}]
-
-
-def test_referral_coupon_not_applied_when_ref_unknown():
-    """Integration: ref present but not in DB → no coupon on Session."""
-    from app import app
-    from api.captions_routes import Config as CaptionsConfig
-    from unittest.mock import MagicMock
-
-    fake_session = MagicMock()
-    fake_session.url = "https://checkout.stripe.com/fake"
-    with app.test_client() as client:
-        with patch("stripe.checkout.Session.create") as mock_create:
-            mock_create.return_value = fake_session
-            with patch.object(CaptionsConfig, "STRIPE_REFERRAL_COUPON_ID", "coupon_env_referral"):
-                with patch(
-                    "services.customer_auth_service.CustomerAuthService.get_by_referral_code",
-                    return_value=None,
-                ):
-                    r = client.get("/api/captions-checkout?platforms=1&ref=NOTREAL01")
-    assert r.status_code == 302
-    call_kw = mock_create.call_args[1]
+    assert call_kw.get("allow_promotion_codes") is True
     assert not call_kw.get("discounts")
+    print("PASS: subscription checkout allows promotion codes")
 
 
 if __name__ == "__main__":
-    test_referral_coupon_applied_when_ref_valid()
-    test_referral_coupon_not_applied_when_no_ref_no_referred_customer()
-    print("All referral discount tests passed.")
+    test_checkout_allows_promotion_codes_no_auto_discount()
+    test_subscription_checkout_allows_promotion_codes()
+    print("All referral checkout tests passed.")

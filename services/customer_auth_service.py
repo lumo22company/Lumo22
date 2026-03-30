@@ -94,6 +94,7 @@ class CustomerAuthService:
         c = result.data[0]
         code = (c.get("referral_code") or "").strip()
         if code:
+            self._sync_stripe_referral_promotion(customer_id)
             return code
         code = self._generate_referral_code()
         try:
@@ -101,9 +102,36 @@ class CustomerAuthService:
                 "referral_code": code,
                 "updated_at": datetime.utcnow().isoformat(),
             }).eq("id", customer_id).execute()
+            self._sync_stripe_referral_promotion(customer_id)
             return code
         except Exception:
             return None
+
+    def _sync_stripe_referral_promotion(self, customer_id: str) -> None:
+        """Best-effort: create Stripe Promotion Code for this customer's referral_code (friend enters at Checkout)."""
+        try:
+            from services.stripe_referral_promotion import ensure_stripe_promotion_code_for_customer
+
+            cust = self.get_by_id(customer_id)
+            if cust:
+                ensure_stripe_promotion_code_for_customer(cust)
+        except Exception as e:
+            print(f"[CustomerAuthService] stripe referral promotion: {e}")
+
+    def set_stripe_referral_promotion_code_id(self, customer_id: str, promotion_code_id: str) -> bool:
+        """Persist Stripe Promotion Code id (prom_xxx) after creation."""
+        if not customer_id or not promotion_code_id:
+            return False
+        try:
+            self.client.table(self.table).update(
+                {
+                    "stripe_referral_promotion_code_id": promotion_code_id.strip(),
+                    "updated_at": datetime.utcnow().isoformat(),
+                }
+            ).eq("id", str(customer_id)).execute()
+            return True
+        except Exception:
+            return False
 
     def create(
         self,
