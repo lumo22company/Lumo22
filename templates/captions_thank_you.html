@@ -23,6 +23,15 @@
     /* Fill out form now / I'll do it later: yellow text, yellow outline, swipe on hover — see landing.css .thankyou-cta-swipe */
     .thankyou-spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid var(--lum-text-muted); border-top-color: transparent; border-radius: 50%; animation: thankyou-spin 0.8s linear infinite; vertical-align: middle; margin-right: 0.5rem; }
     @keyframes thankyou-spin { to { transform: rotate(360deg); } }
+    /* CTAs in a row: don’t stretch to equal height/width; secondary action stays compact */
+    .thankyou-cta-row { align-items: flex-start; }
+    .thankyou-cta-row .thankyou-cta-swipe { flex: 0 1 auto; align-self: flex-start; width: auto; max-width: 100%; }
+    .thankyou-cta-swipe.thankyou-cta-later {
+      padding: 0.5rem 1rem;
+      min-height: 0;
+      font-size: 0.65rem;
+      letter-spacing: 0.12em;
+    }
   </style>
 </head>
 <body class="lumo-landing" data-current-customer="{{ 'true' if current_customer else 'false' }}">
@@ -31,7 +40,8 @@
       <a href="/" class="lumo-nav-logo">Lumo 22</a>
       <a href="/captions" class="lumo-nav-link">Captions</a>
     </div>
-    {% if current_customer %}<a href="/account" class="lumo-nav-cta lumo-nav-account">Account</a>{% else %}<a href="/login" class="lumo-nav-cta lumo-nav-login">Log In</a>{% endif %}
+    {# Logged-in: no Account link here — back footer points to /account. Guests: Log In. #}
+    {% if not current_customer %}<a href="/login" class="lumo-nav-cta lumo-nav-login">Log In</a>{% endif %}
   </nav>
 
   <!-- Same thank-you page for captions one-off and subscription; intake link is polled via session_id. No template vars required. -->
@@ -92,7 +102,7 @@
         </div>
         <p id="thankyou-email-error" style="display: none; margin: 0.5rem 0 0; font-size: 0.9rem; color: #f99;"></p>
       </div>
-      <p class="thankyou-back"><a href="/captions">← Back to Captions</a> · <a href="/">Lumo 22 home</a></p>
+      <p class="thankyou-back">{% if current_customer %}<a href="/account">← Back to account</a>{% else %}<a href="/captions">← Back to Captions</a>{% endif %} · <a href="/">Lumo 22 home</a></p>
     </div>
   </section>
 
