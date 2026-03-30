@@ -1359,7 +1359,7 @@ def _run_generation_and_deliver(
             order_service.record_delivery_failure(order_id, "No customer_email for order")
         except Exception as rec_err:
             print(f"[Captions] record_delivery_failure failed: {rec_err}")
-            order_service.set_failed(order_id)
+        order_service.set_failed(order_id)
         return (False, "No customer_email for order")
 
     # For subscriptions, pass previous pack themes so this month varies (avoid repetition)
@@ -1535,10 +1535,10 @@ def _run_generation_and_deliver(
             order_service.record_delivery_failure(order_id, err_msg)
         except Exception as rec_err:
             print(f"[Captions] record_delivery_failure failed: {rec_err}")
-            try:
-                order_service.set_failed(order_id)
-            except Exception as set_err:
-                print(f"[Captions] set_failed also failed: {set_err}")
+        try:
+            order_service.set_failed(order_id)
+        except Exception as set_err:
+            print(f"[Captions] set_failed also failed: {set_err}")
         return (False, err_msg)
 
 
@@ -2242,7 +2242,7 @@ def captions_download():
             return jsonify({"error": "Stories PDF not available for this pack"}), 404
         filename = f"{name_label}_Stories_{date_str}.pdf"
         disp = "inline" if inline else "attachment"
-        return Response(
+    return Response(
             pdf_bytes,
             mimetype="application/pdf",
             headers={"Content-Disposition": "{}; filename={}".format(disp, filename)},
