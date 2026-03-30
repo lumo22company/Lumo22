@@ -764,7 +764,11 @@
         {% if referral_code %}
         <p class="account-section-desc">The <strong>10% friend discount</strong> applies when they <strong>enter your code at Stripe checkout</strong> (Add promotion code). Share your code below or via email/text—you get 10% off your next billing period for each friend who completes a purchase. Discounts don't stack: two referrals = 10% off your next two periods.</p>
         {% if referral_discount_configured|default(false) and not referral_stripe_promo_ok|default(false) %}
-        <p class="account-section-desc" style="margin-top: 0.75rem; padding: 0.75rem 1rem; background: rgba(220, 160, 50, 0.12); border: 1px solid rgba(255, 200, 80, 0.35); border-radius: 10px; color: #fff;">Your code could not be linked to the payment page yet (or the link expired). <strong>Refresh this page</strong> to try again. If a friend still sees &ldquo;invalid code&rdquo; at checkout, email <a href="mailto:hello@lumo22.com" style="color: var(--lum-gold); font-weight: 600;">hello@lumo22.com</a> so we can fix it.</p>
+        <div class="account-referral-stripe-warning" style="margin-top: 0.75rem; padding: 0.75rem 1rem; background: rgba(220, 160, 50, 0.12); border: 1px solid rgba(255, 200, 80, 0.35); border-radius: 10px; color: #fff;">
+          <p class="account-section-desc" style="margin: 0; color: #fff;">Your code could not be linked to the payment page yet (or the link expired). Use <strong>Retry linking</strong> below—we will try again with Stripe. You can still refresh the page. If a friend sees &ldquo;invalid code&rdquo; at checkout, email <a href="mailto:hello@lumo22.com" style="color: var(--lum-gold); font-weight: 600;">hello@lumo22.com</a>.</p>
+          <button type="button" id="referral-stripe-retry-btn" class="dfd-btn dfd-btn-secondary account-btn-swipe-light" style="margin-top: 0.65rem;">Retry linking to Stripe</button>
+          <p id="referral-stripe-retry-msg" style="display: none; margin: 0.5rem 0 0; font-size: 0.85rem; color: rgba(255,255,255,0.75);"></p>
+        </div>
         {% endif %}
         <div class="account-referral-block" id="referral-share-root">
           <label class="account-settings-label" for="referral-code" style="margin-top: 0; display: block;">Your referral code</label>
@@ -1078,6 +1082,38 @@
 
       /* Share by email/text use server-built mailto:/sms: hrefs on <a> (reliable; JS mailto was flaky). */
       window.copyReferralCode = copyReferralCode;
+
+      function retryReferralStripeSync() {
+        var btn = document.getElementById('referral-stripe-retry-btn');
+        var msg = document.getElementById('referral-stripe-retry-msg');
+        if (!btn) return;
+        btn.disabled = true;
+        if (msg) { msg.style.display = 'block'; msg.textContent = 'Linking…'; }
+        fetch('/api/account/referral-stripe-sync', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+          .then(function(r) { return r.json().then(function(data) { return { ok: r.ok, data: data }; }); })
+          .then(function(res) {
+            var d = res.data || {};
+            if (d.linked) {
+              if (msg) msg.textContent = 'Linked. Reloading…';
+              window.location.reload();
+              return;
+            }
+            if (msg) {
+              msg.textContent = d.referral_discount_configured === false
+                ? 'Stripe coupon or secret key is not set on the server. Check Railway variables.'
+                : 'Still not linked. Check Railway logs for [stripe_referral_promotion] and confirm the Supabase customers table has stripe_referral_promotion_code_id.';
+            }
+          })
+          .catch(function() {
+            if (msg) msg.textContent = 'Request failed. Try again or email hello@lumo22.com.';
+          })
+          .finally(function() { btn.disabled = false; });
+      }
+      window.retryReferralStripeSync = retryReferralStripeSync;
+      document.addEventListener('DOMContentLoaded', function() {
+        var rb = document.getElementById('referral-stripe-retry-btn');
+        if (rb) rb.addEventListener('click', retryReferralStripeSync);
+      });
 
       function formatResumeDate() {
         var d = new Date();

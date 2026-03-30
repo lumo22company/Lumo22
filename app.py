@@ -1330,6 +1330,45 @@ def account_change_password_page():
     return render_template('change_password_logged_in.html')
 
 
+@app.route("/api/account/referral-stripe-sync", methods=["POST"])
+def referral_stripe_sync_api():
+    """
+    Logged-in: re-run Stripe promotion code create/reconcile for refer-a-friend.
+    Use when account shows 'could not be linked to the payment page' but STRIPE_REFERRAL_COUPON_ID is set.
+    """
+    customer = get_current_customer()
+    if not customer:
+        return jsonify({"ok": False, "linked": False, "error": "sign_in_required"}), 401
+    try:
+        from services.customer_auth_service import CustomerAuthService
+        from services.stripe_referral_promotion import ensure_stripe_promotion_code_for_customer
+
+        auth = CustomerAuthService()
+        cid = str(customer.get("id") or "").strip()
+        if not cid:
+            return jsonify({"ok": False, "linked": False, "error": "invalid_session"}), 400
+        auth.ensure_referral_code(cid)
+        fresh = auth.get_by_id(cid)
+        if not fresh:
+            return jsonify({"ok": False, "linked": False, "error": "customer_not_found"}), 404
+        ensure_stripe_promotion_code_for_customer(fresh)
+        again = auth.get_by_id(cid)
+        linked = bool((again.get("stripe_referral_promotion_code_id") or "").strip())
+        ref_coupon = (getattr(Config, "STRIPE_REFERRAL_COUPON_ID", None) or "").strip()
+        ref_secret = (getattr(Config, "STRIPE_SECRET_KEY", None) or "").strip()
+        configured = bool(ref_coupon and ref_secret)
+        return jsonify(
+            {
+                "ok": True,
+                "linked": linked,
+                "referral_discount_configured": configured,
+            }
+        )
+    except Exception as e:
+        print(f"[referral-stripe-sync] {e!r}")
+        return jsonify({"ok": False, "linked": False, "error": "server_error"}), 500
+
+
 @app.route('/account')
 @app.route('/account/<section>')
 @customer_login_required
