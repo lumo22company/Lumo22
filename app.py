@@ -1004,17 +1004,15 @@ def _referral_share_mailto_href(base_url: str, code: str) -> str:
     c = (code or "").strip()
     if not b or not c:
         return ""
-    link_signup = f"{b}/signup?ref={c}"
-    link_captions = f"{b}/captions?ref={c}"
+    link_home = f"{b}/"
     subject = "10% off Lumo 22 — your friend invited you"
     body = (
         "Hi,\n\n"
         "I'm inviting you to try Lumo 22 — 30 days of social media captions (and optional story ideas) written for your business.\n\n"
         "What this is: Lumo 22's refer-a-friend offer.\n"
         "The discount: 10% off your first purchase — applied only when you enter the code below on the Stripe payment page under “Add promotion code”. Visiting a link does not apply the discount by itself.\n"
-        "Links below are just to get to the site or sign up; they don’t take the place of entering the code at checkout.\n\n"
-        f"Sign up: {link_signup}\n"
-        f"Captions (buy): {link_captions}\n\n"
+        "Our site (optional):\n"
+        f"{link_home}\n\n"
         f"Your code (enter at Stripe checkout): {c}\n\n"
         "—"
     )
@@ -1029,11 +1027,11 @@ def _referral_share_sms_href(base_url: str, code: str) -> str:
     c = (code or "").strip()
     if not b or not c:
         return ""
-    link_captions = f"{b}/captions?ref={c}"
+    link_home = f"{b}/"
     text = (
         "Hi — Lumo 22: 30 days of social captions. 10% off first purchase — enter this code at Stripe checkout under Add promotion code: "
         f"{c} "
-        f"(Opening a link alone doesn’t apply the discount.) Start here: {link_captions}"
+        f"(Opening a link alone doesn’t apply the discount.) {link_home}"
     )
     return "sms:?body=" + quote(text, safe="")
 

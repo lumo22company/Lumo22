@@ -271,14 +271,8 @@
         <p style="font-size: 0.8rem; color: var(--lum-text-muted); margin: 0.5rem 0 0;">Your choice will be prefilled on the form after payment.</p>
       </div>
       <div class="captions-ref-code-wrap" id="captions-ref-code-wrap" style="max-width: 600px; margin: 0 auto 1.25rem; padding: 1rem 1.25rem; background: rgba(255,242,0,0.08); border-radius: 10px; border: 1px solid rgba(255,242,0,0.25);">
-        <label for="captions-ref-code-input" style="display: block; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.35rem;">Have a referral code?</label>
-        <p style="font-size: 0.8rem; color: var(--lum-text-muted); margin: 0 0 0.5rem;"><strong>Enter it at checkout</strong> on the Stripe payment page under “Add promotion code” to get your 10% discount. Saving a code here only adds <code style="font-size:0.85em;">?ref=</code> to the link for sign-up attribution — it does not apply the discount by itself.</p>
-        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
-          <input type="text" id="captions-ref-code-input" name="referral_code" autocomplete="off" maxlength="32" placeholder="e.g. AB12CD34" inputmode="text" autocapitalize="characters" style="flex: 1; min-width: 160px; padding: 0.55rem 0.75rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.25); color: inherit; font-size: 1rem;" />
-          <button type="button" id="captions-ref-code-apply" class="dfd-btn dfd-btn-secondary captions-btn-swipe" style="flex-shrink: 0;">Apply</button>
-          <button type="button" id="captions-ref-code-clear" class="dfd-btn dfd-btn-secondary captions-btn-swipe" style="flex-shrink: 0; display: none;">Remove</button>
-        </div>
-        <p id="captions-ref-code-msg" role="status" style="display: none; margin: 0.5rem 0 0; font-size: 0.85rem;"></p>
+        <p style="margin: 0; font-size: 0.9rem; font-weight: 600; color: inherit;">Have a friend’s referral code?</p>
+        <p style="font-size: 0.8rem; color: var(--lum-text-muted); margin: 0.35rem 0 0; line-height: 1.45;">When you continue to checkout and pay on Stripe, use <strong>Add promotion code</strong> and enter their code to get <strong>10% off</strong> your first qualifying purchase. You don’t enter it on this page.</p>
       </div>
       <div class="lumo-pricing-grid">
         {% if captions_subscription_available %}
@@ -382,7 +376,7 @@
         </details>
         <details class="dfd-faq-item" id="refer-a-friend">
           <summary class="dfd-faq-question">How does refer-a-friend work?</summary>
-          <p class="dfd-faq-answer">Share your link and code from your account (Refer a friend). When someone buys captions, they <strong>enter your code at checkout</strong> on the Stripe payment page (Add promotion code) for 10% off their first qualifying purchase. You get 10% off your next captions subscription billing period for each friend who completes a purchase. Discounts don't stack: two referrals = 10% off your next two billing periods (one 10% off per period), not 20% off one period. Saving a code in the box above only helps sign-up attribution — the discount always applies when they type the code in Stripe.</p>
+          <p class="dfd-faq-answer">Share your code from your account (Refer a friend). When someone buys captions, they <strong>enter your code at checkout</strong> on the Stripe payment page (Add promotion code) for 10% off their first qualifying purchase. You get 10% off your next captions subscription billing period for each friend who completes a purchase. Discounts don't stack: two referrals = 10% off your next two billing periods (one 10% off per period), not 20% off one period.</p>
         </details>
         <details class="dfd-faq-item">
           <summary class="dfd-faq-question">How many times can someone use a referral code?</summary>
@@ -390,7 +384,7 @@
         </details>
         <details class="dfd-faq-item">
           <summary class="dfd-faq-question">Do I need a Lumo account to use a friend’s referral code?</summary>
-          <p class="dfd-faq-answer">The <strong>code is entered on Stripe’s payment page</strong>—that’s what applies the 10% off. For a <strong>one-off</strong> purchase you can complete checkout without a Lumo account (we use the email from Stripe). For a <strong>subscription</strong>, you’ll already be in the account flow before checkout. Saving a code in the box on this page only adds <code style="font-size:0.85em;">?ref=</code> to links for sign-up attribution; it doesn’t replace entering the code at checkout.</p>
+          <p class="dfd-faq-answer">The <strong>code is entered on Stripe’s payment page</strong>—that’s what applies the 10% off. For a <strong>one-off</strong> purchase you can complete checkout without a Lumo account (we use the email from Stripe). For a <strong>subscription</strong>, you’ll already be in the account flow before checkout. You don’t enter the code on the captions page; use <strong>Add promotion code</strong> when you pay.</p>
         </details>
         <details class="dfd-faq-item">
           <summary class="dfd-faq-question">I have a product launch, sale, or event. Can you tailor the captions?</summary>
@@ -662,69 +656,6 @@
           setTimeout(function() { pricingEl.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 100);
         }
       }
-    })();
-    (function initReferralCode() {
-      var input = document.getElementById('captions-ref-code-input');
-      var applyBtn = document.getElementById('captions-ref-code-apply');
-      var clearBtn = document.getElementById('captions-ref-code-clear');
-      var msg = document.getElementById('captions-ref-code-msg');
-      if (!input || !applyBtn) return;
-      function showMsg(text, isError) {
-        if (!msg) return;
-        msg.style.display = text ? 'block' : 'none';
-        msg.textContent = text || '';
-        msg.style.color = isError ? '#ff9999' : 'var(--lum-gold)';
-      }
-      function refreshClearVisibility() {
-        if (clearBtn) clearBtn.style.display = getRefForCheckout() ? 'inline-flex' : 'none';
-      }
-      function prefillInput() {
-        var r = getRefForCheckout();
-        if (r) input.value = r;
-        refreshClearVisibility();
-      }
-      applyBtn.addEventListener('click', function() {
-        var raw = (input.value || '').trim();
-        if (raw.length < 4) {
-          showMsg('Enter a referral code (at least 4 characters).', true);
-          return;
-        }
-        showMsg('Checking…', false);
-        fetch('/api/referral-code-check?code=' + encodeURIComponent(raw), { credentials: 'same-origin' })
-          .then(function(r) { return r.json(); })
-          .then(function(data) {
-            if (!data || !data.valid) {
-              showMsg('That code wasn’t found. Double-check with your friend or use their link.', true);
-              return;
-            }
-            var code = raw.toUpperCase();
-            try { sessionStorage.setItem(REF_SESSION_KEY, code); } catch (e) {}
-            var params = new URLSearchParams(window.location.search);
-            params.set('ref', code);
-            var qs = params.toString();
-            history.replaceState({}, '', window.location.pathname + (qs ? '?' + qs : '') + window.location.hash);
-            input.value = code;
-            showMsg('Saved for this visit — use the same code in Stripe at checkout under “Add promotion code”.', false);
-            refreshClearVisibility();
-            updateLinks();
-          })
-          .catch(function() { showMsg('Couldn’t verify right now. Try again or use your friend’s link.', true); });
-      });
-      if (clearBtn) clearBtn.addEventListener('click', function() {
-        try { sessionStorage.removeItem(REF_SESSION_KEY); } catch (e) {}
-        var params = new URLSearchParams(window.location.search);
-        params.delete('ref');
-        var qs = params.toString();
-        history.replaceState({}, '', window.location.pathname + (qs ? '?' + qs : '') + window.location.hash);
-        input.value = '';
-        showMsg('', false);
-        refreshClearVisibility();
-        updateLinks();
-      });
-      input.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') { e.preventDefault(); applyBtn.click(); }
-      });
-      prefillInput();
     })();
     updateWhichUI();
     updateLinks();

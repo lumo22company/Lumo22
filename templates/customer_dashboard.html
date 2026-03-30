@@ -762,20 +762,15 @@
       <section class="account-section-block">
         <h2>Refer a friend</h2>
         {% if referral_code %}
-        <p class="account-section-desc">The <strong>10% friend discount</strong> is applied only when they <strong>enter your code at Stripe checkout</strong> (Add promotion code)—not from opening a link alone. Your link includes <code style="font-size:0.9em;">?ref=</code> so sign-up can be attributed to you; it does not apply the discount. Share your link or code; you get 10% off your next billing period for each friend who completes a purchase. Discounts don't stack: two referrals = 10% off your next two periods.</p>
+        <p class="account-section-desc">The <strong>10% friend discount</strong> applies when they <strong>enter your code at Stripe checkout</strong> (Add promotion code). Share your code below or via email/text—you get 10% off your next billing period for each friend who completes a purchase. Discounts don't stack: two referrals = 10% off your next two periods.</p>
         <div class="account-referral-block" id="referral-share-root">
-          <label class="account-settings-label" for="referral-link">Your referral link</label>
-          <div class="referral-row" style="display: flex; gap: 0.75rem; align-items: center; margin-top: 0.5rem;">
-            <input type="text" id="referral-link" readonly value="{{ base_url }}/signup?ref={{ referral_code }}" class="referral-input" style="flex: 1; padding: 0.6rem 0.9rem; font-size: 0.9rem; border: 1px solid rgba(0,0,0,0.15); border-radius: 12px; background: #f8f8f6; color: #111;">
-            <button type="button" id="referral-copy-link-btn" class="dfd-btn dfd-btn-secondary referral-copy account-btn-swipe-light" onclick="copyReferralLink()">Copy link</button>
-        </div>
-          <label class="account-settings-label" for="referral-code" style="margin-top: 0.75rem; display: block;">Or share your code</label>
+          <label class="account-settings-label" for="referral-code" style="margin-top: 0; display: block;">Your referral code</label>
           <div class="referral-row" style="display: flex; gap: 0.75rem; align-items: center; margin-top: 0.5rem;">
             <input type="text" id="referral-code" readonly value="{{ referral_code }}" class="referral-input" aria-label="Your referral code" style="flex: 1; padding: 0.6rem 0.9rem; font-size: 0.9rem; border: 1px solid rgba(0,0,0,0.15); border-radius: 12px; background: #f8f8f6; color: #111;">
             <button type="button" id="referral-copy-code-btn" class="dfd-btn dfd-btn-secondary referral-copy account-btn-swipe-light" onclick="copyReferralCode()">Copy code</button>
           </div>
           <label class="account-settings-label" for="referral-share-email-btn" style="margin-top: 0.75rem; display: block;">Quick share</label>
-          <p class="account-settings-desc" style="margin-top: 0.35rem; margin-bottom: 0;">Opens your email or messages with a draft that tells them to enter your code at Stripe checkout—the discount isn’t applied by the link alone.</p>
+          <p class="account-settings-desc" style="margin-top: 0.35rem; margin-bottom: 0;">Opens your email or messages with a ready-to-send draft that includes your code and how to enter it at Stripe checkout.</p>
           <div class="referral-share-actions">
             <a id="referral-share-email-btn" class="dfd-btn dfd-btn-secondary referral-copy account-btn-swipe-light referral-share-native" href="{{ referral_mailto_href }}">Share by email</a>
             <a id="referral-share-sms-btn" class="dfd-btn dfd-btn-secondary referral-copy account-btn-swipe-light referral-share-native" href="{{ referral_sms_href }}">Share by text</a>
@@ -785,7 +780,7 @@
         {% endif %}
       </div>
         {% else %}
-        <p class="account-section-desc">Referral codes are available for active customers. Make a purchase to get your unique link.</p>
+        <p class="account-section-desc">Referral codes are available for active customers. Make a purchase to get your unique code.</p>
         {% endif %}
     </section>
       {% endif %}
@@ -1063,18 +1058,6 @@
       }
       window.toggleReminder = toggleReminder;
 
-      function copyReferralLink() {
-        var input = document.getElementById('referral-link');
-        if (!input) return;
-        input.select();
-        input.setSelectionRange(0, 99999);
-        try {
-          navigator.clipboard.writeText(input.value);
-          var btn = document.getElementById('referral-copy-link-btn');
-          if (btn) { btn.textContent = 'Copied!'; setTimeout(function() { btn.textContent = 'Copy link'; }, 2000); }
-        } catch (e) {}
-      }
-
       function copyReferralCode() {
         var input = document.getElementById('referral-code');
         if (!input) return;
@@ -1090,7 +1073,6 @@
       }
 
       /* Share by email/text use server-built mailto:/sms: hrefs on <a> (reliable; JS mailto was flaky). */
-      window.copyReferralLink = copyReferralLink;
       window.copyReferralCode = copyReferralCode;
 
       function formatResumeDate() {
