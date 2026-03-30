@@ -21,8 +21,24 @@
     .checkout-card .back a { color: var(--lum-text-muted); text-decoration: none; font-size: 0.95rem; }
     .checkout-card .back a:hover { color: var(--lum-text); }
     .checkout-order-summary { color: #fff; font-weight: 600; font-size: 1rem; margin-bottom: 0; }
+    .checkout-order-summary-block {
+      margin: 0.35rem 0 1.25rem;
+      padding: 1rem 1.15rem 1.1rem;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 10px;
+    }
+    .checkout-order-summary-block-title {
+      margin: 0 0 0.75rem;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--lum-text-muted);
+    }
     .checkout-order-summary p { margin: 0; }
-    .checkout-order-summary .checkout-selection-addon { margin: 0.5rem 0 0; font-weight: 600; font-size: 0.95rem; color: #fff; }
+    .checkout-order-summary .checkout-summary-line + .checkout-summary-line { margin-top: 0.65rem; padding-top: 0.65rem; border-top: 1px solid rgba(255, 255, 255, 0.1); }
+    .checkout-order-summary .checkout-selection-addon { margin: 0; font-weight: 600; font-size: 0.95rem; color: #fff; }
     .checkout-business-field { margin-top: 1.25rem; }
     .checkout-business-field label { display: block; font-size: 0.85rem; color: var(--lum-text-muted); margin-bottom: 0.4rem; }
     .checkout-business-field input {
@@ -55,15 +71,16 @@
       {% if platforms_invalid %}
       <p class="checkout-platform-error" style="margin-bottom: 1rem; padding: 0.75rem 1rem; background: rgba(220,50,50,0.15); border: 1px solid rgba(220,50,50,0.4); border-radius: 8px; color: #ff9999; font-size: 0.9rem;">Please go back and select which {{ platforms }} platform(s) you want on the captions page.</p>
       {% else %}
-      <div id="checkout-platform-note" class="checkout-order-summary">
+      <div id="checkout-platform-note" class="checkout-order-summary checkout-order-summary-block">
+        <p class="checkout-order-summary-block-title">What you&rsquo;re ordering</p>
         {% if selected %}
-        <p>PLATFORMS: {{ selected }}</p>
-        {% if stories %}<p class="checkout-selection-addon">+ 30 Days Story Ideas</p>{% endif %}
+        <p class="checkout-summary-line">PLATFORMS: {{ selected }}</p>
+        {% if stories %}<p class="checkout-summary-line checkout-selection-addon">+ 30 Days Story Ideas</p>{% endif %}
         {% elif platforms|default(1) > 1 %}
-        <p>{{ platforms }} platforms included.</p>
-        {% if stories %}<p class="checkout-selection-addon">+ 30 Days Story Ideas</p>{% endif %}
+        <p class="checkout-summary-line">{{ platforms }} platforms included.</p>
+        {% if stories %}<p class="checkout-summary-line checkout-selection-addon">+ 30 Days Story Ideas</p>{% endif %}
         {% elif stories %}
-        <p>30 Days Story Ideas</p>
+        <p class="checkout-summary-line">30 Days Story Ideas</p>
         {% endif %}
       </div>
       {% if add_stories_url %}<p style="font-size: 0.9rem; color: var(--lum-text-muted); margin: 0.5rem 0 0;">Using Instagram &amp; Facebook? <a href="{{ add_stories_url }}" style="color: var(--lum-gold); font-weight: 600;">Add Story Ideas to this order</a>. If you add them later from your account, they're delivered with your <strong>next</strong> pack, not instantly.</p>{% endif %}
