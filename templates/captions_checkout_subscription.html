@@ -15,6 +15,7 @@
     .checkout-card { max-width: 520px; margin: 0 auto; padding: 2.5rem; background: var(--lum-card-bg, rgba(255,255,255,0.03)); border-radius: 12px; border: 1px solid var(--lum-border, rgba(255,255,255,0.08)); }
     .checkout-card h1 { font-family: var(--font-display); font-size: 1.5rem; margin-bottom: 0.5rem; }
     .checkout-card .price { color: var(--lum-gold); font-size: 1.25rem; margin-bottom: 1rem; }
+    .checkout-order-summary-block .price { margin-bottom: 0; }
     .checkout-card .price-note { font-size: 0.9rem; color: var(--lum-text-muted); margin: 1.25rem 0 1.5rem; }
     .checkout-card .btn-wrap { margin-top: 1.5rem; }
     .checkout-card .btn-disabled { opacity: 0.5; pointer-events: none; cursor: not-allowed; }
@@ -23,20 +24,23 @@
     .checkout-card .back a:hover { color: var(--lum-text); }
     .checkout-order-summary { color: #fff; font-weight: 600; font-size: 1rem; margin-bottom: 0; }
     .checkout-order-summary-block {
-      margin: 0.35rem 0 1rem;
+      margin: 1rem 0 1rem;
       padding: 1rem 1.15rem 1.1rem;
       background: rgba(255, 255, 255, 0.06);
       border: 1px solid rgba(255, 255, 255, 0.16);
       border-radius: 10px;
     }
-    .checkout-order-summary-block-title {
-      margin: 0 0 0.75rem;
-      font-size: 0.72rem;
+    .checkout-order-summary-block .checkout-selection-heading {
+      margin: 0 0 0.5rem;
+      font-size: 0.85rem;
       font-weight: 600;
-      letter-spacing: 0.1em;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
       color: var(--lum-text-muted);
     }
+    .checkout-order-summary-block .checkout-platform-error { margin: 0.75rem 0 0; }
+    .checkout-order-summary-block .price + .checkout-summary-line,
+    .checkout-order-summary-block .price + .checkout-platform-error { margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid rgba(255, 255, 255, 0.1); }
     .checkout-order-summary p { margin: 0; }
     .checkout-order-summary .checkout-summary-line + .checkout-summary-line { margin-top: 0.65rem; padding-top: 0.65rem; border-top: 1px solid rgba(255, 255, 255, 0.1); }
     .checkout-order-summary .checkout-selection-addon { margin: 0; font-weight: 600; font-size: 0.95rem; color: #fff; }
@@ -74,13 +78,12 @@
   <section class="lumo-section checkout-section">
     <div class="checkout-card">
       <h1 style="text-transform: uppercase;">30 Days of Social Media Captions — Subscription</h1>
-      <h2 class="checkout-selection-heading" style="font-size: 0.85rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--lum-text-muted); margin: 1rem 0 0.5rem;">Your selection</h2>
-      <p class="price" id="checkout-price">{{ currency_symbol|default('£') }}{{ total_sub|default(79) }} <span>/month</span></p>
-      {% if platforms_invalid|default(false) %}
-      <p class="checkout-platform-error" style="margin-bottom: 1rem; padding: 0.75rem 1rem; background: rgba(220,50,50,0.15); border: 1px solid rgba(220,50,50,0.4); border-radius: 8px; color: #ff9999; font-size: 0.9rem;">Please go back and select which {{ platforms }} platform(s) you want on the captions page.</p>
-      {% else %}
       <div id="checkout-platform-note" class="checkout-order-summary checkout-order-summary-block">
-        <p class="checkout-order-summary-block-title">What you&rsquo;re ordering</p>
+        <h2 class="checkout-selection-heading">Your selection</h2>
+        <p class="price" id="checkout-price">{{ currency_symbol|default('£') }}{{ total_sub|default(79) }} <span>/month</span></p>
+        {% if platforms_invalid|default(false) %}
+        <p class="checkout-platform-error" style="padding: 0.75rem 1rem; background: rgba(220,50,50,0.15); border: 1px solid rgba(220,50,50,0.4); border-radius: 8px; color: #ff9999; font-size: 0.9rem;">Please go back and select which {{ platforms }} platform(s) you want on the captions page.</p>
+        {% else %}
         {% if selected %}
         <p class="checkout-summary-line">PLATFORMS: {{ selected }}</p>
         {% if stories %}<p class="checkout-summary-line checkout-selection-addon">+ 30 Days Story Ideas</p>{% endif %}
@@ -90,7 +93,9 @@
         {% elif stories %}
         <p class="checkout-summary-line">30 Days Story Ideas</p>
         {% endif %}
+        {% endif %}
       </div>
+      {% if not platforms_invalid|default(false) %}
       {% if add_stories_url %}<p style="font-size: 0.9rem; color: var(--lum-text-muted); margin: 0.5rem 0 0;">Using Instagram &amp; Facebook? <a href="{{ add_stories_url }}" style="color: var(--lum-gold); font-weight: 600;">Add Story Ideas to this order</a>. If you add them later from your account, they're delivered with your <strong>next</strong> pack, not instantly.</p>{% endif %}
       {% if add_platforms_url %}<p style="font-size: 0.9rem; color: var(--lum-text-muted); margin: 0.35rem 0 0;">Need more platforms? <a href="{{ add_platforms_url }}" style="color: var(--lum-gold); font-weight: 600;">Change your selection</a>—{% if is_upgrade_from_oneoff|default(false) %}your form will still be prefilled from your one-off pack; you can edit it anytime in your account. {% endif %}If you add more platforms later from your account, they're delivered with your <strong>next</strong> pack, not instantly.</p>{% endif %}
       {% endif %}
