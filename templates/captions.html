@@ -137,7 +137,7 @@
         <li data-reveal><strong>30-day chunking</strong> — Research shows smaller, time-bound goals feel achievable. One month at a time reduces overwhelm and increases completion.</li>
         <li data-reveal><strong>Implementation intentions</strong> — Each day has a category and ready text. No "what do I post?" decision. You know exactly what to do, when.</li>
         <li data-reveal><strong>Balanced content mix</strong> — Authority, Educational, Brand Personality, Soft Promotion. The variety experts recommend, pre-planned for you.</li>
-        <li data-reveal><strong>Feed + Stories aligned</strong> — Optionally align Story Ideas to each day's caption. Turn alignment off in the form if you prefer them different.</li>
+        <li data-reveal><strong>Feed + Stories aligned</strong> — Optionally align Story Ideas to each day's caption. You choose aligned or separate on your <strong>intake form</strong> (the short form after payment), not at checkout.</li>
       </ul>
       <p data-reveal style="max-width: 560px; margin: 0.5rem 0 0; font-size: 0.95rem; color: var(--lum-text-muted);">Copy, paste, post. The format removes friction so your marketing actually happens.</p>
     </div>
@@ -147,11 +147,11 @@
   <section class="dfd-section dfd-section--light captions-reveal" id="example-and-format" aria-label="Example and format" data-reveal>
     <div class="dfd-section-inner">
       <h2 class="dfd-heading" data-reveal>What you get</h2>
-      <p class="dfd-lead" data-reveal>Your pack is delivered as a PDF (or two PDFs with the Stories add-on). Each day has a category, ready-to-use text, and hashtags. Add Story Ideas for Instagram &amp; Facebook—align each to that day's caption or keep them separate. Copy, paste, and post.</p>
+      <p class="dfd-lead" data-reveal>Your pack is delivered as a PDF (or two PDFs with the Stories add-on). Each day has a category, ready-to-use text, and hashtags. Add Story Ideas for Instagram &amp; Facebook—on your <strong>intake form</strong> after payment, you choose whether each day's Story aligns with that day's caption or stays separate. Copy, paste, and post.</p>
       <div class="captions-format-list" style="max-width: 560px; margin: 0 0 2rem; text-align: left;">
         <ul style="list-style: none; padding: 0; margin: 0; font-size: 1rem; line-height: 1.7; color: var(--text-on-light, #1a1a1a);">
           <li data-reveal style="padding-left: 1.5rem; position: relative;"><span style="position: absolute; left: 0;">→</span> <strong>Captions PDF</strong> — 30 days, one caption per day (or one per platform if you chose multiple). Each day has a category, platform label, caption text, and optional hashtags.</li>
-          <li data-reveal style="padding-left: 1.5rem; position: relative; margin-top: 0.5rem;"><span style="position: absolute; left: 0;">→</span> <strong>Stories PDF</strong> (if you add Story Ideas) — 30 days of story prompts. Align each to that day's caption or keep them separate.</li>
+          <li data-reveal style="padding-left: 1.5rem; position: relative; margin-top: 0.5rem;"><span style="position: absolute; left: 0;">→</span> <strong>Stories PDF</strong> (if you add Story Ideas) — 30 days of story prompts. You set aligned vs separate on your intake form.</li>
         </ul>
       </div>
       <p data-reveal style="margin: 0 0 1.5rem; font-size: 1rem; color: var(--text-on-light, #1a1a1a); max-width: 560px; text-align: left;">Below is an example written for a specific business type — a coach or consultant — so you can see what "written in your voice" looks like. Yours would sound like your business.</p>
@@ -259,7 +259,7 @@
           <div id="captions-stories-wrap" class="captions-stories-wrap" style="display: none;">
             <p id="captions-stories-headline" style="font-size: 0.95rem; font-weight: 600; margin: 0 0 0.5rem; color: inherit;">Add Story Ideas for Instagram &amp; Facebook—align each to that day's caption or keep them separate.</p>
             <label class="captions-checkbox-label"><input type="checkbox" id="captions-stories-cb" name="stories"> Add 30 Days Story Ideas (<span id="captions-stories-price-label">+£29 one-off / +£17 monthly</span>)</label>
-            <p>One-line prompts for Instagram/Facebook Stories each day.</p>
+            <p>One-line prompts for Instagram/Facebook Stories each day. After payment, your intake form asks whether to align each Story with that day's caption or keep them independent—you don't choose that here at checkout.</p>
             <p class="captions-stories-disclaimer" style="font-size: 0.8rem; color: var(--lum-text-muted); margin: 0.5rem 0 0; line-height: 1.4;">If you add Story Ideas later (e.g. from Manage subscription in your account), they’ll be delivered with your <strong>next</strong> pack, not instantly.</p>
           </div>
           {% endif %}
@@ -501,6 +501,16 @@
       }
       return r ? r.toUpperCase() : '';
     }
+    /** Matches refer-a-friend: 10% off the friend's first captions payment (one-off or first subscription invoice). */
+    var REFERRAL_FIRST_DISCOUNT = 0.1;
+    function formatMoney(sym, amount) {
+      var x = Math.round(amount * 100) / 100;
+      if (Math.abs(x - Math.round(x)) < 0.001) return sym + Math.round(x);
+      return sym + x.toFixed(2);
+    }
+    function referralFirstPaymentPrice(total) {
+      return total * (1 - REFERRAL_FIRST_DISCOUNT);
+    }
     syncRefUrlAndStorage();
     if (!sel) return;
     function prices() { return CAPTIONS_PRICES[getCurrency()] || CAPTIONS_PRICES.gbp; }
@@ -558,7 +568,15 @@
       if (businessName) q += '&business_name=' + encodeURIComponent(businessName);
       var businessKey = (new URLSearchParams(window.location.search)).get('business_key');
       if (businessKey) q += '&business_key=' + encodeURIComponent(businessKey);
-      if (oneoffPrice) oneoffPrice.innerHTML = sym + oneoffTotal(n, stories) + ' <span>one-time</span>';
+      var oo = oneoffTotal(n, stories);
+      var stMonthly = subTotal(n, stories);
+      if (oneoffPrice) {
+        if (ref) {
+          oneoffPrice.innerHTML = formatMoney(sym, referralFirstPaymentPrice(oo)) + ' <span>one-time</span>';
+        } else {
+          oneoffPrice.innerHTML = sym + oo + ' <span>one-time</span>';
+        }
+      }
       var isValid = selected !== null;
       var targetHref = '/captions-checkout?' + q;
       var subQ = q;
@@ -572,12 +590,24 @@
       }
       var stickyOneoff = document.getElementById('captions-sticky-oneoff-cta');
       if (stickyOneoff) stickyOneoff.href = isValid ? targetHref : '#pricing';
-      if (subPrice) subPrice.innerHTML = sym + subTotal(n, stories) + ' <span>/month</span>';
-      if (subSave) subSave.textContent = 'Save ' + sym + (oneoffTotal(n, stories) - subTotal(n, stories)) + ' vs one-off';
+      if (subPrice) {
+        if (ref) {
+          subPrice.innerHTML = formatMoney(sym, referralFirstPaymentPrice(stMonthly)) + ' <span>first month</span><div style="font-size:0.95rem;font-weight:500;margin-top:0.4rem;color:var(--lum-text-muted);line-height:1.35;">' + formatMoney(sym, stMonthly) + ' <span>/month</span> thereafter</div>';
+        } else {
+          subPrice.innerHTML = sym + stMonthly + ' <span>/month</span>';
+        }
+      }
+      if (subSave) subSave.textContent = 'Save ' + sym + (oo - stMonthly) + ' vs one-off';
       if (subCta) {
         subCta.href = isValid ? subHref : '#pricing';
         var priceSpan = subCta.querySelector('.captions-sub-price');
-        if (priceSpan) priceSpan.textContent = ' — ' + sym + subTotal(n, stories) + '/month';
+        if (priceSpan) {
+          if (ref) {
+            priceSpan.textContent = ' — ' + formatMoney(sym, referralFirstPaymentPrice(stMonthly)) + ' first month, then ' + sym + stMonthly + '/mo';
+          } else {
+            priceSpan.textContent = ' — ' + sym + stMonthly + '/month';
+          }
+        }
         subCta.classList.toggle('btn-disabled', !isValid);
         subCta.setAttribute('tabindex', isValid ? '0' : '-1');
       }

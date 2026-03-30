@@ -986,15 +986,18 @@ def _referral_share_mailto_href(base_url: str, code: str) -> str:
     c = (code or "").strip()
     if not b or not c:
         return ""
-    link = f"{b}/signup?ref={c}"
+    link_signup = f"{b}/signup?ref={c}"
+    link_captions = f"{b}/captions?ref={c}"
     subject = "10% off Lumo 22 — your friend invited you"
     body = (
         "Hi,\n\n"
         "I'm inviting you to try Lumo 22 — 30 days of social media captions (and optional story ideas) written for your business.\n\n"
         "What this is: Lumo 22's refer-a-friend offer.\n"
         "The discount: 10% off your first purchase.\n"
-        "How to use it: Open the link below to sign up or buy. You can also enter the code at checkout — the discount applies when you use this link or code.\n\n"
-        f"{link}\n\n"
+        "How to use it: Use either link below (your discount is included automatically). "
+        "Or, on the Captions page, use “Have a friend's referral code?” and enter your code before you pay — you don't type it into the Stripe payment page.\n\n"
+        f"Sign up: {link_signup}\n"
+        f"Captions (buy): {link_captions}\n\n"
         f"Your code: {c}\n\n"
         "—"
     )
@@ -1009,11 +1012,11 @@ def _referral_share_sms_href(base_url: str, code: str) -> str:
     c = (code or "").strip()
     if not b or not c:
         return ""
-    link = f"{b}/signup?ref={c}"
+    link_captions = f"{b}/captions?ref={c}"
     text = (
-        "Hi — I'm sharing Lumo 22 (30 days of social captions for your business). "
-        "10% off your first purchase: use this link or enter the code at checkout. "
-        f"Link: {link}  Code: {c}"
+        "Hi — Lumo 22: 30 days of social captions for your business. 10% off first purchase. "
+        f"Use this link (discount included): {link_captions} "
+        f"Or on lumo22.com/captions use 'Have a friend's referral code?' before paying—not on the card page. Code: {c}"
     )
     return "sms:?body=" + quote(text, safe="")
 
