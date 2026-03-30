@@ -22,6 +22,8 @@
     .checkout-card .back a { color: var(--lum-text-muted); text-decoration: none; font-size: 0.95rem; }
     .checkout-card .back a:hover { color: var(--lum-text); }
     .checkout-order-summary { color: #fff; font-weight: 600; font-size: 1rem; margin-bottom: 0; }
+    .checkout-order-summary p { margin: 0; }
+    .checkout-order-summary .checkout-stories-add-on { margin-top: 0.4rem; }
     .checkout-reminder-optin {
       margin: 1rem 0 0.5rem;
       padding: 1rem;
@@ -56,7 +58,7 @@
       {% if platforms_invalid|default(false) %}
       <p class="checkout-platform-error" style="margin-bottom: 1rem; padding: 0.75rem 1rem; background: rgba(220,50,50,0.15); border: 1px solid rgba(220,50,50,0.4); border-radius: 8px; color: #ff9999; font-size: 0.9rem;">Please go back and select which {{ platforms }} platform(s) you want on the captions page.</p>
       {% else %}
-      <p id="checkout-platform-note" class="checkout-order-summary">{% if selected %}PLATFORMS: {{ selected }}{% if stories %} + 30 Days Story Ideas{% endif %}{% elif platforms|default(1) > 1 %}{{ platforms }} platforms included.{% if stories %} + 30 Days Story Ideas{% endif %}{% elif stories %}30 Days Story Ideas{% endif %}</p>
+      <div id="checkout-platform-note" class="checkout-order-summary">{% if selected %}<p>PLATFORMS: {{ selected }}</p>{% if stories %}<p class="checkout-stories-add-on">+ 30 Days Story Ideas</p>{% endif %}{% elif platforms|default(1) > 1 %}<p>{{ platforms }} platforms included.</p>{% if stories %}<p class="checkout-stories-add-on">+ 30 Days Story Ideas</p>{% endif %}{% elif stories %}<p>30 Days Story Ideas</p>{% endif %}</div>
       {% if add_stories_url %}<p style="font-size: 0.9rem; color: var(--lum-text-muted); margin: 0.5rem 0 0;">Using Instagram &amp; Facebook? <a href="{{ add_stories_url }}" style="color: var(--lum-gold); font-weight: 600;">Add Story Ideas to this order</a>. If you add them later from your account, they're delivered with your <strong>next</strong> pack, not instantly.</p>{% endif %}
       {% if add_platforms_url %}<p style="font-size: 0.9rem; color: var(--lum-text-muted); margin: 0.35rem 0 0;">Need more platforms? <a href="{{ add_platforms_url }}" style="color: var(--lum-gold); font-weight: 600;">Change your selection</a>—{% if is_upgrade_from_oneoff|default(false) %}your form will still be prefilled from your one-off pack; you can edit it anytime in your account. {% endif %}If you add more platforms later from your account, they're delivered with your <strong>next</strong> pack, not instantly.</p>{% endif %}
       {% endif %}
