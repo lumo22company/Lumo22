@@ -2382,6 +2382,17 @@
 .account-referral-block .referral-copy { color: #000; }
 .account-referral-block .referral-copy:hover { color: #000; }
 
+.account-referral-block .referral-share-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  align-items: center;
+}
+.account-referral-block .referral-share-actions .dfd-btn {
+  flex: 0 1 auto;
+}
+
 /* Toggle on light account page */
 .account-page-wrap .account-main .account-toggle {
   background: rgba(0,0,0,0.15);

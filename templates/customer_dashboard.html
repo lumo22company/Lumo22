@@ -763,13 +763,23 @@
         <h2>Refer a friend</h2>
         {% if referral_code %}
         <p class="account-section-desc">Share your referral link — your friend gets 10% off their first purchase. You get 10% off your next billing period for each friend who buys. Discounts don't stack: two referrals = 10% off your next two periods.</p>
-        <div class="account-referral-block">
+        <div class="account-referral-block" id="referral-share-root" data-captions-url="{{ base_url }}/captions?ref={{ referral_code }}">
           <label class="account-settings-label" for="referral-link">Your referral link</label>
           <div class="referral-row" style="display: flex; gap: 0.75rem; align-items: center; margin-top: 0.5rem;">
             <input type="text" id="referral-link" readonly value="{{ base_url }}/signup?ref={{ referral_code }}" class="referral-input" style="flex: 1; padding: 0.6rem 0.9rem; font-size: 0.9rem; border: 1px solid rgba(0,0,0,0.15); border-radius: 12px; background: #f8f8f6; color: #111;">
-            <button type="button" class="dfd-btn dfd-btn-secondary referral-copy account-btn-swipe-light" onclick="copyReferralLink()">Copy link</button>
+            <button type="button" id="referral-copy-link-btn" class="dfd-btn dfd-btn-secondary referral-copy account-btn-swipe-light" onclick="copyReferralLink()">Copy link</button>
         </div>
-          <p class="account-settings-desc" style="margin-top: 0.5rem; color: #444;">Or share your code: <strong>{{ referral_code }}</strong></p>
+          <label class="account-settings-label" for="referral-code" style="margin-top: 0.75rem; display: block;">Or share your code</label>
+          <div class="referral-row" style="display: flex; gap: 0.75rem; align-items: center; margin-top: 0.5rem;">
+            <input type="text" id="referral-code" readonly value="{{ referral_code }}" class="referral-input" aria-label="Your referral code" style="flex: 1; padding: 0.6rem 0.9rem; font-size: 0.9rem; border: 1px solid rgba(0,0,0,0.15); border-radius: 12px; background: #f8f8f6; color: #111;">
+            <button type="button" id="referral-copy-code-btn" class="dfd-btn dfd-btn-secondary referral-copy account-btn-swipe-light" onclick="copyReferralCode()">Copy code</button>
+          </div>
+          <label class="account-settings-label" for="referral-share-email-btn" style="margin-top: 0.75rem; display: block;">Quick share</label>
+          <p class="account-settings-desc" style="margin-top: 0.35rem; margin-bottom: 0;">Opens your email app or messages with a draft that includes your signup link, captions link, and code.</p>
+          <div class="referral-share-actions">
+            <button type="button" id="referral-share-email-btn" class="dfd-btn dfd-btn-secondary account-btn-swipe-light" onclick="shareReferralByEmail()">Share by email</button>
+            <button type="button" id="referral-share-sms-btn" class="dfd-btn dfd-btn-secondary account-btn-swipe-light" onclick="shareReferralByText()">Share by text</button>
+          </div>
         {% if referral_discount_credits|default(0) > 0 %}
         <p class="account-settings-desc" style="margin-top: 0.75rem; color: var(--lum-gold); font-weight: 600;">You have {{ referral_discount_credits }} referral credit{{ 's' if referral_discount_credits != 1 else '' }} — 10% off your next {{ referral_discount_credits }} billing period{{ 's' if referral_discount_credits != 1 else '' }}.</p>
         {% endif %}
@@ -1060,9 +1070,61 @@
         input.setSelectionRange(0, 99999);
         try {
           navigator.clipboard.writeText(input.value);
-          var btn = document.querySelector('.referral-copy');
+          var btn = document.getElementById('referral-copy-link-btn');
           if (btn) { btn.textContent = 'Copied!'; setTimeout(function() { btn.textContent = 'Copy link'; }, 2000); }
         } catch (e) {}
+      }
+
+      function copyReferralCode() {
+        var input = document.getElementById('referral-code');
+        if (!input) return;
+        var text = (input.value || '').trim();
+        if (!text) return;
+        try {
+          navigator.clipboard.writeText(text);
+          input.select();
+          input.setSelectionRange(0, 99999);
+          var btn = document.getElementById('referral-copy-code-btn');
+          if (btn) { btn.textContent = 'Copied!'; setTimeout(function() { btn.textContent = 'Copy code'; }, 2000); }
+        } catch (e) {}
+      }
+
+      function _referralShareParts() {
+        var linkEl = document.getElementById('referral-link');
+        var codeEl = document.getElementById('referral-code');
+        var root = document.getElementById('referral-share-root');
+        var captions = '';
+        if (root && root.getAttribute('data-captions-url')) {
+          captions = String(root.getAttribute('data-captions-url')).trim();
+        }
+        return {
+          signupUrl: linkEl ? String(linkEl.value || '').trim() : '',
+          captionsUrl: captions,
+          code: codeEl ? String(codeEl.value || '').trim() : ''
+        };
+      }
+
+      function shareReferralByEmail() {
+        var p = _referralShareParts();
+        if (!p.signupUrl) return;
+        var subject = '10% off Lumo 22 — join with my link';
+        var body = 'Hi,\n\nI thought you might like Lumo 22 for social media captions and story ideas.\n\n' +
+          'You can get 10% off your first purchase using these links:\n\n' +
+          'Sign up: ' + p.signupUrl + '\n' +
+          (p.captionsUrl ? ('Captions (30 days): ' + p.captionsUrl + '\n') : '') +
+          '\nOr use my referral code at checkout: ' + p.code + '\n\n' +
+          '—';
+        window.location.href = 'mailto:?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+      }
+
+      function shareReferralByText() {
+        var p = _referralShareParts();
+        if (!p.signupUrl) return;
+        var cap = p.captionsUrl || '';
+        var text = '10% off Lumo 22 — Sign up: ' + p.signupUrl +
+          (cap ? (' Captions: ' + cap) : '') +
+          ' Code: ' + p.code;
+        window.location.href = 'sms:?body=' + encodeURIComponent(text);
       }
 
       function formatResumeDate() {
