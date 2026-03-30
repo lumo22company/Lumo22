@@ -19,6 +19,44 @@ def _promotion_code_fields(po: Any) -> tuple:
     return (code, bool(getattr(po, "active", False)))
 
 
+def _coupon_id_from_promo_row(row: Any) -> str:
+    """Stripe PromotionCode.coupon as id string."""
+    if row is None:
+        return ""
+    c = row.get("coupon") if isinstance(row, dict) else getattr(row, "coupon", None)
+    if isinstance(c, str):
+        return c.strip()
+    if isinstance(c, dict):
+        return str(c.get("id") or "").strip()
+    return str(getattr(c, "id", "") or "").strip()
+
+
+def _reconcile_promotion_id_from_stripe_list(
+    stripe_mod: Any, *, code: str, coupon_id: str, _save_pc, log_prefix: str
+) -> Optional[str]:
+    """
+    If Stripe already has an active promotion for this customer-facing code + coupon but DB has no id,
+    persist that prom_xxx. Fixes cases where create succeeded in Stripe but DB save failed.
+    """
+    try:
+        listed = stripe_mod.PromotionCode.list(code=code, limit=20)
+        data = listed.get("data") if isinstance(listed, dict) else getattr(listed, "data", None) or []
+        want = coupon_id.strip()
+        for row in data:
+            code_s, active = _promotion_code_fields(row)
+            if not active or code_s != code:
+                continue
+            if _coupon_id_from_promo_row(row) != want:
+                continue
+            pid = row.get("id") if isinstance(row, dict) else getattr(row, "id", None)
+            if pid:
+                _save_pc(str(pid))
+                return str(pid)
+    except Exception as ex:
+        print(f"{log_prefix} reconcile list failed: {ex!r}")
+    return None
+
+
 def ensure_stripe_promotion_code_for_customer(customer: Dict[str, Any]) -> Optional[str]:
     """
     Idempotently create a Stripe Promotion Code for this customer's referral_code.
@@ -60,6 +98,16 @@ def ensure_stripe_promotion_code_for_customer(customer: Dict[str, Any]) -> Optio
         except Exception as e:
             print(f"[stripe_referral_promotion] stored prom id invalid, will recreate: {e!r}")
         auth.clear_stripe_referral_promotion_code_id(cid)
+
+    linked = _reconcile_promotion_id_from_stripe_list(
+        stripe,
+        code=code,
+        coupon_id=coupon_id,
+        _save_pc=_save_pc,
+        log_prefix="[stripe_referral_promotion]",
+    )
+    if linked:
+        return linked
 
     try:
         pc = stripe.PromotionCode.create(coupon=coupon_id, code=code, active=True)
