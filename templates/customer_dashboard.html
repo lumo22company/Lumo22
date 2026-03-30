@@ -1127,6 +1127,12 @@
         window.location.href = 'sms:?body=' + encodeURIComponent(text);
       }
 
+      /* Inline onclick= only sees globals; these handlers live inside the IIFE above. */
+      window.copyReferralLink = copyReferralLink;
+      window.copyReferralCode = copyReferralCode;
+      window.shareReferralByEmail = shareReferralByEmail;
+      window.shareReferralByText = shareReferralByText;
+
       function formatResumeDate() {
         var d = new Date();
         d.setUTCDate(d.getUTCDate() + 30);
