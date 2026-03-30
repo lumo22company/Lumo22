@@ -125,6 +125,20 @@
         .replace(/\?&/g, '?')
         .replace(/[?&]$/, '');
 
+      var REF_SESSION_KEY = 'lumo_captions_ref';
+      function mergeStoredReferralRef(u) {
+        try {
+          var stored = (sessionStorage.getItem(REF_SESSION_KEY) || '').trim();
+          if (!stored) return u;
+          var parsed = new URL(u, window.location.origin);
+          if (!parsed.searchParams.get('ref')) {
+            parsed.searchParams.set('ref', stored.toUpperCase());
+          }
+          return parsed.pathname + parsed.search + (parsed.hash || '');
+        } catch (e) {
+          return u;
+        }
+      }
       function updateLink() {
         var parts = [];
         if (getPackNowCheckbox && getPackNowCheckbox.checked) parts.push('get_pack_now=1');
@@ -136,6 +150,7 @@
         var bn = businessInput && (businessInput.value || '').trim();
         if (bn) parts.push('business_name=' + encodeURIComponent(bn.slice(0, 120)));
         var u = apiUrl + (parts.length ? ((apiUrl.indexOf('?') !== -1 ? '&' : '?') + parts.join('&')) : '');
+        u = mergeStoredReferralRef(u);
         btn.href = u;
       }
       if (getPackNowCheckbox) getPackNowCheckbox.addEventListener('change', updateLink);

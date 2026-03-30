@@ -85,6 +85,7 @@
       var input = document.getElementById('checkout-business-name');
       if (!btn || !input) return;
       var baseUrl = (btn.getAttribute('data-api-url') || btn.getAttribute('href') || '').trim();
+      var REF_SESSION_KEY = 'lumo_captions_ref';
       function stripBusinessParams(url) {
         return url
           .replace(/[&?]business_name=[^&]*/g, '')
@@ -92,8 +93,21 @@
           .replace(/\?&/g, '?')
           .replace(/[?&]$/, '');
       }
+      function mergeStoredReferralRef(u) {
+        try {
+          var stored = (sessionStorage.getItem(REF_SESSION_KEY) || '').trim();
+          if (!stored) return u;
+          var parsed = new URL(u, window.location.origin);
+          if (!parsed.searchParams.get('ref')) {
+            parsed.searchParams.set('ref', stored.toUpperCase());
+          }
+          return parsed.pathname + parsed.search + (parsed.hash || '');
+        } catch (e) {
+          return u;
+        }
+      }
       function updateLink() {
-        var u = stripBusinessParams(baseUrl);
+        var u = mergeStoredReferralRef(stripBusinessParams(baseUrl));
         var name = (input.value || '').trim();
         if (name) {
           var sep = u.indexOf('?') !== -1 ? '&' : '?';

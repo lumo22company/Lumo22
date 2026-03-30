@@ -267,6 +267,16 @@
         <p id="captions-platform-error" role="alert" style="display: none; margin-top: 0.75rem; padding: 0.75rem 1rem; background: rgba(220,50,50,0.15); border: 1px solid rgba(220,50,50,0.4); border-radius: 8px; color: #ff9999; font-size: 0.9rem;">Please select which platform(s) you want above. You cannot proceed to checkout until this is complete.</p>
         <p style="font-size: 0.8rem; color: var(--lum-text-muted); margin: 0.5rem 0 0;">Your choice will be prefilled on the form after payment.</p>
       </div>
+      <div class="captions-ref-code-wrap" id="captions-ref-code-wrap" style="max-width: 600px; margin: 0 auto 1.25rem; padding: 1rem 1.25rem; background: rgba(255,242,0,0.08); border-radius: 10px; border: 1px solid rgba(255,242,0,0.25);">
+        <label for="captions-ref-code-input" style="display: block; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.35rem;">Have a friend's referral code?</label>
+        <p style="font-size: 0.8rem; color: var(--lum-text-muted); margin: 0 0 0.5rem;">Enter it here so your 10% friend discount applies at checkout (same as opening your friend's link).</p>
+        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
+          <input type="text" id="captions-ref-code-input" name="referral_code" autocomplete="off" maxlength="32" placeholder="e.g. AB12CD34" inputmode="text" autocapitalize="characters" style="flex: 1; min-width: 160px; padding: 0.55rem 0.75rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.25); color: inherit; font-size: 1rem;" />
+          <button type="button" id="captions-ref-code-apply" class="dfd-btn dfd-btn-secondary captions-btn-swipe" style="flex-shrink: 0;">Apply</button>
+          <button type="button" id="captions-ref-code-clear" class="dfd-btn dfd-btn-secondary captions-btn-swipe" style="flex-shrink: 0; display: none;">Remove</button>
+        </div>
+        <p id="captions-ref-code-msg" role="status" style="display: none; margin: 0.5rem 0 0; font-size: 0.85rem;"></p>
+      </div>
       <div class="lumo-pricing-grid">
         {% if captions_subscription_available %}
         <div class="lumo-pricing-card glass-card featured" style="position: relative;">
@@ -369,7 +379,7 @@
         </details>
         <details class="dfd-faq-item" id="refer-a-friend">
           <summary class="dfd-faq-question">How does refer-a-friend work?</summary>
-          <p class="dfd-faq-answer">Share your referral link from your account (Refer a friend). When a friend signs up and buys captions using your link, they get 10% off their first purchase. You get 10% off your next captions subscription billing period for each friend who completes a purchase. Discounts don't stack: two referrals = 10% off your next two billing periods (one 10% off per period), not 20% off one period.</p>
+          <p class="dfd-faq-answer">Share your referral link from your account (Refer a friend). When a friend signs up and buys captions using your link, they get 10% off their first purchase. You get 10% off your next captions subscription billing period for each friend who completes a purchase. Discounts don't stack: two referrals = 10% off your next two billing periods (one 10% off per period), not 20% off one period. If they only have your code, they can enter it under “Have a friend's referral code?” on this page before checkout.</p>
         </details>
         <details class="dfd-faq-item">
           <summary class="dfd-faq-question">I have a product launch, sale, or event. Can you tailor the captions?</summary>
@@ -466,6 +476,32 @@
     var whichLabel = document.getElementById('captions-which-label');
     var whichHint = document.getElementById('captions-which-hint');
     var errEl = document.getElementById('captions-platform-error');
+    var REF_SESSION_KEY = 'lumo_captions_ref';
+    function syncRefUrlAndStorage() {
+      try {
+        var params = new URLSearchParams(window.location.search);
+        var urlRef = (params.get('ref') || '').trim();
+        if (urlRef) {
+          sessionStorage.setItem(REF_SESSION_KEY, urlRef.toUpperCase());
+          return;
+        }
+        var stored = (sessionStorage.getItem(REF_SESSION_KEY) || '').trim();
+        if (stored) {
+          params.set('ref', stored.toUpperCase());
+          var qs = params.toString();
+          history.replaceState({}, '', window.location.pathname + (qs ? '?' + qs : '') + window.location.hash);
+        }
+      } catch (e) {}
+    }
+    function getRefForCheckout() {
+      var params = new URLSearchParams(window.location.search);
+      var r = (params.get('ref') || '').trim();
+      if (!r) {
+        try { r = (sessionStorage.getItem(REF_SESSION_KEY) || '').trim(); } catch (e) {}
+      }
+      return r ? r.toUpperCase() : '';
+    }
+    syncRefUrlAndStorage();
     if (!sel) return;
     function prices() { return CAPTIONS_PRICES[getCurrency()] || CAPTIONS_PRICES.gbp; }
     function oneoffTotal(n, stories) { var p = prices(); return p.oneoff + (n - 1) * p.extra_oneoff + (stories ? p.stories_oneoff : 0); }
@@ -516,7 +552,7 @@
       if (stories) q += '&stories=1';
       var cur = getCurrency();
       if (cur !== 'gbp') q += '&currency=' + cur;
-      var ref = (new URLSearchParams(window.location.search)).get('ref');
+      var ref = getRefForCheckout();
       if (ref) q += '&ref=' + encodeURIComponent(ref);
       var businessName = (new URLSearchParams(window.location.search)).get('business_name');
       if (businessName) q += '&business_name=' + encodeURIComponent(businessName);
@@ -615,6 +651,69 @@
           setTimeout(function() { pricingEl.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 100);
         }
       }
+    })();
+    (function initReferralCode() {
+      var input = document.getElementById('captions-ref-code-input');
+      var applyBtn = document.getElementById('captions-ref-code-apply');
+      var clearBtn = document.getElementById('captions-ref-code-clear');
+      var msg = document.getElementById('captions-ref-code-msg');
+      if (!input || !applyBtn) return;
+      function showMsg(text, isError) {
+        if (!msg) return;
+        msg.style.display = text ? 'block' : 'none';
+        msg.textContent = text || '';
+        msg.style.color = isError ? '#ff9999' : 'var(--lum-gold)';
+      }
+      function refreshClearVisibility() {
+        if (clearBtn) clearBtn.style.display = getRefForCheckout() ? 'inline-flex' : 'none';
+      }
+      function prefillInput() {
+        var r = getRefForCheckout();
+        if (r) input.value = r;
+        refreshClearVisibility();
+      }
+      applyBtn.addEventListener('click', function() {
+        var raw = (input.value || '').trim();
+        if (raw.length < 4) {
+          showMsg('Enter a referral code (at least 4 characters).', true);
+          return;
+        }
+        showMsg('Checking…', false);
+        fetch('/api/referral-code-check?code=' + encodeURIComponent(raw), { credentials: 'same-origin' })
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (!data || !data.valid) {
+              showMsg('That code wasn’t found. Double-check with your friend or use their link.', true);
+              return;
+            }
+            var code = raw.toUpperCase();
+            try { sessionStorage.setItem(REF_SESSION_KEY, code); } catch (e) {}
+            var params = new URLSearchParams(window.location.search);
+            params.set('ref', code);
+            var qs = params.toString();
+            history.replaceState({}, '', window.location.pathname + (qs ? '?' + qs : '') + window.location.hash);
+            input.value = code;
+            showMsg('Applied — your 10% discount will be included when you continue to checkout.', false);
+            refreshClearVisibility();
+            updateLinks();
+          })
+          .catch(function() { showMsg('Couldn’t verify right now. Try again or use your friend’s link.', true); });
+      });
+      if (clearBtn) clearBtn.addEventListener('click', function() {
+        try { sessionStorage.removeItem(REF_SESSION_KEY); } catch (e) {}
+        var params = new URLSearchParams(window.location.search);
+        params.delete('ref');
+        var qs = params.toString();
+        history.replaceState({}, '', window.location.pathname + (qs ? '?' + qs : '') + window.location.hash);
+        input.value = '';
+        showMsg('', false);
+        refreshClearVisibility();
+        updateLinks();
+      });
+      input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') { e.preventDefault(); applyBtn.click(); }
+      });
+      prefillInput();
     })();
     updateWhichUI();
     updateLinks();
