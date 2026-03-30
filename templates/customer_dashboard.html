@@ -763,6 +763,9 @@
         <h2>Refer a friend</h2>
         {% if referral_code %}
         <p class="account-section-desc">The <strong>10% friend discount</strong> applies when they <strong>enter your code at Stripe checkout</strong> (Add promotion code). Share your code below or via email/text—you get 10% off your next billing period for each friend who completes a purchase. Discounts don't stack: two referrals = 10% off your next two periods.</p>
+        {% if referral_discount_configured|default(false) and not referral_stripe_promo_ok|default(false) %}
+        <p class="account-section-desc" style="margin-top: 0.75rem; padding: 0.75rem 1rem; background: rgba(220, 160, 50, 0.12); border: 1px solid rgba(255, 200, 80, 0.35); border-radius: 10px; color: #fff;">Your code could not be linked to the payment page yet (or the link expired). <strong>Refresh this page</strong> to try again. If a friend still sees &ldquo;invalid code&rdquo; at checkout, email <a href="mailto:hello@lumo22.com" style="color: var(--lum-gold); font-weight: 600;">hello@lumo22.com</a> so we can fix it.</p>
+        {% endif %}
         <div class="account-referral-block" id="referral-share-root">
           <label class="account-settings-label" for="referral-code" style="margin-top: 0; display: block;">Your referral code</label>
           <div class="referral-row" style="display: flex; gap: 0.75rem; align-items: center; margin-top: 0.5rem;">

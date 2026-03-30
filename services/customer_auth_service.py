@@ -133,6 +133,21 @@ class CustomerAuthService:
         except Exception:
             return False
 
+    def clear_stripe_referral_promotion_code_id(self, customer_id: str) -> bool:
+        """Clear stored Stripe Promotion Code id so ensure_* can recreate (e.g. stale or deleted promo)."""
+        if not customer_id:
+            return False
+        try:
+            self.client.table(self.table).update(
+                {
+                    "stripe_referral_promotion_code_id": None,
+                    "updated_at": datetime.utcnow().isoformat(),
+                }
+            ).eq("id", str(customer_id)).execute()
+            return True
+        except Exception:
+            return False
+
     def create(
         self,
         email: str,

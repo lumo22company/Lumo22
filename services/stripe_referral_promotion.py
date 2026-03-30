@@ -4,10 +4,19 @@ Friends enter the code on Stripe Checkout; Lumo does not auto-apply discounts on
 """
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Any, Dict, Optional
 
 from config import Config
+
+
+def _promotion_code_fields(po: Any) -> tuple:
+    """Return (code_upper, active) from Stripe PromotionCode object or dict."""
+    if po is None:
+        return "", False
+    if isinstance(po, dict):
+        return (str(po.get("code") or "").strip().upper(), bool(po.get("active")))
+    code = str(getattr(po, "code", "") or "").strip().upper()
+    return (code, bool(getattr(po, "active", False)))
 
 
 def ensure_stripe_promotion_code_for_customer(customer: Dict[str, Any]) -> Optional[str]:
@@ -26,9 +35,6 @@ def ensure_stripe_promotion_code_for_customer(customer: Dict[str, Any]) -> Optio
     cid = str(customer.get("id") or "").strip()
     if not cid:
         return None
-    existing = (customer.get("stripe_referral_promotion_code_id") or "").strip()
-    if existing:
-        return existing
 
     import stripe
     from services.customer_auth_service import CustomerAuthService
@@ -39,6 +45,21 @@ def ensure_stripe_promotion_code_for_customer(customer: Dict[str, Any]) -> Optio
     def _save_pc(prom_id: str) -> None:
         if not auth.set_stripe_referral_promotion_code_id(cid, prom_id):
             print(f"[stripe_referral_promotion] persist promotion id failed for customer {cid[:8]}…")
+
+    existing = (customer.get("stripe_referral_promotion_code_id") or "").strip()
+    if existing:
+        try:
+            po = stripe.PromotionCode.retrieve(existing)
+            code_stripe, active = _promotion_code_fields(po)
+            if active and code_stripe == code:
+                return existing
+            print(
+                f"[stripe_referral_promotion] stored prom {existing[:12]}… mismatch or inactive "
+                f"(stripe_code={code_stripe!r} active={active}); clearing and recreating"
+            )
+        except Exception as e:
+            print(f"[stripe_referral_promotion] stored prom id invalid, will recreate: {e!r}")
+        auth.clear_stripe_referral_promotion_code_id(cid)
 
     try:
         pc = stripe.PromotionCode.create(coupon=coupon_id, code=code, active=True)

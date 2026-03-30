@@ -1084,6 +1084,10 @@ def _account_context():
                 delivered_base = bool(base and (base.get("status") == "delivered" or base.get("delivered_at")))
             o["has_delivered_pack"] = bool(delivered_self or delivered_base)
         referral_code = auth_svc.ensure_referral_code(str(customer["id"]))
+        # Fresh row so stripe_referral_promotion_code_id reflects Stripe sync (refer-a-friend codes must exist in Stripe).
+        _refreshed = auth_svc.get_by_id(str(customer["id"]))
+        if _refreshed:
+            customer = _refreshed
         try:
             from api.captions_routes import _get_subscription_pause_info
             for o in caption_orders:
@@ -1160,6 +1164,10 @@ def _account_context():
     if base and not base.startswith("http"):
         base = "https://" + base
     rc = (referral_code or "").strip()
+    ref_coupon = (getattr(Config, "STRIPE_REFERRAL_COUPON_ID", None) or "").strip()
+    ref_secret = (getattr(Config, "STRIPE_SECRET_KEY", None) or "").strip()
+    referral_discount_configured = bool(ref_coupon and ref_secret)
+    referral_stripe_promo_ok = bool((customer.get("stripe_referral_promotion_code_id") or "").strip())
     return {
         "customer": customer,
         "caption_orders": caption_orders,
@@ -1176,6 +1184,8 @@ def _account_context():
         "referral_discount_credits": int(customer.get("referral_discount_credits") or 0),
         "referral_mailto_href": _referral_share_mailto_href(base, rc) if rc else "",
         "referral_sms_href": _referral_share_sms_href(base, rc) if rc else "",
+        "referral_discount_configured": referral_discount_configured,
+        "referral_stripe_promo_ok": referral_stripe_promo_ok,
     }
 
 
