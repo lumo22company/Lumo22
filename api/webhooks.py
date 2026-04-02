@@ -110,12 +110,29 @@ def _mark_plan_change_email_sent(dedupe_key: str, now_ts: float | None = None) -
     _plan_change_email_dedupe[dedupe_key] = float(now_ts if now_ts is not None else time.time())
 
 
+def _checkout_session_metadata(session) -> dict:
+    """Stripe checkout.session metadata from webhook JSON or SDK object (must not assume plain dict)."""
+    if not isinstance(session, dict):
+        return {}
+    m = session.get("metadata")
+    if isinstance(m, dict):
+        return m
+    if m is not None:
+        try:
+            if hasattr(m, "to_dict"):
+                return m.to_dict()
+            return dict(m)
+        except Exception:
+            pass
+    return {}
+
+
 def _is_captions_subscription_payment(session) -> bool:
     """True if this checkout is for 30 Days Captions subscription (£79/month). Reuses same intake/delivery as one-off."""
     mode = (session.get("mode") or "") if isinstance(session, dict) else ""
     if mode != "subscription":
         return False
-    meta = (session.get("metadata") or {}) if isinstance(session, dict) else {}
+    meta = _checkout_session_metadata(session)
     if meta.get("product") == "captions_subscription":
         return True
     sub_price_ids = [
@@ -133,7 +150,7 @@ def _is_captions_subscription_payment(session) -> bool:
 
 def _is_captions_payment(session) -> bool:
     """True if this checkout is for 30 Days Captions (one-off, any currency)."""
-    meta = (session.get("metadata") or {}) if isinstance(session, dict) else {}
+    meta = _checkout_session_metadata(session)
     if meta.get("product") == "captions":
         return True
     amount_raw = session.get("amount_total")
@@ -940,10 +957,28 @@ def stripe_webhook():
                 print("[Stripe webhook] checkout.session.completed: missing or invalid session object; skipping.")
                 return jsonify({"received": True}), 200
             amount = session.get("amount_total")
-            meta = (session.get("metadata") or {}) if isinstance(session.get("metadata"), dict) else {}
+            meta = _checkout_session_metadata(session)
             is_captions = _is_captions_payment(session)
             is_captions_sub = _is_captions_subscription_payment(session)
             print(f"[Stripe webhook] checkout.session.completed amount_total={amount} metadata={meta} is_captions={is_captions} is_captions_sub={is_captions_sub}")
+            # Webhook payload often omits expanded line_items; retrieve session so price-ID / metadata checks match checkout.
+            if not is_captions and not is_captions_sub:
+                sid = (session.get("id") or "").strip()
+                if sid and (getattr(Config, "STRIPE_SECRET_KEY", None) or "").strip():
+                    try:
+                        import stripe
+                        stripe.api_key = Config.STRIPE_SECRET_KEY.strip()
+                        full = stripe.checkout.Session.retrieve(sid, expand=["line_items"])
+                        session = full.to_dict() if hasattr(full, "to_dict") else dict(full)
+                        meta = _checkout_session_metadata(session)
+                        is_captions = _is_captions_payment(session)
+                        is_captions_sub = _is_captions_subscription_payment(session)
+                        print(
+                            f"[Stripe webhook] checkout.session.completed after Session.retrieve(expand=line_items): "
+                            f"metadata={meta} is_captions={is_captions} is_captions_sub={is_captions_sub}"
+                        )
+                    except Exception as re_err:
+                        print(f"[Stripe webhook] Session.retrieve for captions detection failed: {re_err!r}")
             if is_captions or is_captions_sub:
                 try:
                     _handle_captions_payment(session)

@@ -39,12 +39,14 @@ class CaptionOrderService:
     """CRUD for caption_orders table."""
 
     def __init__(self):
-        if not Config.SUPABASE_URL or not Config.SUPABASE_KEY:
+        key = (getattr(Config, "SUPABASE_SERVICE_ROLE_KEY", None) or Config.SUPABASE_KEY or "").strip()
+        if not Config.SUPABASE_URL or not key:
             raise ValueError("Supabase configuration missing")
         url = _sanitize_url(Config.SUPABASE_URL)
         if not url:
             raise ValueError("Supabase configuration missing")
-        self.client: Client = create_client(url, (Config.SUPABASE_KEY or "").strip())
+        # Service role bypasses RLS; anon key often cannot UPDATE caption_orders (claim column), so checkout emails never send.
+        self.client: Client = create_client(url, key)
         self.table = "caption_orders"
 
     def create_order(
@@ -191,6 +193,12 @@ class CaptionOrderService:
             c = getattr(result, "count", None)
             if isinstance(c, int) and c > 0:
                 return True
+            row = self.get_by_id(order_id)
+            if row and row.get("checkout_confirmation_email_sent_at") is None:
+                print(
+                    f"[CaptionOrderService] try_claim: PATCH matched 0 rows but checkout_confirmation_email_sent_at "
+                    f"still null for order {order_id[:8]}... — use SUPABASE_SERVICE_ROLE_KEY if RLS blocks updates."
+                )
             return False
         except Exception as e:
             print(f"[CaptionOrderService] try_claim_checkout_confirmation_email (non-fatal): {e!r}")
