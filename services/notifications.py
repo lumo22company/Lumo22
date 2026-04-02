@@ -1665,8 +1665,15 @@ Unsubscribe from upgrade reminders: {unsubscribe_url}
             return ok
         except Exception as e:
             import traceback
-            print(f"[SendGrid] Error sending email to {to_email}: {e}")
-            traceback.print_exc()
+            err_s = str(e).lower()
+            if "401" in err_s or "unauthorized" in err_s:
+                print(
+                    "[SendGrid] Email NOT sent (401 Unauthorized): SENDGRID_API_KEY is missing, revoked, or wrong. "
+                    "Create a new key at https://app.sendgrid.com/settings/api_keys and set it in Railway."
+                )
+            else:
+                print(f"[SendGrid] Error sending email to {to_email}: {e}")
+                traceback.print_exc()
             return False
 
     def send_email_with_attachment(

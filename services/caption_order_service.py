@@ -13,6 +13,12 @@ import secrets
 from config import Config
 
 
+def _is_checkout_claim_column_missing(exc: Exception) -> bool:
+    """PostgREST when caption_orders.checkout_confirmation_email_sent_at was never migrated."""
+    s = str(exc)
+    return "PGRST204" in s and "checkout_confirmation_email_sent_at" in s
+
+
 def _is_unique_stripe_session_violation(exc: Exception) -> bool:
     """True if insert failed because stripe_session_id already exists (PostgREST / Postgres)."""
     s = str(exc).lower()
@@ -202,6 +208,12 @@ class CaptionOrderService:
                 return True
             return False
         except Exception as e:
+            if _is_checkout_claim_column_missing(e):
+                print(
+                    "[CaptionOrderService] checkout_confirmation_email_sent_at column missing — run "
+                    "database_caption_orders_checkout_email_dedupe.sql in Supabase; dedupe disabled until then."
+                )
+                return True
             print(f"[CaptionOrderService] try_claim_checkout_confirmation_email (non-fatal): {e!r}")
             return True
 
@@ -212,6 +224,8 @@ class CaptionOrderService:
         try:
             self.client.table(self.table).update({"checkout_confirmation_email_sent_at": None}).eq("id", order_id).execute()
         except Exception as e:
+            if _is_checkout_claim_column_missing(e):
+                return
             print(f"[CaptionOrderService] release_checkout_confirmation_email_claim (non-fatal): {e!r}")
 
     def update(self, order_id: str, updates: Dict[str, Any]) -> bool:
