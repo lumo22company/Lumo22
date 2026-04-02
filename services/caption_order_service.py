@@ -196,9 +196,10 @@ class CaptionOrderService:
             row = self.get_by_id(order_id)
             if row and row.get("checkout_confirmation_email_sent_at") is None:
                 print(
-                    f"[CaptionOrderService] try_claim: PATCH matched 0 rows but checkout_confirmation_email_sent_at "
-                    f"still null for order {order_id[:8]}... — use SUPABASE_SERVICE_ROLE_KEY if RLS blocks updates."
+                    f"[CaptionOrderService] try_claim: PATCH matched 0 rows but sent_at still null for order {order_id[:8]}... "
+                    f"— proceeding with send anyway (set SUPABASE_SERVICE_ROLE_KEY to persist claim and avoid duplicate sends)."
                 )
+                return True
             return False
         except Exception as e:
             print(f"[CaptionOrderService] try_claim_checkout_confirmation_email (non-fatal): {e!r}")
