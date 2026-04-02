@@ -8,7 +8,7 @@ Covers:
 2. No deferred charge when get_pack_now
 3. invoice.paid: copy intake from one-off when order has no intake (upgrader)
 4. No "trial" in user-facing copy
-5. Emails: upgrader (no charge today) gets upgrade confirmation (not receipt); get_pack_now gets receipt + welcome prefilled
+5. Emails: upgrader (no charge today) gets upgrade confirmation (not checkout intake email); get_pack_now gets welcome prefilled
 """
 
 import os
@@ -56,14 +56,16 @@ def test_upgrade_confirmation_email_exists():
     print("OK: send_subscription_upgrade_confirmation_email exists.")
 
 
-def test_webhook_skips_receipt_for_trial():
-    """Webhook skips receipt when is_trial_upgrade (upgrader + amount_total 0)."""
+def test_webhook_single_checkout_email_with_session():
+    """Standard captions checkout sends one combined email; webhook passes Stripe session into send helper."""
     import api.webhooks as wh
     src = open(wh.__file__, "r").read()
     assert "is_trial_upgrade" in src
-    assert "send_order_receipt_email" in src
-    assert "not is_trial_upgrade" in src or "if not is_trial_upgrade" in src
-    print("OK: Receipt skipped for trial upgrade.")
+    assert "send_subscription_upgrade_confirmation_email" in src
+    assert "_send_intake_email_for_order" in src
+    assert "checkout_session=session" in src
+    assert "send_order_receipt_email" not in src
+    print("OK: Webhook uses _send_intake_email_for_order with session (no separate receipt).")
 
 
 def test_get_pack_today_edit_form_first_ui():
@@ -86,7 +88,7 @@ def run_all():
     test_billing_anchor_only_when_upgrader_no_get_pack_now()
     test_invoice_paid_copies_intake()
     test_upgrade_confirmation_email_exists()
-    test_webhook_skips_receipt_for_trial()
+    test_webhook_single_checkout_email_with_session()
     print("\nAll upgrade-flow checks passed.")
 
 

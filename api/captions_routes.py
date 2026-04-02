@@ -9,15 +9,13 @@ import time
 import hmac
 import hashlib
 import base64
-from typing import Optional
+from typing import Any, Optional
 from flask import Blueprint, request, jsonify, redirect, Response, url_for
 from urllib.parse import quote
 from config import Config
 
 captions_bp = Blueprint("captions", __name__, url_prefix="/api")
 
-# Cooldown for intake email resends (order_id -> last_sent_timestamp) to avoid spam
-_intake_email_sent_at = {}
 _email_change_attempts = {}
 _email_change_resend_last = {}
 
@@ -591,6 +589,13 @@ def captions_checkout():
     checkout_email, email_error = _parse_checkout_email(request)
     if email_error:
         return redirect(f"{request.host_url.rstrip('/')}/captions?error=checkout_email_invalid#pricing", code=302)
+    # Match subscription checkout: prefill Stripe email when logged in (one-off page has no email fields).
+    if not checkout_email:
+        from api.auth_routes import get_current_customer
+
+        cust = get_current_customer()
+        if cust and (cust.get("email") or "").strip():
+            checkout_email = (cust.get("email") or "").strip().lower()
     extra_price_id = (getattr(Config, "STRIPE_CAPTIONS_EXTRA_PLATFORM_PRICE_ID", None) or "").strip()
     stories_price_id = (getattr(Config, "STRIPE_CAPTIONS_STORIES_PRICE_ID", None) or "").strip()
     amounts = _CURRENCY_ADDON_AMOUNTS.get(currency, _CURRENCY_ADDON_AMOUNTS["gbp"])
@@ -729,7 +734,7 @@ def captions_correct_email():
             user_agent=(request.headers.get("User-Agent") or ""),
         )
         updated = order_service.get_by_id(order_id) or updated
-        _send_intake_email_for_order(updated)
+        _send_intake_email_for_order(updated, skip_checkout_confirmation_dedupe=True)
         intake_url = _build_intake_url(updated)
         is_sub = bool((updated.get("stripe_subscription_id") or "").strip())
         is_pref = bool((updated.get("upgraded_from_token") or "").strip())
@@ -1062,17 +1067,39 @@ def _build_intake_url(order: dict) -> str:
     return intake_url
 
 
-def _send_intake_email_for_order(order: dict) -> None:
-    """Send receipt email then intake or subscription-welcome email (used by webhook and by API fallback)."""
+def _send_intake_email_for_order(
+    order: dict,
+    *,
+    skip_checkout_confirmation_dedupe: bool = False,
+    checkout_session: Optional[Any] = None,
+) -> bool:
+    """Send combined order confirmation + intake email, or subscription-welcome for upgrade-from-one-off (API fallback).
+    When skip_checkout_confirmation_dedupe is False, claims checkout_confirmation_email_sent_at first (cross-worker dedupe).
+    When True, caller already claimed (e.g. Stripe webhook); still releases claim if send fails."""
     customer_email = (order.get("customer_email") or "").strip()
     if not customer_email or "@" not in customer_email:
-        return
+        return False
     intake_url = _build_intake_url(order)
     if not intake_url:
-        return
+        return False
     upgraded_from_oneoff = bool((order.get("upgraded_from_token") or "").strip())
+    oid = str(order.get("id") or "").strip()
+    order_svc = None
+    if not skip_checkout_confirmation_dedupe and oid:
+        from services.caption_order_service import CaptionOrderService
+
+        order_svc = CaptionOrderService()
+        if not order_svc.try_claim_checkout_confirmation_email(oid):
+            print(f"[captions-intake-link] Skip duplicate checkout confirmation email for order {oid[:8]}...")
+            return False
+    elif skip_checkout_confirmation_dedupe and oid:
+        from services.caption_order_service import CaptionOrderService
+
+        order_svc = CaptionOrderService()
+    ok = False
     try:
         from services.notifications import NotificationService
+
         notif = NotificationService()
         if upgraded_from_oneoff:
             # Upgrade-from-one-off: prefilled form already exists, so we must not send the standard receipt copy
@@ -1083,18 +1110,29 @@ def _send_intake_email_for_order(order: dict) -> None:
             else:
                 print(f"[captions-intake-link] Subscription welcome email NOT sent to {customer_email}")
         else:
-            try:
-                notif.send_order_receipt_email(customer_email, order=order)
-                time.sleep(2)  # Ensure confirmation is queued before intake so it arrives first
-            except Exception as e:
-                print(f"[captions-intake-link] Receipt email failed (non-fatal): {e!r}")
-            ok = notif.send_intake_link_email(customer_email, intake_url, order)
+            stripe_session = checkout_session
+            if stripe_session is None:
+                sid = (order.get("stripe_session_id") or "").strip()
+                if sid and (getattr(Config, "STRIPE_SECRET_KEY", None) or "").strip():
+                    try:
+                        import stripe
+                        stripe.api_key = Config.STRIPE_SECRET_KEY.strip()
+                        stripe_session = stripe.checkout.Session.retrieve(sid)
+                    except Exception:
+                        stripe_session = None
+            ok = notif.send_intake_link_email(customer_email, intake_url, order, session=stripe_session)
             if ok:
                 print(f"[captions-intake-link] Sent intake email to {customer_email}")
             else:
                 print(f"[captions-intake-link] Intake email NOT sent (send_email returned False) to {customer_email}")
+        if not ok and oid and order_svc:
+            order_svc.release_checkout_confirmation_email_claim(oid)
+        return ok
     except Exception as e:
+        if oid and order_svc:
+            order_svc.release_checkout_confirmation_email_claim(oid)
         print(f"[captions-intake-link] Failed to send email: {e!r}")
+        return False
 
 
 @captions_bp.route("/captions-intake-link", methods=["GET"])
@@ -1267,15 +1305,11 @@ def captions_intake_link_by_email():
     intake_url = _build_intake_url(order)
     if not intake_url:
         return jsonify({"status": "error", "error": "Order has no token."}), 200
-    if (order.get("status") or "").strip().lower() == "awaiting_intake":
-        order_id = order.get("id")
-        if order_id:
-            import time
-            now = time.time()
-            last = _intake_email_sent_at.get(str(order_id), 0)
-            if now - last >= 300:
-                _send_intake_email_for_order(order)
-                _intake_email_sent_at[str(order_id)] = now
+    # If checkout email was never sent (e.g. webhook missed), try atomic claim + send once.
+    # Do not use skip_checkout_confirmation_dedupe here — that bypassed DB dedupe and duplicated
+    # the webhook confirmation when users hit "Get form link" after checkout.
+    if (order.get("status") or "").strip().lower() == "awaiting_intake" and order.get("id"):
+        _send_intake_email_for_order(order)
     is_subscription = bool((order.get("stripe_subscription_id") or "").strip())
     is_prefilled_from_oneoff = bool((order.get("upgraded_from_token") or "").strip())
     sid = (order.get("stripe_session_id") or "").strip()

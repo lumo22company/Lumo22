@@ -784,7 +784,7 @@
             <a id="referral-share-sms-btn" class="dfd-btn dfd-btn-secondary referral-copy account-btn-swipe-light referral-share-native" href="{{ referral_sms_href }}">Share by text</a>
           </div>
         {% if referral_discount_credits|default(0) > 0 %}
-        <p class="account-settings-desc" style="margin-top: 0.75rem; color: var(--lum-gold); font-weight: 600;">You have {{ referral_discount_credits }} referral credit{{ 's' if referral_discount_credits != 1 else '' }} — 10% off your next {{ referral_discount_credits }} billing period{{ 's' if referral_discount_credits != 1 else '' }}.</p>
+        <div class="account-referral-credits-banner" role="status">You have {{ referral_discount_credits }} referral credit{{ 's' if referral_discount_credits != 1 else '' }} — 10% off your next {% if referral_discount_credits == 1 %}billing period{% else %}{{ referral_discount_credits }} billing periods{% endif %}.</div>
         {% endif %}
       </div>
         {% else %}

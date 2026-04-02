@@ -288,7 +288,7 @@ def _handle_captions_payment(session):
             except Exception as e:
                 print(f"[Stripe webhook] Could not persist reminder_opt_out on create: {e}")
         print(f"[Stripe webhook] Order created id={order.get('id')} token=...{order['token'][-6:]}")
-    # Merge checkout business name into intake before any emails (receipt / intake link).
+    # Merge checkout business name into intake before any emails (order confirmation + intake link).
     try:
         from api.captions_routes import seed_intake_business_from_stripe_metadata
 
@@ -310,117 +310,119 @@ def _handle_captions_payment(session):
     if copy_from:
         intake_url += f"&copy_from={copy_from}"
 
-    # Only send emails when we created the order; if existing, API or prior webhook already sent
+    # Only send emails when we created the order; if existing, API or prior webhook already sent.
+    # Atomic claim prevents duplicate rows (same session) + duplicate sends when thank-you API and webhook race.
     if order_created_here:
-        notif = NotificationService()
-        amount_total = session.get("amount_total") if isinstance(session, dict) else getattr(session, "amount_total", None)
-        upgraded_from_oneoff = bool((order.get("upgraded_from_token") or copy_from or "").strip())
-        is_trial_upgrade = upgraded_from_oneoff and (amount_total is None or (isinstance(amount_total, (int, float)) and int(amount_total) == 0))
-        # For upgrades from one-off -> subscription we send a dedicated "prefilled form" email.
-        # The standard receipt copy would incorrectly say "complete your short intake form" even though it was already filled/edited.
-        if (not upgraded_from_oneoff) and (not is_trial_upgrade):
-            try:
-                notif.send_order_receipt_email(customer_email, order=order, session=session)
-                time.sleep(2)  # Ensure confirmation is queued before intake so it arrives first
-            except Exception as receipt_err:
-                print(f"[Stripe webhook] Receipt email failed (non-fatal): {receipt_err}")
-        if upgraded_from_oneoff:
-            if is_trial_upgrade:
-                # No charge today; send upgrade confirmation with charge date (no "payment received" receipt)
-                first_charge_date_str = None
-                if copy_from:
-                    try:
-                        from services.caption_order_service import CaptionOrderService
-                        from datetime import datetime, timedelta, timezone
-                        one_off = CaptionOrderService().get_by_token(copy_from)
-                        if one_off:
-                            raw = one_off.get("delivered_at") or one_off.get("updated_at") or one_off.get("created_at")
-                            if raw:
-                                dt = datetime.fromisoformat(raw.replace("Z", "+00:00")) if isinstance(raw, str) else raw
-                                if getattr(dt, "tzinfo", None) is None:
-                                    dt = dt.replace(tzinfo=timezone.utc)
-                                first_charge_date_str = (dt + timedelta(days=30)).strftime("%d %B %Y")
-                    except Exception:
-                        pass
-                print(f"[Stripe webhook] Sending subscription upgrade confirmation (trial) to {customer_email}")
-                ok = False
-                try:
-                    ok = notif.send_subscription_upgrade_confirmation_email(
-                        customer_email,
-                        intake_url,
-                        first_charge_date_str,
-                        order=order,
-                    )
-                except Exception as send_err:
-                    print(f"[Stripe webhook] Upgrade confirmation send failed ({send_err}), retrying with fallback URL")
-                    fallback_url = f"https://lumo-22-production.up.railway.app/captions-intake?t={safe_token}"
+        oid = str(order.get("id") or "").strip()
+        send_checkout_emails = not oid or order_service.try_claim_checkout_confirmation_email(oid)
+        if oid and not send_checkout_emails:
+            print(
+                f"[Stripe webhook] Checkout confirmation email already sent for order {oid[:8]}...; "
+                "skipping duplicate send"
+            )
+        if send_checkout_emails:
+            notif = NotificationService()
+            amount_total = session.get("amount_total") if isinstance(session, dict) else getattr(session, "amount_total", None)
+            upgraded_from_oneoff = bool((order.get("upgraded_from_token") or copy_from or "").strip())
+            is_trial_upgrade = upgraded_from_oneoff and (
+                amount_total is None or (isinstance(amount_total, (int, float)) and int(amount_total) == 0)
+            )
+            if upgraded_from_oneoff:
+                if is_trial_upgrade:
+                    first_charge_date_str = None
                     if copy_from:
-                        fallback_url += f"&copy_from={copy_from}"
+                        try:
+                            from services.caption_order_service import CaptionOrderService
+                            from datetime import datetime, timedelta, timezone
+
+                            one_off = CaptionOrderService().get_by_token(copy_from)
+                            if one_off:
+                                raw = one_off.get("delivered_at") or one_off.get("updated_at") or one_off.get("created_at")
+                                if raw:
+                                    dt = datetime.fromisoformat(raw.replace("Z", "+00:00")) if isinstance(raw, str) else raw
+                                    if getattr(dt, "tzinfo", None) is None:
+                                        dt = dt.replace(tzinfo=timezone.utc)
+                                    first_charge_date_str = (dt + timedelta(days=30)).strftime("%d %B %Y")
+                        except Exception:
+                            pass
+                    print(f"[Stripe webhook] Sending subscription upgrade confirmation (trial) to {customer_email}")
+                    ok = False
                     try:
                         ok = notif.send_subscription_upgrade_confirmation_email(
                             customer_email,
-                            fallback_url,
+                            intake_url,
                             first_charge_date_str,
                             order=order,
                         )
-                    except Exception as fallback_err:
-                        print(f"[Stripe webhook] Fallback also failed: {fallback_err}")
-                        raise
-                if not ok:
-                    print(f"[Stripe webhook] subscription upgrade confirmation email FAILED to send to {customer_email}")
+                    except Exception as send_err:
+                        print(f"[Stripe webhook] Upgrade confirmation send failed ({send_err}), retrying with fallback URL")
+                        fallback_url = f"https://lumo-22-production.up.railway.app/captions-intake?t={safe_token}"
+                        if copy_from:
+                            fallback_url += f"&copy_from={copy_from}"
+                        try:
+                            ok = notif.send_subscription_upgrade_confirmation_email(
+                                customer_email,
+                                fallback_url,
+                                first_charge_date_str,
+                                order=order,
+                            )
+                        except Exception as fallback_err:
+                            print(f"[Stripe webhook] Fallback also failed: {fallback_err}")
+                            if oid:
+                                order_service.release_checkout_confirmation_email_claim(oid)
+                            raise
+                    if not ok:
+                        print(f"[Stripe webhook] subscription upgrade confirmation email FAILED to send to {customer_email}")
+                        if oid:
+                            order_service.release_checkout_confirmation_email_claim(oid)
+                    else:
+                        print(f"[Stripe webhook] subscription upgrade confirmation email sent to {customer_email}")
                 else:
-                    print(f"[Stripe webhook] subscription upgrade confirmation email sent to {customer_email}")
-            else:
-                # Charged at checkout (e.g. get pack now); send welcome prefilled
-                print(f"[Stripe webhook] Sending subscription welcome (prefilled) email to {customer_email}")
-                ok = False
-                try:
-                    amount_paid = _format_paid_amount(amount_total, (order.get("currency") or "gbp"))
-                    ok = notif.send_subscription_welcome_prefilled_email(
-                        customer_email,
-                        intake_url,
-                        order=order,
-                        amount_paid=amount_paid,
-                    )
-                except Exception as send_err:
-                    print(f"[Stripe webhook] Send failed ({send_err}), retrying with hardcoded fallback URL")
-                    fallback_url = f"https://lumo-22-production.up.railway.app/captions-intake?t={safe_token}"
-                    if copy_from:
-                        fallback_url += f"&copy_from={copy_from}"
+                    print(f"[Stripe webhook] Sending subscription welcome (prefilled) email to {customer_email}")
+                    ok = False
                     try:
                         amount_paid = _format_paid_amount(amount_total, (order.get("currency") or "gbp"))
                         ok = notif.send_subscription_welcome_prefilled_email(
                             customer_email,
-                            fallback_url,
+                            intake_url,
                             order=order,
                             amount_paid=amount_paid,
                         )
-                    except Exception as fallback_err:
-                        print(f"[Stripe webhook] Fallback send also failed: {fallback_err}")
-                        raise
-                if not ok:
-                    print(f"[Stripe webhook] subscription-welcome email FAILED to send to {customer_email}")
-                else:
-                    print(f"[Stripe webhook] subscription-welcome email sent to {customer_email}")
-        else:
-            print(f"[Stripe webhook] Sending intake email to {customer_email}")
-            ok = False
-            try:
-                ok = notif.send_intake_link_email(customer_email, intake_url, order)
-            except Exception as send_err:
-                print(f"[Stripe webhook] Send failed ({send_err}), retrying with hardcoded fallback URL")
-                fallback_url = f"https://lumo-22-production.up.railway.app/captions-intake?t={safe_token}"
-                if copy_from:
-                    fallback_url += f"&copy_from={copy_from}"
-                try:
-                    ok = notif.send_intake_link_email(customer_email, fallback_url, order)
-                except Exception as fallback_err:
-                    print(f"[Stripe webhook] Fallback send also failed: {fallback_err}")
-                    raise
-            if not ok:
-                print(f"[Stripe webhook] intake-link email FAILED to send to {customer_email}")
+                    except Exception as send_err:
+                        print(f"[Stripe webhook] Send failed ({send_err}), retrying with hardcoded fallback URL")
+                        fallback_url = f"https://lumo-22-production.up.railway.app/captions-intake?t={safe_token}"
+                        if copy_from:
+                            fallback_url += f"&copy_from={copy_from}"
+                        try:
+                            amount_paid = _format_paid_amount(amount_total, (order.get("currency") or "gbp"))
+                            ok = notif.send_subscription_welcome_prefilled_email(
+                                customer_email,
+                                fallback_url,
+                                order=order,
+                                amount_paid=amount_paid,
+                            )
+                        except Exception as fallback_err:
+                            print(f"[Stripe webhook] Fallback send also failed: {fallback_err}")
+                            if oid:
+                                order_service.release_checkout_confirmation_email_claim(oid)
+                            raise
+                    if not ok:
+                        print(f"[Stripe webhook] subscription-welcome email FAILED to send to {customer_email}")
+                        if oid:
+                            order_service.release_checkout_confirmation_email_claim(oid)
+                    else:
+                        print(f"[Stripe webhook] subscription-welcome email sent to {customer_email}")
             else:
-                print(f"[Stripe webhook] intake-link email sent to {customer_email}")
+                from api.captions_routes import _send_intake_email_for_order
+
+                print(f"[Stripe webhook] Sending intake email to {customer_email}")
+                ok = _send_intake_email_for_order(
+                    order, skip_checkout_confirmation_dedupe=True, checkout_session=session
+                )
+                if not ok:
+                    print(f"[Stripe webhook] intake-link email FAILED to send to {customer_email}")
+                else:
+                    print(f"[Stripe webhook] intake-link email sent to {customer_email}")
 
     # Referrer reward: signup referral (referred_by) and/or friend's promotion code at Checkout. No credit if self-referral.
     try:

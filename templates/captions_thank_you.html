@@ -15,22 +15,76 @@
     .thankyou-card { max-width: 520px; margin: 0 auto; padding: 2.5rem; background: var(--lum-card-bg, rgba(255,255,255,0.03)); border-radius: 12px; border: 1px solid var(--lum-border, rgba(255,255,255,0.08)); }
     .thankyou-card h1 { font-family: var(--font-display); font-size: 1.75rem; margin-bottom: 1rem; }
     .thankyou-card p { color: var(--lum-text-muted); line-height: 1.7; margin-bottom: 1.25rem; }
-    .thankyou-card .thankyou-cta { margin-top: 1.5rem; display: inline-block; }
     .thankyou-card .thankyou-back { margin-top: 2rem; }
     .thankyou-card .thankyou-back a { color: var(--lum-text-muted); text-decoration: none; font-size: 0.95rem; }
     .thankyou-card .thankyou-back a:hover { color: var(--lum-text); }
     .thankyou-card input::placeholder { color: #666; }
-    /* Fill out form now / I'll do it later: yellow text, yellow outline, swipe on hover — see landing.css .thankyou-cta-swipe */
+    /* Primary: landing.css .thankyou-cta-swipe; secondary: underlined text link below */
     .thankyou-spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid var(--lum-text-muted); border-top-color: transparent; border-radius: 50%; animation: thankyou-spin 0.8s linear infinite; vertical-align: middle; margin-right: 0.5rem; }
     @keyframes thankyou-spin { to { transform: rotate(360deg); } }
-    /* CTAs in a row: don’t stretch to equal height/width; secondary action stays compact */
-    .thankyou-cta-row { align-items: flex-start; }
-    .thankyou-cta-row .thankyou-cta-swipe { flex: 0 1 auto; align-self: flex-start; width: auto; max-width: 100%; }
-    .thankyou-cta-swipe.thankyou-cta-later {
-      padding: 0.5rem 1rem;
-      min-height: 0;
-      font-size: 0.65rem;
+    /* Primary button full width; “I’ll do it later” below as a normal text link */
+    .thankyou-cta-stack {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+    }
+    .thankyou-cta-stack .thankyou-cta-swipe {
+      width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      margin: 0;
+      padding: 0.65rem 1rem !important;
+      min-height: 48px;
+      font-size: 0.68rem;
       letter-spacing: 0.12em;
+      line-height: 1.3;
+    }
+    .thankyou-cta-stack .thankyou-link-later-wrap {
+      text-align: center;
+      margin: 0;
+      padding: 0;
+    }
+    .thankyou-link-wrong-email {
+      background: none;
+      border: none;
+      padding: 0;
+      margin: 0 0 0.35rem 0;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--lum-gold, #fff200);
+      text-decoration: none;
+      border-bottom: 1px solid var(--lum-gold, #fff200);
+      display: inline;
+      line-height: 1.4;
+    }
+    .thankyou-link-wrong-email:hover {
+      color: var(--lum-ivory, #f5f5f0);
+      border-bottom-color: var(--lum-ivory, #f5f5f0);
+    }
+    .thankyou-link-later {
+      display: inline;
+      font-size: 0.9rem;
+      font-weight: 400;
+      letter-spacing: normal;
+      color: var(--lum-text-muted);
+      text-decoration: underline;
+      text-underline-offset: 0.2em;
+      padding: 0;
+      margin: 0;
+      border: none;
+      background: none;
+      transition: color 0.2s ease;
+    }
+    .thankyou-link-later:hover {
+      color: var(--lum-text);
     }
   </style>
 </head>
@@ -56,7 +110,7 @@
       <div id="thankyou-form-link" style="display: none;" aria-hidden="true">
         <p id="thankyou-email-msg" style="margin-bottom: 1.25rem;"></p>
         <div id="thankyou-wrong-email-wrap" style="display: none; margin: 0.25rem 0 1.25rem;">
-          <button type="button" id="thankyou-wrong-email-toggle" class="thankyou-cta-swipe" style="padding: 0.45rem 0.9rem;">Wrong email?</button>
+          <button type="button" id="thankyou-wrong-email-toggle" class="thankyou-link-wrong-email">Wrong email?</button>
           <div id="thankyou-wrong-email-form" style="display: none; margin-top: 0.75rem; max-width: 420px;">
             <label for="thankyou-new-email" style="display:block; font-size: 0.9rem; margin-bottom: 0.25rem;">Email</label>
             <input type="email" id="thankyou-new-email" placeholder="your@email.com" style="width: 100%; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: #ffffff; color: #1a1a1a; font-size: 1rem; margin-bottom: 0.65rem;">
@@ -67,13 +121,16 @@
             <p id="thankyou-update-email-success" style="display:none; margin:0.65rem 0 0; font-size:0.9rem; color:#8c8;">Updated. We sent your intake link to the new email.</p>
           </div>
         </div>
-        <div class="thankyou-cta-row" style="display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1.5rem;">
-          <a href="#" id="intake-link" class="thankyou-cta-swipe thankyou-cta" aria-disabled="true">Fill out form now</a>
-          <a href="{% if current_customer %}/account{% else %}/{% endif %}" id="later-link" class="thankyou-cta-swipe">I'll do it later</a>
+        <div class="thankyou-cta-stack">
+          <a href="#" id="intake-link" class="thankyou-cta-swipe" aria-disabled="true">Fill out form now</a>
+          <p class="thankyou-link-later-wrap">
+            <a href="{% if current_customer %}/account{% else %}/{% endif %}" id="later-link" class="thankyou-link-later">I'll do it later</a>
+          </p>
         </div>
         <div id="thankyou-create-account" style="display: none; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.15);">
           <h2 style="font-size: 1.15rem; margin: 0 0 0.5rem;">Create your account</h2>
           <p style="font-size: 0.95rem; color: var(--lum-text-muted); margin: 0 0 1rem; line-height: 1.5;">Set a password (at least 12 characters and 1 number) so you can log in and manage your subscription. We'll send a verification link to your email to confirm your address.</p>
+          <p id="thankyou-login-hint" style="font-size: 0.9rem; color: var(--lum-text-muted); margin: 0 0 1rem; line-height: 1.5;">Already have an account? <a id="thankyou-login-link" href="/login" style="color: var(--lum-gold); font-weight: 600; text-decoration: none; border-bottom: 1px solid var(--lum-gold);">Log in</a> to manage your subscription—you won’t need to create a second account.</p>
           <div id="signup-form-wrap" style="max-width: 320px;">
             <label for="signup-email" style="display:block; font-size: 0.9rem; margin-bottom: 0.25rem;">Email</label>
             <input type="email" id="signup-email" style="width: 100%; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: #ffffff; color: #1a1a1a; font-size: 1rem; margin-bottom: 0.75rem;" placeholder="your@email.com">
@@ -157,7 +214,7 @@
                 if (data && data.status === 'ok' && data.intake_url) {
                   noSessionEl.style.display = 'none';
                   if (emailFallbackNoSession) emailFallbackNoSession.style.display = 'none';
-                  showIntake(data.intake_url, data.customer_email || null, !!data.is_subscription, !!data.is_prefilled_from_oneoff, data.email_recovery_token || '', !!data.subscription_first_pack_immediate);
+                  showIntakeWithAuth(data.intake_url, data.customer_email || null, !!data.is_subscription, !!data.is_prefilled_from_oneoff, data.email_recovery_token || '', !!data.subscription_first_pack_immediate);
                   formLinkEl.style.display = 'block';
                 } else {
                   if (emailError) { emailError.textContent = data && data.error ? data.error : 'No order found for this email.'; emailError.style.display = 'block'; }
@@ -175,7 +232,7 @@
         return;
       }
 
-      function showIntake(url, customerEmail, isSubscription, isPrefilledFromOneoff, emailRecoveryToken, firstPackImmediate) {
+      function showIntake(url, customerEmail, isSubscription, isPrefilledFromOneoff, emailRecoveryToken, firstPackImmediate, mePayload) {
         recoveryToken = (emailRecoveryToken || recoveryToken || '');
         firstPackImmediate = !!firstPackImmediate;
         var thankyouBox = document.getElementById('thankyou-box');
@@ -186,7 +243,14 @@
         messageEl.style.display = 'none';
         var emailFallback = document.getElementById('thankyou-email-fallback');
         if (emailFallback) emailFallback.style.display = 'none';
-        var isLoggedIn = (document.body.getAttribute('data-current-customer') || '').toLowerCase() === 'true';
+        var bodyLoggedIn = (document.body.getAttribute('data-current-customer') || '').toLowerCase() === 'true';
+        var emailMatchesSession = false;
+        if (mePayload && mePayload.ok && mePayload.customer && customerEmail) {
+          var sessEm = (mePayload.customer.email || '').trim().toLowerCase();
+          var orderEm = String(customerEmail).trim().toLowerCase();
+          emailMatchesSession = Boolean(sessEm && orderEm && sessEm === orderEm);
+        }
+        var isLoggedIn = bodyLoggedIn || emailMatchesSession;
         var prefilledEditLine = '';
         var timingPart = '';
         var accountSuffix = '';
@@ -233,6 +297,10 @@
             prefilledEditLine = ' Open the form to get started — we\'ll tailor your pack from your answers.';
             timingPart = ' Your captions are usually ready within 15 minutes.';
             accountSuffix = ' When they\'re ready, you\'ll find them in your account and by email.';
+          } else if (isLoggedIn && isSubscription) {
+            prefilledEditLine = ' Open the form to complete your details — we\'ll tailor your captions from your answers.';
+            timingPart = ' Your captions are usually ready within 15 minutes.';
+            accountSuffix = ' You can manage your subscription from your account.';
           } else {
             prefilledEditLine = customerEmail
               ? ' Fill in the short form to get started.'
@@ -240,8 +308,6 @@
             timingPart = ' Your captions are usually ready within 15 minutes.';
             if (isSubscription && !isLoggedIn) {
               accountSuffix = ' Create your account below (set a password) so you can log in and manage your subscription. We\'ll send a verification link to your email.';
-            } else if (isSubscription && isLoggedIn && !isPrefilledFromOneoff) {
-              accountSuffix = ' You can manage your subscription from your account.';
             } else if (!isSubscription) {
               accountSuffix = ' On the form you can also create an account to access your captions in one place.';
             }
@@ -296,6 +362,32 @@
             createAccountEl.style.display = 'none';
           }
         }
+        var thankyouLoginLink = document.getElementById('thankyou-login-link');
+        if (thankyouLoginLink) {
+          var nextPath = window.location.pathname + window.location.search;
+          if (!nextPath || nextPath === '/') {
+            nextPath = '/captions-thank-you';
+          }
+          var loginHref = '/login?next=' + encodeURIComponent(nextPath);
+          if (customerEmail && customerEmail.indexOf('@') !== -1) {
+            loginHref += '&email=' + encodeURIComponent(String(customerEmail).trim());
+          }
+          thankyouLoginLink.href = loginHref;
+        }
+      }
+
+      function showIntakeWithAuth(url, customerEmail, isSubscription, isPrefilledFromOneoff, emailRecoveryToken, firstPackImmediate) {
+        fetch('/api/auth/me', { credentials: 'same-origin' })
+          .then(function(r) {
+            if (!r.ok) return null;
+            return r.json();
+          })
+          .then(function(me) {
+            showIntake(url, customerEmail, isSubscription, isPrefilledFromOneoff, emailRecoveryToken, firstPackImmediate, me);
+          })
+          .catch(function() {
+            showIntake(url, customerEmail, isSubscription, isPrefilledFromOneoff, emailRecoveryToken, firstPackImmediate, null);
+          });
       }
 
       function escapeHtml(s) {
@@ -308,7 +400,7 @@
       function onResponse(data) {
         if (data && data.status === 'ok' && data.intake_url) {
           intakeShown = true;
-          showIntake(data.intake_url, data.customer_email || null, !!data.is_subscription, !!data.is_prefilled_from_oneoff, data.email_recovery_token || '', !!data.subscription_first_pack_immediate);
+          showIntakeWithAuth(data.intake_url, data.customer_email || null, !!data.is_subscription, !!data.is_prefilled_from_oneoff, data.email_recovery_token || '', !!data.subscription_first_pack_immediate);
           return true;
         }
         return false;
@@ -355,7 +447,7 @@
               .then(function(data) {
                 if (data && data.status === 'ok' && data.intake_url) {
                   intakeShown = true;
-                  showIntake(data.intake_url, data.customer_email || null, !!data.is_subscription, !!data.is_prefilled_from_oneoff, data.email_recovery_token || '', !!data.subscription_first_pack_immediate);
+                  showIntakeWithAuth(data.intake_url, data.customer_email || null, !!data.is_subscription, !!data.is_prefilled_from_oneoff, data.email_recovery_token || '', !!data.subscription_first_pack_immediate);
                   if (emailFallback) emailFallback.style.display = 'none';
                 } else {
                   if (emailError) { emailError.textContent = data && data.error ? data.error : 'No order found for this email.'; emailError.style.display = 'block'; }
@@ -493,7 +585,7 @@
           .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
           .then(function(res) {
             if (res.ok && res.data && res.data.status === 'ok') {
-              showIntake((res.data && res.data.intake_url) || intakeLinkEl.href, email, !!res.data.is_subscription, !!res.data.is_prefilled_from_oneoff, (res.data && res.data.email_recovery_token) || '', !!(res.data && res.data.subscription_first_pack_immediate));
+              showIntakeWithAuth((res.data && res.data.intake_url) || intakeLinkEl.href, email, !!res.data.is_subscription, !!res.data.is_prefilled_from_oneoff, (res.data && res.data.email_recovery_token) || '', !!(res.data && res.data.subscription_first_pack_immediate));
               if (wrongEmailSuccessEl) wrongEmailSuccessEl.style.display = 'block';
               if (wrongEmailFormEl) wrongEmailFormEl.style.display = 'none';
             } else {

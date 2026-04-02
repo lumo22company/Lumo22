@@ -40,7 +40,7 @@ def main():
 
     # 1. Form link email (after captions purchase) — uses production template
     intake_url = "https://www.lumo22.com/captions-intake?t=sample-token"
-    samples.append(("intake.html", "Form link (after captions purchase)", _intake_link_email_html(intake_url, "• One-off (£97)\n• 1 platform", is_subscription=False)))
+    samples.append(("intake.html", "Order confirmed + form link (after captions checkout)", _intake_link_email_html(intake_url, "• One-off (£97)\n• 1 platform", is_subscription=False)))
 
     # 2. Delivery email — uses production template
     samples.append(("delivery.html", "Delivery email (with attachment)", _captions_delivery_email_html(has_stories=False, has_subscription=False)))

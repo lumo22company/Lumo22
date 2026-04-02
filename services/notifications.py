@@ -222,9 +222,17 @@ def _build_captions_order_pricing_detail(
     currency: str,
     amount_paid_display: Optional[str],
     amount_total_minor: Optional[int],
+    *,
+    subtotal_minor: Optional[int] = None,
+    discount_minor: Optional[int] = None,
+    tax_minor: Optional[int] = None,
+    discount_label: Optional[str] = None,
+    ongoing_monthly_display: Optional[str] = None,
 ) -> Tuple[str, str]:
     """
-    Itemised list prices + platforms + amount (or list-price total when amount unknown).
+    Itemised pack/add-ons (list prices), then Stripe checkout totals when available (subtotal, tax, discount, total).
+    discount_label: promotion code(s) or coupon name from Checkout.
+    ongoing_monthly_display: full plan price per month for subscriptions (renewals).
     Returns (plain_text, html_fragment) for order confirmation / receipt blocks.
     """
     import html as html_module
@@ -242,7 +250,7 @@ def _build_captions_order_pricing_detail(
     else:
         platforms_line = "1 platform" if platforms_n == 1 else f"{platforms_n} platforms"
 
-    plain_lines: list[str] = ["Pricing"]
+    plain_lines: list[str] = ["Line items (pack and add-ons)", ""]
     html_rows: list[str] = []
 
     def _fmt_money(amount: float, monthly: bool) -> str:
@@ -306,14 +314,88 @@ def _build_captions_order_pricing_detail(
 
     computed_minor = int(round(computed * 100))
     plain_lines.append("")
+
+    disc = 0
+    if discount_minor is not None:
+        try:
+            disc = max(0, int(discount_minor))
+        except (TypeError, ValueError):
+            disc = 0
+    tax_amt = 0
+    if tax_minor is not None:
+        try:
+            tax_amt = max(0, int(tax_minor))
+        except (TypeError, ValueError):
+            tax_amt = 0
+
+    sub_fmt: Optional[str] = None
+    if subtotal_minor is not None:
+        try:
+            sub_fmt = _format_amount_paid(int(subtotal_minor), currency)
+        except (TypeError, ValueError):
+            sub_fmt = None
+    tax_fmt = _format_amount_paid(tax_amt, currency) if tax_amt > 0 else None
+    d_fmt = _format_amount_paid(disc, currency) if disc > 0 else None
+
+    show_checkout_totals = bool(amount_paid_display) and bool(sub_fmt or tax_fmt or d_fmt)
+    disc_plain_title = "Discount (promotion)"
+    if disc > 0 and (discount_label or "").strip():
+        disc_plain_title = f"Discount (code / offer: {discount_label.strip()})"
+    elif disc > 0:
+        disc_plain_title = "Discount (promotion)"
+
+    checkout_extra_html = ""
+    if show_checkout_totals:
+        plain_lines.extend(["Checkout totals", ""])
+        if sub_fmt:
+            plain_lines.append(f"Subtotal: {sub_fmt}")
+            checkout_extra_html += (
+                f'<p style="margin:0 0 6px;"><strong>Subtotal:</strong> '
+                f"{html_module.escape(sub_fmt)}</p>"
+            )
+        if tax_fmt:
+            plain_lines.append(f"Tax: {tax_fmt}")
+            checkout_extra_html += (
+                f'<p style="margin:0 0 6px;"><strong>Tax:</strong> '
+                f"{html_module.escape(tax_fmt)}</p>"
+            )
+        if d_fmt:
+            disc_html_title = "Discount (promotion)"
+            if (discount_label or "").strip():
+                safe_lbl = html_module.escape(discount_label.strip())
+                disc_html_title = f"Discount ({safe_lbl})"
+            plain_lines.append(f"{disc_plain_title}: −{d_fmt}")
+            checkout_extra_html += (
+                f'<p style="margin:0 0 6px;"><strong>{disc_html_title}:</strong> '
+                f"−{html_module.escape(d_fmt)}</p>"
+            )
+        plain_lines.append("")
+
     if amount_paid_display:
-        plain_lines.append(f"Amount paid: {amount_paid_display}")
+        paid_label = "Total paid" if show_checkout_totals else "Amount paid"
+        plain_lines.append(f"{paid_label}: {amount_paid_display}")
     elif is_sub:
         plain_lines.append(f"Monthly total (at checkout prices): {_fmt_money(computed, True)}")
     else:
         plain_lines.append(f"Pack total (at checkout prices): {_fmt_money(computed, False)}")
 
     plain_lines.extend(["", "Your platforms", platforms_line, "", f"Billing: {'Monthly subscription' if is_sub else 'One-off purchase'}"])
+
+    ongoing_html = ""
+    if ongoing_monthly_display and is_sub:
+        safe_ongoing = html_module.escape(str(ongoing_monthly_display).strip())
+        plain_lines.extend(
+            [
+                "",
+                f"Going forward: your subscription renews at {ongoing_monthly_display.strip()} at the plan price.",
+                "One-time promotions at checkout usually apply only to this payment; later renewals follow your plan unless you have another active discount in Stripe.",
+            ]
+        )
+        ongoing_html = (
+            f'<p style="margin:12px 0 0;"><strong>Going forward:</strong> {safe_ongoing} at the plan price.</p>'
+            f'<p style="margin:6px 0 0; font-size:12px; color:{BRAND_MUTED};">'
+            "One-time promotions at checkout usually apply only to this payment; renewals follow your plan unless you have another active discount.</p>"
+        )
 
     mismatch_note_plain = ""
     mismatch_note_html = ""
@@ -333,14 +415,24 @@ def _build_captions_order_pricing_detail(
         )
 
     table_html = (
-        f'<p style="margin:0 0 6px; font-size:13px; color:{BRAND_TEXT_ON_LIGHT_GREY_PANEL};"><strong>Pricing</strong></p>'
+        f'<p style="margin:0 0 6px; font-size:13px; color:{BRAND_TEXT_ON_LIGHT_GREY_PANEL};"><strong>Line items</strong></p>'
         f'<table role="presentation" cellpadding="0" cellspacing="0" width="100%" '
         f'style="font-size:14px; color:{BRAND_TEXT_ON_LIGHT_GREY_PANEL}; margin:0 0 12px;">'
         + "".join(html_rows)
         + "</table>"
     )
+    totals_heading = ""
+    if show_checkout_totals:
+        totals_heading = (
+            f'<p style="margin:12px 0 6px; font-size:13px; color:{BRAND_TEXT_ON_LIGHT_GREY_PANEL};">'
+            f"<strong>Checkout totals</strong></p>"
+        )
     if amount_paid_display:
-        total_line = f'<p style="margin:0 0 10px;"><strong>Amount paid:</strong> {html_module.escape(amount_paid_display)}</p>'
+        paid_label_html = "Total paid" if show_checkout_totals else "Amount paid"
+        total_line = (
+            f'<p style="margin:0 0 10px;"><strong>{paid_label_html}:</strong> '
+            f"{html_module.escape(amount_paid_display)}</p>"
+        )
     elif is_sub:
         total_line = (
             f'<p style="margin:0 0 10px;"><strong>Monthly total (at checkout prices):</strong> '
@@ -357,7 +449,9 @@ def _build_captions_order_pricing_detail(
         f'<p style="margin:0;"><strong>Billing:</strong> '
         f"{'Monthly subscription' if is_sub else 'One-off purchase'}</p>"
     )
-    html_fragment = table_html + total_line + platforms_html + mismatch_note_html
+    html_fragment = (
+        table_html + totals_heading + checkout_extra_html + total_line + platforms_html + ongoing_html + mismatch_note_html
+    )
     plain_text = "\n".join(plain_lines) + mismatch_note_plain
     return plain_text, html_fragment
 
@@ -396,6 +490,198 @@ def _format_amount_paid(amount_total: Optional[int], currency: str) -> Optional[
     if currency == "eur":
         return f"€{amt / 100:.2f}"
     return f"{amt / 100:.2f} {currency.upper()}"
+
+
+def _stripe_session_payment_breakdown(session: Optional[Any]) -> Optional[Dict[str, Any]]:
+    """
+    Read Stripe Checkout Session amounts for receipt emails.
+    Returns dict with currency, subtotal (minor), total (minor), discount (minor), tax (minor).
+    """
+    if session is None:
+        return None
+
+    def _get(obj: Any, key: str, default: Any = None) -> Any:
+        if obj is None:
+            return default
+        if isinstance(obj, dict):
+            return obj.get(key, default)
+        return getattr(obj, key, default)
+
+    curr = str(_get(session, "currency") or "gbp").strip().lower()
+    sub = _get(session, "amount_subtotal")
+    tot = _get(session, "amount_total")
+    td = _get(session, "total_details")
+    disc_raw = _get(td, "amount_discount") if td is not None else None
+
+    def _to_int(v: Any) -> Optional[int]:
+        if v is None:
+            return None
+        try:
+            return int(v)
+        except (TypeError, ValueError):
+            return None
+
+    sub_i = _to_int(sub)
+    tot_i = _to_int(tot)
+    disc_i = _to_int(disc_raw) or 0
+    if disc_i < 0:
+        disc_i = 0
+    tax_raw = _get(td, "amount_tax") if td is not None else None
+    tax_i = _to_int(tax_raw) or 0
+    if tax_i < 0:
+        tax_i = 0
+    return {"currency": curr, "subtotal": sub_i, "total": tot_i, "discount": disc_i, "tax": tax_i}
+
+
+def _checkout_discount_label_from_session(session: Optional[Any]) -> Optional[str]:
+    """Promotion / coupon labels applied at Checkout (comma-separated if several)."""
+    if session is None:
+        return None
+
+    def _get(obj: Any, key: str, default: Any = None) -> Any:
+        if obj is None:
+            return default
+        if isinstance(obj, dict):
+            return obj.get(key, default)
+        return getattr(obj, key, default)
+
+    def _discount_rows(sess: Any) -> list[Any]:
+        raw = _get(sess, "discounts")
+        if raw is None:
+            return []
+        if isinstance(raw, (list, tuple)):
+            return list(raw)
+        data = _get(raw, "data")
+        if isinstance(data, list):
+            return data
+        try:
+            return list(raw)
+        except TypeError:
+            return []
+
+    parts: list[str] = []
+    for d in _discount_rows(session):
+        if d is None:
+            continue
+        pc = _get(d, "promotion_code")
+        if isinstance(pc, dict):
+            code = (pc.get("code") or "").strip().upper()
+            if code:
+                parts.append(code)
+                continue
+        if pc is not None and not isinstance(pc, str):
+            code = str(getattr(pc, "code", "") or "").strip().upper()
+            if code:
+                parts.append(code)
+                continue
+        cp = _get(d, "coupon")
+        if isinstance(cp, dict):
+            name = (cp.get("name") or "").strip()
+            cid = (cp.get("id") or "").strip()
+            label = name or (f"Coupon ({cid})" if cid else "")
+            if label:
+                parts.append(label)
+        elif cp is not None and not isinstance(cp, str):
+            name = str(getattr(cp, "name", "") or "").strip()
+            cid = str(getattr(cp, "id", "") or "").strip()
+            label = name or (f"Coupon ({cid})" if cid else "")
+            if label:
+                parts.append(label)
+
+    if parts:
+        seen: set[str] = set()
+        out: list[str] = []
+        for p in parts:
+            k = p.lower()
+            if k not in seen:
+                seen.add(k)
+                out.append(p)
+        return ", ".join(out)
+
+    sid = _get(session, "id")
+    if sid:
+        try:
+            from services.stripe_referral_promotion import get_promotion_code_str_from_checkout_session
+
+            code = get_promotion_code_str_from_checkout_session({"id": str(sid)})
+            if code:
+                return code
+        except Exception:
+            pass
+    return None
+
+
+def _captions_order_list_price_monthly_display(order: Optional[Dict[str, Any]], currency: str) -> Optional[str]:
+    """Full list-price monthly total for a subscription order (before one-time checkout discounts)."""
+    if not order or not isinstance(order, dict):
+        return None
+    if not (order.get("stripe_subscription_id") or "").strip():
+        return None
+    currency = (currency or "gbp").strip().lower()
+    p = _CAPTIONS_DISPLAY_PRICES.get(currency, _CAPTIONS_DISPLAY_PRICES["gbp"])
+    symbol = str(p["symbol"])
+    platforms_n = max(1, min(4, int(order.get("platforms_count") or 1)))
+    extras = platforms_n - 1
+    stories = bool(order.get("include_stories"))
+    base_f = float(p["sub"])
+    computed = base_f + extras * float(p["extra_sub"]) + (float(p["stories_sub"]) if stories else 0.0)
+    return f"{symbol}{computed:.2f}/month"
+
+
+def _checkout_payment_fields_for_order_email(
+    order: Optional[Dict[str, Any]],
+    session: Optional[Any],
+) -> Dict[str, Any]:
+    """Stripe checkout amounts + ongoing monthly label for order confirmation emails."""
+    currency = (
+        str(order.get("currency") or "gbp").strip().lower()
+        if order and isinstance(order, dict)
+        else "gbp"
+    )
+    amount_paid: Optional[str] = None
+    amount_total_minor: Optional[int] = None
+    subtotal_minor: Optional[int] = None
+    discount_minor: Optional[int] = None
+    tax_minor: Optional[int] = None
+    discount_label: Optional[str] = None
+    if session:
+        amt_raw = session.get("amount_total") if hasattr(session, "get") else getattr(session, "amount_total", None)
+        curr_raw = session.get("currency") if hasattr(session, "get") else getattr(session, "currency", "gbp")
+        if curr_raw:
+            currency = str(curr_raw or "gbp").strip().lower()
+        amount_paid = _format_amount_paid(amt_raw, currency)
+        if amt_raw is not None and isinstance(amt_raw, (int, float)):
+            try:
+                amount_total_minor = int(amt_raw)
+            except (TypeError, ValueError):
+                amount_total_minor = None
+        bd = _stripe_session_payment_breakdown(session)
+        if bd:
+            subtotal_minor = bd.get("subtotal")
+            try:
+                d0 = int(bd.get("discount") or 0)
+                discount_minor = d0 if d0 > 0 else None
+            except (TypeError, ValueError):
+                discount_minor = None
+            try:
+                t0 = int(bd.get("tax") or 0)
+                tax_minor = t0 if t0 > 0 else None
+            except (TypeError, ValueError):
+                tax_minor = None
+        discount_label = _checkout_discount_label_from_session(session)
+    ongoing_monthly: Optional[str] = None
+    if order and isinstance(order, dict) and (order.get("stripe_subscription_id") or "").strip():
+        ongoing_monthly = _captions_order_list_price_monthly_display(order, currency)
+    return {
+        "currency": currency,
+        "amount_paid": amount_paid,
+        "amount_total_minor": amount_total_minor,
+        "subtotal_minor": subtotal_minor,
+        "discount_minor": discount_minor,
+        "tax_minor": tax_minor,
+        "discount_label": discount_label,
+        "ongoing_monthly": ongoing_monthly,
+    }
 
 
 def _build_subscription_upgrade_pricing_summary(
@@ -473,6 +759,12 @@ def _order_receipt_email_html(
     amount_total_minor: Optional[int] = None,
     currency: Optional[str] = None,
     business_name: Optional[str] = None,
+    *,
+    subtotal_minor: Optional[int] = None,
+    discount_minor: Optional[int] = None,
+    tax_minor: Optional[int] = None,
+    discount_label: Optional[str] = None,
+    ongoing_monthly_display: Optional[str] = None,
 ) -> str:
     """Build branded HTML for order receipt — itemised pricing, amount paid, platforms, intake link coming soon."""
     import html as html_module
@@ -481,7 +773,15 @@ def _order_receipt_email_html(
     inner_html = ""
     if order and isinstance(order, dict):
         _, inner_html = _build_captions_order_pricing_detail(
-            order, curr, amount_paid, amount_total_minor
+            order,
+            curr,
+            amount_paid,
+            amount_total_minor,
+            subtotal_minor=subtotal_minor,
+            discount_minor=discount_minor,
+            tax_minor=tax_minor,
+            discount_label=discount_label,
+            ongoing_monthly_display=ongoing_monthly_display,
         )
     elif amount_paid:
         inner_html = f'<p style="margin:0;"><strong>Amount paid:</strong> {html_module.escape(amount_paid)}</p>'
@@ -495,8 +795,8 @@ def _order_receipt_email_html(
     content = f"""<p style="margin:0 0 16px;">Hi,</p>
 {business_line}
 <p style="margin:0 0 16px;">Thanks for your order. We've received your payment for 30 Days of Social Media Captions.</p>
-{receipt_block}<p style="margin:0 0 16px;">You'll receive an email soon with a link to complete your short intake form (about 2 minutes). Once you submit, we'll generate your captions and send them to you by email within a few minutes.</p>
-<p style="margin:0 0 16px;">If you don't see the intake email, check your spam folder.</p>
+{receipt_block}<p style="margin:0 0 16px;">Complete your short intake form (about 2 minutes) when you're ready. Once you submit, we'll generate your captions and send them to you by email within a few minutes.</p>
+<p style="margin:0 0 16px;">If you need the form link again, check your inbox for your order confirmation or reply to this email.</p>
 <p style="margin:0;">— Lumo 22</p>"""
     return _email_wrapper(content)
 
@@ -604,11 +904,11 @@ def _intake_link_email_html(
     safe_login = html.escape(login_url, quote=True)
     summary_block = ""
     if order_detail_html and str(order_detail_html).strip():
-        summary_block = f"""<div style="margin:0 0 16px; font-size:14px; line-height:1.6; color:{BRAND_BLACK};"><strong>Order confirmation</strong><br>Here's what you ordered:<br><br>{order_detail_html.strip()}</div>
+        summary_block = f"""<div style="margin:0 0 16px; font-size:14px; line-height:1.6; color:{BRAND_BLACK};"><strong>Your order in detail</strong><br><span style="color:{BRAND_MUTED}; font-size:13px;">Line items, then checkout totals (subtotal, tax if any, discounts and codes, total paid).</span><br><br>{order_detail_html.strip()}</div>
 """
     elif order_summary and order_summary.strip():
         summary_escaped = html.escape(order_summary.strip()).replace("\n", "<br>\n")
-        summary_block = f"""<p style="margin:0 0 16px; font-size:14px; line-height:1.6; color:{BRAND_BLACK};"><strong>Order confirmation</strong><br>Here's what you ordered:<br>{summary_escaped}</p>
+        summary_block = f"""<p style="margin:0 0 16px; font-size:14px; line-height:1.6; color:{BRAND_BLACK};"><strong>Your order in detail</strong><br><span style="color:{BRAND_MUTED}; font-size:13px;">Line items and checkout totals.</span><br>{summary_escaped}</p>
 """
     account_line = "On the form you can also create an account to access your captions and manage your subscription in one place." if is_subscription else "On the form you can also create an account to access your captions in one place."
     business_line = ""
@@ -617,8 +917,8 @@ def _intake_link_email_html(
         business_line = f"<p style=\"margin:0 0 16px;\"><strong>Business:</strong> {safe_business}</p>"
     content = f"""<p style="margin:0 0 16px;">Hi,</p>
 {business_line}
-<p style="margin:0 0 16px;">Thanks for your order. Your 30 Days of Social Media Captions will be tailored to your business and voice.</p>
-{summary_block}<p style="margin:0 0 12px;">Please complete this short form so we can create your captions. It takes about 2 minutes.</p>
+<p style="margin:0 0 16px;">We've received your payment — thank you. Your 30 Days of Social Media Captions will be tailored to your business and voice.</p>
+{summary_block}<p style="margin:0 0 12px;">Next step: complete this short form so we can create your captions. It takes about 2 minutes.</p>
 <p style="margin:0 0 12px; font-size:14px; color:{BRAND_MUTED};"><strong style="color:{BRAND_TEXT};">For security:</strong> If you already have a Lumo 22 account, <a href="{safe_login}" style="color:{BRAND_BLACK}; text-decoration:none; border-bottom:1px solid {BRAND_BLACK};">log in first</a>, then use the button below to open your form.</p>
 <p style="margin:0 0 24px;"><a href="{safe_url}" style="display:inline-block; padding:14px 28px; background:{BRAND_GOLD}; color:{BRAND_BLACK}; text-decoration:none; border-radius:10px; font-weight:600;">Complete the form</a></p>
 <p style="margin:0 0 8px; font-size:14px; color:{BRAND_MUTED};">Or copy and paste this link into your browser:</p>
@@ -1080,29 +1380,32 @@ If you didn't request this, you can ignore this email. Your email address will s
         order: Optional[Dict[str, Any]] = None,
         session: Optional[Any] = None,
     ) -> bool:
-        """Send order receipt (payment received, products, price, intake link coming soon). Sent right after checkout.
-        order: caption order dict for product summary. session: Stripe checkout session for amount_paid."""
+        """Standalone receipt (payment + order lines). Not sent after normal checkout — use send_intake_link_email with session instead.
+        Kept for manual resend, tests, and samples. order: caption order dict. session: Stripe checkout session for amount_paid."""
         business_name = _extract_business_name(order) if order else None
         subject = _subject_with_business("Thanks for your order — 30 Days of Social Media Captions", business_name)
-        amount_paid = None
-        amount_total_minor: Optional[int] = None
-        currency = str(order.get("currency") or "gbp").strip().lower() if order else "gbp"
-        if session:
-            amt_raw = session.get("amount_total") if hasattr(session, "get") else getattr(session, "amount_total", None)
-            curr_raw = session.get("currency") if hasattr(session, "get") else getattr(session, "currency", "gbp")
-            if curr_raw:
-                currency = str(curr_raw or "gbp").strip().lower()
-            amount_paid = _format_amount_paid(amt_raw, currency)
-            if amt_raw is not None and isinstance(amt_raw, (int, float)):
-                try:
-                    amount_total_minor = int(amt_raw)
-                except (TypeError, ValueError):
-                    amount_total_minor = None
+        pay = _checkout_payment_fields_for_order_email(order if isinstance(order, dict) else None, session)
+        currency = pay["currency"]
+        amount_paid = pay["amount_paid"]
+        amount_total_minor = pay["amount_total_minor"]
+        subtotal_minor = pay["subtotal_minor"]
+        discount_minor = pay["discount_minor"]
+        tax_minor = pay["tax_minor"]
+        discount_label = pay["discount_label"]
+        ongoing_monthly = pay["ongoing_monthly"]
 
         receipt_plain = ""
         if order and isinstance(order, dict):
             receipt_plain, _ = _build_captions_order_pricing_detail(
-                order, currency, amount_paid, amount_total_minor
+                order,
+                currency,
+                amount_paid,
+                amount_total_minor,
+                subtotal_minor=subtotal_minor,
+                discount_minor=discount_minor,
+                tax_minor=tax_minor,
+                discount_label=discount_label,
+                ongoing_monthly_display=ongoing_monthly,
             )
 
         body_lines = [
@@ -1124,10 +1427,10 @@ If you didn't request this, you can ignore this email. Your email address will s
             body_lines.append(f"Amount paid: {amount_paid}")
             body_lines.extend(["", ""])
         body_lines.extend([
-            "You'll receive an email soon with a link to complete your short intake form (about 2 minutes). "
+            "Complete your short intake form (about 2 minutes) when you're ready. "
             "Once you submit, we'll generate your captions and send them to you by email within a few minutes.",
             "",
-            "If you don't see the intake email, check your spam folder.",
+            "If you need the form link again, check your inbox for your order confirmation or reply to this email.",
             "",
             "— Lumo 22",
         ])
@@ -1138,27 +1441,49 @@ If you didn't request this, you can ignore this email. Your email address will s
             amount_total_minor=amount_total_minor,
             currency=currency,
             business_name=business_name,
+            subtotal_minor=subtotal_minor,
+            discount_minor=discount_minor,
+            tax_minor=tax_minor,
+            discount_label=discount_label,
+            ongoing_monthly_display=ongoing_monthly,
         )
         return self.send_email(to_email, subject, body, html_body=html_body)
 
-    def send_intake_link_email(self, to_email: str, intake_url: str, order: Optional[Dict[str, Any]] = None) -> bool:
-        """Send captions intake form link email with explicit HTML body. Optionally include order summary."""
+    def send_intake_link_email(
+        self,
+        to_email: str,
+        intake_url: str,
+        order: Optional[Dict[str, Any]] = None,
+        session: Optional[Any] = None,
+    ) -> bool:
+        """Send single post-checkout email: payment confirmation, order summary (with Stripe session when provided), and intake link."""
         if not intake_url or not str(intake_url).strip().startswith("http"):
             print("[SendGrid] Intake link email NOT sent: invalid intake_url")
             return False
         business_name = _extract_business_name(order) if order else None
-        subject = _subject_with_business("Your 30 Days of Social Media Captions — next step", business_name)
+        subject = _subject_with_business("Order confirmed — 30 Days of Social Media Captions (next step)", business_name)
+        pay = _checkout_payment_fields_for_order_email(order if isinstance(order, dict) else None, session)
+        curr = pay["currency"]
         order_detail_plain: Optional[str] = None
         order_detail_html: Optional[str] = None
         if order and isinstance(order, dict):
-            curr = str(order.get("currency") or "gbp").strip().lower()
-            order_detail_plain, order_detail_html = _build_captions_order_pricing_detail(order, curr, None, None)
-        body = "Hi,\n\nThanks for your order. Your 30 Days of Social Media Captions will be tailored to your business and voice.\n\n"
+            order_detail_plain, order_detail_html = _build_captions_order_pricing_detail(
+                order,
+                curr,
+                pay["amount_paid"],
+                pay["amount_total_minor"],
+                subtotal_minor=pay["subtotal_minor"],
+                discount_minor=pay["discount_minor"],
+                tax_minor=pay["tax_minor"],
+                discount_label=pay["discount_label"],
+                ongoing_monthly_display=pay["ongoing_monthly"],
+            )
+        body = "Hi,\n\nWe've received your payment — thank you. Your 30 Days of Social Media Captions will be tailored to your business and voice.\n\n"
         if business_name:
-            body = f"Hi,\n\nBusiness: {business_name}\n\nThanks for your order. Your 30 Days of Social Media Captions will be tailored to your business and voice.\n\n"
+            body = f"Hi,\n\nBusiness: {business_name}\n\nWe've received your payment — thank you. Your 30 Days of Social Media Captions will be tailored to your business and voice.\n\n"
         if order_detail_plain:
-            body += "Order confirmation — here's what you ordered:\n" + order_detail_plain + "\n\n"
-        body += "Please complete this short form so we can create your captions. It takes about 2 minutes.\n\n"
+            body += "Your order in detail (line items, then checkout totals including any discount codes and tax):\n" + order_detail_plain + "\n\n"
+        body += "Next step: complete this short form so we can create your captions. It takes about 2 minutes.\n\n"
         base = (Config.BASE_URL or "").strip().rstrip("/")
         login_url = f"{base}/login" if base and base.startswith("http") else "https://www.lumo22.com/login"
         body += "For security: If you already have a Lumo 22 account, log in first (" + login_url + "), then use the link below to open your form.\n\n"

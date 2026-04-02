@@ -6,10 +6,22 @@ import base64
 import re
 from typing import Dict, Any, Optional
 from supabase import create_client, Client
+from postgrest.types import CountMethod
 from datetime import datetime, timezone, timedelta
 import uuid
 import secrets
 from config import Config
+
+
+def _is_unique_stripe_session_violation(exc: Exception) -> bool:
+    """True if insert failed because stripe_session_id already exists (PostgREST / Postgres)."""
+    s = str(exc).lower()
+    if "23505" in s or "duplicate key" in s or "unique constraint" in s or "already exists" in s:
+        return True
+    code = getattr(exc, "code", None)
+    if code == "23505":
+        return True
+    return False
 
 
 def _token() -> str:
@@ -72,7 +84,15 @@ class CaptionOrderService:
             "currency": curr,
             "upgraded_from_token": (upgraded_from_token or "").strip() or None,
         }
-        result = self.client.table(self.table).insert(row).execute()
+        try:
+            result = self.client.table(self.table).insert(row).execute()
+        except Exception as e:
+            sid = (stripe_session_id or "").strip()
+            if sid and _is_unique_stripe_session_violation(e):
+                existing = self.get_by_stripe_session_id(sid)
+                if existing:
+                    return existing
+            raise
         if not result.data:
             raise RuntimeError("Failed to create caption order")
         self.remove_from_deleted_blocklist(customer_email_normalized)
@@ -143,6 +163,47 @@ class CaptionOrderService:
         if result.data and len(result.data) > 0:
             return result.data[0]
         return None
+
+    def try_claim_checkout_confirmation_email(self, order_id: str) -> bool:
+        """
+        Atomically set checkout_confirmation_email_sent_at if still null.
+        Returns True if this caller should send the post-checkout email; False if already sent/claimed.
+        Fails open (returns True) on unexpected errors so checkout still works before DB migration.
+        """
+        if not order_id:
+            return False
+        now_iso = datetime.now(timezone.utc).isoformat()
+        try:
+            # count=exact → Content-Range so we know row count even when the response body is empty
+            # (some stacks return minimal/empty bodies for PATCH; bool(result.data) alone then skips sends).
+            result = (
+                self.client.table(self.table)
+                .update(
+                    {"checkout_confirmation_email_sent_at": now_iso},
+                    count=CountMethod.exact,
+                )
+                .eq("id", order_id)
+                .is_("checkout_confirmation_email_sent_at", "null")
+                .execute()
+            )
+            if result.data and len(result.data) > 0:
+                return True
+            c = getattr(result, "count", None)
+            if isinstance(c, int) and c > 0:
+                return True
+            return False
+        except Exception as e:
+            print(f"[CaptionOrderService] try_claim_checkout_confirmation_email (non-fatal): {e!r}")
+            return True
+
+    def release_checkout_confirmation_email_claim(self, order_id: str) -> None:
+        """Clear claim so a failed send can be retried (e.g. SendGrid error)."""
+        if not order_id:
+            return
+        try:
+            self.client.table(self.table).update({"checkout_confirmation_email_sent_at": None}).eq("id", order_id).execute()
+        except Exception as e:
+            print(f"[CaptionOrderService] release_checkout_confirmation_email_claim (non-fatal): {e!r}")
 
     def update(self, order_id: str, updates: Dict[str, Any]) -> bool:
         """Update order (status, intake, captions_md)."""
