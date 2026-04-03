@@ -2532,6 +2532,30 @@
   .account-sidebar-nav a { padding: 0.4rem 0.6rem; font-size: 1.15rem; }
   .account-sidebar-logout { margin-top: 0; padding-top: 0; border-top: none; margin-left: auto; }
   .account-main { padding: 1.5rem 1rem 3rem; }
+  /* Edit form rows: name + Subscription/One-off pill on one line; buttons full width below */
+  .account-edit-form-list .account-edit-form-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.65rem;
+  }
+  .account-edit-form-list .account-edit-form-meta {
+    flex-wrap: nowrap;
+    flex: none;
+    width: 100%;
+    min-width: 0;
+  }
+  .account-edit-form-list .account-edit-form-biz {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .account-edit-form-list .account-edit-form-actions {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
 }
 
 /* Account page mobile: centered logo only (no burger), nav above layout */
