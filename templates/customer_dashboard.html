@@ -196,20 +196,17 @@
       {% if current_section == 'edit-form' %}
       <section class="account-section-block">
         <h2>Edit form</h2>
-        {% set sub_edit_orders = caption_orders|selectattr('stripe_subscription_id')|list if caption_orders else [] %}
-        {# one_off_orders: non-sub one-offs not used as upgrade base. Upgrade dropdown uses one_off_upgrade_options (intake submitted only). #}
-        {% set oneoff_edit_orders = one_off_orders|selectattr('token')|list if one_off_orders else [] %}
-        {% set edit_form_orders = sub_edit_orders + oneoff_edit_orders %}
+        {# edit_form_orders: from server — hidden excluded; sort by last PDF time, else order created_at #}
         {% if edit_form_orders %}
         <p class="account-section-desc" style="margin: 0 0 1.25rem; line-height: 1.65; color: rgba(255,255,255,0.92);">
-          {% if sub_edit_orders %}
+          {% if edit_form_has_subscriptions|default(false) %}
           <strong>Subscriptions:</strong> use <strong>Edit form</strong> below to change your brief for your <strong>next</strong> pack (not packs already delivered). Edits are free; adding Story Ideas or extra platforms may require an additional charge.
           {% endif %}
-          {% if oneoff_edit_orders %}
-          <span style="display: block; margin-top: {% if sub_edit_orders %}0.65rem{% else %}0{% endif %};"><strong>One-off packs:</strong> use <strong>View form</strong> to read what we have on file. To <strong>change</strong> answers from your account, follow <strong>Upgrade to edit</strong> (subscription checkout—then you can edit anytime for each new pack). Want another 30 days <strong>without</strong> subscribing? <a href="/captions" style="color: #e8d48b; font-weight: 600;">Buy another one-off</a> from pricing—each order has its own brief.</span>
+          {% if edit_form_has_oneoffs|default(false) %}
+          <span style="display: block; margin-top: {% if edit_form_has_subscriptions|default(false) %}0.65rem{% else %}0{% endif %};"><strong>One-off packs:</strong> use <strong>View form</strong> to read what we have on file. To <strong>change</strong> answers from your account, follow <strong>Upgrade to edit</strong> (subscription checkout—then you can edit anytime for each new pack). Want another 30 days <strong>without</strong> subscribing? <a href="/captions" style="color: #e8d48b; font-weight: 600;">Buy another one-off</a> from pricing—each order has its own brief.</span>
           {% endif %}
         </p>
-        {% if sub_edit_orders %}
+        {% if edit_form_has_subscriptions|default(false) %}
         <ul class="account-section-desc" style="margin: 0 0 1.25rem; padding-left: 1.25rem; line-height: 1.7; color: #ffffff;">
           <li>Update your voice, topics, and preferences.</li>
           <li>Have a launch, sale, or event coming up? Add it in the Key date section and we'll tailor your next pack to match.</li>
@@ -221,7 +218,7 @@
           <li>All changes apply to your next pack.</li>
         </ul>
         {% endif %}
-        {% if oneoff_edit_orders and not sub_edit_orders %}
+        {% if edit_form_has_oneoffs|default(false) and not edit_form_has_subscriptions|default(false) %}
         <ul class="account-section-desc" style="margin: 0 0 1.25rem; padding-left: 1.25rem; line-height: 1.7; color: #ffffff;">
           <li><strong>View form</strong> is read-only for one-off orders.</li>
           <li>Your delivered PDF does not change when you subscribe; new edits apply to future subscription packs.</li>
