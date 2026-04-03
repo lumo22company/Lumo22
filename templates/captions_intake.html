@@ -127,7 +127,7 @@
     .intake-modal-btn-price { white-space: nowrap; }
     .intake-page .help-trigger { display: inline-flex; align-items: center; justify-content: center; width: 1.1rem; height: 1.1rem; border-radius: 50%; background: #999; color: #fff; font-size: 0.7rem; font-weight: 600; cursor: help; margin-left: 0.4rem; vertical-align: middle; position: relative; }
     .intake-page .help-trigger:hover, .intake-page .help-trigger:focus { background: var(--lum-gold); color: #000; outline: none; }
-    .intake-page .help-tooltip { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(100% + 0.5rem); width: min(280px, 90vw); padding: 1rem; background: #1a1a1a; color: #f5f5f2; font-family: var(--font-body, 'Century Gothic', CenturyGothic, 'Apple Gothic', sans-serif); font-size: 0.9rem; line-height: 1.5; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); border: 1px solid #333; opacity: 0; visibility: hidden; transition: opacity 0.2s, visibility 0.2s; z-index: 100; pointer-events: none; text-align: left; font-weight: 400; }
+    .intake-page .help-tooltip { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(100% + 0.5rem); width: min(280px, 90vw); padding: 1rem; background: #1a1a1a; color: #f5f5f2; font-family: var(--font-body, 'Century Gothic', CenturyGothic, 'Apple Gothic', sans-serif); font-size: 0.9rem; line-height: 1.5; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); border: 1px solid #333; opacity: 0; visibility: hidden; transition: opacity 0.2s, visibility 0.2s; z-index: 100; pointer-events: none; text-align: left; font-weight: 400; text-transform: none; }
     .intake-page .help-trigger:hover .help-tooltip, .intake-page .help-trigger:focus .help-tooltip { opacity: 1; visibility: visible; }
     .intake-page .help-tooltip::after { content: ''; position: absolute; top: 100%; left: 50%; margin-left: -6px; border: 6px solid transparent; border-top-color: #1a1a1a; }
     .intake-page .field-helper { font-size: 0.85rem; color: #555; margin: -0.75rem 0 1rem; line-height: 1.4; }
@@ -187,7 +187,7 @@
     <!-- intake-form-version: 2025-02-v3 -->
     <h1>30 DAYS CAPTIONS — YOUR DETAILS</h1>
     <p class="sub">Complete this form so we can tailor your caption set. Your answers shape your voice, structure, and strategy for the month. The more detail you give, the better we can align your captions with your brand. Edits are free and will apply to your next pack.</p>
-    {% if existing_intake %}
+    {% if existing_intake and (is_upgrade_flow or intake_returning_editor) %}
     <p id="intake-edit-notice" class="intake-edit-notice" style="margin: 0 0 1.25rem; padding: 0.75rem 1rem; background: rgba(0,0,0,0.06); border-radius: 8px; border: 2px solid var(--lum-gold, #c9a227); font-size: 0.9rem; color: #1a1a1a;">{% if is_upgrade_flow %}Your answers here will be used for your first subscription pack. Content edits (voice, topics, key dates, etc.) are free.{% else %}Any updates you make here will be reflected in your <strong>next</strong> captions and stories pack, not in packs already delivered. Edits are free; adding Story Ideas or extra platforms may require an additional charge.{% endif %}</p>
     {% endif %}
     {% if not intake_token %}
@@ -313,7 +313,7 @@
         {% else %}
         <input type="hidden" id="platform" name="platform" value="{{ prefilled_primary if is_upgrade_flow else (existing_intake.get('platform', '') or prefilled_primary) }}">
         {% endif %}
-        {% if existing_intake and not is_oneoff %}
+        {% if intake_returning_editor and not is_oneoff %}
         <p class="intake-change-platform-note field-helper" style="margin: 0.5rem 0 0; font-size: 0.9rem; color: #1a1a1a;">To change which platforms or reduce the number (or remove Story Ideas), update above and submit. You'll be asked to accept the new price. Changes apply to your next pack.</p>
         <p class="intake-edit-preferences-wrap" style="margin: 1rem 0 0;">
           <button type="button" class="btn account-btn-swipe-light intake-edit-preferences-btn" id="btn-edit-preferences" aria-controls="intake-edit-preferences-modal" aria-haspopup="dialog">Edit preferences</button>
@@ -387,7 +387,7 @@
         <label for="caption_examples">Paste 1–3 example captions you like — from your own posts, competitors, or inspiration. We'll match this style, tone, and structure where relevant.</label>
         <textarea id="caption_examples" name="caption_examples" data-testid="caption_examples" placeholder="Paste example captions here" style="min-height: 140px;">{{ existing_intake.get('caption_examples', '') }}</textarea>
       </div>
-      <button type="button" class="btn-submit account-btn-swipe-light" id="btn-review">{% if existing_intake %}REVIEW CHANGES{% else %}NEXT STEP{% endif %}</button>
+      <button type="button" class="btn-submit account-btn-swipe-light" id="btn-review">{% if intake_returning_editor %}REVIEW CHANGES{% else %}NEXT STEP{% endif %}</button>
     </form>
 
     <div id="review-step" class="review-step">
@@ -400,7 +400,7 @@
       </div>
     </div>
 
-    {% if existing_intake and intake_token %}
+    {% if intake_returning_editor and not is_oneoff and intake_token %}
     <div id="intake-edit-preferences-modal" class="intake-edit-preferences-modal" role="dialog" aria-labelledby="intake-edit-preferences-modal-title" aria-modal="true" data-order-token="{{ intake_token }}" hidden>
       <div class="modal-backdrop" id="intake-edit-preferences-backdrop"></div>
       <div class="modal-box">

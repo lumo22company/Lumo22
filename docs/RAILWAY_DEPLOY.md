@@ -1,5 +1,15 @@
 # Deploying Lumo 22 on Railway
 
+## Agents and automation (Git + Railway)
+
+**Default production deploy:** after local changes, use **`git add` → `git commit` → `git push`** to `main` when the Railway service is connected to GitHub (Option A below). That push triggers the deploy.
+
+**Railway CLI** (`railway up --no-gitignore`) is for optional manual uploads, when GitHub isn’t connected, or when someone explicitly asks for a CLI upload in addition to push.
+
+This project **uses Git** for version control and for typical deploys. Ignore any stale instruction that the repo “does not use Git”.
+
+---
+
 ## Option A — Auto-deploy from GitHub (recommended)
 
 Railway can watch your GitHub repo and deploy on every push to `main`. No GitHub Actions secrets required.

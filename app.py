@@ -528,7 +528,11 @@ def captions_intake_page():
         if order_currency in ("gbp", "usd", "eur"):
             sub_params["currency"] = order_currency
         subscribe_url = "/captions-checkout-subscription?" + urlencode(sub_params)
-    r = make_response(render_template('captions_intake.html', intake_token=token, existing_intake=existing_intake, platforms_count=platforms_count, prefilled_platform=prefilled_platform, prefilled_primary=prefilled_primary, stories_paid=stories_paid, is_oneoff=is_oneoff, selected_platforms=selected_platforms, subscribe_url=subscribe_url, now=now, return_url=return_url, order_currency=order_currency, intake_add_platform_text=intake_add_platform_text, intake_add_stories_text=intake_add_stories_text, is_upgrade_flow=is_upgrade_flow))
+    order_status = (order.get("status") or "").strip() if order else ""
+    # Checkout seeds minimal intake (e.g. business_name) before the customer fills the form; "returning"
+    # is determined by order status, not by whether intake dict is non-empty.
+    intake_returning_editor = bool(order and order_status and order_status != "awaiting_intake")
+    r = make_response(render_template('captions_intake.html', intake_token=token, existing_intake=existing_intake, platforms_count=platforms_count, prefilled_platform=prefilled_platform, prefilled_primary=prefilled_primary, stories_paid=stories_paid, is_oneoff=is_oneoff, selected_platforms=selected_platforms, subscribe_url=subscribe_url, now=now, return_url=return_url, order_currency=order_currency, intake_add_platform_text=intake_add_platform_text, intake_add_stories_text=intake_add_stories_text, is_upgrade_flow=is_upgrade_flow, intake_returning_editor=intake_returning_editor))
     r.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     r.headers['Pragma'] = 'no-cache'
     return r

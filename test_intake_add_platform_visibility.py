@@ -5,6 +5,7 @@ not when completing the form for the first time.
 """
 from datetime import datetime, timezone
 import sys
+from unittest.mock import MagicMock, patch
 
 def test_intake_template():
     from app import app
@@ -17,6 +18,7 @@ def test_intake_template():
             "captions_intake.html",
             intake_token="test-token-123",
             existing_intake={},
+            intake_returning_editor=False,
             platforms_count=1,
             prefilled_platform="",
             stories_paid=False,
@@ -29,6 +31,7 @@ def test_intake_template():
             "captions_intake.html",
             intake_token="test-token-123",
             existing_intake={"business_name": "Test Co", "platform": "LinkedIn"},
+            intake_returning_editor=True,
             platforms_count=1,
             prefilled_platform="LinkedIn",
             stories_paid=False,
@@ -43,6 +46,42 @@ def test_intake_template():
             print("FAIL: Edit intake should show 'Add another platform'")
             sys.exit(1)
         print("PASS: 'Add another platform' only visible when editing (existing_intake set)")
+
+
+def test_awaiting_intake_with_seeded_business_shows_next_step():
+    """Stripe/checkout often seeds only business_name; button must not say REVIEW CHANGES."""
+    from app import app
+
+    mock_order = {
+        "id": "ord-1",
+        "token": "tok-seed",
+        "status": "awaiting_intake",
+        "intake": {"business_name": "From Checkout"},
+        "platforms_count": 1,
+        "selected_platforms": "",
+        "include_stories": False,
+        "customer_email": "buyer@example.com",
+        "stripe_subscription_id": "",
+        "upgraded_from_token": "",
+    }
+    with app.test_client() as client:
+        with patch("services.caption_order_service.CaptionOrderService") as MockSvc:
+            mock_svc = MagicMock()
+            mock_svc.get_by_token.return_value = dict(mock_order)
+            MockSvc.return_value = mock_svc
+            with patch(
+                "api.captions_routes.enrich_order_intake_from_checkout_session",
+                lambda svc, o: o,
+            ):
+                r = client.get("/captions-intake?t=tok-seed")
+    if r.status_code != 200:
+        print(f"FAIL: expected 200, got {r.status_code}")
+        sys.exit(1)
+    html = r.get_data(as_text=True)
+    if "NEXT STEP" not in html or "REVIEW CHANGES" in html:
+        print("FAIL: First-time awaiting_intake should show NEXT STEP, not REVIEW CHANGES")
+        sys.exit(1)
+    print("PASS: Seeded awaiting_intake shows NEXT STEP")
 
 
 def test_upgrade_required_response():
@@ -85,5 +124,6 @@ def test_upgrade_required_response():
 
 if __name__ == "__main__":
     test_intake_template()
+    test_awaiting_intake_with_seeded_business_shows_next_step()
     test_upgrade_required_response()
     print("All tests passed.")

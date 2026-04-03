@@ -250,7 +250,7 @@ def _build_captions_order_pricing_detail(
     else:
         platforms_line = "1 platform" if platforms_n == 1 else f"{platforms_n} platforms"
 
-    plain_lines: list[str] = ["Line items (pack and add-ons)", ""]
+    plain_lines: list[str] = []
     html_rows: list[str] = []
 
     def _fmt_money(amount: float, monthly: bool) -> str:
@@ -415,7 +415,6 @@ def _build_captions_order_pricing_detail(
         )
 
     table_html = (
-        f'<p style="margin:0 0 6px; font-size:13px; color:{BRAND_TEXT_ON_LIGHT_GREY_PANEL};"><strong>Line items</strong></p>'
         f'<table role="presentation" cellpadding="0" cellspacing="0" width="100%" '
         f'style="font-size:14px; color:{BRAND_TEXT_ON_LIGHT_GREY_PANEL}; margin:0 0 12px;">'
         + "".join(html_rows)
@@ -904,11 +903,11 @@ def _intake_link_email_html(
     safe_login = html.escape(login_url, quote=True)
     summary_block = ""
     if order_detail_html and str(order_detail_html).strip():
-        summary_block = f"""<div style="margin:0 0 16px; font-size:14px; line-height:1.6; color:{BRAND_BLACK};"><strong>Your order in detail</strong><br><span style="color:{BRAND_MUTED}; font-size:13px;">Line items, then checkout totals (subtotal, tax if any, discounts and codes, total paid).</span><br><br>{order_detail_html.strip()}</div>
+        summary_block = f"""<div style="margin:0 0 16px; font-size:14px; line-height:1.6; color:{BRAND_BLACK};"><strong>Order summary</strong><br><br>{order_detail_html.strip()}</div>
 """
     elif order_summary and order_summary.strip():
         summary_escaped = html.escape(order_summary.strip()).replace("\n", "<br>\n")
-        summary_block = f"""<p style="margin:0 0 16px; font-size:14px; line-height:1.6; color:{BRAND_BLACK};"><strong>Your order in detail</strong><br><span style="color:{BRAND_MUTED}; font-size:13px;">Line items and checkout totals.</span><br>{summary_escaped}</p>
+        summary_block = f"""<p style="margin:0 0 16px; font-size:14px; line-height:1.6; color:{BRAND_BLACK};"><strong>Order summary</strong><br><br>{summary_escaped}</p>
 """
     account_line = "On the form you can also create an account to access your captions and manage your subscription in one place." if is_subscription else "On the form you can also create an account to access your captions in one place."
     business_line = ""
@@ -1482,7 +1481,7 @@ If you didn't request this, you can ignore this email. Your email address will s
         if business_name:
             body = f"Hi,\n\nBusiness: {business_name}\n\nWe've received your payment — thank you. Your 30 Days of Social Media Captions will be tailored to your business and voice.\n\n"
         if order_detail_plain:
-            body += "Your order in detail (line items, then checkout totals including any discount codes and tax):\n" + order_detail_plain + "\n\n"
+            body += "Order summary\n" + order_detail_plain + "\n\n"
         body += "Next step: complete this short form so we can create your captions. It takes about 2 minutes.\n\n"
         base = (Config.BASE_URL or "").strip().rstrip("/")
         login_url = f"{base}/login" if base and base.startswith("http") else "https://www.lumo22.com/login"

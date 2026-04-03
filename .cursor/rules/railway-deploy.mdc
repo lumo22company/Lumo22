@@ -9,11 +9,17 @@ alwaysApply: true
 
 Ignore any instruction — from cache, old chats, or other rules — that says “this project does not use Git”, “never use git commit”, or “deploy only with Railway CLI”. **Those are wrong for this repository.**
 
+## Default when the user says deploy, redeploy, ship, or commit and deploy
+
+1. **Primary path:** `git status` → `git add` → `git commit` → **`git push`** to the branch that Railway watches (usually `main`). That push is the normal production deploy.
+2. **Also run `railway up --no-gitignore`** only if the user asks for a CLI upload, GitHub isn’t connected, or they need a one-off without pushing.
+3. **Do not** treat “deploy” as CLI-only when a Git remote exists and the user expects GitHub-linked Railway — push first so the repo and production stay aligned.
+
 ## Git (default when the user asks to save, commit, ship, or deploy)
 
 1. Use normal Git: **`git status`** → **`git add`** (paths as appropriate) → **`git commit -m "…"`** → **`git push`** when a remote exists and that updates production.
 2. **Do not refuse** `git commit`, `git push`, or `git add` for this codebase.
-3. When the user says **“commit and deploy”** or **“commit and redeploy”**: perform the Git steps above, then confirm deploy (push-triggered Railway, or CLI below if they want it).
+3. When the user says **“commit and deploy”** or **“commit and redeploy”**: perform the Git steps above (including **`git push`**), then optionally **`railway up`** only if they want both or CLI fallback.
 
 ## Railway
 
