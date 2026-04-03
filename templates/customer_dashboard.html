@@ -26,7 +26,7 @@
         <li><a href="/account/information" class="{% if current_section == 'information' %}active{% endif %}">Account Information</a></li>
         <li><a href="/account/history" class="{% if current_section == 'history' %}active{% endif %}">History</a></li>
         <li><a href="/account/edit-form" class="{% if current_section == 'edit-form' %}active{% endif %}">Edit form</a></li>
-        {% if subscribe_options %}<li><a href="/account/upgrade" class="{% if current_section == 'upgrade' %}active{% endif %}">Upgrade</a></li>{% endif %}
+        {% if subscribe_options %}<li><a href="/account/upgrade" class="{% if current_section == 'upgrade' %}active{% endif %}">{% if account_resubscribe_mode|default(false) %}Resubscribe{% else %}Upgrade{% endif %}</a></li>{% endif %}
         <li><a href="/account/pause" class="{% if current_section == 'pause' %}active{% endif %}">Manage subscription</a></li>
         <li><a href="/account/refer" class="{% if current_section == 'refer' %}active{% endif %}">Refer a friend</a></li>
       </ul>
@@ -228,7 +228,8 @@
           {% for o in edit_form_orders %}
           {% set biz = ((o.get('intake') or {}).get('business_name') or '')|trim %}
           {% set is_sub_row = (o.get('stripe_subscription_id') or '')|trim %}
-          {% set label = (biz|title) if biz else (o.created_at[:10] if o.created_at else ('Subscription' if is_sub_row else 'One-off')) %}
+          {% set is_former_sub = o.get('subscription_cancelled_at') %}
+          {% set label = (biz|title) if biz else (o.created_at[:10] if o.created_at else ('Subscription' if is_sub_row else ('Former subscription' if is_former_sub else 'One-off'))) %}
           {# Subscription: awaiting_intake + prefilled business_name (sync from one-off) → Edit form, not Complete. One-off: any awaiting_intake → Complete (checkout may still prefill business_name). #}
           {% set _needs_first_submit = o.status == 'awaiting_intake' and ((not is_sub_row) or (not biz)) %}
           {% set _edit_pause = (o.get('subscription_pause') or {}) %}
@@ -236,7 +237,7 @@
           <li class="account-edit-form-row">
             <div class="account-edit-form-meta">
               <span class="account-edit-form-biz">{{ label }}</span>
-              <span class="account-edit-form-type account-edit-form-type--{{ 'subscription' if is_sub_row else 'oneoff' }}">{{ 'Subscription' if is_sub_row else 'One-off' }}</span>
+              <span class="account-edit-form-type account-edit-form-type--{{ 'subscription' if is_sub_row else ('former-sub' if is_former_sub else 'oneoff') }}">{{ 'Subscription' if is_sub_row else ('Former subscription' if is_former_sub else 'One-off') }}</span>
             </div>
             <div class="account-edit-form-actions">
               {% if _needs_first_submit %}
@@ -245,7 +246,7 @@
               <a href="/captions-intake?t={{ o.token }}" class="account-billing-portal-link account-btn-swipe-light">Edit form</a>
               {% else %}
               <a href="/captions-intake?t={{ o.token }}&view=1" class="account-billing-portal-link account-btn-swipe-light">View form</a>
-              <a href="/account/upgrade?base={{ o.token }}" class="account-billing-portal-link account-btn-swipe-light">Upgrade to edit</a>
+              <a href="/account/upgrade?base={{ o.token }}" class="account-billing-portal-link account-btn-swipe-light">{% if is_former_sub %}Resubscribe{% else %}Upgrade to edit{% endif %}</a>
               {% endif %}
               {% if _edit_cancelled %}
               <span class="account-cancel-badge account-edit-form-cancel-badge">Cancelled{% if _edit_pause.get('ends_at') %} — {{ _edit_pause.get('ends_at') }}{% endif %}</span>
@@ -255,8 +256,8 @@
           {% endfor %}
         </ul>
         {% elif subscribe_options %}
-        <p class="account-section-desc">We couldn’t find a form link for your order yet. Try the link in your order email, or upgrade to a subscription—your answers can be prefilled from your one-off.</p>
-        <p><a href="/account/upgrade" class="dfd-btn dfd-btn-secondary account-upgrade-subscription-btn">Upgrade to subscription</a></p>
+        <p class="account-section-desc">{% if subscribe_options|selectattr('is_resubscribe')|list|length == subscribe_options|length %}We couldn’t find a form link for your order yet. Try the link in your order email, or resubscribe—your answers can be prefilled from your pack.{% else %}We couldn’t find a form link for your order yet. Try the link in your order email, or upgrade to a subscription—your answers can be prefilled from your one-off.{% endif %}</p>
+        <p><a href="/account/upgrade" class="dfd-btn dfd-btn-secondary account-upgrade-subscription-btn">{% if account_resubscribe_mode|default(false) %}Resubscribe{% else %}Upgrade to subscription{% endif %}</a></p>
               {% else %}
         <p class="account-section-desc">No caption orders linked to this email yet. After you purchase with this address, your form will appear here (one-off and subscription).</p>
         <p class="account-section-desc" style="font-size: 0.9rem; color: rgba(255,255,255,0.75); margin-top: 0.5rem;">Orders are linked to the email you used at checkout. If a recent order is missing, check you're logged in with that same email.</p>
@@ -267,8 +268,8 @@
 
       {% if current_section == 'upgrade' and one_off_upgrade_options %}
       <section class="account-section-block account-upgrade-section">
-        <h2>Upgrade to subscription</h2>
-        <p class="account-section-desc">Choose which one-off pack to base your subscription on (after you've completed that pack's intake). Adjust platforms and Story Ideas, then upgrade. Your form will be prefilled from your selected pack; you can edit it anytime under <strong>Edit form</strong> in your account after you subscribe.</p>
+        <h2>{% if account_resubscribe_mode|default(false) %}Resubscribe{% else %}Upgrade to subscription{% endif %}</h2>
+        <p class="account-section-desc">{% if account_resubscribe_mode|default(false) %}Start your subscription again from a pack below—your form will be prefilled. You can edit anytime under <strong>Edit form</strong> after you subscribe.{% else %}Choose which one-off pack to base your subscription on (after you've completed that pack's intake). Adjust platforms and Story Ideas, then upgrade. Your form will be prefilled from your selected pack; you can edit it anytime under <strong>Edit form</strong> in your account after you subscribe.{% endif %}</p>
         <div id="account-upgrade-base-token" data-token="{{ upgrade_url_base_token|default('', true)|e }}" hidden></div>
         <div class="account-upgrade-form" style="max-width: 480px;">
           <div style="margin-bottom: 1.25rem;">
@@ -328,7 +329,7 @@
           </div>
           <p class="account-upgrade-price" style="font-size: 1.1rem; font-weight: 600; color: var(--lum-gold); margin-bottom: 1rem;"><span id="upgrade-price-display">£79</span> <span>/month</span></p>
           <p id="upgrade-first-pack-copy" style="font-size: 0.9rem; color: rgba(255,255,255,0.8); margin-bottom: 1rem;">Your first subscription pack will be delivered 30 days after your one-off pack—continuous content, no overlap.</p>
-          <a href="#" id="upgrade-checkout-btn" class="lumo-btn-primary btn-cta-account-style js-terms-checkout" data-checkout-url="">Upgrade to subscription</a>
+          <a href="#" id="upgrade-checkout-btn" class="lumo-btn-primary btn-cta-account-style js-terms-checkout" data-checkout-url="">{% if account_resubscribe_mode|default(false) %}Resubscribe{% else %}Upgrade to subscription{% endif %}</a>
         </div>
       </section>
       {% include '_terms_modal.html' %}
@@ -780,9 +781,9 @@
         {% else %}
         <p class="account-section-desc">You don't have an active subscription. Pause is only available for monthly Captions subscribers.</p>
         {% if subscribe_options %}
-        <p class="account-section-desc" style="margin-bottom: 0.75rem;">Want a new pack every month? Upgrade to a subscription and the choices from a previous one-off pack will be prefilled on the checkout page. Your first subscription pack arrives 30 days after that one-off pack.{% if subscribe_options|length > 1 %} You have more than one one-off pack — choose which one to base the subscription on below.{% endif %}</p>
+        <p class="account-section-desc" style="margin-bottom: 0.75rem;">{% if subscribe_options|selectattr('is_resubscribe')|list|length == subscribe_options|length %}Your subscription has ended. Resubscribe to get monthly packs again—your choices will be prefilled at checkout.{% else %}Want a new pack every month? Upgrade to a subscription and the choices from a previous one-off pack will be prefilled on the checkout page. Your first subscription pack arrives 30 days after that one-off pack.{% endif %}{% if subscribe_options|length > 1 %} You have more than one pack — choose which one to base the subscription on below.{% endif %}</p>
         {% for opt in subscribe_options %}
-        <p style="margin-bottom: 0.5rem;"><a href="{{ opt.url }}" class="dfd-btn dfd-btn-secondary account-upgrade-subscription-btn">Upgrade to subscription{% if opt.business_name %} — {{ opt.business_name|title }}{% else %} — use this pack’s choices{% endif %}</a></p>
+        <p style="margin-bottom: 0.5rem;"><a href="{{ opt.url }}" class="dfd-btn dfd-btn-secondary account-upgrade-subscription-btn">{% if opt.is_resubscribe|default(false) %}Resubscribe{% else %}Upgrade to subscription{% endif %}{% if opt.business_name %} — {{ opt.business_name|title }}{% else %} — use this pack’s choices{% endif %}</a></p>
         {% endfor %}
         {% endif %}
       {% endif %}
@@ -2063,6 +2064,63 @@
           var textSpan = sidebarToggle.querySelector('.account-sidebar-toggle-text');
           if (textSpan) textSpan.textContent = isOpen ? 'Close menu' : 'Your account';
         });
+      }
+    })();
+  </script>
+  <script>
+    (function() {
+      /** Edit form: if any row wraps actions onto a second line, stack every row the same way (desktop only). */
+      var mqNarrow = window.matchMedia('(max-width: 768px)');
+      function syncEditFormListStacked() {
+        var list = document.querySelector('.account-edit-form-list');
+        if (!list) return;
+        if (mqNarrow.matches) {
+          list.classList.remove('account-edit-form-list--stacked');
+          return;
+        }
+        list.classList.remove('account-edit-form-list--stacked');
+        void list.offsetWidth;
+        var rows = list.querySelectorAll('.account-edit-form-row');
+        var needStack = false;
+        for (var i = 0; i < rows.length; i++) {
+          var row = rows[i];
+          var meta = row.querySelector('.account-edit-form-meta');
+          var actions = row.querySelector('.account-edit-form-actions');
+          if (!meta || !actions) continue;
+          if (actions.offsetTop > meta.offsetTop) {
+            needStack = true;
+            break;
+          }
+        }
+        if (needStack) list.classList.add('account-edit-form-list--stacked');
+      }
+      function scheduleSync() {
+        if (typeof window.requestAnimationFrame === 'function') {
+          window.requestAnimationFrame(function() { syncEditFormListStacked(); });
+        } else {
+          syncEditFormListStacked();
+        }
+      }
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', scheduleSync);
+      } else {
+        scheduleSync();
+      }
+      window.addEventListener('resize', scheduleSync);
+      if (typeof mqNarrow.addEventListener === 'function') {
+        mqNarrow.addEventListener('change', scheduleSync);
+      } else if (typeof mqNarrow.addListener === 'function') {
+        mqNarrow.addListener(scheduleSync);
+      }
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(scheduleSync).catch(function() { scheduleSync(); });
+      }
+      var listEl = document.querySelector('.account-edit-form-list');
+      if (listEl && typeof ResizeObserver === 'function') {
+        var ro = new ResizeObserver(scheduleSync);
+        ro.observe(listEl);
+        var main = document.querySelector('.account-main');
+        if (main) ro.observe(main);
       }
     })();
   </script>

@@ -1,0 +1,10 @@
+---
+description: Redirect — canonical Git/Railway rules are in railway-deploy.mdc
+alwaysApply: false
+---
+
+# Git and Railway
+
+Canonical rules: **`.cursor/rules/railway-deploy.mdc`** and **`.cursor/rules/no-github-railway-deploy.mdc`** (same Git-first policy; second path exists so older Cursor workspace bindings still load the right instructions). Both use `alwaysApply: true`.
+
+Do not duplicate deploy steps here.

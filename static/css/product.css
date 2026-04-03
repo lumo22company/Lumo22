@@ -2315,6 +2315,11 @@
   color: rgba(255, 255, 255, 0.95);
   border: 1px solid rgba(255, 255, 255, 0.22);
 }
+.account-edit-form-list .account-edit-form-type--former-sub {
+  background: rgba(232, 212, 139, 0.1);
+  color: rgba(255, 248, 220, 0.92);
+  border: 1px solid rgba(232, 212, 139, 0.35);
+}
 .account-edit-form-list .account-edit-form-type--oneoff {
   background: rgba(255, 255, 255, 0.08);
   color: rgba(255, 255, 255, 0.8);
@@ -2555,6 +2560,34 @@
     white-space: nowrap;
   }
   .account-edit-form-list .account-edit-form-actions {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+}
+
+/* Desktop/tablet: when JS detects any row wrapping (account-edit-form-list--stacked), match all rows */
+@media (min-width: 769px) {
+  .account-edit-form-list--stacked .account-edit-form-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.65rem;
+  }
+  .account-edit-form-list--stacked .account-edit-form-meta {
+    flex-wrap: nowrap;
+    flex: none;
+    width: 100%;
+    min-width: 0;
+  }
+  .account-edit-form-list--stacked .account-edit-form-biz {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .account-edit-form-list--stacked .account-edit-form-actions {
     width: 100%;
     justify-content: flex-start;
     flex-wrap: wrap;

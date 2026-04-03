@@ -56,7 +56,7 @@ logs/
 .coverage
 htmlcov/
 
-# Cursor / IDE
+# Cursor / IDE (deploy policy files are force-added: see docs/RAILWAY_DEPLOY.md)
 .cursor/
 
 # Backups and secrets

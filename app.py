@@ -1196,10 +1196,16 @@ def _account_context():
     # Omit one-offs removed from History (status hidden)—same as Edit form.
     subscribe_options = []
     one_off_orders = [o for o in caption_orders if not (o.get("stripe_subscription_id") or "").strip()]
+    # Suppress the base one-off pack from upgrade/resubscribe lists while a subscription row exists for it,
+    # or while the former subscription row (cancelled) still references it — avoids duplicate choices.
     upgraded_from_tokens = {
         (o.get("upgraded_from_token") or "").strip()
         for o in caption_orders
-        if (o.get("stripe_subscription_id") or "").strip() and (o.get("upgraded_from_token") or "").strip()
+        if (o.get("upgraded_from_token") or "").strip()
+        and (
+            (o.get("stripe_subscription_id") or "").strip()
+            or bool(o.get("subscription_cancelled_at"))
+        )
     }
     one_off_orders = [
         o for o in one_off_orders
@@ -1227,7 +1233,11 @@ def _account_context():
             if currency in ("gbp", "usd", "eur"):
                 sub_params["currency"] = currency
             url = "/captions-checkout-subscription?" + urlencode(sub_params)
-            subscribe_options.append({"url": url, "business_name": business_name})
+            subscribe_options.append({
+                "url": url,
+                "business_name": business_name,
+                "is_resubscribe": bool(o.get("subscription_cancelled_at")),
+            })
     # Backward compatibility: single upgrade link (most recent one-off)
     subscribe_url = subscribe_options[0]["url"] if subscribe_options else None
     subscribe_business_name = subscribe_options[0]["business_name"] if subscribe_options else None
@@ -1250,6 +1260,10 @@ def _account_context():
     ref_secret = (getattr(Config, "STRIPE_SECRET_KEY", None) or "").strip()
     referral_discount_configured = bool(ref_coupon and ref_secret)
     referral_stripe_promo_ok = bool((customer.get("stripe_referral_promotion_code_id") or "").strip())
+    # True when every subscribe/upgrade link is for a pack that used to be on a subscription (Stripe sub deleted).
+    account_resubscribe_mode = bool(subscribe_options) and all(
+        (x.get("is_resubscribe") for x in subscribe_options)
+    )
     return {
         "customer": customer,
         "caption_orders": caption_orders,
@@ -1272,6 +1286,7 @@ def _account_context():
         "referral_sms_href": _referral_share_sms_href(base, rc) if rc else "",
         "referral_discount_configured": referral_discount_configured,
         "referral_stripe_promo_ok": referral_stripe_promo_ok,
+        "account_resubscribe_mode": account_resubscribe_mode,
     }
 
 
