@@ -236,19 +236,21 @@
           {% set _needs_first_submit = (o.status == 'awaiting_intake' and not biz) %}
           {% set _edit_pause = (o.get('subscription_pause') or {}) %}
           {% set _edit_cancelled = _edit_pause.get('cancel_at_period_end') or _edit_pause.get('cancelled_now') %}
-          <li style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+          <li class="account-edit-form-row">
+            <span class="account-edit-form-biz">{{ label }}</span>
+            <div class="account-edit-form-actions">
               {% if _needs_first_submit %}
-            <a href="/captions-intake?t={{ o.token }}" class="account-billing-portal-link account-btn-swipe-light">Complete the form — {{ label }}</a>
+              <a href="/captions-intake?t={{ o.token }}" class="account-billing-portal-link account-btn-swipe-light">Complete the form</a>
               {% elif is_sub_row %}
-            <a href="/captions-intake?t={{ o.token }}" class="account-billing-portal-link account-btn-swipe-light">Edit form — {{ label }}</a>
+              <a href="/captions-intake?t={{ o.token }}" class="account-billing-portal-link account-btn-swipe-light">Edit form</a>
               {% else %}
-            <a href="/captions-intake?t={{ o.token }}&view=1" class="account-billing-portal-link account-btn-swipe-light">View form — {{ label }}</a>
-            <span style="color: rgba(255,255,255,0.45); font-size: 0.85rem;" aria-hidden="true">·</span>
-            <a href="/account/upgrade?base={{ o.token }}" class="account-billing-portal-link account-btn-swipe-light" style="font-size: 0.65rem; letter-spacing: 0.12em;">Upgrade to edit</a>
+              <a href="/captions-intake?t={{ o.token }}&view=1" class="account-billing-portal-link account-btn-swipe-light">View form</a>
+              <a href="/account/upgrade?base={{ o.token }}" class="account-billing-portal-link account-btn-swipe-light">Upgrade to edit</a>
               {% endif %}
-            {% if _edit_cancelled %}
-            <span class="account-cancel-badge" style="font-size: 0.75rem; font-weight: 500; color: #c45c00; padding: 0.2rem 0.5rem; background: rgba(196,92,0,0.12); border-radius: 10px;">Cancelled{% if _edit_pause.get('ends_at') %} — {{ _edit_pause.get('ends_at') }}{% endif %}</span>
-            {% endif %}
+              {% if _edit_cancelled %}
+              <span class="account-cancel-badge account-edit-form-cancel-badge">Cancelled{% if _edit_pause.get('ends_at') %} — {{ _edit_pause.get('ends_at') }}{% endif %}</span>
+              {% endif %}
+            </div>
           </li>
           {% endfor %}
         </ul>

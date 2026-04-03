@@ -2272,31 +2272,40 @@
 .account-edit-form-list .account-edit-form-row {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   flex-wrap: wrap;
-  gap: 0.5rem 0.75rem;
-  padding: 0.5rem 0;
+  gap: 0.75rem 1rem;
+  padding: 0.65rem 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 .account-edit-form-list .account-edit-form-row:last-child {
   border-bottom: none;
 }
+/* Plain label only — not a link, not button-styled */
 .account-edit-form-list .account-edit-form-biz {
-  font-weight: 600;
-  color: #ffffff;
-  font-size: 1rem;
-  line-height: 1.35;
-  min-width: 0;
-}
-.account-edit-form-list .account-edit-form-sep {
-  color: rgba(255, 255, 255, 0.4);
   font-weight: 500;
-  user-select: none;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 1rem;
+  line-height: 1.4;
+  min-width: 0;
+  flex: 1 1 12rem;
+  max-width: 100%;
 }
 .account-edit-form-list .account-edit-form-actions {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 0.5rem;
+  justify-content: flex-end;
+  flex: 0 1 auto;
+}
+.account-edit-form-list .account-edit-form-cancel-badge {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #c45c00;
+  padding: 0.2rem 0.5rem;
+  background: rgba(196, 92, 0, 0.12);
+  border-radius: 10px;
 }
 /* Button on black background: no panel; light text and outline, swipe on hover */
 .account-edit-form-list .account-billing-portal-link.account-btn-swipe-light {
