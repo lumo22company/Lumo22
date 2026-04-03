@@ -2281,6 +2281,15 @@
 .account-edit-form-list .account-edit-form-row:last-child {
   border-bottom: none;
 }
+.account-edit-form-list .account-edit-form-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.65rem;
+  flex: 1 1 12rem;
+  min-width: 0;
+  max-width: 100%;
+}
 /* Plain label only — not a link, not button-styled */
 .account-edit-form-list .account-edit-form-biz {
   font-weight: 500;
@@ -2288,8 +2297,26 @@
   font-size: 1rem;
   line-height: 1.4;
   min-width: 0;
-  flex: 1 1 12rem;
-  max-width: 100%;
+}
+/* Same role as History panel type pills; tuned for dark account background */
+.account-edit-form-list .account-edit-form-type {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.account-edit-form-list .account-edit-form-type--subscription {
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+}
+.account-edit-form-list .account-edit-form-type--oneoff {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.18);
 }
 .account-edit-form-list .account-edit-form-actions {
   display: flex;

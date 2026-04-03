@@ -237,7 +237,10 @@
           {% set _edit_pause = (o.get('subscription_pause') or {}) %}
           {% set _edit_cancelled = _edit_pause.get('cancel_at_period_end') or _edit_pause.get('cancelled_now') %}
           <li class="account-edit-form-row">
-            <span class="account-edit-form-biz">{{ label }}</span>
+            <div class="account-edit-form-meta">
+              <span class="account-edit-form-biz">{{ label }}</span>
+              <span class="account-edit-form-type account-edit-form-type--{{ 'subscription' if is_sub_row else 'oneoff' }}">{{ 'Subscription' if is_sub_row else 'One-off' }}</span>
+            </div>
             <div class="account-edit-form-actions">
               {% if _needs_first_submit %}
               <a href="/captions-intake?t={{ o.token }}" class="account-billing-portal-link account-btn-swipe-light">Complete the form</a>
