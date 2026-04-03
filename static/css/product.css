@@ -2285,8 +2285,10 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-start;
   gap: 0.5rem 0.65rem;
-  flex: 1 1 12rem;
+  /* Stay only as wide as name + pill — do not grow (avoids pill floating toward buttons) */
+  flex: 0 1 auto;
   min-width: 0;
   max-width: 100%;
 }
@@ -2545,8 +2547,9 @@
     min-width: 0;
   }
   .account-edit-form-list .account-edit-form-biz {
-    flex: 1 1 auto;
+    flex: 0 1 auto;
     min-width: 0;
+    max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
