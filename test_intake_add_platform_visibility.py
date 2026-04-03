@@ -19,6 +19,8 @@ def test_intake_template():
             intake_token="test-token-123",
             existing_intake={},
             intake_returning_editor=False,
+            intake_view_only=False,
+            account_upgrade_base_url="",
             platforms_count=1,
             prefilled_platform="",
             stories_paid=False,
@@ -32,6 +34,8 @@ def test_intake_template():
             intake_token="test-token-123",
             existing_intake={"business_name": "Test Co", "platform": "LinkedIn"},
             intake_returning_editor=True,
+            intake_view_only=False,
+            account_upgrade_base_url="",
             platforms_count=1,
             prefilled_platform="LinkedIn",
             stories_paid=False,
@@ -122,8 +126,75 @@ def test_upgrade_required_response():
     print("PASS: API returns upgrade_required when form requests Stories but order does not include it")
 
 
+def test_oneoff_edit_blocked_after_completed():
+    """One-off orders cannot POST intake updates after first submit; subscription edits still allowed."""
+    from app import app
+    from unittest.mock import patch, MagicMock
+
+    one_off = {
+        "id": "ord-oneoff",
+        "token": "tok-oneoff",
+        "status": "delivered",
+        "platforms_count": 1,
+        "include_stories": False,
+        "intake": {"business_name": "Old", "platform": "LinkedIn", "goal": "Build authority"},
+        "customer_email": "a@example.com",
+        "stripe_subscription_id": "",
+    }
+    sub_order = {
+        **one_off,
+        "id": "ord-sub",
+        "token": "tok-sub",
+        "stripe_subscription_id": "sub_123",
+    }
+    payload = {
+        "token": "tok-oneoff",
+        "business_name": "New Name",
+        "business_type": "Agency",
+        "offer_one_line": "We help teams",
+        "audience": "Founders",
+        "audience_cares": "Growth",
+        "platform": "LinkedIn",
+        "goal": "Build authority",
+    }
+    with app.test_client() as client:
+        with patch("services.caption_order_service.CaptionOrderService") as MockSvc:
+            mock_svc = MagicMock()
+            mock_svc.get_by_token.return_value = dict(one_off)
+            mock_svc.has_subscription_upgraded_from_oneoff_token.return_value = False
+            MockSvc.return_value = mock_svc
+            r = client.post("/api/captions-intake", json=payload, content_type="application/json")
+    data = r.get_json() or {}
+    if r.status_code != 400 or not data.get("oneoff_edit_blocked"):
+        print("FAIL: one-off edit after delivered should return 400 with oneoff_edit_blocked")
+        sys.exit(1)
+    if "upgrade_account_url" not in data or "account/upgrade" not in (data.get("upgrade_account_url") or ""):
+        print("FAIL: response should include upgrade_account_url")
+        sys.exit(1)
+    assert mock_svc.update_intake_only.call_count == 0
+
+    with app.test_client() as client:
+        with patch("services.caption_order_service.CaptionOrderService") as MockSvc:
+            mock_svc = MagicMock()
+            mock_svc.get_by_token.return_value = dict(sub_order)
+            mock_svc.has_subscription_upgraded_from_oneoff_token.return_value = False
+            mock_svc.update_intake_only.return_value = True
+            MockSvc.return_value = mock_svc
+            r2 = client.post(
+                "/api/captions-intake",
+                json={**payload, "token": "tok-sub"},
+                content_type="application/json",
+            )
+    d2 = r2.get_json() or {}
+    if r2.status_code != 200 or not d2.get("success"):
+        print("FAIL: subscription order should still allow intake edit", r2.status_code, d2)
+        sys.exit(1)
+    print("PASS: One-off edit blocked; subscription edit allowed")
+
+
 if __name__ == "__main__":
     test_intake_template()
     test_awaiting_intake_with_seeded_business_shows_next_step()
     test_upgrade_required_response()
+    test_oneoff_edit_blocked_after_completed()
     print("All tests passed.")

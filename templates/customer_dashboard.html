@@ -25,7 +25,7 @@
       <ul class="account-sidebar-nav">
         <li><a href="/account/information" class="{% if current_section == 'information' %}active{% endif %}">Account Information</a></li>
         <li><a href="/account/history" class="{% if current_section == 'history' %}active{% endif %}">History</a></li>
-        <li><a href="/account/edit-form" class="{% if current_section == 'edit-form' %}active{% endif %}">Edit form</a></li>
+        <li><a href="/account/edit-form" class="{% if current_section == 'edit-form' %}active{% endif %}">Caption brief</a></li>
         {% if subscribe_options %}<li><a href="/account/upgrade" class="{% if current_section == 'upgrade' %}active{% endif %}">Upgrade</a></li>{% endif %}
         <li><a href="/account/pause" class="{% if current_section == 'pause' %}active{% endif %}">Manage subscription</a></li>
         <li><a href="/account/refer" class="{% if current_section == 'refer' %}active{% endif %}">Refer a friend</a></li>
@@ -152,7 +152,7 @@
         <p class="account-section-desc" style="font-size: 0.9rem; color: rgba(255,255,255,0.8); margin-bottom: 0.5rem;">Showing orders for: <strong>{{ customer.email if customer and customer.email else '' }}</strong></p>
         {% set delivered_orders = (caption_orders|selectattr('status', 'equalto', 'delivered')|list)|sort(attribute='created_at', reverse=True) %}
         {% if delivered_orders %}
-        <p class="account-section-desc">View or download your previous packs. Each pack is available as a PDF; if you added Story Ideas, you get a separate Stories PDF. Only delivered packs appear here — for current orders use Edit form or Manage subscription.</p>
+        <p class="account-section-desc">View or download your previous packs. Each pack is available as a PDF; if you added Story Ideas, you get a separate Stories PDF. Only delivered packs appear here — for current orders use <strong>Caption brief</strong> or Manage subscription.</p>
         <div class="account-history-filters" id="account-history-filters">
           <label for="account-history-business-filter">Business</label>
           <select id="account-history-business-filter" style="padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: #ffffff; color: #1a1a1a; font-size: 0.95rem;">
@@ -195,18 +195,24 @@
 
       {% if current_section == 'edit-form' %}
       <section class="account-section-block">
-        <h2>Edit form</h2>
-        {% set edit_form_orders = caption_orders|selectattr('stripe_subscription_id')|list if caption_orders else [] %}
+        <h2>Caption brief</h2>
+        {% set sub_edit_orders = caption_orders|selectattr('stripe_subscription_id')|list if caption_orders else [] %}
+        {# one_off_orders excludes one-offs already used as upgraded_from_token (same list as upgrade dropdown) #}
+        {% set oneoff_edit_orders = one_off_orders|selectattr('token')|list if one_off_orders else [] %}
+        {% set edit_form_orders = sub_edit_orders + oneoff_edit_orders %}
         {% if edit_form_orders %}
         <p class="account-section-desc" style="margin: 0 0 1.25rem; line-height: 1.65; color: rgba(255,255,255,0.92);">
-          <strong>Subscription captions only.</strong> <strong>Edit form</strong> here is for <strong>monthly subscription</strong> orders (listed below)—so you can refresh your details for your <strong>next</strong> pack. One-off purchases don’t appear here; use the link in your order email for that form, or subscribe if you want ongoing edits from this account.
-          {% if one_off_orders %}
-          <span style="display: block; margin-top: 0.65rem; font-size: 0.95rem; color: rgba(255,255,255,0.82);">You also have a one-off on this account—it isn’t listed below.{% if subscribe_options %} <a href="/account/upgrade" style="color: #e8d48b; font-weight: 600;">Upgrade to subscription</a> to continue editing from your account.{% endif %}</span>
+          {% if sub_edit_orders %}
+          <strong>Subscriptions:</strong> use <strong>Edit form</strong> below to change your brief for your <strong>next</strong> pack (not packs already delivered). Edits are free; adding Story Ideas or extra platforms may require an additional charge.
+          {% endif %}
+          {% if oneoff_edit_orders %}
+          <span style="display: block; margin-top: {% if sub_edit_orders %}0.65rem{% else %}0{% endif %};"><strong>One-off packs:</strong> use <strong>View form</strong> to read what we have on file. To <strong>change</strong> answers from your account, follow <strong>Upgrade to edit</strong> (subscription checkout—then you can edit anytime for each new pack). Want another 30 days <strong>without</strong> subscribing? <a href="/captions" style="color: #e8d48b; font-weight: 600;">Buy another one-off</a> from pricing—each order has its own brief.</span>
           {% endif %}
         </p>
+        {% if sub_edit_orders %}
         <ul class="account-section-desc" style="margin: 0 0 1.25rem; padding-left: 1.25rem; line-height: 1.7; color: #ffffff;">
           <li>Update your voice, topics, and preferences.</li>
-          <li>Have a launch, sale, or event coming up? Add it in the Key date section and we’ll tailor your next pack to match.</li>
+          <li>Have a launch, sale, or event coming up? Add it in the Key date section and we'll tailor your next pack to match.</li>
           <li>Changes are reflected in your <strong>next</strong> captions and stories pack, not in packs already delivered.</li>
           <li>Edits are free; adding Story Ideas or extra platforms may require an additional charge.</li>
           <li><strong>Platforms:</strong> Edit form is the only place to add, change, or reduce platforms—not Manage subscription.</li>
@@ -214,10 +220,18 @@
           <li>To change which platforms or reduce the number (or remove Story Ideas), edit the form and submit—you'll be asked to accept the new price.</li>
           <li>All changes apply to your next pack.</li>
         </ul>
+        {% endif %}
+        {% if oneoff_edit_orders and not sub_edit_orders %}
+        <ul class="account-section-desc" style="margin: 0 0 1.25rem; padding-left: 1.25rem; line-height: 1.7; color: #ffffff;">
+          <li><strong>View form</strong> is read-only for one-off orders.</li>
+          <li>Your delivered PDF does not change when you subscribe; new edits apply to future subscription packs.</li>
+        </ul>
+        {% endif %}
         <ul class="account-edit-form-list">
           {% for o in edit_form_orders %}
           {% set biz = ((o.get('intake') or {}).get('business_name') or '')|trim %}
-          {% set label = (biz|title) if biz else (o.created_at[:10] if o.created_at else 'Subscription') %}
+          {% set is_sub_row = (o.get('stripe_subscription_id') or '')|trim %}
+          {% set label = (biz|title) if biz else (o.created_at[:10] if o.created_at else ('Subscription' if is_sub_row else 'One-off')) %}
           {# Status can stay awaiting_intake after update_intake_only (prefill sync); use intake business_name as source of truth #}
           {% set _needs_first_submit = (o.status == 'awaiting_intake' and not biz) %}
           {% set _edit_pause = (o.get('subscription_pause') or {}) %}
@@ -225,9 +239,13 @@
           <li style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
               {% if _needs_first_submit %}
             <a href="/captions-intake?t={{ o.token }}" class="account-billing-portal-link account-btn-swipe-light">Complete the form — {{ label }}</a>
-              {% else %}
+              {% elif is_sub_row %}
             <a href="/captions-intake?t={{ o.token }}" class="account-billing-portal-link account-btn-swipe-light">Edit form — {{ label }}</a>
-            {% endif %}
+              {% else %}
+            <a href="/captions-intake?t={{ o.token }}&view=1" class="account-billing-portal-link account-btn-swipe-light">View form — {{ label }}</a>
+            <span style="color: rgba(255,255,255,0.45); font-size: 0.85rem;" aria-hidden="true">·</span>
+            <a href="/account/upgrade?base={{ o.token }}" class="account-billing-portal-link account-btn-swipe-light" style="font-size: 0.65rem; letter-spacing: 0.12em;">Upgrade to edit</a>
+              {% endif %}
             {% if _edit_cancelled %}
             <span class="account-cancel-badge" style="font-size: 0.75rem; font-weight: 500; color: #c45c00; padding: 0.2rem 0.5rem; background: rgba(196,92,0,0.12); border-radius: 10px;">Cancelled{% if _edit_pause.get('ends_at') %} — {{ _edit_pause.get('ends_at') }}{% endif %}</span>
             {% endif %}
@@ -235,10 +253,10 @@
           {% endfor %}
         </ul>
         {% elif subscribe_options %}
-        <p class="account-section-desc">One-off packs can't be edited — upgrade to a subscription to edit your pack. Your answers will be prefilled from your original form.</p>
+        <p class="account-section-desc">We couldn’t find a form link for your order yet. Try the link in your order email, or upgrade to a subscription—your answers can be prefilled from your one-off.</p>
         <p><a href="/account/upgrade" class="dfd-btn dfd-btn-secondary account-upgrade-subscription-btn">Upgrade to subscription</a></p>
               {% else %}
-        <p class="account-section-desc">No caption orders yet. After you purchase, you can edit your form here (subscriptions) or upgrade to a subscription if you bought a one-off.</p>
+        <p class="account-section-desc">No caption orders linked to this email yet. After you purchase with this address, your form will appear here (one-off and subscription).</p>
         <p class="account-section-desc" style="font-size: 0.9rem; color: rgba(255,255,255,0.75); margin-top: 0.5rem;">Orders are linked to the email you used at checkout. If a recent order is missing, check you're logged in with that same email.</p>
         <p><a href="/captions" style="color: #8b6914; font-weight: 500;">Get 30 Days Captions</a></p>
               {% endif %}
@@ -248,7 +266,8 @@
       {% if current_section == 'upgrade' and one_off_orders %}
       <section class="account-section-block account-upgrade-section">
         <h2>Upgrade to subscription</h2>
-        <p class="account-section-desc">Choose which one-off pack to base your subscription on, adjust platforms and Story Ideas, then upgrade. Your form will be prefilled from your selected pack; you can edit it anytime in your account (Edit form) after you subscribe.</p>
+        <p class="account-section-desc">Choose which one-off pack to base your subscription on, adjust platforms and Story Ideas, then upgrade. Your form will be prefilled from your selected pack; you can edit it anytime in your account (Caption brief) after you subscribe.</p>
+        <div id="account-upgrade-base-token" data-token="{{ upgrade_url_base_token|default('', true)|e }}" hidden></div>
         <div class="account-upgrade-form" style="max-width: 480px;">
           <div style="margin-bottom: 1.25rem;">
             <label class="account-settings-label" style="display: block; font-size: 0.95rem; font-weight: 600; color: #fff; margin-bottom: 0.5rem;">Base subscription on</label>
@@ -511,6 +530,16 @@
               return false;
             }
           }, true);
+        }
+        var baseTokEl = document.getElementById('account-upgrade-base-token');
+        var baseTok = baseTokEl ? (baseTokEl.getAttribute('data-token') || '').trim() : '';
+        if (baseTok && prefillSelect) {
+          for (var bi = 0; bi < prefillSelect.options.length; bi++) {
+            if (prefillSelect.options[bi].value === baseTok) {
+              prefillSelect.selectedIndex = bi;
+              break;
+            }
+          }
         }
         syncFromPrefill();
       })();

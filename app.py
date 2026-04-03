@@ -372,6 +372,7 @@ def captions_intake_page():
     stories_paid = False
     is_oneoff = False
     order = None
+    oneoff_consumed_by_subscription = False
     if token:
         try:
             from services.caption_order_service import CaptionOrderService
@@ -388,6 +389,8 @@ def captions_intake_page():
                 selected_platforms = (order.get("selected_platforms") or "").strip() or ""
                 stories_paid = bool(order.get("include_stories"))
                 is_oneoff = not bool((order.get("stripe_subscription_id") or "").strip())
+                if is_oneoff and token:
+                    oneoff_consumed_by_subscription = svc.has_subscription_upgraded_from_oneoff_token(token)
                 # copy_from: only prefill when this order was explicitly upgraded from that one-off (one-off→subscription flow).
                 # If account was deleted and user resubscribes, order has no upgraded_from_token so we do not prefill.
                 if not existing_intake and copy_from:
@@ -528,11 +531,31 @@ def captions_intake_page():
         if order_currency in ("gbp", "usd", "eur"):
             sub_params["currency"] = order_currency
         subscribe_url = "/captions-checkout-subscription?" + urlencode(sub_params)
+    if oneoff_consumed_by_subscription:
+        subscribe_url = None
     order_status = (order.get("status") or "").strip() if order else ""
     # Checkout seeds minimal intake (e.g. business_name) before the customer fills the form; "returning"
     # is determined by order status, not by whether intake dict is non-empty.
     intake_returning_editor = bool(order and order_status and order_status != "awaiting_intake")
-    r = make_response(render_template('captions_intake.html', intake_token=token, existing_intake=existing_intake, platforms_count=platforms_count, prefilled_platform=prefilled_platform, prefilled_primary=prefilled_primary, stories_paid=stories_paid, is_oneoff=is_oneoff, selected_platforms=selected_platforms, subscribe_url=subscribe_url, now=now, return_url=return_url, order_currency=order_currency, intake_add_platform_text=intake_add_platform_text, intake_add_stories_text=intake_add_stories_text, is_upgrade_flow=is_upgrade_flow, intake_returning_editor=intake_returning_editor))
+    view_raw = (request.args.get("view") or "").strip().lower()
+    pending_oneoff_intake = bool(order and is_oneoff and order_status == "awaiting_intake")
+    intake_view_only = bool(
+        (
+            view_raw in ("1", "true", "yes")
+            or oneoff_consumed_by_subscription
+        )
+        and token
+        and order
+        and is_oneoff
+        and not pending_oneoff_intake
+    )
+    from urllib.parse import quote as _url_quote
+    account_upgrade_base_url = (
+        "/account/upgrade?base=" + _url_quote(token, safe="")
+        if token and is_oneoff and not oneoff_consumed_by_subscription
+        else ""
+    )
+    r = make_response(render_template('captions_intake.html', intake_token=token, existing_intake=existing_intake, platforms_count=platforms_count, prefilled_platform=prefilled_platform, prefilled_primary=prefilled_primary, stories_paid=stories_paid, is_oneoff=is_oneoff, selected_platforms=selected_platforms, subscribe_url=subscribe_url, now=now, return_url=return_url, order_currency=order_currency, intake_add_platform_text=intake_add_platform_text, intake_add_stories_text=intake_add_stories_text, is_upgrade_flow=is_upgrade_flow, intake_returning_editor=intake_returning_editor, intake_view_only=intake_view_only, account_upgrade_base_url=account_upgrade_base_url, oneoff_upgraded_to_subscription=oneoff_consumed_by_subscription))
     r.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     r.headers['Pragma'] = 'no-cache'
     return r
@@ -1136,9 +1159,19 @@ def _account_context():
             "order_token": (o.get("token") or "").strip(),
         })
 
-    # Upgrade options for one-off customers: one entry per one-off order so they can choose which pack to base a subscription on
+    # Upgrade options for one-off customers: one entry per one-off order so they can choose which pack to base a subscription on.
+    # Omit one-offs already linked as upgraded_from_token on a subscription row (that upgrade path is done).
     subscribe_options = []
     one_off_orders = [o for o in caption_orders if not (o.get("stripe_subscription_id") or "").strip()]
+    upgraded_from_tokens = {
+        (o.get("upgraded_from_token") or "").strip()
+        for o in caption_orders
+        if (o.get("stripe_subscription_id") or "").strip() and (o.get("upgraded_from_token") or "").strip()
+    }
+    one_off_orders = [
+        o for o in one_off_orders
+        if (o.get("token") or "").strip() not in upgraded_from_tokens
+    ]
     if one_off_orders:
         from urllib.parse import urlencode
         for o in one_off_orders:
@@ -1389,6 +1422,7 @@ def account_page(section=None):
     if section == "upgrade" and not ctx.get("subscribe_options"):
         section = "edit-form"
     ctx["current_section"] = section
+    ctx["upgrade_url_base_token"] = (request.args.get("base") or "").strip()
     return render_template("customer_dashboard.html", **ctx)
 
 

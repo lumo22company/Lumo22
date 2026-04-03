@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>30 Days Captions — Your details | Lumo 22</title>
+  <title>{% if intake_view_only %}Your caption brief (view only){% else %}30 Days Captions — Your details{% endif %} | Lumo 22</title>
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
   <meta name="description" content="Complete the form so we can tailor your 30 days of social media captions for feed posts, Reels, and more.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -130,6 +130,10 @@
     .intake-page .help-tooltip { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(100% + 0.5rem); width: min(280px, 90vw); padding: 1rem; background: #1a1a1a; color: #f5f5f2; font-family: var(--font-body, 'Century Gothic', CenturyGothic, 'Apple Gothic', sans-serif); font-size: 0.9rem; line-height: 1.5; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); border: 1px solid #333; opacity: 0; visibility: hidden; transition: opacity 0.2s, visibility 0.2s; z-index: 100; pointer-events: none; text-align: left; font-weight: 400; text-transform: none; }
     .intake-page .help-trigger:hover .help-tooltip, .intake-page .help-trigger:focus .help-tooltip { opacity: 1; visibility: visible; }
     .intake-page .help-tooltip::after { content: ''; position: absolute; top: 100%; left: 50%; margin-left: -6px; border: 6px solid transparent; border-top-color: #1a1a1a; }
+    .intake-readonly-fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+    .intake-view-only-banner { margin: 0 0 1.25rem; padding: 0.9rem 1rem; background: rgba(201,162,39,0.12); border-radius: 8px; border: 2px solid var(--lum-gold, #c9a227); font-size: 0.95rem; line-height: 1.55; color: #1a1a1a; }
+    .intake-view-only-banner a { font-weight: 600; color: #1a1a1a; text-decoration: underline; }
+    .intake-view-only-banner a:hover { color: #000; }
     .intake-page .field-helper { font-size: 0.85rem; color: #555; margin: -0.75rem 0 1rem; line-height: 1.4; }
     .intake-page #intake-success .btn-submit { background: var(--lum-gold); color: #000; }
     .intake-page .intake-success-message-box {
@@ -180,16 +184,33 @@
     .intake-edit-preferences-modal .modal-error.show { display: block; }
   </style>
 </head>
-<body class="lumo-landing intake-page-body" data-current-customer-email="{{ (current_customer.email or '')|lower if current_customer else '' }}" data-return-url="{{ return_url or '' }}">
+<body class="lumo-landing intake-page-body" data-current-customer-email="{{ (current_customer.email or '')|lower if current_customer else '' }}" data-return-url="{{ return_url or '' }}" data-intake-view-only="{{ 'true' if intake_view_only else 'false' }}">
   {% include '_lumo_nav.html' %}
 
   <main class="intake-page">
     <!-- intake-form-version: 2025-02-v3 -->
+    <div id="intake-intro-block">
+    {% if intake_view_only %}
+    <h1>YOUR CAPTION BRIEF</h1>
+    <p class="sub" style="margin-bottom: 1rem;">Read-only snapshot of what we have on file for this <strong>one-off</strong> order. Your delivered PDF does not change.</p>
+    <div class="intake-view-only-banner">
+      {% if oneoff_upgraded_to_subscription %}
+      <strong>This pack was used to start your subscription.</strong> To change answers for <strong>future</strong> packs, open <a href="/account/edit-form">Caption brief</a> in your account and use <strong>Edit form</strong> on your subscription row.
+      <span style="display: block; margin-top: 0.65rem; font-size: 0.88rem; font-weight: 500;">Another 30-day pack without subscribing? <a href="/captions">Buy another one-off</a> from pricing (each order has its own brief).</span>
+      {% else %}
+      <strong>Want to edit these answers from your account?</strong> Upgrade to a monthly subscription—after checkout you can open <strong>Edit form</strong> anytime for your next pack.
+      {% if account_upgrade_base_url %}<br><a href="{{ account_upgrade_base_url }}">Upgrade to subscription to edit</a>{% endif %}
+      <span style="display: block; margin-top: 0.65rem; font-size: 0.88rem; font-weight: 500;">Another 30-day pack without subscribing? <a href="/captions">Buy another one-off</a> from pricing (each order has its own brief).</span>
+      {% endif %}
+    </div>
+    {% else %}
     <h1>30 DAYS CAPTIONS — YOUR DETAILS</h1>
     <p class="sub">Complete this form so we can tailor your caption set. Your answers shape your voice, structure, and strategy for the month. The more detail you give, the better we can align your captions with your brand. Edits are free and will apply to your next pack.</p>
     {% if existing_intake and (is_upgrade_flow or intake_returning_editor) %}
     <p id="intake-edit-notice" class="intake-edit-notice" style="margin: 0 0 1.25rem; padding: 0.75rem 1rem; background: rgba(0,0,0,0.06); border-radius: 8px; border: 2px solid var(--lum-gold, #c9a227); font-size: 0.9rem; color: #1a1a1a;">{% if is_upgrade_flow %}Your answers here will be used for your first subscription pack. Content edits (voice, topics, key dates, etc.) are free.{% else %}Any updates you make here will be reflected in your <strong>next</strong> captions and stories pack, not in packs already delivered. Edits are free; adding Story Ideas or extra platforms may require an additional charge.{% endif %}</p>
     {% endif %}
+    {% endif %}
+    </div>
     {% if not intake_token %}
     <p class="sub" style="margin-top: 1rem;">Use the link from your order email to complete the form. If you just purchased, check your inbox for a message from us with a personalised link.</p>
     <p class="sub" style="margin-top: 0.5rem;">Haven't bought yet? <a href="/captions" style="color: var(--lum-gold);">Get 30 Days Captions</a></p>
@@ -216,6 +237,7 @@
     <div id="intake-upgrade-cta" style="display: none; margin: 0 0 2rem; padding: 1rem 0;"></div>
 
     <form id="captions-intake-form" action="#" method="post" data-platforms-count="{{ platforms_count }}">
+      {% if intake_view_only %}<fieldset class="intake-readonly-fieldset" disabled aria-label="Your saved caption brief (read only)">{% endif %}
       <input type="hidden" name="token" id="intake_token" value="{{ intake_token }}" data-testid="intake_token">
       <p id="intake-validation-hint" style="display: none; margin: -0.5rem 0 1rem; font-size: 0.9rem; color: #c00;"></p>
       <div class="form-section">
@@ -387,9 +409,15 @@
         <label for="caption_examples">Paste 1–3 example captions you like — from your own posts, competitors, or inspiration. We'll match this style, tone, and structure where relevant.</label>
         <textarea id="caption_examples" name="caption_examples" data-testid="caption_examples" placeholder="Paste example captions here" style="min-height: 140px;">{{ existing_intake.get('caption_examples', '') }}</textarea>
       </div>
+      {% if intake_view_only %}</fieldset>{% endif %}
+      {% if not intake_view_only %}
       <button type="button" class="btn-submit account-btn-swipe-light" id="btn-review">{% if intake_returning_editor %}REVIEW CHANGES{% else %}NEXT STEP{% endif %}</button>
+      {% else %}
+      <p class="back" style="margin-top: 1.5rem;"><a href="/account/edit-form" class="intake-back-account">← Back to Caption brief</a></p>
+      {% endif %}
     </form>
 
+    {% if not intake_view_only %}
     <div id="review-step" class="review-step">
       <h2 class="form-section" style="margin-bottom: 1rem; font-size: 1.75rem;">Double-check your answers</h2>
       <p class="sub" style="margin-bottom: 1.5rem;">Review before sending. Click Edit at the bottom of the form to change anything.</p>
@@ -399,8 +427,9 @@
         <button type="button" class="btn-submit account-btn-swipe-light" id="btn-confirm">Send details</button>
       </div>
     </div>
+    {% endif %}
 
-    {% if intake_returning_editor and not is_oneoff and intake_token %}
+    {% if intake_returning_editor and not is_oneoff and intake_token and not intake_view_only %}
     <div id="intake-edit-preferences-modal" class="intake-edit-preferences-modal" role="dialog" aria-labelledby="intake-edit-preferences-modal-title" aria-modal="true" data-order-token="{{ intake_token }}" hidden>
       <div class="modal-backdrop" id="intake-edit-preferences-backdrop"></div>
       <div class="modal-box">
@@ -498,7 +527,7 @@
     </script>
     {% endif %}
 
-    {% if subscribe_url and not is_upgrade_flow %}
+    {% if subscribe_url and not is_upgrade_flow and not intake_view_only %}
     {% set _intake_biz = (existing_intake.get('business_name', '') or '')|trim %}
     <div class="intake-subscribe-cta" style="margin: 2rem 0 1.5rem; padding: 1.25rem 1rem; background: rgba(0,0,0,0.06); border-radius: 8px; border: 1px solid rgba(201,162,39,0.35); font-size: 0.95rem; color: #1a1a1a;">
       <p style="margin: 0 0 0.75rem; font-weight: 600;">Want a new pack every month?{% if _intake_biz %} <span style="font-weight: 400; color: #555;">({{ _intake_biz }})</span>{% endif %}</p>
@@ -724,6 +753,8 @@
             if (ctaEl) { ctaEl.style.display = 'none'; ctaEl.innerHTML = ''; }
             var successEl = document.getElementById('intake-success');
             if (successEl) successEl.style.display = 'block';
+            var introBlock = document.getElementById('intake-intro-block');
+            if (introBlock) introBlock.style.display = 'none';
             var editNoticeEl = document.getElementById('intake-edit-notice');
             if (editNoticeEl) editNoticeEl.style.display = 'none';
             var msgEl = document.getElementById('intake-success-msg');
@@ -818,6 +849,8 @@
                               if (rs) rs.classList.remove('show');
                               var successEl = document.getElementById('intake-success');
                               if (successEl) successEl.style.display = 'block';
+                              var introBlock2 = document.getElementById('intake-intro-block');
+                              if (introBlock2) introBlock2.style.display = 'none';
                               var editNoticeEl = document.getElementById('intake-edit-notice');
                               if (editNoticeEl) editNoticeEl.style.display = 'none';
                               var formEl = document.getElementById('captions-intake-form');
@@ -1177,6 +1210,8 @@
             if (ctaEl) { ctaEl.style.display = 'none'; ctaEl.innerHTML = ''; }
             var successEl = document.getElementById('intake-success');
             successEl.style.display = 'block';
+            var introBlock3 = document.getElementById('intake-intro-block');
+            if (introBlock3) introBlock3.style.display = 'none';
             var editNoticeEl = document.getElementById('intake-edit-notice');
             if (editNoticeEl) editNoticeEl.style.display = 'none';
             var msgEl = document.getElementById('intake-success-msg');

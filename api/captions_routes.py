@@ -2170,12 +2170,36 @@ def _captions_intake_submit_impl(data):
 
     # Edit mode: order already has intake (intake_completed, generating, delivered)
     if order.get("intake") and status in ("intake_completed", "generating", "delivered"):
+        # One-off: no further intake updates via this API — use account (view) + subscription to edit.
+        if not (order.get("stripe_subscription_id") or "").strip():
+            if order_service.has_subscription_upgraded_from_oneoff_token(token):
+                return jsonify({
+                    "error": (
+                        "This one-off pack was used to start your subscription. "
+                        "Edit your brief under Caption brief → Edit form on your subscription row—those changes apply to future packs."
+                    ),
+                    "oneoff_edit_blocked": True,
+                    "upgraded_to_subscription": True,
+                    "account_edit_form_url": "/account/edit-form",
+                }), 400
+            base = (Config.BASE_URL or request.url_root or "").strip().rstrip("/")
+            if base and not base.startswith("http"):
+                base = "https://" + base
+            qtok = quote(token, safe="")
+            upgrade_account_url = f"{base}/account/upgrade?base={qtok}" if base else f"/account/upgrade?base={qtok}"
+            return jsonify({
+                "error": (
+                    "This one-off pack's form can't be updated from this link. "
+                    "In your account, open Caption brief → View form to read your answers, or Upgrade to edit (subscription) to change them for future packs. "
+                    "Want another month without subscribing? Buy another one-off from the pricing page."
+                ),
+                "oneoff_edit_blocked": True,
+                "upgrade_account_url": upgrade_account_url,
+            }), 400
         platform_val = (intake.get("platform") or "").strip()
-        is_oneoff_edit = not (order.get("stripe_subscription_id") or "").strip()
         if platform_val and "," in platform_val:
             platform_parts = [p.strip() for p in platform_val.split(",") if p.strip()]
-            # One-off (delivered): allow saving more platforms so they can prepare form before upgrading
-            if len(platform_parts) > order_platforms_count and not is_oneoff_edit:
+            if len(platform_parts) > order_platforms_count:
                 base = (Config.BASE_URL or request.url_root or "").strip().rstrip("/")
                 if base and not base.startswith("http"):
                     base = "https://" + base

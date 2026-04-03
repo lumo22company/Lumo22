@@ -113,6 +113,26 @@ class CaptionOrderService:
             return result.data[0]
         return None
 
+    def has_subscription_upgraded_from_oneoff_token(self, oneoff_token: str) -> bool:
+        """True if a subscription caption_orders row lists this token as upgraded_from_token."""
+        t = (oneoff_token or "").strip()
+        if not t:
+            return False
+        try:
+            result = (
+                self.client.table(self.table)
+                .select("stripe_subscription_id")
+                .eq("upgraded_from_token", t)
+                .limit(5)
+                .execute()
+            )
+            for row in result.data or []:
+                if (row.get("stripe_subscription_id") or "").strip():
+                    return True
+        except Exception:
+            pass
+        return False
+
     def get_by_id(self, order_id: str) -> Optional[Dict[str, Any]]:
         """Get order by id."""
         result = self.client.table(self.table).select("*").eq("id", order_id).execute()
