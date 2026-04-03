@@ -1072,6 +1072,29 @@ def _one_off_eligible_for_upgrade_base_dropdown(o: dict) -> bool:
     return True
 
 
+def _edit_form_pdf_delivered_sort_ts(o: dict) -> str:
+    """Timestamp string for sorting by last captions PDF delivery; empty if not delivered yet."""
+    t = (o.get("delivered_at") or "").strip()
+    if t:
+        return t
+    if (o.get("status") or "").strip().lower() == "delivered":
+        return (o.get("updated_at") or o.get("created_at") or "").strip() or ""
+    return ""
+
+
+def _edit_form_row_sort_ts(o: dict) -> str:
+    """Single sort key for Edit form: last PDF delivery time, or order created_at if no PDF yet."""
+    pdf_ts = _edit_form_pdf_delivered_sort_ts(o)
+    if pdf_ts:
+        return pdf_ts
+    return (o.get("created_at") or "").strip() or ""
+
+
+def _order_hidden_from_account(o: dict) -> bool:
+    """True if customer removed this pack from History (hide-pack); exclude from Edit form list."""
+    return (o.get("status") or "").strip().lower() == "hidden"
+
+
 def _account_context():
     """Load customer and account data for dashboard. Returns dict for template."""
     customer = get_current_customer()
@@ -1170,6 +1193,7 @@ def _account_context():
 
     # Upgrade options for one-off customers: one entry per one-off order so they can choose which pack to base a subscription on.
     # Omit one-offs already linked as upgraded_from_token on a subscription row (that upgrade path is done).
+    # Omit one-offs removed from History (status hidden)—same as Edit form.
     subscribe_options = []
     one_off_orders = [o for o in caption_orders if not (o.get("stripe_subscription_id") or "").strip()]
     upgraded_from_tokens = {
@@ -1180,6 +1204,7 @@ def _account_context():
     one_off_orders = [
         o for o in one_off_orders
         if (o.get("token") or "").strip() not in upgraded_from_tokens
+        and not _order_hidden_from_account(o)
     ]
     one_off_upgrade_options = [o for o in one_off_orders if _one_off_eligible_for_upgrade_base_dropdown(o)]
     if one_off_upgrade_options:
@@ -1207,6 +1232,16 @@ def _account_context():
     subscribe_url = subscribe_options[0]["url"] if subscribe_options else None
     subscribe_business_name = subscribe_options[0]["business_name"] if subscribe_options else None
 
+    # Edit form: subs + eligible one-offs; omit packs hidden from History; sort by last PDF time else created_at
+    edit_form_subs = [
+        o for o in caption_orders
+        if (o.get("stripe_subscription_id") or "").strip() and not _order_hidden_from_account(o)
+    ]
+    edit_form_orders = edit_form_subs + [o for o in one_off_orders if (o.get("token") or "").strip()]
+    edit_form_orders.sort(key=_edit_form_row_sort_ts, reverse=True)
+    edit_form_has_subscriptions = any((o.get("stripe_subscription_id") or "").strip() for o in edit_form_orders)
+    edit_form_has_oneoffs = any(not (o.get("stripe_subscription_id") or "").strip() for o in edit_form_orders)
+
     base = (Config.BASE_URL or request.url_root or "").strip().rstrip("/")
     if base and not base.startswith("http"):
         base = "https://" + base
@@ -1226,6 +1261,9 @@ def _account_context():
         "subscribe_business_name": subscribe_business_name,
         "one_off_orders": one_off_orders,
         "one_off_upgrade_options": one_off_upgrade_options,
+        "edit_form_orders": edit_form_orders,
+        "edit_form_has_subscriptions": edit_form_has_subscriptions,
+        "edit_form_has_oneoffs": edit_form_has_oneoffs,
         "captions_prices": CAPTIONS_DISPLAY_PRICES,
         "base_url": base,
         "referral_code": rc,
