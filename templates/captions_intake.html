@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>{% if intake_view_only %}Your caption brief (view only){% else %}30 Days Captions — Your details{% endif %} | Lumo 22</title>
+  <title>{% if intake_view_only %}Your details (view only){% else %}30 Days Captions — Your details{% endif %} | Lumo 22</title>
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
   <meta name="description" content="Complete the form so we can tailor your 30 days of social media captions for feed posts, Reels, and more.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -191,11 +191,11 @@
     <!-- intake-form-version: 2025-02-v3 -->
     <div id="intake-intro-block">
     {% if intake_view_only %}
-    <h1>YOUR CAPTION BRIEF</h1>
+    <h1>YOUR DETAILS</h1>
     <p class="sub" style="margin-bottom: 1rem;">Read-only snapshot of what we have on file for this <strong>one-off</strong> order. Your delivered PDF does not change.</p>
     <div class="intake-view-only-banner">
       {% if oneoff_upgraded_to_subscription %}
-      <strong>This pack was used to start your subscription.</strong> To change answers for <strong>future</strong> packs, open <a href="/account/edit-form">Caption brief</a> in your account and use <strong>Edit form</strong> on your subscription row.
+      <strong>This pack was used to start your subscription.</strong> To change answers for <strong>future</strong> packs, open <a href="/account/edit-form">Edit form</a> in your account and update the row for your <strong>subscription</strong>.
       <span style="display: block; margin-top: 0.65rem; font-size: 0.88rem; font-weight: 500;">Another 30-day pack without subscribing? <a href="/captions">Buy another one-off</a> from pricing (each order has its own brief).</span>
       {% else %}
       <strong>Want to edit these answers from your account?</strong> Upgrade to a monthly subscription—after checkout you can open <strong>Edit form</strong> anytime for your next pack.
@@ -237,7 +237,7 @@
     <div id="intake-upgrade-cta" style="display: none; margin: 0 0 2rem; padding: 1rem 0;"></div>
 
     <form id="captions-intake-form" action="#" method="post" data-platforms-count="{{ platforms_count }}">
-      {% if intake_view_only %}<fieldset class="intake-readonly-fieldset" disabled aria-label="Your saved caption brief (read only)">{% endif %}
+      {% if intake_view_only %}<fieldset class="intake-readonly-fieldset" disabled aria-label="Your saved details (read only)">{% endif %}
       <input type="hidden" name="token" id="intake_token" value="{{ intake_token }}" data-testid="intake_token">
       <p id="intake-validation-hint" style="display: none; margin: -0.5rem 0 1rem; font-size: 0.9rem; color: #c00;"></p>
       <div class="form-section">
@@ -413,7 +413,7 @@
       {% if not intake_view_only %}
       <button type="button" class="btn-submit account-btn-swipe-light" id="btn-review">{% if intake_returning_editor %}REVIEW CHANGES{% else %}NEXT STEP{% endif %}</button>
       {% else %}
-      <p class="back" style="margin-top: 1.5rem;"><a href="/account/edit-form" class="intake-back-account">← Back to Caption brief</a></p>
+      <p class="back" style="margin-top: 1.5rem;"><a href="/account/edit-form" class="intake-back-account">← Back to Edit form</a></p>
       {% endif %}
     </form>
 

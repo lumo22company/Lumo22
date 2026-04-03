@@ -2269,6 +2269,35 @@
 .account-edit-form-list li {
   margin-bottom: 0.75rem;
 }
+.account-edit-form-list .account-edit-form-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+.account-edit-form-list .account-edit-form-row:last-child {
+  border-bottom: none;
+}
+.account-edit-form-list .account-edit-form-biz {
+  font-weight: 600;
+  color: #ffffff;
+  font-size: 1rem;
+  line-height: 1.35;
+  min-width: 0;
+}
+.account-edit-form-list .account-edit-form-sep {
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 500;
+  user-select: none;
+}
+.account-edit-form-list .account-edit-form-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
 /* Button on black background: no panel; light text and outline, swipe on hover */
 .account-edit-form-list .account-billing-portal-link.account-btn-swipe-light {
   background: transparent !important;

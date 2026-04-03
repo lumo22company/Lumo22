@@ -2176,7 +2176,7 @@ def _captions_intake_submit_impl(data):
                 return jsonify({
                     "error": (
                         "This one-off pack was used to start your subscription. "
-                        "Edit your brief under Caption brief → Edit form on your subscription row—those changes apply to future packs."
+                        "Update your brief from your account: open the Edit form page, then use the button beside your subscription—those changes apply to future packs."
                     ),
                     "oneoff_edit_blocked": True,
                     "upgraded_to_subscription": True,
@@ -2190,7 +2190,7 @@ def _captions_intake_submit_impl(data):
             return jsonify({
                 "error": (
                     "This one-off pack's form can't be updated from this link. "
-                    "In your account, open Caption brief → View form to read your answers, or Upgrade to edit (subscription) to change them for future packs. "
+                    "In your account, open Edit form: use View form to read your answers, or Upgrade to edit (subscription) to change them for future packs. "
                     "Want another month without subscribing? Buy another one-off from the pricing page."
                 ),
                 "oneoff_edit_blocked": True,

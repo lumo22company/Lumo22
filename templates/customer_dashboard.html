@@ -25,7 +25,7 @@
       <ul class="account-sidebar-nav">
         <li><a href="/account/information" class="{% if current_section == 'information' %}active{% endif %}">Account Information</a></li>
         <li><a href="/account/history" class="{% if current_section == 'history' %}active{% endif %}">History</a></li>
-        <li><a href="/account/edit-form" class="{% if current_section == 'edit-form' %}active{% endif %}">Caption brief</a></li>
+        <li><a href="/account/edit-form" class="{% if current_section == 'edit-form' %}active{% endif %}">Edit form</a></li>
         {% if subscribe_options %}<li><a href="/account/upgrade" class="{% if current_section == 'upgrade' %}active{% endif %}">Upgrade</a></li>{% endif %}
         <li><a href="/account/pause" class="{% if current_section == 'pause' %}active{% endif %}">Manage subscription</a></li>
         <li><a href="/account/refer" class="{% if current_section == 'refer' %}active{% endif %}">Refer a friend</a></li>
@@ -152,7 +152,7 @@
         <p class="account-section-desc" style="font-size: 0.9rem; color: rgba(255,255,255,0.8); margin-bottom: 0.5rem;">Showing orders for: <strong>{{ customer.email if customer and customer.email else '' }}</strong></p>
         {% set delivered_orders = (caption_orders|selectattr('status', 'equalto', 'delivered')|list)|sort(attribute='created_at', reverse=True) %}
         {% if delivered_orders %}
-        <p class="account-section-desc">View or download your previous packs. Each pack is available as a PDF; if you added Story Ideas, you get a separate Stories PDF. Only delivered packs appear here — for current orders use <strong>Caption brief</strong> or Manage subscription.</p>
+        <p class="account-section-desc">View or download your previous packs. Each pack is available as a PDF; if you added Story Ideas, you get a separate Stories PDF. Only delivered packs appear here — for current orders use <strong>Edit form</strong> or Manage subscription.</p>
         <div class="account-history-filters" id="account-history-filters">
           <label for="account-history-business-filter">Business</label>
           <select id="account-history-business-filter" style="padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: #ffffff; color: #1a1a1a; font-size: 0.95rem;">
@@ -195,7 +195,7 @@
 
       {% if current_section == 'edit-form' %}
       <section class="account-section-block">
-        <h2>Caption brief</h2>
+        <h2>Edit form</h2>
         {% set sub_edit_orders = caption_orders|selectattr('stripe_subscription_id')|list if caption_orders else [] %}
         {# one_off_orders excludes one-offs already used as upgraded_from_token (same list as upgrade dropdown) #}
         {% set oneoff_edit_orders = one_off_orders|selectattr('token')|list if one_off_orders else [] %}
@@ -266,7 +266,7 @@
       {% if current_section == 'upgrade' and one_off_orders %}
       <section class="account-section-block account-upgrade-section">
         <h2>Upgrade to subscription</h2>
-        <p class="account-section-desc">Choose which one-off pack to base your subscription on, adjust platforms and Story Ideas, then upgrade. Your form will be prefilled from your selected pack; you can edit it anytime in your account (Caption brief) after you subscribe.</p>
+        <p class="account-section-desc">Choose which one-off pack to base your subscription on, adjust platforms and Story Ideas, then upgrade. Your form will be prefilled from your selected pack; you can edit it anytime under <strong>Edit form</strong> in your account after you subscribe.</p>
         <div id="account-upgrade-base-token" data-token="{{ upgrade_url_base_token|default('', true)|e }}" hidden></div>
         <div class="account-upgrade-form" style="max-width: 480px;">
           <div style="margin-bottom: 1.25rem;">
