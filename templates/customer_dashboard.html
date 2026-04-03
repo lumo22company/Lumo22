@@ -197,7 +197,7 @@
       <section class="account-section-block">
         <h2>Edit form</h2>
         {% set sub_edit_orders = caption_orders|selectattr('stripe_subscription_id')|list if caption_orders else [] %}
-        {# one_off_orders excludes one-offs already used as upgraded_from_token (same list as upgrade dropdown) #}
+        {# one_off_orders: non-sub one-offs not used as upgrade base. Upgrade dropdown uses one_off_upgrade_options (intake submitted only). #}
         {% set oneoff_edit_orders = one_off_orders|selectattr('token')|list if one_off_orders else [] %}
         {% set edit_form_orders = sub_edit_orders + oneoff_edit_orders %}
         {% if edit_form_orders %}
@@ -265,22 +265,22 @@
       </section>
               {% endif %}
 
-      {% if current_section == 'upgrade' and one_off_orders %}
+      {% if current_section == 'upgrade' and one_off_upgrade_options %}
       <section class="account-section-block account-upgrade-section">
         <h2>Upgrade to subscription</h2>
-        <p class="account-section-desc">Choose which one-off pack to base your subscription on, adjust platforms and Story Ideas, then upgrade. Your form will be prefilled from your selected pack; you can edit it anytime under <strong>Edit form</strong> in your account after you subscribe.</p>
+        <p class="account-section-desc">Choose which one-off pack to base your subscription on (after you've completed that pack's intake). Adjust platforms and Story Ideas, then upgrade. Your form will be prefilled from your selected pack; you can edit it anytime under <strong>Edit form</strong> in your account after you subscribe.</p>
         <div id="account-upgrade-base-token" data-token="{{ upgrade_url_base_token|default('', true)|e }}" hidden></div>
         <div class="account-upgrade-form" style="max-width: 480px;">
           <div style="margin-bottom: 1.25rem;">
             <label class="account-settings-label" style="display: block; font-size: 0.95rem; font-weight: 600; color: #fff; margin-bottom: 0.5rem;">Base subscription on</label>
             <select id="upgrade-prefill-select" class="account-upgrade-select account-upgrade-select--styled" style="width: 100%; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); color: #1a1a1a; font-size: 1rem;">
-              {% if one_off_orders|length > 1 %}
+              {% if one_off_upgrade_options|length > 1 %}
               <option value="" selected disabled>Please select</option>
               {% endif %}
-              {% for o in one_off_orders %}
+              {% for o in one_off_upgrade_options %}
               {% set biz = (o.get('intake') or {}).get('business_name', '')|trim %}
               {% set label = (biz|title) if biz else (o.created_at[:10] if o.created_at else 'Pack') %}
-              <option value="{{ o.get('token', '') }}" data-platforms="{{ o.get('platforms_count') or 1 }}" data-selected="{{ (o.get('selected_platforms') or '')|e }}" data-stories="{{ '1' if o.get('include_stories') else '0' }}" data-currency="{{ (o.get('currency') or 'gbp')|lower }}" data-delivered="{{ '1' if (o.get('status') == 'delivered' or o.get('delivered_at')) else '0' }}"{% if one_off_orders|length == 1 %} selected{% endif %}>{{ label }}</option>
+              <option value="{{ o.get('token', '') }}" data-platforms="{{ o.get('platforms_count') or 1 }}" data-selected="{{ (o.get('selected_platforms') or '')|e }}" data-stories="{{ '1' if o.get('include_stories') else '0' }}" data-currency="{{ (o.get('currency') or 'gbp')|lower }}" data-delivered="{{ '1' if (o.get('status') == 'delivered' or o.get('delivered_at')) else '0' }}"{% if one_off_upgrade_options|length == 1 %} selected{% endif %}>{{ label }}</option>
               {% endfor %}
             </select>
             </div>

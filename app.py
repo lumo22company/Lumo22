@@ -1063,6 +1063,15 @@ def _referral_share_sms_href(base_url: str, code: str) -> str:
     return "sms:?body=" + quote(text, safe="")
 
 
+def _one_off_eligible_for_upgrade_base_dropdown(o: dict) -> bool:
+    """Show in subscription upgrade 'base pack' UI only after one-off intake is submitted (prefill is real).
+    Delivered is not required—intake_completed / generating / delivered / failed (post-intake) all qualify."""
+    st = (o.get("status") or "").strip().lower()
+    if not st or st == "awaiting_intake" or st == "hidden":
+        return False
+    return True
+
+
 def _account_context():
     """Load customer and account data for dashboard. Returns dict for template."""
     customer = get_current_customer()
@@ -1172,9 +1181,10 @@ def _account_context():
         o for o in one_off_orders
         if (o.get("token") or "").strip() not in upgraded_from_tokens
     ]
-    if one_off_orders:
+    one_off_upgrade_options = [o for o in one_off_orders if _one_off_eligible_for_upgrade_base_dropdown(o)]
+    if one_off_upgrade_options:
         from urllib.parse import urlencode
-        for o in one_off_orders:
+        for o in one_off_upgrade_options:
             token = (o.get("token") or "").strip()
             if not token:
                 continue
@@ -1215,6 +1225,7 @@ def _account_context():
         "subscribe_url": subscribe_url,
         "subscribe_business_name": subscribe_business_name,
         "one_off_orders": one_off_orders,
+        "one_off_upgrade_options": one_off_upgrade_options,
         "captions_prices": CAPTIONS_DISPLAY_PRICES,
         "base_url": base,
         "referral_code": rc,
