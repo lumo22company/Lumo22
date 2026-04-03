@@ -165,6 +165,21 @@
     .intake-checkbox-label input:disabled { cursor: not-allowed; opacity: 0.5; }
     .intake-checkbox-label:has(input:disabled) { cursor: not-allowed; color: #888; pointer-events: none; }
     .intake-page input[type="checkbox"] { accent-color: #fff200; }
+    /* View-only: fieldset[disabled] washes out checks — dark tick, full opacity, readable label text */
+    .intake-page-body[data-intake-view-only="true"] .intake-readonly-fieldset input[type="checkbox"]:disabled {
+      opacity: 1 !important;
+      accent-color: #1a1a1a;
+      width: 1.15rem;
+      height: 1.15rem;
+      min-width: 1.15rem;
+      min-height: 1.15rem;
+    }
+    .intake-page-body[data-intake-view-only="true"] .intake-readonly-fieldset label:has(input[type="checkbox"]:disabled) {
+      color: #2a2a2a;
+      opacity: 1;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
     .intake-page label input[type="checkbox"] { flex-shrink: 0; vertical-align: middle; align-self: center; margin: 0; }
     .intake-add-platform-link { color: var(--lum-gold, #c9a227); font-weight: 600; text-decoration: none; }
     .intake-add-platform-link:hover { text-decoration: underline; }
