@@ -792,7 +792,7 @@
       {% endif %}
 
       {% if current_section == 'refer' %}
-      <section class="account-section-block">
+      <section class="account-section-block account-section-block--refer">
         <h2>Refer a friend</h2>
         {% if referral_code %}
         <p class="account-section-desc">The <strong>10% friend discount</strong> applies when they <strong>enter your code at Stripe checkout</strong> (Add promotion code). Share your code below or via email/text—you get 10% off your next billing period for each friend who completes a purchase. Discounts don't stack: two referrals = 10% off your next two periods.</p>
@@ -807,7 +807,7 @@
           <label class="account-settings-label" for="referral-code" style="margin-top: 0; display: block;">Your referral code</label>
           <p class="account-settings-desc" style="margin-top: 0.35rem; margin-bottom: 0; font-size: 0.88rem;">This code does not change—it is your permanent share code. Refreshing the page only reconnects it to Stripe if needed; it will not issue a new code.</p>
           <div class="referral-row" style="display: flex; gap: 0.75rem; align-items: center; margin-top: 0.5rem;">
-            <input type="text" id="referral-code" readonly value="{{ referral_code }}" class="referral-input" aria-label="Your referral code" style="flex: 1; padding: 0.6rem 0.9rem; font-size: 0.9rem; border: 1px solid rgba(0,0,0,0.15); border-radius: 12px; background: #f8f8f6; color: #111;">
+            <input type="text" id="referral-code" readonly value="{{ referral_code }}" class="referral-input" aria-label="Your referral code" style="flex: 1; padding: 0.6rem 0.9rem; font-size: 0.9rem; border: 1px solid rgba(0,0,0,0.15); border-radius: 12px; background: #f8f8f6; color: #000;">
             <button type="button" id="referral-copy-code-btn" class="dfd-btn dfd-btn-secondary referral-copy account-btn-swipe-light" onclick="copyReferralCode()">Copy code</button>
           </div>
           <label class="account-settings-label" for="referral-share-email-btn" style="margin-top: 0.75rem; display: block;">Quick share</label>

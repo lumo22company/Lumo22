@@ -2440,17 +2440,37 @@
 .account-referral-block .referral-input {
   border-color: rgba(0,0,0,0.15);
   background: #f8f8f6;
-  color: #111;
+  color: #000;
 }
+/* Refer block: .account-page-wrap .account-settings-desc (later in file) was overriding to light/muted — force black */
 .account-referral-block .account-settings-label,
-.account-page-wrap .account-referral-block .account-settings-label { color: #1a1a1a !important; }
-.account-referral-block .account-settings-desc { color: #444; }
+.account-page-wrap .account-referral-block .account-settings-label { color: #000 !important; }
+.account-referral-block .account-settings-desc,
+.account-page-wrap .account-referral-block .account-settings-desc { color: #000 !important; }
+
+/* Refer a friend section: dark typography (override global white-on-black .account-section-desc / h2) */
+.account-page-wrap .account-main .account-section-block--refer > h2 {
+  color: #000;
+  background: transparent;
+  padding: 0;
+  display: block;
+  margin: 0 0 0.75rem;
+}
+.account-page-wrap .account-main .account-section-block--refer > p.account-section-desc {
+  color: #000;
+  background: transparent;
+  padding: 0;
+  display: block;
+}
+.account-page-wrap .account-main .account-section-block--refer > p.account-section-desc strong {
+  color: #000;
+}
 /* Referrer reward credits — brand yellow panel, dark text */
 .account-referral-block .account-referral-credits-banner {
   margin-top: 0.75rem;
   padding: 0.75rem 1rem;
   background: #fff200;
-  color: #111;
+  color: #000;
   font-weight: 600;
   border-radius: 10px;
   border: 1px solid rgba(0, 0, 0, 0.1);
