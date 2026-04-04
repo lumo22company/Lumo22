@@ -321,7 +321,7 @@
           </div>
           <div id="upgrade-edit-form-first-wrap" style="margin-bottom: 1.25rem; padding: 0.75rem 1rem; background: rgba(255,255,255,0.06); border-radius: 8px; border: 1px solid rgba(255,255,255,0.15);">
             <p style="font-size: 0.95rem; font-weight: 600; color: #fff; margin: 0 0 0.35rem;">Do you need to update your form?</p>
-            <p style="font-size: 0.9rem; color: rgba(255,255,255,0.9); margin: 0 0 0.5rem;">Update your details or tell us about an event coming up—we'll use this for your first pack. After you submit the form, we'll take you to checkout to complete your subscription.</p>
+            <p style="font-size: 0.9rem; color: rgba(255,255,255,0.9); margin: 0 0 0.5rem;">Update your details or tell us about an event coming up—we'll use this for your first pack. After you submit the form, you'll go to your <strong>order summary</strong> to accept the terms, then continue to Stripe to pay.</p>
             <a href="#" id="upgrade-edit-form-first-link" class="account-billing-portal-link account-btn-swipe-light" style="font-size: 0.85rem;">Edit form</a>
           </div>
           <div style="margin-bottom: 1.25rem;">
@@ -461,8 +461,8 @@
           if (getPackToday) q += '&get_pack_now=1';
           if (checkoutBtn) {
             if (copyFrom) {
-              checkoutBtn.href = '/api/captions-checkout-subscription?' + q;
-              checkoutBtn.dataset.checkoutUrl = '/api/captions-checkout-subscription?' + q;
+              checkoutBtn.href = '/captions-checkout-subscription?' + q;
+              checkoutBtn.dataset.checkoutUrl = '/captions-checkout-subscription?' + q;
             } else {
               checkoutBtn.href = '#';
               checkoutBtn.dataset.checkoutUrl = '';
