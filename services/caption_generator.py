@@ -405,6 +405,27 @@ def _build_deadline_alignment_block(pack_start_date: str) -> str:
     )
 
 
+def _build_weekday_hook_alignment_block() -> str:
+    """
+    Prevent hooks like 'Monday mornings at…' on a Wednesday post (Day N must match DATE_CONTEXT weekday).
+    Factual operating hours listing Mon–Sun may still appear on any day.
+    """
+    return (
+        "WEEKDAY_IN_HOOK_ALIGNMENT (CRITICAL — each **## Day N** post is read **on** the calendar day "
+        "in **DATE_CONTEXT** for that N; the PDF prints that date beside the post):\n"
+        "- For **Day N**, the weekday is **fixed** by DATE_CONTEXT (e.g. if Day 13 = Wed 15 Apr 2026, this post goes live on **Wednesday**).\n"
+        "- In **Suggested hook** and **Caption:**, do **not** use scene-setting that names **another** weekday as if *this* post were that day "
+        "(e.g. do not write “Monday mornings at [Business]…” when Day N is **Wednesday**). If you name a weekday in a *scene* hook, it must match "
+        "DATE_CONTEXT for **this** Day N.\n"
+        "- Prefer **non-weekday** scene-setting when variety is needed: “Mornings at [Business]…”, “Midweek classes…”, “Here at [Business]…”, “Today's …”.\n"
+        "- **Factual operating hours** may list multiple weekdays (e.g. “Open Mon–Thu 8–5, Fri–Sat mornings”, “closed Sunday”) on **any** Day N — "
+        "that is schedule copy, not pretending the post falls on Monday.\n"
+        "- **Promoting a future class** is OK when unambiguous (e.g. “This **Friday** morning we’re hosting…” on a Tuesday post) so the reader knows the event is Friday.\n"
+        "- Hashtags: avoid **#MondayMotivation** (etc.) on a calendar day that is not that weekday; use neutral tags or day-appropriate tags "
+        "(e.g. #WellnessWednesday on Wednesday)."
+    )
+
+
 CAPTION_CATEGORIES = [
     "Authority / Expertise",
     "Educational / Value",
@@ -728,6 +749,7 @@ def _build_user_prompt(
     if date_context:
         align_block = _build_date_alignment_weekend_block(start_str)
         deadline_block = _build_deadline_alignment_block(start_str)
+        weekday_hook_block = _build_weekday_hook_alignment_block()
         parts.extend([
             "",
             "DATE_CONTEXT (the client's 30 days start on a specific date; use when it adds value):",
@@ -737,7 +759,12 @@ def _build_user_prompt(
             "",
             deadline_block,
             "",
-            "When KEY_DATE_EVENTS is also set, prioritize event timing from KEY_DATE_EVENTS over casual weekday mentions. When only DATE_CONTEXT applies (no KEY_DATE_EVENTS), you may reference weekday/weekend lightly; do not force a calendar date into every caption — but **DATE_ALIGNMENT** and **DEADLINE_AND_REGISTRATION_ALIGNMENT** above still apply.",
+            weekday_hook_block,
+            "",
+            "When KEY_DATE_EVENTS is also set, prioritize event timing from KEY_DATE_EVENTS over casual weekday mentions. "
+            "When only DATE_CONTEXT applies (no KEY_DATE_EVENTS), you may reference weekday/weekend lightly only where it matches **DATE_CONTEXT** "
+            "and **WEEKDAY_IN_HOOK_ALIGNMENT** — do not force a calendar date into every caption, but **never** name the wrong weekday in a scene-setting hook. "
+            "**DATE_ALIGNMENT**, **DEADLINE_AND_REGISTRATION_ALIGNMENT**, and **WEEKDAY_IN_HOOK_ALIGNMENT** above still apply.",
         ])
 
     # Subscription variety: avoid repeating the same day-by-day category pattern as previous packs
