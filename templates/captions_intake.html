@@ -215,7 +215,7 @@
     .intake-edit-preferences-modal .modal-error.show { display: block; }
   </style>
 </head>
-<body class="lumo-landing intake-page-body" data-current-customer-email="{{ (current_customer.email or '')|lower if current_customer else '' }}" data-return-url="{{ return_url or '' }}" data-intake-view-only="{{ 'true' if intake_view_only else 'false' }}" data-oneoff-subscribe-checkout="{{ 'true' if oneoff_subscribe_checkout_mode|default(false) else 'false' }}" data-subscribe-url="{{ subscribe_url or '' }}" data-auto-open-review="{{ 'true' if oneoff_subscribe_checkout_mode|default(false) else 'false' }}">
+<body class="lumo-landing intake-page-body" data-current-customer-email="{{ (current_customer.email or '')|lower if current_customer else '' }}" data-return-url="{{ return_url or '' }}" data-intake-view-only="{{ 'true' if intake_view_only else 'false' }}" data-oneoff-subscribe-checkout="{{ 'true' if oneoff_subscribe_checkout_mode|default(false) else 'false' }}" data-subscribe-url="{{ subscribe_url or '' }}" data-auto-open-review="{{ 'true' if oneoff_subscribe_checkout_mode|default(false) else 'false' }}" data-oneoff-upgrade-edit="{{ 'true' if edit_intake_before_subscribe|default(false) else 'false' }}">
   {% include '_lumo_nav.html' %}
 
   <main class="intake-page">
@@ -870,6 +870,9 @@
         include_stories: !!(document.getElementById('include_stories') && document.getElementById('include_stories').checked),
         align_stories_to_captions: !!(document.getElementById('align_stories') && document.getElementById('align_stories').checked)
       };
+      if (document.body.getAttribute('data-oneoff-upgrade-edit') === 'true') {
+        payload.oneoff_upgrade_edit = true;
+      }
       var fOneOffChk = document.getElementById('captions-intake-form');
       var subUrlEarly = (document.body.getAttribute('data-subscribe-url') || '').trim();
       if (fOneOffChk && fOneOffChk.getAttribute('data-oneoff-subscribe-checkout') === 'true' && subUrlEarly) {
@@ -1345,6 +1348,9 @@
           include_stories: !!(document.getElementById('include_stories') && document.getElementById('include_stories').checked),
           align_stories_to_captions: !!(document.getElementById('align_stories') && document.getElementById('align_stories').checked)
         };
+        if (document.body.getAttribute('data-oneoff-upgrade-edit') === 'true') {
+          payload.oneoff_upgrade_edit = true;
+        }
         btnConfirm.disabled = true;
         btnConfirm.textContent = 'Sending…';
         fetch('/api/captions-intake', {

@@ -625,6 +625,7 @@ def captions_intake_page():
             account_upgrade_base_url=account_upgrade_base_url,
             oneoff_upgraded_to_subscription=oneoff_consumed_by_subscription,
             oneoff_subscribe_checkout_mode=oneoff_subscribe_checkout_mode,
+            edit_intake_before_subscribe=edit_intake_before_subscribe,
         )
     )
     r.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'

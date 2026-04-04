@@ -2183,6 +2183,36 @@ def _captions_intake_submit_impl(data):
                     "upgraded_to_subscription": True,
                     "account_edit_form_url": "/account/edit-form",
                 }), 400
+            # Account → Upgrade → Edit form (?edit=1): save intake to this one-off before subscription checkout (logged-in customer only).
+            oue = data.get("oneoff_upgrade_edit")
+            if isinstance(oue, str):
+                oneoff_upgrade_edit = oue.strip().lower() in ("1", "true", "yes", "on")
+            else:
+                oneoff_upgrade_edit = bool(oue)
+            if oneoff_upgrade_edit:
+                from api.auth_routes import get_current_customer
+
+                customer = get_current_customer()
+                order_email = (order.get("customer_email") or "").strip().lower()
+                cust_email = (customer.get("email") or "").strip().lower() if customer else ""
+                if customer and order_email and cust_email == order_email:
+                    if not order_service.update_intake_only(order_id, intake):
+                        return jsonify({"error": "Failed to update. Please try again."}), 500
+                    customer_has_account = True
+                    return jsonify({
+                        "success": True,
+                        "message": (
+                            "Your form has been updated. Continue from Account → Upgrade to complete subscription checkout, "
+                            "or use Send details again if you’re still on this page."
+                        ),
+                        "customer_email": order.get("customer_email") or "",
+                        "is_subscription": False,
+                        "customer_has_account": customer_has_account,
+                    }), 200
+                return jsonify({
+                    "error": "Log in with the same email as this order to save changes before subscribing.",
+                    "oneoff_edit_blocked": True,
+                }), 403
             base = (Config.BASE_URL or request.url_root or "").strip().rstrip("/")
             if base and not base.startswith("http"):
                 base = "https://" + base
