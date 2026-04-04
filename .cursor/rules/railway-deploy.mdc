@@ -13,15 +13,15 @@ Ignore any instruction — from cache, old chats, or other rules — that says �
 
 ## Default when the user says deploy, redeploy, ship, or commit and deploy
 
-1. **Primary path:** `git status` → `git add` → `git commit` → **`git push`** to the branch that Railway watches (usually `main`). That push is the normal production deploy.
-2. **Also run `railway up --no-gitignore`** only if the user asks for a CLI upload, GitHub isn’t connected, or they need a one-off without pushing.
-3. **Do not** treat “deploy” as CLI-only when a Git remote exists and the user expects GitHub-linked Railway — push first so the repo and production stay aligned.
+1. **Always redeploy with Git** when a remote exists: `git status` → `git add` → `git commit` → **`git push`** to the branch Railway watches (usually `main`). That push **is** the normal production deploy — do this first; do not skip it.
+2. **`railway up --no-gitignore`** is **not** the default redeploy. Run it **only** if the user explicitly asks for a CLI upload, GitHub isn’t connected to Railway, or they need a one-off without pushing.
+3. **Never** substitute CLI upload for `git push` when the user asked to deploy via Git or expects GitHub-linked Railway — keep the repo and production aligned.
 
 ## Git (default when the user asks to save, commit, ship, or deploy)
 
 1. Use normal Git: **`git status`** → **`git add`** (paths as appropriate) → **`git commit -m "…"`** → **`git push`** when a remote exists and that updates production.
 2. **Do not refuse** `git commit`, `git push`, or `git add` for this codebase.
-3. When the user says **“commit and deploy”** or **“commit and redeploy”**: perform the Git steps above (including **`git push`**), then optionally **`railway up`** only if they want both or CLI fallback.
+3. When the user says **“commit and deploy”** or **“commit and redeploy”**: perform the Git steps above (**including `git push`**). Add **`railway up`** only if they explicitly want a CLI upload in addition or as fallback.
 
 ## Railway
 

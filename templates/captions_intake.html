@@ -215,7 +215,7 @@
     .intake-edit-preferences-modal .modal-error.show { display: block; }
   </style>
 </head>
-<body class="lumo-landing intake-page-body" data-current-customer-email="{{ (current_customer.email or '')|lower if current_customer else '' }}" data-return-url="{{ return_url or '' }}" data-intake-view-only="{{ 'true' if intake_view_only else 'false' }}" data-oneoff-subscribe-checkout="{{ 'true' if oneoff_subscribe_checkout_mode|default(false) else 'false' }}" data-subscribe-url="{{ subscribe_url or '' }}" data-auto-open-review="{{ 'true' if oneoff_subscribe_checkout_mode|default(false) else 'false' }}" data-oneoff-upgrade-edit="{{ 'true' if edit_intake_before_subscribe|default(false) else 'false' }}">
+<body class="lumo-landing intake-page-body" data-current-customer-email="{{ (current_customer.email or '')|lower if current_customer else '' }}" data-return-url="{{ return_url or '' }}" data-intake-view-only="{{ 'true' if intake_view_only else 'false' }}" data-oneoff-subscribe-checkout="{{ 'true' if oneoff_subscribe_checkout_mode|default(false) else 'false' }}" data-subscribe-url="{{ subscribe_url or '' }}" data-auto-open-review="{{ 'true' if oneoff_subscribe_checkout_mode|default(false) else 'false' }}" data-oneoff-upgrade-edit="{{ 'true' if edit_intake_before_subscribe|default(false) else 'false' }}" data-is-upgrade-flow="{{ 'true' if is_upgrade_flow|default(false) else 'false' }}">
   {% include '_lumo_nav.html' %}
 
   <main class="intake-page">
@@ -488,7 +488,7 @@
         {% if not oneoff_subscribe_checkout_mode|default(false) %}
         <button type="button" class="btn-submit btn-secondary account-btn-swipe-light" id="btn-edit">Edit</button>
         {% endif %}
-        <button type="button" class="btn-submit account-btn-swipe-light" id="btn-confirm">{% if oneoff_subscribe_checkout_mode|default(false) %}Confirm and continue{% else %}Send details{% endif %}</button>
+        <button type="button" class="btn-submit account-btn-swipe-light" id="btn-confirm">{% if oneoff_subscribe_checkout_mode|default(false) %}Confirm and continue{% elif is_upgrade_flow|default(false) %}Next step{% else %}Send details{% endif %}</button>
       </div>
     </div>
     {% endif %}
@@ -611,8 +611,14 @@
   {% if intake_token %}
   <script>
   (function(){
-    var PLAN_UPGRADE = 'Your answers are not saved on our servers yet. After checkout completes and the new price is active, come back to this page and tap Send details again to save (or open the form from your confirmation email).';
-    var PLAN_DOWNGRADE = 'Your answers are not saved yet. Accept the new price below first — then we will save your updates (tap Send details again if needed).';
+    window.lumoIntakeBtnConfirmLabel = function() {
+      var b = document.body;
+      if (b.getAttribute('data-oneoff-subscribe-checkout') === 'true') return 'Confirm and continue';
+      if (b.getAttribute('data-is-upgrade-flow') === 'true') return 'Next step';
+      return 'Send details';
+    };
+    var PLAN_UPGRADE = 'Your answers are not saved on our servers yet. After checkout completes and the new price is active, come back to this page and tap Next step again to save (or open the form from your confirmation email).';
+    var PLAN_DOWNGRADE = 'Your answers are not saved yet. Accept the new price below first — then we will save your updates (tap Next step again if needed).';
     window.lumoIntakeScrollTo = function(el) {
       if (!el || !el.scrollIntoView) return;
       try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) { el.scrollIntoView(true); }
@@ -1023,26 +1029,26 @@
                               dbtn.disabled = false;
                               dbtn.textContent = 'Accept new price — ' + sym + price + '/month';
                             }
-                            if (btn) { btn.disabled = false; btn.textContent = 'Send details'; }
+                            if (btn) { btn.disabled = false; btn.textContent = window.lumoIntakeBtnConfirmLabel(); }
                           })
                           .catch(function() {
                             if (typeof lumoIntakeSetError === 'function') lumoIntakeSetError('Could not save — try again.', null);
                             dbtn.disabled = false;
                             dbtn.textContent = 'Accept new price — ' + sym + price + '/month';
-                            if (btn) { btn.disabled = false; btn.textContent = 'Send details'; }
+                            if (btn) { btn.disabled = false; btn.textContent = window.lumoIntakeBtnConfirmLabel(); }
                           });
                       } else {
                         if (typeof lumoIntakeSetError === 'function') lumoIntakeSetError(res.error || 'Could not update plan.', null);
                         dbtn.disabled = false;
                         dbtn.textContent = 'Accept new price — ' + sym + price + '/month';
-                        if (btn) { btn.disabled = false; btn.textContent = 'Send details'; }
+                        if (btn) { btn.disabled = false; btn.textContent = window.lumoIntakeBtnConfirmLabel(); }
                       }
                     })
                     .catch(function() {
                       if (typeof lumoIntakeSetError === 'function') lumoIntakeSetError('Could not update plan — try again.', null);
                       dbtn.disabled = false;
                       dbtn.textContent = 'Accept new price — ' + sym + price + '/month';
-                      if (btn) { btn.disabled = false; btn.textContent = 'Send details'; }
+                      if (btn) { btn.disabled = false; btn.textContent = window.lumoIntakeBtnConfirmLabel(); }
                     });
                   };
                 }
@@ -1051,14 +1057,14 @@
                 ctaEl.style.display = 'block';
               } else { ctaEl.style.display = 'none'; ctaEl.innerHTML = ''; }
             }
-            if (btn) { btn.disabled = false; btn.textContent = 'Send details'; }
+            if (btn) { btn.disabled = false; btn.textContent = window.lumoIntakeBtnConfirmLabel(); }
           }
         })
         .catch(function() {
           if (typeof lumoIntakeSetError === 'function') lumoIntakeSetError('Something didn\'t send — try again or email hello@lumo22.com.', null);
           var ctaEl = document.getElementById('intake-upgrade-cta');
           if (ctaEl) { ctaEl.style.display = 'none'; ctaEl.innerHTML = ''; }
-          if (btn) { btn.disabled = false; btn.textContent = 'Send details'; }
+          if (btn) { btn.disabled = false; btn.textContent = window.lumoIntakeBtnConfirmLabel(); }
         });
     });
     (function setupPlatformButtons() {
@@ -1454,7 +1460,7 @@
               } else { ctaEl.style.display = 'none'; ctaEl.innerHTML = ''; }
             }
             btnConfirm.disabled = false;
-            btnConfirm.textContent = 'Send details';
+            btnConfirm.textContent = window.lumoIntakeBtnConfirmLabel();
           }
         })
         .catch(function() {
@@ -1462,7 +1468,7 @@
           var ctaEl = document.getElementById('intake-upgrade-cta');
           if (ctaEl) { ctaEl.style.display = 'none'; ctaEl.innerHTML = ''; }
           btnConfirm.disabled = false;
-          btnConfirm.textContent = 'Send details';
+          btnConfirm.textContent = window.lumoIntakeBtnConfirmLabel();
         });
       }
 
