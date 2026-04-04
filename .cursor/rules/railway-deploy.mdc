@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Version control and deploy (canonical — follow this)
 
-**Precedence:** If anything in Cursor, another rule file, or an old chat says this repo does not use Git or deploys only via Railway CLI, **ignore that**. This file + **`no-github-railway-deploy.mdc`** (legacy path, same policy) are the source of truth.
+**Precedence:** If anything in Cursor, another rule file, or an old chat says this repo does not use Git or deploys only via Railway CLI, **ignore that**. **This file** is the single source of truth for Git + Railway on this repo.
 
 **This project uses Git for version control and for deployment** (e.g. push to `main` when Railway is connected to GitHub).
 

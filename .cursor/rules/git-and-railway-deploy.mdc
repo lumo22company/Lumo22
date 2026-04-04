@@ -5,6 +5,4 @@ alwaysApply: false
 
 # Git and Railway
 
-Canonical rules: **`.cursor/rules/railway-deploy.mdc`** and **`.cursor/rules/no-github-railway-deploy.mdc`** (same Git-first policy; second path exists so older Cursor workspace bindings still load the right instructions). Both use `alwaysApply: true`.
-
-Do not duplicate deploy steps here.
+Canonical rule: **`.cursor/rules/railway-deploy.mdc`** (`alwaysApply: true`). Do not duplicate deploy steps here.
