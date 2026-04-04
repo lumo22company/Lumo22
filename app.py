@@ -1131,6 +1131,16 @@ def _order_hidden_from_account(o: dict) -> bool:
     return (o.get("status") or "").strip().lower() == "hidden"
 
 
+def _safe_int(val, default: int = 0) -> int:
+    """Coerce to int without raising. DB JSON may have null or bad strings (e.g. platforms_count)."""
+    try:
+        if val is None or val == "":
+            return int(default)
+        return int(val)
+    except (TypeError, ValueError):
+        return int(default)
+
+
 def _account_context():
     """Load customer and account data for dashboard. Returns dict for template."""
     customer = get_current_customer()
@@ -1242,7 +1252,7 @@ def _account_context():
                 continue
             intake = o.get("intake") or {}
             business_name = (intake.get("business_name") or "").strip() or None
-            platforms_count = max(1, int(o.get("platforms_count", 1)))
+            platforms_count = max(1, _safe_int(o.get("platforms_count"), 1))
             selected_platforms = (o.get("selected_platforms") or "").strip() or ""
             stories_paid = bool(o.get("include_stories"))
             sub_params = {"copy_from": token, "platforms": platforms_count}
@@ -1302,7 +1312,7 @@ def _account_context():
         "captions_prices": CAPTIONS_DISPLAY_PRICES,
         "base_url": base,
         "referral_code": rc,
-        "referral_discount_credits": int(customer.get("referral_discount_credits") or 0),
+        "referral_discount_credits": _safe_int(customer.get("referral_discount_credits"), 0),
         "referral_mailto_href": _referral_share_mailto_href(base, rc) if rc else "",
         "referral_sms_href": _referral_share_sms_href(base, rc) if rc else "",
         "referral_discount_configured": referral_discount_configured,
