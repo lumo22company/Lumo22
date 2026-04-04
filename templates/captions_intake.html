@@ -211,11 +211,11 @@
     <div class="intake-view-only-banner">
       {% if oneoff_upgraded_to_subscription %}
       <strong>This pack was used to start your subscription.</strong> To change answers for <strong>future</strong> packs, open <a href="/account/edit-form">Edit form</a> in your account and update the row for your <strong>subscription</strong>.
-      <span style="display: block; margin-top: 0.65rem; font-size: 0.88rem; font-weight: 500;">Another 30-day pack without subscribing? <a href="/captions">Buy another one-off</a> from pricing (each order has its own brief).</span>
+      <span style="display: block; margin-top: 0.65rem; font-size: 0.88rem; font-weight: 500;">Want another 30-day pack without subscribing? <a href="/captions">Buy another one-off</a> (each order has its own brief).</span>
       {% else %}
       <strong>Want to edit these answers from your account?</strong> Upgrade to a monthly subscription—after checkout you can open <strong>Edit form</strong> anytime for your next pack.
       {% if account_upgrade_base_url %}<br><a href="{{ account_upgrade_base_url }}">Upgrade to subscription to edit</a>{% endif %}
-      <span style="display: block; margin-top: 0.65rem; font-size: 0.88rem; font-weight: 500;">Another 30-day pack without subscribing? <a href="/captions">Buy another one-off</a> from pricing (each order has its own brief).</span>
+      <span style="display: block; margin-top: 0.65rem; font-size: 0.88rem; font-weight: 500;">Want another 30-day pack without subscribing? <a href="/captions">Buy another one-off</a> (each order has its own brief).</span>
       {% endif %}
     </div>
     {% else %}
