@@ -1251,10 +1251,22 @@ def _account_resolve_referral_customer(customer: dict, *, stripe_promotion_sync:
     """Ensure referral code; refresh customer row only if DB/Stripe updated it. Runs in parallel with Stripe billing."""
     from services.customer_auth_service import CustomerAuthService
 
-    auth_svc = CustomerAuthService()
     cid = str(customer.get("id") or "").strip()
     if not cid:
         return None, customer
+
+    # Session row is from get_current_customer() — skip extra Supabase when nothing can change this request.
+    if not stripe_promotion_sync:
+        existing = (customer.get("referral_code") or "").strip()
+        if existing:
+            return existing, customer
+    else:
+        rc = (customer.get("referral_code") or "").strip()
+        promo = (customer.get("stripe_referral_promotion_code_id") or "").strip()
+        if rc and promo:
+            return rc, customer
+
+    auth_svc = CustomerAuthService()
     code, need_refresh = auth_svc.ensure_referral_code(
         cid, stripe_promotion_sync=stripe_promotion_sync
     )
@@ -1271,56 +1283,15 @@ def _account_context_build(customer: dict, section: Optional[str] = None) -> dic
     caption_orders = []
     referral_code = None
     account_orders_ok = False
+    subscription_billing = None
     sync_referral_promo = (section or "information") == "refer"
     try:
         from services.caption_order_service import CaptionOrderService
 
         co_svc = CaptionOrderService()
         caption_orders = co_svc.get_by_customer_email_including_stripe_customer(email)
-        # Eligibility for "Get my pack sooner": customer must already have at least one delivered pack
-        # (either this subscription order itself, or the one-off order it was upgraded from).
-        by_token = {
-            (o.get("token") or "").strip(): o
-            for o in caption_orders
-            if (o.get("token") or "").strip()
-        }
-        # Show business name / intake on subscription row when DB intake is empty but one-off has answers
-        for o in caption_orders:
-            if not (o.get("stripe_subscription_id") or "").strip():
-                continue
-            intake = dict(o.get("intake") or {})
-            if _safe_str(intake.get("business_name")):
-                continue
-            uft = (o.get("upgraded_from_token") or "").strip()
-            if not uft:
-                continue
-            base = by_token.get(uft)
-            if not base or not isinstance(base.get("intake"), dict):
-                continue
-            bi = base["intake"]
-            for k, v in bi.items():
-                if v is not None and v != "" and not intake.get(k):
-                    intake[k] = v
-            o["intake"] = intake
-        for o in caption_orders:
-            delivered_self = bool(o.get("status") == "delivered" or o.get("delivered_at"))
-            upgraded_from = (o.get("upgraded_from_token") or "").strip()
-            delivered_base = False
-            if upgraded_from:
-                base = by_token.get(upgraded_from)
-                delivered_base = bool(base and (base.get("status") == "delivered" or base.get("delivered_at")))
-            o["has_delivered_pack"] = bool(delivered_self or delivered_base)
-        account_orders_ok = True
-    except Exception as e:
-        print(f"[account] Error loading data: {e}")
-        referral_code = None
-    current_intake_order = None
-    if caption_orders:
-        sub_orders = [o for o in caption_orders if (o.get("stripe_subscription_id") or "").strip()]
-        current_intake_order = sub_orders[0] if sub_orders else caption_orders[0]
-
-    # Referral resolution (may call Stripe) overlaps with subscription billing (Stripe) — run in parallel.
-    if account_orders_ok:
+        # Start Stripe + referral as soon as orders are loaded; merge intake / flags on the main thread
+        # while those network calls run (same total work, better wall time).
         with ThreadPoolExecutor(max_workers=2) as pool:
             fut_billing = pool.submit(_load_account_stripe_subscription_data, caption_orders)
             fut_ref = pool.submit(
@@ -1328,10 +1299,61 @@ def _account_context_build(customer: dict, section: Optional[str] = None) -> dic
                 customer,
                 stripe_promotion_sync=sync_referral_promo,
             )
-            subscription_billing = fut_billing.result()
-            referral_code, customer = fut_ref.result()
-    else:
-        subscription_billing = _load_account_stripe_subscription_data(caption_orders)
+            try:
+                # Eligibility for "Get my pack sooner": customer must already have at least one delivered pack
+                # (either this subscription order itself, or the one-off order it was upgraded from).
+                by_token = {
+                    (o.get("token") or "").strip(): o
+                    for o in caption_orders
+                    if (o.get("token") or "").strip()
+                }
+                # Show business name / intake on subscription row when DB intake is empty but one-off has answers
+                for o in caption_orders:
+                    if not (o.get("stripe_subscription_id") or "").strip():
+                        continue
+                    intake = dict(o.get("intake") or {})
+                    if _safe_str(intake.get("business_name")):
+                        continue
+                    uft = (o.get("upgraded_from_token") or "").strip()
+                    if not uft:
+                        continue
+                    base = by_token.get(uft)
+                    if not base or not isinstance(base.get("intake"), dict):
+                        continue
+                    bi = base["intake"]
+                    for k, v in bi.items():
+                        if v is not None and v != "" and not intake.get(k):
+                            intake[k] = v
+                    o["intake"] = intake
+                for o in caption_orders:
+                    delivered_self = bool(o.get("status") == "delivered" or o.get("delivered_at"))
+                    upgraded_from = (o.get("upgraded_from_token") or "").strip()
+                    delivered_base = False
+                    if upgraded_from:
+                        base = by_token.get(upgraded_from)
+                        delivered_base = bool(base and (base.get("status") == "delivered" or base.get("delivered_at")))
+                    o["has_delivered_pack"] = bool(delivered_self or delivered_base)
+            finally:
+                subscription_billing = fut_billing.result()
+                referral_code, customer = fut_ref.result()
+        account_orders_ok = True
+    except Exception as e:
+        print(f"[account] Error loading data: {e}")
+        # If merge failed after Stripe/referral futures finished, subscription_billing may already be set in `finally`.
+        if subscription_billing is None:
+            subscription_billing = _load_account_stripe_subscription_data(caption_orders)
+            referral_code = None
+    current_intake_order = None
+    if caption_orders:
+        sub_orders = [o for o in caption_orders if (o.get("stripe_subscription_id") or "").strip()]
+        current_intake_order = sub_orders[0] if sub_orders else caption_orders[0]
+
+    if subscription_billing is None:
+        subscription_billing = {
+            "payment_methods": [],
+            "subscription_payment_methods": {},
+            "subscription_pricing": {},
+        }
 
     # Billing accounts: one per unique stripe_customer_id among subscription orders
     # Each has { stripe_customer_id, label, order_token } so Manage billing can be scoped
