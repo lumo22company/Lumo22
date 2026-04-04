@@ -9,20 +9,67 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v={{ asset_version }}">
+  <style id="lumo-error-500-layout">
+    /*
+      Self-contained: fixed .lumo-nav is out of flow; body flex + flex:1 on main often fails to leave vertical
+      room for justify-content:center. Use explicit min-height on main so content truly sits mid-viewport.
+    */
+    body.lumo-landing--error-500 {
+      margin: 0;
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+    }
+    body.lumo-landing--error-500 .footer {
+      flex-shrink: 0;
+    }
+    body.lumo-landing--error-500 .lumo-error-500-main {
+      flex: 1 1 auto;
+      width: 100%;
+      box-sizing: border-box;
+      /* Reserve ~nav + ~footer so the flex column has real height to centre within */
+      min-height: max(28rem, calc(100svh - 15rem));
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: max(5.5rem, calc(env(safe-area-inset-top, 0px) + 4rem)) 1.25rem 2rem;
+    }
+    body.lumo-landing--error-500 .lumo-error-500-inner {
+      width: 100%;
+      max-width: 28rem;
+      margin: 0 auto;
+      text-align: center;
+    }
+    body.lumo-landing--error-500 .lumo-error-500-inner .lumo-section-title {
+      margin: 0 auto 0.5rem;
+    }
+    body.lumo-landing--error-500 .lumo-error-500-inner .lumo-section-desc {
+      margin: 0 auto 1.75rem;
+    }
+    body.lumo-landing--error-500 .lumo-error-500-inner .lumo-btn-primary {
+      margin-left: auto;
+      margin-right: auto;
+    }
+    body.lumo-landing--error-500 .lumo-error-500-links {
+      margin: 2rem 0 0;
+    }
+  </style>
 </head>
 <body class="lumo-landing lumo-landing--error-500">
   {% include '_lumo_nav.html' %}
 
   <main id="main-content" class="lumo-error-500-main">
-  <section class="lumo-section lumo-section--error-500" style="padding: 0; margin: 0; width: 100%; max-width: var(--max-width, 72rem); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
-    <h1 class="lumo-section-title" style="margin: 0 auto 0.5rem; text-align: center; max-width: 28rem;">Something went wrong</h1>
-    <p class="lumo-section-desc" style="max-width: 28rem; margin: 0 auto 1.75rem; text-align: center;">We're sorry — something went wrong on our end. Please try again or contact us at hello@lumo22.com.</p>
-    <a href="/" class="lumo-btn-primary btn-cta-account-style" style="margin: 0 auto;">Back to home</a>
-    <p style="margin: 2rem auto 0; text-align: center;">
-      <a href="/captions" style="color: inherit; text-decoration: underline;">Captions</a> ·
-      <a href="/captions#pricing" style="color: inherit; text-decoration: underline;">Pricing</a>
-    </p>
-  </section>
+    <div class="lumo-error-500-inner">
+      <h1 class="lumo-section-title">Something went wrong</h1>
+      <p class="lumo-section-desc">We're sorry — something went wrong on our end. Please try again or contact us at hello@lumo22.com.</p>
+      <a href="/" class="lumo-btn-primary btn-cta-account-style">Back to home</a>
+      <p class="lumo-error-500-links">
+        <a href="/captions" style="color: inherit; text-decoration: underline;">Captions</a> ·
+        <a href="/captions#pricing" style="color: inherit; text-decoration: underline;">Pricing</a>
+      </p>
+    </div>
   </main>
 
   {% include '_footer.html' %}
