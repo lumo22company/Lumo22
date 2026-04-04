@@ -20,8 +20,8 @@
     .auth-form-wrap .auth-btn { display: inline-flex; align-items: center; justify-content: center; width: 100%; min-height: 48px; padding: 14px 24px; background: #ffffff; color: #000000; font-family: var(--font-body); font-weight: 500; font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; border: none; border-radius: var(--radius-btn); cursor: pointer; transition: transform 0.3s ease-in-out, background-color 0.3s ease-in-out; }
     .auth-form-wrap .auth-btn:hover:not(:disabled) { transform: translateY(-3px); background-color: var(--lum-gold); }
     .auth-form-wrap .auth-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-    .auth-form-wrap .pw-toggle { margin: -0.75rem 0 1rem; text-align: right; }
-    .auth-form-wrap .pw-toggle button { background: none; border: 0; color: var(--lum-gold); cursor: pointer; font-size: 0.82rem; padding: 0; }
+    .auth-form-wrap .pw-toggle { margin: 0.35rem 0 1rem; text-align: right; position: relative; z-index: 2; }
+    .auth-form-wrap .pw-toggle button { background: none; border: 0; color: var(--lum-gold); cursor: pointer; font-size: 0.82rem; padding: 0.35rem 0; font-family: inherit; min-height: 44px; }
     .auth-form-wrap .auth-msg { margin-top: 1rem; padding: 0.75rem 1rem; border-radius: var(--radius-btn); font-size: 0.9rem; font-family: var(--font-body); }
     .auth-form-wrap .auth-msg.error {
       background: rgba(200,80,80,0.15);
@@ -70,7 +70,7 @@
 
           <label for="password">Password</label>
           <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="••••••••">
-          <div class="pw-toggle"><button type="button" id="toggle-password">Show password</button></div>
+          <div class="pw-toggle"><button type="button" id="toggle-password" aria-pressed="false" aria-label="Show or hide password">Show password</button></div>
 
           <button type="submit" class="auth-btn auth-btn-swipe" id="btn">Log in</button>
           {% if login_error %}
@@ -110,10 +110,14 @@
       var pwInput = document.getElementById('password');
       var pwToggle = document.getElementById('toggle-password');
       if (pwToggle && pwInput) {
-        pwToggle.addEventListener('click', function() {
-          var showing = pwInput.type === 'text';
-          pwInput.type = showing ? 'password' : 'text';
-          pwToggle.textContent = showing ? 'Show password' : 'Hide password';
+        pwToggle.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          var isText = pwInput.type === 'text';
+          var next = isText ? 'password' : 'text';
+          pwInput.setAttribute('type', next);
+          pwToggle.setAttribute('aria-pressed', next === 'text' ? 'true' : 'false');
+          pwToggle.textContent = next === 'text' ? 'Hide password' : 'Show password';
         });
       }
       if (form && btn) {

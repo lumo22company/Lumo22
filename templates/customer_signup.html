@@ -29,8 +29,8 @@
     .auth-page .link a:hover { text-decoration: underline; }
     .auth-page .marketing-optin-row { display:flex; align-items:flex-start; gap:0.5rem; font-size:0.9rem; cursor:pointer; margin:0 0 1.25rem; line-height:1.45; padding-left:0; width:100%; }
     .auth-page .marketing-optin-row input[type="checkbox"] { width:auto; margin:0.2rem 0 0 0; padding:0; flex-shrink:0; }
-    .pw-toggle { margin: -0.75rem 0 1rem; text-align: right; }
-    .pw-toggle button { background: none; border: 0; color: var(--lum-gold); cursor: pointer; font-size: 0.82rem; padding: 0; }
+    .pw-toggle { margin: 0.35rem 0 1rem; text-align: right; position: relative; z-index: 2; }
+    .pw-toggle button { background: none; border: 0; color: var(--lum-gold); cursor: pointer; font-size: 0.82rem; padding: 0.35rem 0; font-family: inherit; min-height: 44px; }
     /* Post-signup: verify email — matches common “success card” pattern (clear hierarchy, readable on dark page) */
     .signup-verify-card {
       display: none;
@@ -129,7 +129,7 @@
 
       <label for="password_confirm">Confirm password</label>
       <input type="password" id="password_confirm" name="password_confirm" required minlength="12" autocomplete="new-password">
-      <div class="pw-toggle"><button type="button" id="toggle-password">Show password</button></div>
+      <div class="pw-toggle"><button type="button" id="toggle-password" aria-pressed="false" aria-label="Show or hide password">Show password</button></div>
 
       <label class="marketing-optin-row">
         <input type="checkbox" id="marketing_opt_in" name="marketing_opt_in" value="1">
@@ -178,12 +178,15 @@
       var pwConfirmInput = document.getElementById('password_confirm');
       var pwToggle = document.getElementById('toggle-password');
       if (pwToggle && pwInput && pwConfirmInput) {
-        pwToggle.addEventListener('click', function() {
-          var showing = pwInput.type === 'text';
-          var nextType = showing ? 'password' : 'text';
-          pwInput.type = nextType;
-          pwConfirmInput.type = nextType;
-          pwToggle.textContent = showing ? 'Show password' : 'Hide password';
+        pwToggle.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          var isText = pwInput.type === 'text';
+          var nextType = isText ? 'password' : 'text';
+          pwInput.setAttribute('type', nextType);
+          pwConfirmInput.setAttribute('type', nextType);
+          pwToggle.setAttribute('aria-pressed', nextType === 'text' ? 'true' : 'false');
+          pwToggle.textContent = nextType === 'text' ? 'Hide password' : 'Show password';
         });
       }
 

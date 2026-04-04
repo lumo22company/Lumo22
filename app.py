@@ -1246,6 +1246,22 @@ def _account_context():
         return _account_context_fallback(customer, e)
 
 
+def _account_resolve_referral_customer(customer: dict):
+    """Ensure referral code; refresh customer row only if DB/Stripe updated it. Runs in parallel with Stripe billing."""
+    from services.customer_auth_service import CustomerAuthService
+
+    auth_svc = CustomerAuthService()
+    cid = str(customer.get("id") or "").strip()
+    if not cid:
+        return None, customer
+    code, need_refresh = auth_svc.ensure_referral_code(cid)
+    if need_refresh:
+        refreshed = auth_svc.get_by_id(cid)
+        if refreshed:
+            customer = refreshed
+    return code, customer
+
+
 def _account_context_build(customer: dict) -> dict:
     """Assemble template context; may raise — caller wraps with fallback."""
     email = customer.get("email", "")
@@ -1290,11 +1306,7 @@ def _account_context_build(customer: dict) -> dict:
                 base = by_token.get(upgraded_from)
                 delivered_base = bool(base and (base.get("status") == "delivered" or base.get("delivered_at")))
             o["has_delivered_pack"] = bool(delivered_self or delivered_base)
-        referral_code = auth_svc.ensure_referral_code(str(customer["id"]))
-        # Fresh row so stripe_referral_promotion_code_id reflects Stripe sync (refer-a-friend codes must exist in Stripe).
-        _refreshed = auth_svc.get_by_id(str(customer["id"]))
-        if _refreshed:
-            customer = _refreshed
+        account_orders_ok = True
     except Exception as e:
         print(f"[account] Error loading data: {e}")
         referral_code = None
@@ -1303,7 +1315,15 @@ def _account_context_build(customer: dict) -> dict:
         sub_orders = [o for o in caption_orders if (o.get("stripe_subscription_id") or "").strip()]
         current_intake_order = sub_orders[0] if sub_orders else caption_orders[0]
 
-    subscription_billing = _load_account_stripe_subscription_data(caption_orders)
+    # Referral resolution (may call Stripe) overlaps with subscription billing (Stripe) — run in parallel.
+    if account_orders_ok:
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            fut_billing = pool.submit(_load_account_stripe_subscription_data, caption_orders)
+            fut_ref = pool.submit(_account_resolve_referral_customer, customer)
+            subscription_billing = fut_billing.result()
+            referral_code, customer = fut_ref.result()
+    else:
+        subscription_billing = _load_account_stripe_subscription_data(caption_orders)
 
     # Billing accounts: one per unique stripe_customer_id among subscription orders
     # Each has { stripe_customer_id, label, order_token } so Manage billing can be scoped

@@ -86,8 +86,9 @@ class CustomerAuthService:
             return result.data[0]
         return None
 
-    def ensure_referral_code(self, customer_id: str) -> Optional[str]:
-        """Ensure customer has a referral code; generate if missing. Returns code or None."""
+    def ensure_referral_code(self, customer_id: str) -> Tuple[Optional[str], bool]:
+        """Ensure customer has a referral code; generate if missing.
+        Returns (code_or_None, need_refresh_customer_row). Second is True when DB/Stripe may have updated the row."""
         result = (
             self.client.table(self.table)
             .select("referral_code, stripe_referral_promotion_code_id")
@@ -95,7 +96,7 @@ class CustomerAuthService:
             .execute()
         )
         if not result.data or len(result.data) == 0:
-            return None
+            return (None, False)
         c = result.data[0]
         code = (c.get("referral_code") or "").strip()
         if code:
@@ -103,7 +104,8 @@ class CustomerAuthService:
             promo_id = (c.get("stripe_referral_promotion_code_id") or "").strip()
             if not promo_id:
                 self._sync_stripe_referral_promotion(customer_id)
-            return code
+                return (code, True)
+            return (code, False)
         code = self._generate_referral_code()
         try:
             self.client.table(self.table).update({
@@ -111,9 +113,9 @@ class CustomerAuthService:
                 "updated_at": datetime.utcnow().isoformat(),
             }).eq("id", customer_id).execute()
             self._sync_stripe_referral_promotion(customer_id)
-            return code
+            return (code, True)
         except Exception:
-            return None
+            return (None, False)
 
     def _sync_stripe_referral_promotion(self, customer_id: str) -> None:
         """Best-effort: create Stripe Promotion Code for this customer's referral_code (friend enters at Checkout)."""
