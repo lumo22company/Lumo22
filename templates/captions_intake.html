@@ -232,6 +232,15 @@
     <p class="back" style="margin-bottom: 1rem;"><a href="/captions">← Back to form</a></p>
     {% else %}
     <div id="intake-success" style="display: none; margin: 2rem 0;">
+      <div id="intake-success-title-block" style="display: none;">
+        {% if intake_view_only %}
+        <h1>YOUR DETAILS</h1>
+        <p class="sub">Your snapshot is saved.</p>
+        {% else %}
+        <h1>30 DAYS CAPTIONS — YOUR DETAILS</h1>
+        <p class="sub">Your details are saved.</p>
+        {% endif %}
+      </div>
       <div class="intake-success-message-box">
         <p id="intake-success-msg" style="margin: 0;">Thanks. We're generating your 30 captions now. You'll receive them by email within a few minutes.</p>
       </div>
@@ -768,6 +777,8 @@
             if (ctaEl) { ctaEl.style.display = 'none'; ctaEl.innerHTML = ''; }
             var successEl = document.getElementById('intake-success');
             if (successEl) successEl.style.display = 'block';
+            var successTitleBlock = document.getElementById('intake-success-title-block');
+            if (successTitleBlock) successTitleBlock.style.display = 'block';
             var introBlock = document.getElementById('intake-intro-block');
             if (introBlock) introBlock.style.display = 'none';
             var editNoticeEl = document.getElementById('intake-edit-notice');
@@ -864,6 +875,8 @@
                               if (rs) rs.classList.remove('show');
                               var successEl = document.getElementById('intake-success');
                               if (successEl) successEl.style.display = 'block';
+                              var successTitleBlock2 = document.getElementById('intake-success-title-block');
+                              if (successTitleBlock2) successTitleBlock2.style.display = 'block';
                               var introBlock2 = document.getElementById('intake-intro-block');
                               if (introBlock2) introBlock2.style.display = 'none';
                               var editNoticeEl = document.getElementById('intake-edit-notice');
@@ -1225,6 +1238,8 @@
             if (ctaEl) { ctaEl.style.display = 'none'; ctaEl.innerHTML = ''; }
             var successEl = document.getElementById('intake-success');
             successEl.style.display = 'block';
+            var successTitleBlock3 = document.getElementById('intake-success-title-block');
+            if (successTitleBlock3) successTitleBlock3.style.display = 'block';
             var introBlock3 = document.getElementById('intake-intro-block');
             if (introBlock3) introBlock3.style.display = 'none';
             var editNoticeEl = document.getElementById('intake-edit-notice');
