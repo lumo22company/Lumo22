@@ -1233,6 +1233,7 @@ def _account_context_fallback(customer: dict, exc=None) -> dict:
         "referral_stripe_promo_ok": bool(_safe_str(customer.get("stripe_referral_promotion_code_id"))),
         "account_resubscribe_mode": False,
         "account_load_error": True,
+        "defer_stripe_billing": False,
     }
 
 
@@ -1277,6 +1278,71 @@ def _account_resolve_referral_customer(customer: dict, *, stripe_promotion_sync:
     return code, customer
 
 
+# Stripe subscription/card data for account — loaded async after HTML when DEFER_ACCOUNT_STRIPE_BILLING is True.
+DEFER_ACCOUNT_STRIPE_BILLING = True
+
+_ACCOUNT_SUB_PAUSE_FALLBACK = {
+    "paused": False,
+    "resumes_at": None,
+    "cancel_at_period_end": False,
+    "cancelled_now": False,
+    "ends_at": None,
+}
+
+
+def _init_subscription_pause_placeholders(caption_orders: list) -> None:
+    """Before Stripe runs: set neutral subscription_pause on each row (same shape as _load_account_stripe_subscription_data)."""
+    for o in caption_orders or []:
+        sid = (o.get("stripe_subscription_id") or "").strip()
+        o["subscription_pause"] = None if not sid else dict(_ACCOUNT_SUB_PAUSE_FALLBACK)
+
+
+def _account_merge_order_rows(caption_orders: list) -> None:
+    """Merge intake from one-off into subscription rows and set has_delivered_pack (no Stripe)."""
+    by_token = {
+        (o.get("token") or "").strip(): o
+        for o in caption_orders
+        if (o.get("token") or "").strip()
+    }
+    for o in caption_orders:
+        if not (o.get("stripe_subscription_id") or "").strip():
+            continue
+        intake = dict(o.get("intake") or {})
+        if _safe_str(intake.get("business_name")):
+            continue
+        uft = (o.get("upgraded_from_token") or "").strip()
+        if not uft:
+            continue
+        base = by_token.get(uft)
+        if not base or not isinstance(base.get("intake"), dict):
+            continue
+        bi = base["intake"]
+        for k, v in bi.items():
+            if v is not None and v != "" and not intake.get(k):
+                intake[k] = v
+        o["intake"] = intake
+    for o in caption_orders:
+        delivered_self = bool(o.get("status") == "delivered" or o.get("delivered_at"))
+        upgraded_from = (o.get("upgraded_from_token") or "").strip()
+        delivered_base = False
+        if upgraded_from:
+            base = by_token.get(upgraded_from)
+            delivered_base = bool(base and (base.get("status") == "delivered" or base.get("delivered_at")))
+        o["has_delivered_pack"] = bool(delivered_self or delivered_base)
+
+
+def _account_fetch_merged_orders_and_stripe_billing(customer: dict):
+    """Load orders, merge rows, run Stripe — used by /api/account/billing-data."""
+    email = (customer.get("email") or "").strip()
+    from services.caption_order_service import CaptionOrderService
+
+    co_svc = CaptionOrderService()
+    caption_orders = co_svc.get_by_customer_email_including_stripe_customer(email)
+    _account_merge_order_rows(caption_orders)
+    subscription_billing = _load_account_stripe_subscription_data(caption_orders)
+    return caption_orders, subscription_billing
+
+
 def _account_context_build(customer: dict, section: Optional[str] = None) -> dict:
     """Assemble template context; may raise — caller wraps with fallback."""
     email = customer.get("email", "")
@@ -1285,61 +1351,45 @@ def _account_context_build(customer: dict, section: Optional[str] = None) -> dic
     account_orders_ok = False
     subscription_billing = None
     sync_referral_promo = (section or "information") == "refer"
+    defer = DEFER_ACCOUNT_STRIPE_BILLING
     try:
         from services.caption_order_service import CaptionOrderService
 
         co_svc = CaptionOrderService()
         caption_orders = co_svc.get_by_customer_email_including_stripe_customer(email)
-        # Start Stripe + referral as soon as orders are loaded; merge intake / flags on the main thread
-        # while those network calls run (same total work, better wall time).
-        with ThreadPoolExecutor(max_workers=2) as pool:
-            fut_billing = pool.submit(_load_account_stripe_subscription_data, caption_orders)
-            fut_ref = pool.submit(
-                _account_resolve_referral_customer,
-                customer,
-                stripe_promotion_sync=sync_referral_promo,
-            )
-            try:
-                # Eligibility for "Get my pack sooner": customer must already have at least one delivered pack
-                # (either this subscription order itself, or the one-off order it was upgraded from).
-                by_token = {
-                    (o.get("token") or "").strip(): o
-                    for o in caption_orders
-                    if (o.get("token") or "").strip()
-                }
-                # Show business name / intake on subscription row when DB intake is empty but one-off has answers
-                for o in caption_orders:
-                    if not (o.get("stripe_subscription_id") or "").strip():
-                        continue
-                    intake = dict(o.get("intake") or {})
-                    if _safe_str(intake.get("business_name")):
-                        continue
-                    uft = (o.get("upgraded_from_token") or "").strip()
-                    if not uft:
-                        continue
-                    base = by_token.get(uft)
-                    if not base or not isinstance(base.get("intake"), dict):
-                        continue
-                    bi = base["intake"]
-                    for k, v in bi.items():
-                        if v is not None and v != "" and not intake.get(k):
-                            intake[k] = v
-                    o["intake"] = intake
-                for o in caption_orders:
-                    delivered_self = bool(o.get("status") == "delivered" or o.get("delivered_at"))
-                    upgraded_from = (o.get("upgraded_from_token") or "").strip()
-                    delivered_base = False
-                    if upgraded_from:
-                        base = by_token.get(upgraded_from)
-                        delivered_base = bool(base and (base.get("status") == "delivered" or base.get("delivered_at")))
-                    o["has_delivered_pack"] = bool(delivered_self or delivered_base)
-            finally:
-                subscription_billing = fut_billing.result()
-                referral_code, customer = fut_ref.result()
+        if defer:
+            _init_subscription_pause_placeholders(caption_orders)
+            with ThreadPoolExecutor(max_workers=1) as pool:
+                fut_ref = pool.submit(
+                    _account_resolve_referral_customer,
+                    customer,
+                    stripe_promotion_sync=sync_referral_promo,
+                )
+                try:
+                    _account_merge_order_rows(caption_orders)
+                finally:
+                    referral_code, customer = fut_ref.result()
+            subscription_billing = {
+                "payment_methods": [],
+                "subscription_payment_methods": {},
+                "subscription_pricing": {},
+            }
+        else:
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                fut_billing = pool.submit(_load_account_stripe_subscription_data, caption_orders)
+                fut_ref = pool.submit(
+                    _account_resolve_referral_customer,
+                    customer,
+                    stripe_promotion_sync=sync_referral_promo,
+                )
+                try:
+                    _account_merge_order_rows(caption_orders)
+                finally:
+                    subscription_billing = fut_billing.result()
+                    referral_code, customer = fut_ref.result()
         account_orders_ok = True
     except Exception as e:
         print(f"[account] Error loading data: {e}")
-        # If merge failed after Stripe/referral futures finished, subscription_billing may already be set in `finally`.
         if subscription_billing is None:
             subscription_billing = _load_account_stripe_subscription_data(caption_orders)
             referral_code = None
@@ -1474,16 +1524,8 @@ def _account_context_build(customer: dict, section: Optional[str] = None) -> dic
         "referral_stripe_promo_ok": referral_stripe_promo_ok,
         "account_resubscribe_mode": account_resubscribe_mode,
         "account_load_error": False,
+        "defer_stripe_billing": DEFER_ACCOUNT_STRIPE_BILLING,
     }
-
-
-_ACCOUNT_SUB_PAUSE_FALLBACK = {
-    "paused": False,
-    "resumes_at": None,
-    "cancel_at_period_end": False,
-    "cancelled_now": False,
-    "ends_at": None,
-}
 
 
 def _subscription_pricing_from_stripe_sub(sub, sub_id, out: dict) -> None:
@@ -1737,6 +1779,46 @@ def referral_stripe_sync_api():
     except Exception as e:
         print(f"[referral-stripe-sync] {e!r}")
         return jsonify({"ok": False, "linked": False, "error": "server_error"}), 500
+
+
+@app.route("/api/account/billing-data", methods=["GET"])
+@customer_login_required
+def account_billing_data_api():
+    """Hydrate subscription billing + Stripe pause state after deferred account HTML (no extra aesthetic change)."""
+    customer = get_current_customer()
+    if not customer:
+        return jsonify({"ok": False, "error": "sign_in_required"}), 401
+    try:
+        caption_orders, subscription_billing = _account_fetch_merged_orders_and_stripe_billing(customer)
+    except Exception as e:
+        print(f"[api/account/billing-data] {e!r}")
+        return jsonify({"ok": False, "error": "server_error"}), 500
+    sub_orders = [o for o in caption_orders if (o.get("stripe_subscription_id") or "").strip()]
+    pause_subscription_inner_html = ""
+    if sub_orders:
+        pause_subscription_inner_html = render_template(
+            "partials/account_pause_subscription_blocks.html",
+            sub_orders=sub_orders,
+            subscription_billing=subscription_billing,
+            captions_prices=CAPTIONS_DISPLAY_PRICES,
+        )
+    edit_pause_by_token = {}
+    for o in caption_orders:
+        t = (o.get("token") or "").strip()
+        if t and (o.get("stripe_subscription_id") or "").strip():
+            sp = o.get("subscription_pause") or {}
+            edit_pause_by_token[t] = {
+                "cancel_at_period_end": bool(sp.get("cancel_at_period_end")),
+                "cancelled_now": bool(sp.get("cancelled_now")),
+                "ends_at": sp.get("ends_at"),
+            }
+    return jsonify(
+        {
+            "ok": True,
+            "pause_subscription_inner_html": pause_subscription_inner_html,
+            "edit_pause_by_token": edit_pause_by_token,
+        }
+    )
 
 
 @app.route('/account')

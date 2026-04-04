@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v={{ asset_version }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/product.css') }}?v={{ asset_version }}">
 </head>
-<body class="lumo-landing account-page-wrap">
+<body class="lumo-landing account-page-wrap"{% if defer_stripe_billing|default(false) %} data-account-defer-stripe="1"{% endif %}>
   {% include '_lumo_nav.html' %}
 
   <div class="account-layout" id="account-layout">
@@ -239,7 +239,7 @@
           {% set _needs_first_submit = o.status == 'awaiting_intake' and ((not is_sub_row) or (not biz)) %}
           {% set _edit_pause = (o.get('subscription_pause') or {}) %}
           {% set _edit_cancelled = _edit_pause.get('cancel_at_period_end') or _edit_pause.get('cancelled_now') %}
-          <li class="account-edit-form-row">
+          <li class="account-edit-form-row" data-order-token="{{ o.get('token', '') }}">
             <div class="account-edit-form-meta">
               <span class="account-edit-form-biz">{{ label }}</span>
               <span class="account-edit-form-type account-edit-form-type--{{ 'subscription' if is_sub_row else ('former-sub' if is_former_sub else 'oneoff') }}">{{ 'Subscription' if is_sub_row else ('Former subscription' if is_former_sub else 'One-off') }}</span>
@@ -253,7 +253,7 @@
               <a href="/captions-intake?t={{ o.token }}&view=1" class="account-billing-portal-link account-btn-swipe-light">View form</a>
               <a href="/account/upgrade?base={{ o.token }}" class="account-billing-portal-link account-btn-swipe-light">{% if is_former_sub %}Resubscribe{% else %}Upgrade to edit{% endif %}</a>
               {% endif %}
-              {% if _edit_cancelled %}
+              {% if _edit_cancelled and not (defer_stripe_billing|default(false)) %}
               <span class="account-cancel-badge account-edit-form-cancel-badge">Cancelled{% if _edit_pause.get('ends_at') %} — {{ _edit_pause.get('ends_at') }}{% endif %}</span>
               {% endif %}
             </div>
@@ -588,197 +588,17 @@
           <li>Pause billing for one month and manage update form reminders below.</li>
           <li><strong>Platforms (add, change, or reduce)</strong> and <strong>Story Ideas (add or remove)</strong> — use the buttons below, or Edit form to change platforms and remove Story Ideas.</li>
         </ul>
-        <div class="account-pause-manage-billing" style="margin-bottom: 1.25rem;">
-          {% if sub_orders and sub_orders|length > 1 %}
-          <p class="account-settings-desc" style="margin: 0 0 0.5rem; font-size: 0.9rem; color: #fff;">You have more than one subscription. Select the one you want to manage:</p>
-          <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
-            <select id="subscription-filter-select" class="account-subscription-filter-select" aria-label="Select subscription to manage">
-              <option value="">— Show all —</option>
-              {% for o in sub_orders %}
-              {% set _flabel = ((o.get('intake') or {}).get('business_name', '')|title) if (o.get('intake') or {}).get('business_name') else ((o.get('created_at') or '')[:10] if o.get('created_at') else 'Subscription') %}
-              {% set _fpause = (o.get('subscription_pause') or {}) %}
-              {% set _fcancelled = _fpause.get('cancel_at_period_end') or _fpause.get('cancelled_now') %}
-              <option value="{{ o.get('token', '') }}">{{ _flabel }}{% if _fcancelled %} (Cancelled){% endif %}</option>
-              {% endfor %}
-            </select>
+        {% if defer_stripe_billing|default(false) %}
+        <div id="account-pause-billing-deferred-root" data-account-billing-deferred="1" role="region" aria-live="polite" aria-label="Subscription billing">
+          {% for o in sub_orders %}
+          <div class="account-pause-block account-pause-block--skeleton" data-order-token="{{ o.get('token', '') }}" aria-busy="true" style="margin-bottom: 1rem; padding: 1.25rem 1.5rem; background: #fff; border: 1px solid rgba(0,0,0,0.08); border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.04);">
+            <p class="account-settings-desc" style="margin:0; color:#555; font-size:0.9rem;">Loading billing details…</p>
           </div>
-          <script>
-          document.addEventListener('DOMContentLoaded', function() {
-            var sel = document.getElementById('subscription-filter-select');
-            var panels = document.querySelectorAll('.account-pause-block[data-order-token]');
-            function filterPanels() {
-              var token = sel ? sel.value : '';
-              for (var i = 0; i < panels.length; i++) {
-                var p = panels[i];
-                p.style.display = (!token || p.getAttribute('data-order-token') === token) ? '' : 'none';
-              }
-            }
-            if (sel) {
-              sel.addEventListener('change', filterPanels);
-              filterPanels();
-            }
-          });
-          </script>
-          {% endif %}
-        </div>
-        {% for o in sub_orders %}
-        {% set pause_biz = (o.get('intake') or {}).get('business_name', '') %}
-        {% set pause_label = (pause_biz|title) if pause_biz else ((o.get('created_at') or '')[:10] if o.get('created_at') else 'Subscription') %}
-        {% set sub_id = (o.get('stripe_subscription_id') or '')|trim %}
-        {% set current_pm = (subscription_billing.get('subscription_payment_methods') or {}).get(sub_id) if subscription_billing else None %}
-        {% set _pause_state = (o.get('subscription_pause') or {}) %}
-        {% set _cancelled = _pause_state.get('cancel_at_period_end') or _pause_state.get('cancelled_now') %}
-        {% set _cancelled_scheduled = _pause_state.get('cancel_at_period_end') %}
-        <div class="account-pause-block" data-order-token="{{ o.get('token', '') }}" style="margin-bottom: 1rem;">
-          <div class="account-pause-panel-title" style="font-size: 0.9rem; font-weight: 600; color: #000; margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(0,0,0,0.08); display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-            {{ pause_label }}
-            {% if _cancelled %}
-            <span class="account-cancel-badge" style="font-size: 0.8rem; font-weight: 500; color: #c45c00; padding: 0.25rem 0.6rem; background: rgba(196,92,0,0.12); border-radius: 12px;">Cancelled{% if _pause_state.get('ends_at') %} — {{ _pause_state.get('ends_at') }}{% endif %}</span>
-            {% endif %}
-          </div>
-          {% if _cancelled_scheduled %}
-          <div class="account-settings-row account-add-stories-row" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid rgba(0,0,0,0.06);">
-            <div class="account-add-stories-text" style="flex: 1;">
-              <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Resume subscription</div>
-              <div class="account-settings-desc">Your subscription will renew again if you resume before it ends.</div>
-            </div>
-            {% set _resume_platforms = (o.get('platforms_count') or 1)|int %}
-            {% set _resume_stories = o.get('include_stories') %}
-            {% set _resume_currency = (o.get('currency') or 'gbp')|lower %}
-            {% set _resume_p = captions_prices.get(_resume_currency, captions_prices['gbp']) %}
-            {% set _resume_total = _resume_p.get('sub', 79) + (_resume_platforms - 1) * _resume_p.get('extra_sub', 19) + (_resume_p.get('stories_sub', 17) if _resume_stories else 0) %}
-            {% set _resume_ends = _pause_state.get('ends_at') or 'at period end' %}
-            <button type="button" class="account-billing-portal-link account-btn-swipe-light account-restart-btn" style="flex-shrink: 0;" data-order-id="{{ o.get('id', '') }}" data-ends-at="{{ _resume_ends }}" data-price="{{ _resume_p.get('symbol', '£') }}{{ _resume_total }}" onclick="showResumeSubscriptionModal(this)">Resume subscription</button>
-          </div>
-          {% endif %}
-          <div class="account-settings-row account-payment-method-row" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid rgba(0,0,0,0.06);" data-subscription-id="{{ sub_id }}">
-        <div>
-              <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Payment method</div>
-              <div class="account-settings-desc account-payment-method-display">{% if current_pm %}{{ current_pm.get('brand', '') }} ****{{ current_pm.get('last4', '') }}{% else %}—{% endif %}</div>
-        </div>
-            <div class="account-payment-method-select-wrap">
-              {% if subscription_billing and subscription_billing.get('payment_methods') %}
-              <select class="account-payment-method-select" aria-label="Choose card for this subscription" data-subscription-id="{{ sub_id }}">
-                {% for pm in (subscription_billing.get('payment_methods') or []) %}
-                <option value="{{ pm.get('id', '') }}" {% if current_pm and current_pm.get('id') == pm.get('id') %}selected{% endif %}>{{ pm.get('brand', '') }} ****{{ pm.get('last4', '') }}</option>
           {% endfor %}
-              </select>
-              {% else %}
-              <span class="account-payment-method-no-cards">Add a card via <a href="/api/billing/portal?order_token={{ o.get('token', '') }}">Manage billing</a></span>
-              {% endif %}
-      </div>
-          </div>
-          {% if not _cancelled %}
-          <div class="account-settings-row" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid rgba(0,0,0,0.06);">
-            <div>
-              <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Update form reminders</div>
-              <div class="account-settings-desc">Remind me before each pack so I can update my form—captions are tailored for the month ahead</div>
-            </div>
-            <div id="reminder-toggle-{{ o.get('id', '') }}" role="button" tabindex="0" class="account-toggle {% if not o.get('reminder_opt_out') %}on{% endif %}" aria-label="Toggle update form reminders for tailored monthly captions" data-order-id="{{ o.get('id', '') }}" onclick="toggleReminder(this)" onkeydown="if(event.key==='Enter'||event.key===' ') { event.preventDefault(); toggleReminder(this); }"></div>
-          </div>
-          {% endif %}
-          {% if not _cancelled %}
-          <div class="account-settings-row account-add-stories-row">
-            <div class="account-add-stories-text">
-              <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Change plan</div>
-              <div class="account-settings-desc">Change platforms or Story Ideas for this subscription.<br>Changes apply to your next pack.</div>
-            </div>
-            {% set _platforms = (o.get('platforms_count') or 1)|int %}
-            {% set _has_stories = o.get('include_stories') %}
-            {% set _plan_currency = (o.get('currency') or 'gbp')|lower %}
-            {% set _pricing_map = (subscription_billing.get('subscription_pricing') or {}) if subscription_billing else {} %}
-            {% set _pricing = _pricing_map.get(sub_id) if _pricing_map else None %}
-            {% set _eff_monthly = _pricing.get('effective_monthly') if _pricing else None %}
-            {% set _std_monthly = _pricing.get('standard_monthly') if _pricing else None %}
-            {% set _disc_type = _pricing.get('discount_type') if _pricing else None %}
-            {% set _disc_pct = _pricing.get('discount_percent') if _pricing else None %}
-            {% set _disc_amt = _pricing.get('discount_amount') if _pricing else None %}
-            {% set _disc_duration = _pricing.get('discount_duration') if _pricing else None %}
-            <button type="button"
-                    class="account-billing-portal-link account-btn-swipe-light account-change-plan-btn"
-                    data-order-token="{{ o.get('token', '') }}"
-                    data-platforms="{{ _platforms }}"
-                    data-has-stories="{{ '1' if _has_stories else '0' }}"
-                    data-currency="{{ _plan_currency }}"
-                    data-effective-monthly="{{ _eff_monthly if _eff_monthly is not none else '' }}"
-                    data-standard-monthly="{{ _std_monthly if _std_monthly is not none else '' }}"
-                    data-discount-type="{{ _disc_type or '' }}"
-                    data-discount-percent="{{ _disc_pct if _disc_pct is not none else '' }}"
-                    data-discount-amount="{{ _disc_amt if _disc_amt is not none else '' }}"
-                    data-discount-duration="{{ _disc_duration or '' }}"
-                    onclick="showChangePlanModal(this)">Change plan</button>
-          </div>
-          <div class="account-settings-row" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid rgba(0,0,0,0.06);">
-            <div>
-              <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Pause subscription</div>
-              <div class="account-settings-desc">{% if (o.get('subscription_pause') or {}).get('paused') %}Paused — resumes {{ (o.get('subscription_pause') or {}).get('resumes_at') or 'automatically' }}{% else %}Pause billing for 1 month (no charge, no pack){% endif %}</div>
-            </div>
-            {% if (o.get('subscription_pause') or {}).get('paused') %}
-            <span class="account-pause-badge" style="font-size: 0.85rem; font-weight: 500; color: #555; padding: 0.35rem 0.75rem; background: rgba(0,0,0,0.06); border-radius: 12px; margin-right: 0.5rem;">Paused</span>
-            <button type="button" class="account-billing-portal-link account-btn-swipe-light account-resume-btn" data-order-id="{{ o.get('id', '') }}" onclick="resumeSubscription(this)">Resume subscription</button>
-      {% else %}
-            <button type="button" class="account-billing-portal-link account-btn-swipe-light account-pause-btn" data-order-id="{{ o.get('id', '') }}" onclick="showPauseModal(this)">Pause for 1 month</button>
-            {% endif %}
-          </div>
-          {% if not o.get('include_stories') %}
-          <div class="account-settings-row account-add-stories-row">
-            <div class="account-add-stories-text">
-              <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Story Ideas</div>
-              <div class="account-settings-desc">Add 30 Days Story Ideas to this subscription.<br>Stories will be delivered with your <strong>next</strong> set of captions,<br>not instantly.</div>
-            </div>
-            {% set _platforms = (o.get('platforms_count') or 1)|int %}
-            {% set _currency = (o.get('currency') or 'gbp')|lower %}
-            <button type="button"
-                    class="account-billing-portal-link account-btn-swipe-light account-pause-btn account-add-stories-btn"
-                    data-subscription-id="{{ sub_id }}"
-                    data-platforms="{{ _platforms }}"
-                    data-currency="{{ _currency }}"
-                    onclick="showAddStoriesModal(this)">Add Story Ideas</button>
-          </div>
-          {% else %}
-          <div class="account-settings-row account-remove-stories-row">
-            <div class="account-remove-stories-text">
-              <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Story Ideas</div>
-              <div class="account-settings-desc">Included in this subscription. You'll receive Stories with each pack.<br>You can also remove Story Ideas from the Edit form.</div>
-            </div>
-            {% set _platforms = (o.get('platforms_count') or 1)|int %}
-            {% set _remove_currency = (o.get('currency') or 'gbp')|lower %}
-            {% set _remove_p = captions_prices.get(_remove_currency, captions_prices['gbp']) %}
-            {% set _new_price = _remove_p.get('sub', 79) + (_platforms - 1) * _remove_p.get('extra_sub', 19) %}
-<button type="button" class="account-remove-stories-btn account-billing-portal-link account-btn-swipe-light" data-order-token="{{ o.get('token', '') }}" data-platforms-count="{{ _platforms }}" data-new-price="{{ _new_price }}" data-new-price-symbol="{{ _remove_p.get('symbol', '£') }}" onclick="showRemoveStoriesModal(this)">Remove Story Ideas</button>
-          </div>
-          {% endif %}
-          {% if not (o.get('subscription_pause') or {}).get('paused') and o.get('has_delivered_pack') %}
-          <div class="account-settings-row account-remove-stories-row account-get-pack-sooner-row">
-            <div class="account-remove-stories-text account-get-pack-sooner-text">
-              <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Get your pack sooner</div>
-              <div class="account-settings-desc">Need your next pack before your renewal date? You'll be charged now and get it within minutes.<br>Your next billing date resets to 30 days from today.</div>
-            </div>
-            {% set _gps_platforms = (o.get('platforms_count') or 1)|int %}
-            {% set _gps_stories = o.get('include_stories') %}
-            {% set _gps_currency = (o.get('currency') or 'gbp')|lower %}
-            {% set _gps_p = captions_prices.get(_gps_currency, captions_prices['gbp']) %}
-            {% set _gps_total = _gps_p.get('sub', 79) + (_gps_platforms - 1) * _gps_p.get('extra_sub', 19) + (_gps_p.get('stories_sub', 17) if _gps_stories else 0) %}
-            <button type="button" class="account-get-pack-sooner-btn account-billing-portal-link account-btn-swipe-light" data-order-id="{{ o.get('id', '') }}" data-order-token="{{ o.get('token', '') }}" data-amount="{{ _gps_p.get('symbol', '£') }}{{ _gps_total }}" data-amount-symbol="{{ _gps_p.get('symbol', '£') }}" onclick="showGetPackSoonerModal(this)">Get my pack sooner</button>
-          </div>
-          {% elif not (o.get('subscription_pause') or {}).get('paused') %}
-          <div class="account-settings-row account-remove-stories-row account-get-pack-sooner-row">
-            <div class="account-remove-stories-text account-get-pack-sooner-text">
-              <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Get your pack sooner</div>
-              <div class="account-settings-desc">Available after at least one pack has been delivered on this subscription path.</div>
-            </div>
-          </div>
-          {% endif %}
-          {% endif %}
-          <div class="account-settings-row" style="padding: 1rem 0 0; border-bottom: none;">
-            <div>
-              <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Manage billing</div>
-              <div class="account-settings-desc">Cancel immediately, update your card, or view invoices.</div>
-            </div>
-            <a href="/api/billing/portal?order_token={{ o.get('token', '') }}" class="account-billing-portal-link account-btn-swipe-light">Manage billing</a>
-          </div>
         </div>
-        {% endfor %}
+        {% else %}
+        {% include 'partials/account_pause_subscription_blocks.html' %}
+        {% endif %}
         {% else %}
         <p class="account-section-desc">You don't have an active subscription. Pause is only available for monthly Captions subscribers.</p>
         {% if subscribe_options %}
@@ -996,6 +816,62 @@
         document.addEventListener(ev, resetInactivityTimer);
       });
       resetInactivityTimer();
+
+      window.lumoInitPauseSubFilter = function() {
+        var sel = document.getElementById('subscription-filter-select');
+        var panels = document.querySelectorAll('.account-pause-block[data-order-token]');
+        if (!sel || !panels.length) return;
+        function filterPanels() {
+          var token = sel ? sel.value : '';
+          for (var i = 0; i < panels.length; i++) {
+            var p = panels[i];
+            if (p.classList.contains('account-pause-block--skeleton')) continue;
+            p.style.display = (!token || p.getAttribute('data-order-token') === token) ? '' : 'none';
+          }
+        }
+        sel.onchange = filterPanels;
+        filterPanels();
+      };
+      window.lumoApplyEditPauseBadges = function(map) {
+        if (!map || typeof map !== 'object') return;
+        Object.keys(map).forEach(function(token) {
+          var p = map[token];
+          if (!p || (!p.cancel_at_period_end && !p.cancelled_now)) return;
+          var rows = document.querySelectorAll('.account-edit-form-row[data-order-token]');
+          var row = null;
+          for (var i = 0; i < rows.length; i++) {
+            if ((rows[i].getAttribute('data-order-token') || '') === token) { row = rows[i]; break; }
+          }
+          if (!row) return;
+          var actions = row.querySelector('.account-edit-form-actions');
+          if (!actions || actions.querySelector('.account-edit-form-cancel-badge')) return;
+          var span = document.createElement('span');
+          span.className = 'account-cancel-badge account-edit-form-cancel-badge';
+          span.textContent = 'Cancelled' + (p.ends_at ? ' — ' + p.ends_at : '');
+          actions.appendChild(span);
+        });
+      };
+      document.addEventListener('DOMContentLoaded', function() { if (typeof lumoInitPauseSubFilter === 'function') lumoInitPauseSubFilter(); });
+      (function deferredAccountBilling() {
+        if (!document.body.getAttribute('data-account-defer-stripe')) return;
+        var pauseRoot = document.getElementById('account-pause-billing-deferred-root');
+        var editRows = document.querySelectorAll('.account-edit-form-row[data-order-token]');
+        if (!pauseRoot && !editRows.length) return;
+        fetch('/api/account/billing-data', { credentials: 'same-origin' })
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (!data.ok) return;
+            if (pauseRoot && data.pause_subscription_inner_html) {
+              pauseRoot.innerHTML = data.pause_subscription_inner_html;
+              if (typeof window.lumoInitPauseSubFilter === 'function') window.lumoInitPauseSubFilter();
+            }
+            if (data.edit_pause_by_token && typeof window.lumoApplyEditPauseBadges === 'function') {
+              window.lumoApplyEditPauseBadges(data.edit_pause_by_token);
+            }
+          })
+          .catch(function() {});
+      })();
+
       var logoutForms = document.querySelectorAll('form[action="/api/auth/logout"]');
       logoutForms.forEach(function(form) {
         form.addEventListener('submit', function(e) {

@@ -2429,6 +2429,15 @@
 }
 .account-pause-block .account-settings-desc { color: #444; margin-top: 0.25rem; }
 
+/* Deferred Stripe: brief loading state on Manage subscription (replaced by real markup) */
+.account-pause-block--skeleton {
+  animation: account-pause-skeleton-pulse 1.15s ease-in-out infinite;
+}
+@keyframes account-pause-skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
 /* Refer a friend on light background */
 .account-referral-block {
   background: #fff;
