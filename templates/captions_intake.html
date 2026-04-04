@@ -223,11 +223,8 @@
     <div id="intake-intro-block">
     {% if intake_view_only %}
     {% if oneoff_subscribe_checkout_mode|default(false) %}
-    <h1>READY TO SUBSCRIBE</h1>
-    <p class="sub" style="margin-bottom: 1rem;">Your <strong>one-off</strong> pack is complete and your brief is saved. Review your answers below, then confirm to open secure checkout for your monthly subscription—your saved brief carries into the subscription.</p>
-    <div class="intake-view-only-banner" style="border-color: rgba(201,162,39,0.6);">
-      <strong>This isn’t a save form anymore.</strong> We can’t update this one-off order from here. Use <strong>Confirm and continue to subscription checkout</strong> on the next step to subscribe; Stripe will set up your subscription and we’ll use this brief for your ongoing packs.
-    </div>
+    <h1>Upgrade to subscription</h1>
+    <p class="sub" style="margin-bottom: 1rem;">You’re upgrading from your one-off to a monthly subscription. What follows is the brief we saved from that pack. When you tap <strong>Confirm and continue to subscription checkout</strong>, you’ll pay in Stripe and we’ll use this brief for your monthly packs.</p>
     {% else %}
     <h1>YOUR DETAILS</h1>
     <p class="sub" style="margin-bottom: 1rem;">Read-only snapshot of what we have on file for this <strong>one-off</strong> order. Your delivered PDF does not change.</p>
@@ -482,10 +479,8 @@
 
     {% if not intake_view_only or oneoff_subscribe_checkout_mode|default(false) %}
     <div id="review-step" class="review-step{% if oneoff_subscribe_checkout_mode|default(false) %} show{% endif %}" style="{% if oneoff_subscribe_checkout_mode|default(false) %}display: block;{% endif %}">
-      <h2 class="form-section" style="margin-bottom: 1rem; font-size: 1.75rem;">Double-check your answers</h2>
-      {% if oneoff_subscribe_checkout_mode|default(false) %}
-      <p class="sub" style="margin-bottom: 1.5rem;">This is what we’ll carry into your subscription at checkout. When you’re ready, confirm below to open Stripe and finish subscribing.</p>
-      {% else %}
+      <h2 class="form-section" style="margin-bottom: 1rem; font-size: 1.75rem;">{% if oneoff_subscribe_checkout_mode|default(false) %}Your brief{% else %}Double-check your answers{% endif %}</h2>
+      {% if not oneoff_subscribe_checkout_mode|default(false) %}
       <p class="sub" style="margin-bottom: 1.5rem;">Review before sending. Click Edit at the bottom of the form to change anything.</p>
       {% endif %}
       <div id="review-content"></div>
