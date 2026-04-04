@@ -167,19 +167,42 @@ class CaptionOrderService:
         Ensures the latest order shows even if they checked out with a different email (same Stripe customer)."""
         orders_by_email = self.get_by_customer_email(email)
         seen_ids = {o.get("id") for o in orders_by_email if o.get("id")}
-        stripe_customer_ids = [
-            (o.get("stripe_customer_id") or "").strip()
-            for o in orders_by_email
-            if (o.get("stripe_customer_id") or "").strip()
-        ]
-        for sc_id in stripe_customer_ids:
-            if not sc_id:
-                continue
-            result = self.client.table(self.table).select("*").eq("stripe_customer_id", sc_id).order("created_at", desc=True).execute()
-            for o in result.data or []:
-                if o.get("id") and o["id"] not in seen_ids:
-                    seen_ids.add(o["id"])
-                    orders_by_email.append(o)
+        unique_sc_ids = []
+        seen_sc = set()
+        for o in orders_by_email:
+            sc = (o.get("stripe_customer_id") or "").strip()
+            if sc and sc not in seen_sc:
+                seen_sc.add(sc)
+                unique_sc_ids.append(sc)
+        if unique_sc_ids:
+            try:
+                result = (
+                    self.client.table(self.table)
+                    .select("*")
+                    .in_("stripe_customer_id", unique_sc_ids)
+                    .order("created_at", desc=True)
+                    .execute()
+                )
+                for row in result.data or []:
+                    if row.get("id") and row["id"] not in seen_ids:
+                        seen_ids.add(row["id"])
+                        orders_by_email.append(row)
+            except Exception:
+                for sc_id in unique_sc_ids:
+                    try:
+                        result = (
+                            self.client.table(self.table)
+                            .select("*")
+                            .eq("stripe_customer_id", sc_id)
+                            .order("created_at", desc=True)
+                            .execute()
+                        )
+                        for o in result.data or []:
+                            if o.get("id") and o["id"] not in seen_ids:
+                                seen_ids.add(o["id"])
+                                orders_by_email.append(o)
+                    except Exception:
+                        pass
         orders_by_email.sort(key=lambda x: (x.get("created_at") or ""), reverse=True)
         return orders_by_email
 

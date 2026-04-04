@@ -86,9 +86,13 @@ class CustomerAuthService:
             return result.data[0]
         return None
 
-    def ensure_referral_code(self, customer_id: str) -> Tuple[Optional[str], bool]:
+    def ensure_referral_code(
+        self, customer_id: str, *, stripe_promotion_sync: bool = True
+    ) -> Tuple[Optional[str], bool]:
         """Ensure customer has a referral code; generate if missing.
-        Returns (code_or_None, need_refresh_customer_row). Second is True when DB/Stripe may have updated the row."""
+        Returns (code_or_None, need_refresh_customer_row). Second is True when DB/Stripe may have updated the row.
+        When stripe_promotion_sync is False (e.g. non-refer account sections), skip creating the Stripe Promotion Code
+        so /account loads do not pay that API cost; sync on /account/refer or /api/account/referral-stripe-sync."""
         result = (
             self.client.table(self.table)
             .select("referral_code, stripe_referral_promotion_code_id")
@@ -100,9 +104,8 @@ class CustomerAuthService:
         c = result.data[0]
         code = (c.get("referral_code") or "").strip()
         if code:
-            # Avoid Stripe on every account load: sync only if promotion not linked in DB yet.
             promo_id = (c.get("stripe_referral_promotion_code_id") or "").strip()
-            if not promo_id:
+            if not promo_id and stripe_promotion_sync:
                 self._sync_stripe_referral_promotion(customer_id)
                 return (code, True)
             return (code, False)
@@ -112,7 +115,8 @@ class CustomerAuthService:
                 "referral_code": code,
                 "updated_at": datetime.utcnow().isoformat(),
             }).eq("id", customer_id).execute()
-            self._sync_stripe_referral_promotion(customer_id)
+            if stripe_promotion_sync:
+                self._sync_stripe_referral_promotion(customer_id)
             return (code, True)
         except Exception:
             return (None, False)

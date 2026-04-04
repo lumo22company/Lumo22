@@ -11,6 +11,7 @@ from flask_cors import CORS
 from config import Config
 from concurrent.futures import ThreadPoolExecutor
 from functools import wraps
+from typing import Optional
 
 # One-time login tokens: when session cookie does not persist (e.g. proxy), redirect to /account?login_token=X
 # so the account page can set session from the token and render (cookie is set in that response).
@@ -1235,18 +1236,18 @@ def _account_context_fallback(customer: dict, exc=None) -> dict:
     }
 
 
-def _account_context():
+def _account_context(section: Optional[str] = None):
     """Load customer and account data for dashboard. Returns dict for template."""
     customer = get_current_customer()
     if not customer:
         return None
     try:
-        return _account_context_build(customer)
+        return _account_context_build(customer, section=section)
     except Exception as e:
         return _account_context_fallback(customer, e)
 
 
-def _account_resolve_referral_customer(customer: dict):
+def _account_resolve_referral_customer(customer: dict, *, stripe_promotion_sync: bool = True):
     """Ensure referral code; refresh customer row only if DB/Stripe updated it. Runs in parallel with Stripe billing."""
     from services.customer_auth_service import CustomerAuthService
 
@@ -1254,7 +1255,9 @@ def _account_resolve_referral_customer(customer: dict):
     cid = str(customer.get("id") or "").strip()
     if not cid:
         return None, customer
-    code, need_refresh = auth_svc.ensure_referral_code(cid)
+    code, need_refresh = auth_svc.ensure_referral_code(
+        cid, stripe_promotion_sync=stripe_promotion_sync
+    )
     if need_refresh:
         refreshed = auth_svc.get_by_id(cid)
         if refreshed:
@@ -1262,16 +1265,17 @@ def _account_resolve_referral_customer(customer: dict):
     return code, customer
 
 
-def _account_context_build(customer: dict) -> dict:
+def _account_context_build(customer: dict, section: Optional[str] = None) -> dict:
     """Assemble template context; may raise — caller wraps with fallback."""
     email = customer.get("email", "")
     caption_orders = []
     referral_code = None
+    account_orders_ok = False
+    sync_referral_promo = (section or "information") == "refer"
     try:
         from services.caption_order_service import CaptionOrderService
-        from services.customer_auth_service import CustomerAuthService
+
         co_svc = CaptionOrderService()
-        auth_svc = CustomerAuthService()
         caption_orders = co_svc.get_by_customer_email_including_stripe_customer(email)
         # Eligibility for "Get my pack sooner": customer must already have at least one delivered pack
         # (either this subscription order itself, or the one-off order it was upgraded from).
@@ -1319,7 +1323,11 @@ def _account_context_build(customer: dict) -> dict:
     if account_orders_ok:
         with ThreadPoolExecutor(max_workers=2) as pool:
             fut_billing = pool.submit(_load_account_stripe_subscription_data, caption_orders)
-            fut_ref = pool.submit(_account_resolve_referral_customer, customer)
+            fut_ref = pool.submit(
+                _account_resolve_referral_customer,
+                customer,
+                stripe_promotion_sync=sync_referral_promo,
+            )
             subscription_billing = fut_billing.result()
             referral_code, customer = fut_ref.result()
     else:
@@ -1592,11 +1600,15 @@ def _load_account_stripe_subscription_data(caption_orders):
             except Exception:
                 return sub_id, None
 
+        # Saved cards list is only used on the Pause/manage UI next to subscription rows; skip an extra
+        # Stripe round trip for one-off-only customers (no subscription ids).
+        list_saved_cards = bool(stripe_customer_id and unique_sub_ids)
+
         subs_by_id = {}
-        workers = min(10, max(1, (1 if stripe_customer_id else 0) + len(unique_sub_ids)))
-        if workers > 1 and (stripe_customer_id or unique_sub_ids):
+        workers = min(10, max(1, (1 if list_saved_cards else 0) + len(unique_sub_ids)))
+        if workers > 1 and (list_saved_cards or unique_sub_ids):
             with ThreadPoolExecutor(max_workers=workers) as pool:
-                pm_future = pool.submit(_list_payment_methods) if stripe_customer_id else None
+                pm_future = pool.submit(_list_payment_methods) if list_saved_cards else None
                 sub_futures = [pool.submit(_retrieve_subscription, sid) for sid in unique_sub_ids]
                 if pm_future:
                     try:
@@ -1614,7 +1626,7 @@ def _load_account_stripe_subscription_data(caption_orders):
                     sid, sub = fut.result()
                     subs_by_id[sid] = sub
         else:
-            if stripe_customer_id:
+            if list_saved_cards:
                 try:
                     pm_list = _list_payment_methods()
                     for pm in (pm_list.data or []):
@@ -1714,7 +1726,7 @@ def account_page(section=None):
         return redirect(url_for('customer_login_page'))
     if section is None or section not in _ACCOUNT_SECTIONS:
         section = "information"
-    ctx = _account_context()
+    ctx = _account_context(section=section)
     if not ctx:
         return redirect(url_for('customer_login_page'))
     # Upgrade section only for one-off customers; redirect others to edit-form
