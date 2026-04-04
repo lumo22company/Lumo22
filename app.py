@@ -709,7 +709,8 @@ def captions_checkout_subscription_page():
     All subscription checkouts (new and upgrade from one-off) require an account before payment (signup first, then log in if already registered)."""
     from urllib.parse import urlencode, quote
     copy_from = (request.args.get("copy_from") or "").strip()
-    if not get_current_customer():
+    current_customer = get_current_customer()
+    if not current_customer:
         signup_url = url_for("customer_signup_page") + "?next=" + quote(request.full_path or "/captions-checkout-subscription", safe="")
         return redirect(signup_url)
     platforms = _parse_platforms_from_request()
@@ -734,10 +735,38 @@ def captions_checkout_subscription_page():
     ref = (request.args.get("ref") or "").strip()
     if ref:
         params["ref"] = ref
-    if copy_from:
-        params["copy_from"] = copy_from
     business_name = (request.args.get("business_name") or "").strip()
     business_key = (request.args.get("business_key") or "").strip()
+    first_charge_date_str = None
+    can_get_pack_now = False
+    valid_copy_from_order = False
+    if copy_from:
+        try:
+            from services.caption_order_service import CaptionOrderService
+            from datetime import datetime, timedelta, timezone
+
+            one_off = CaptionOrderService().get_by_token(copy_from)
+            if one_off:
+                one_off_email = (one_off.get("customer_email") or "").strip().lower()
+                cust_email = (current_customer.get("email") or "").strip().lower()
+                if not one_off_email or not cust_email or one_off_email != cust_email:
+                    one_off = None
+            if one_off:
+                valid_copy_from_order = True
+                params["copy_from"] = copy_from
+                if not business_name:
+                    intake = one_off.get("intake") if isinstance(one_off.get("intake"), dict) else {}
+                    business_name = (intake.get("business_name") or "").strip() or business_name
+                is_delivered = bool(one_off.get("status") == "delivered" or one_off.get("delivered_at"))
+                can_get_pack_now = is_delivered
+                raw = one_off.get("delivered_at") or one_off.get("updated_at") or one_off.get("created_at")
+                if is_delivered and raw:
+                    dt = datetime.fromisoformat(raw.replace("Z", "+00:00")) if isinstance(raw, str) else raw
+                    if getattr(dt, "tzinfo", None) is None:
+                        dt = dt.replace(tzinfo=timezone.utc)
+                    first_charge_date_str = (dt + timedelta(days=30)).strftime("%d %B %Y")
+        except Exception:
+            pass
     if business_name:
         params["business_name"] = business_name
     if business_key:
@@ -752,7 +781,7 @@ def captions_checkout_subscription_page():
         add_stories_params = "stories=1&platforms=" + str(platforms) + "&currency=" + currency
         if selected:
             add_stories_params += "&selected=" + quote(selected)
-        if copy_from:
+        if valid_copy_from_order:
             add_stories_params += "&copy_from=" + quote(copy_from)
         if business_name:
             add_stories_params += "&business_name=" + quote(business_name)
@@ -762,24 +791,6 @@ def captions_checkout_subscription_page():
     else:
         add_stories_url = None
     add_platforms_url = ("/captions" + captions_prefill) if platforms < 4 else None
-    first_charge_date_str = None
-    can_get_pack_now = False
-    if copy_from:
-        try:
-            from services.caption_order_service import CaptionOrderService
-            from datetime import datetime, timedelta, timezone
-            one_off = CaptionOrderService().get_by_token(copy_from)
-            if one_off:
-                is_delivered = bool(one_off.get("status") == "delivered" or one_off.get("delivered_at"))
-                can_get_pack_now = is_delivered
-                raw = one_off.get("delivered_at") or one_off.get("updated_at") or one_off.get("created_at")
-                if is_delivered and raw:
-                    dt = datetime.fromisoformat(raw.replace("Z", "+00:00")) if isinstance(raw, str) else raw
-                    if getattr(dt, "tzinfo", None) is None:
-                        dt = dt.replace(tzinfo=timezone.utc)
-                    first_charge_date_str = (dt + timedelta(days=30)).strftime("%d %B %Y")
-        except Exception:
-            pass
     return render_template(
         'captions_checkout_subscription.html',
         platforms=platforms,
@@ -795,7 +806,7 @@ def captions_checkout_subscription_page():
         add_stories_url=add_stories_url,
         add_platforms_url=add_platforms_url,
         back_to_captions_url=back_to_captions_url,
-        is_upgrade_from_oneoff=bool(copy_from),
+        is_upgrade_from_oneoff=valid_copy_from_order,
         first_charge_date=first_charge_date_str,
         can_get_pack_now=can_get_pack_now,
         form_reminders_on=reminders_on,
