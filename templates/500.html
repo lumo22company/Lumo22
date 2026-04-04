@@ -11,12 +11,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v={{ asset_version }}">
 </head>
 <body class="lumo-landing" style="min-height: 100vh; min-height: 100dvh; margin: 0; display: flex; flex-direction: column;">
-  <nav class="lumo-nav lumo-nav-scrolled">
-    <div class="lumo-nav-left">
-      <a href="/" class="lumo-nav-logo">Lumo 22</a>
-      <a href="/captions" class="lumo-nav-link">Captions</a>
-    </div>
-  </nav>
+  {% include '_lumo_nav.html' %}
 
   <main id="main-content" style="flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; padding: 1.5rem 1rem 2rem; box-sizing: border-box;">
   <section class="lumo-section lumo-section--error-500" style="padding: 0; margin: 0; width: 100%; max-width: var(--max-width, 72rem); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
@@ -31,5 +26,7 @@
   </main>
 
   {% include '_footer.html' %}
+
+  <script src="{{ url_for('static', filename='js/landing.js') }}?v={{ asset_version }}"></script>
 </body>
 </html>
