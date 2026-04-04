@@ -88,13 +88,21 @@ class CustomerAuthService:
 
     def ensure_referral_code(self, customer_id: str) -> Optional[str]:
         """Ensure customer has a referral code; generate if missing. Returns code or None."""
-        result = self.client.table(self.table).select("referral_code").eq("id", customer_id).execute()
+        result = (
+            self.client.table(self.table)
+            .select("referral_code, stripe_referral_promotion_code_id")
+            .eq("id", customer_id)
+            .execute()
+        )
         if not result.data or len(result.data) == 0:
             return None
         c = result.data[0]
         code = (c.get("referral_code") or "").strip()
         if code:
-            self._sync_stripe_referral_promotion(customer_id)
+            # Avoid Stripe on every account load: sync only if promotion not linked in DB yet.
+            promo_id = (c.get("stripe_referral_promotion_code_id") or "").strip()
+            if not promo_id:
+                self._sync_stripe_referral_promotion(customer_id)
             return code
         code = self._generate_referral_code()
         try:

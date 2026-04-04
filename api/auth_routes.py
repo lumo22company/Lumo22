@@ -2,7 +2,7 @@
 Auth routes for Lumo 22 customer accounts (DFD, Chat, Captions).
 """
 import logging
-from flask import Blueprint, request, jsonify, session, redirect, url_for
+from flask import Blueprint, request, jsonify, session, redirect, url_for, g, has_request_context
 from config import Config
 from services.customer_auth_service import CustomerAuthService
 from services.login_guard import check_locked, record_failure, clear_failures
@@ -52,18 +52,43 @@ def set_customer_session(customer: dict) -> None:
     session["customer_id"] = str(customer["id"])
     session["customer_email"] = customer["email"]
     session["auth_version"] = int(customer.get("auth_version") or 0)
+    invalidate_current_customer_cache()
+
+
+def invalidate_current_customer_cache() -> None:
+    """Clear per-request cache so the next get_current_customer() reloads from DB (e.g. after login)."""
+    if has_request_context() and hasattr(g, "_current_customer_cache"):
+        delattr(g, "_current_customer_cache")
+
+
+def get_template_current_customer():
+    """
+    Session-only snapshot for nav and shared templates: no DB round-trip.
+    Use get_current_customer() in routes/API where the full row and auth_version check are required.
+    """
+    customer_id = session.get("customer_id")
+    email = session.get("customer_email")
+    if not customer_id or not email:
+        return None
+    return {"id": str(customer_id), "email": email}
 
 
 def get_current_customer():
     """Get current logged-in customer from session. Clears session if auth_version mismatches DB (password changed elsewhere)."""
+    if has_request_context() and hasattr(g, "_current_customer_cache"):
+        return g._current_customer_cache
     customer_id = session.get("customer_id")
     email = session.get("customer_email")
     if not customer_id or not email:
+        if has_request_context():
+            g._current_customer_cache = None
         return None
     try:
         svc = CustomerAuthService()
         customer = svc.get_by_email(email)
         if not customer or str(customer.get("id")) != str(customer_id):
+            if has_request_context():
+                g._current_customer_cache = None
             return None
         db_ver = int(customer.get("auth_version") or 0)
         sess_ver = int(session.get("auth_version") or 0)
@@ -71,10 +96,16 @@ def get_current_customer():
             session.pop("customer_id", None)
             session.pop("customer_email", None)
             session.pop("auth_version", None)
+            if has_request_context():
+                g._current_customer_cache = None
             return None
+        if has_request_context():
+            g._current_customer_cache = customer
         return customer
     except Exception:
         pass
+    if has_request_context():
+        g._current_customer_cache = None
     return None
 
 

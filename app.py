@@ -8,6 +8,7 @@ import secrets
 from flask import Flask, render_template, request, jsonify, redirect, url_for, send_from_directory, make_response, session
 from flask_cors import CORS
 from config import Config
+from concurrent.futures import ThreadPoolExecutor
 from functools import wraps
 
 # One-time login tokens: when session cookie does not persist (e.g. proxy), redirect to /account?login_token=X
@@ -36,7 +37,13 @@ def _consume_login_token(token: str):
 from api.routes import api_bp
 from api.webhooks import webhook_bp
 from api.captions_routes import captions_bp
-from api.auth_routes import auth_bp, get_current_customer, set_customer_session
+from api.auth_routes import (
+    auth_bp,
+    get_current_customer,
+    get_template_current_customer,
+    set_customer_session,
+    invalidate_current_customer_cache,
+)
 from api.passkey_routes import passkey_bp
 from api.billing_routes import billing_bp
 from services.login_guard import check_locked, record_failure, clear_failures
@@ -129,7 +136,7 @@ def inject_asset_version():
     out = {'asset_version': _asset_version}
     out['today_str'] = datetime.utcnow().strftime('%d %B %Y')
     try:
-        out['current_customer'] = get_current_customer()
+        out['current_customer'] = get_template_current_customer()
     except Exception:
         out['current_customer'] = None
     return out
@@ -823,14 +830,16 @@ def customer_login_required(f):
                         session["customer_id"] = data["customer_id"]
                         session["customer_email"] = data["email"]
                         session["auth_version"] = 0
+                        invalidate_current_customer_cache()
                 except Exception:
                     session.permanent = True
                     session["customer_id"] = data["customer_id"]
                     session["customer_email"] = data["email"]
                     session["auth_version"] = 0
+                    invalidate_current_customer_cache()
                 # Render the page in this response so session cookie is set here (no second request needed)
                 return f(*args, **kwargs)
-        if not get_current_customer():
+        if not customer:
             return redirect(url_for('customer_login_page') + '?next=' + request.url)
         return f(*args, **kwargs)
     return decorated
@@ -1174,21 +1183,6 @@ def _account_context():
         _refreshed = auth_svc.get_by_id(str(customer["id"]))
         if _refreshed:
             customer = _refreshed
-        try:
-            from api.captions_routes import _get_subscription_pause_info
-            for o in caption_orders:
-                sub_id = (o.get("stripe_subscription_id") or "").strip()
-                if sub_id:
-                    try:
-                        info = _get_subscription_pause_info(sub_id)
-                        o["subscription_pause"] = info or {"paused": False, "resumes_at": None, "cancel_at_period_end": False, "ends_at": None}
-                    except Exception:
-                        o["subscription_pause"] = {"paused": False, "resumes_at": None, "cancel_at_period_end": False, "ends_at": None}
-                else:
-                    o["subscription_pause"] = None
-        except Exception:
-            for o in caption_orders:
-                o["subscription_pause"] = None
     except Exception as e:
         print(f"[account] Error loading data: {e}")
         referral_code = None
@@ -1197,7 +1191,7 @@ def _account_context():
         sub_orders = [o for o in caption_orders if (o.get("stripe_subscription_id") or "").strip()]
         current_intake_order = sub_orders[0] if sub_orders else caption_orders[0]
 
-    subscription_billing = _get_subscription_billing(caption_orders)
+    subscription_billing = _load_account_stripe_subscription_data(caption_orders)
 
     # Billing accounts: one per unique stripe_customer_id among subscription orders
     # Each has { stripe_customer_id, label, order_token } so Manage billing can be scoped
@@ -1317,130 +1311,208 @@ def _account_context():
     }
 
 
-def _get_subscription_billing(caption_orders):
+_ACCOUNT_SUB_PAUSE_FALLBACK = {
+    "paused": False,
+    "resumes_at": None,
+    "cancel_at_period_end": False,
+    "cancelled_now": False,
+    "ends_at": None,
+}
+
+
+def _subscription_pricing_from_stripe_sub(sub, sub_id, out: dict) -> None:
+    """Fill subscription_payment_methods and subscription_pricing for one subscription into out."""
+    pm = sub.get("default_payment_method")
+    if pm and isinstance(pm, dict):
+        card = pm.get("card") or {}
+        out["subscription_payment_methods"][sub_id] = {
+            "id": pm.get("id"),
+            "brand": (card.get("brand") or "card").capitalize(),
+            "last4": card.get("last4") or "****",
+        }
+    else:
+        out["subscription_payment_methods"][sub_id] = None
+
+    try:
+        items = ((sub.get("items") or {}).get("data") or [])
+        subtotal_minor = 0
+        currency = "gbp"
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            price = item.get("price") or {}
+            unit_amount = int(price.get("unit_amount") or 0)
+            qty = int(item.get("quantity") or 1)
+            subtotal_minor += max(0, unit_amount) * max(1, qty)
+            if price.get("currency"):
+                currency = str(price.get("currency")).strip().lower()
+        symbols = {"gbp": "£", "usd": "$", "eur": "€"}
+        symbol = symbols.get(currency, "£")
+        standard_monthly = round(subtotal_minor / 100.0, 2)
+        effective_monthly = standard_monthly
+        discount_type = None
+        discount_percent = None
+        discount_amount = None
+        discount_duration = None
+        discount_end = None
+
+        discount = sub.get("discount")
+        if isinstance(discount, dict):
+            coupon = discount.get("coupon") or {}
+            percent_off = coupon.get("percent_off")
+            amount_off = coupon.get("amount_off")
+            if percent_off is not None:
+                try:
+                    discount_percent = float(percent_off)
+                    effective_monthly = round(
+                        max(0.0, standard_monthly * (1.0 - (discount_percent / 100.0))),
+                        2,
+                    )
+                    discount_type = "percent"
+                except Exception:
+                    pass
+            elif amount_off is not None:
+                try:
+                    discount_amount = round(float(amount_off) / 100.0, 2)
+                    effective_monthly = round(
+                        max(0.0, standard_monthly - float(discount_amount)),
+                        2,
+                    )
+                    discount_type = "amount"
+                except Exception:
+                    pass
+            discount_duration = (coupon.get("duration") or "").strip().lower() or None
+            discount_end = discount.get("end")
+
+        out["subscription_pricing"][sub_id] = {
+            "currency": currency,
+            "symbol": symbol,
+            "standard_monthly": standard_monthly,
+            "effective_monthly": effective_monthly,
+            "discount_type": discount_type,
+            "discount_percent": discount_percent,
+            "discount_amount": discount_amount,
+            "discount_duration": discount_duration,
+            "discount_end": discount_end,
+        }
+    except Exception:
+        out["subscription_pricing"][sub_id] = None
+
+
+def _load_account_stripe_subscription_data(caption_orders):
     """
-    Build payment_methods list and per-subscription default for account page.
+    Build payment_methods list and per-subscription billing for account page.
+    One Stripe Subscription.retrieve per unique subscription id (shared with pause badges).
+    Sets o['subscription_pause'] on each caption order row.
     Returns:
     {
       "payment_methods": [{ id, brand, last4 }],
       "subscription_payment_methods": { sub_id: { id, brand, last4 } },
-      "subscription_pricing": {
-        sub_id: {
-          currency, symbol, standard_monthly, effective_monthly,
-          discount_type, discount_percent, discount_amount,
-          discount_duration, discount_end
-        }
-      }
+      "subscription_pricing": { sub_id: { ... } },
     }.
     """
+    from api.captions_routes import _pause_info_from_subscription
+    from api.stripe_utils import is_valid_stripe_subscription_id
+
     out = {"payment_methods": [], "subscription_payment_methods": {}, "subscription_pricing": {}}
-    if not caption_orders or not getattr(Config, "STRIPE_SECRET_KEY", None):
+    orders = caption_orders or []
+    for o in orders:
+        sid = (o.get("stripe_subscription_id") or "").strip()
+        o["subscription_pause"] = None if not sid else dict(_ACCOUNT_SUB_PAUSE_FALLBACK)
+
+    if not orders or not getattr(Config, "STRIPE_SECRET_KEY", None):
         return out
+
     stripe_customer_id = None
-    for o in caption_orders:
+    for o in orders:
         cid = (o.get("stripe_customer_id") or "").strip()
         if cid:
             stripe_customer_id = cid
             break
-    if not stripe_customer_id:
-        return out
+
     try:
         import stripe
+
         stripe.api_key = Config.STRIPE_SECRET_KEY
-        pm_list = stripe.PaymentMethod.list(customer=stripe_customer_id, type="card")
-        for pm in (pm_list.data or []):
-            card = (pm.get("card") or {})
-            out["payment_methods"].append({
-                "id": pm.get("id"),
-                "brand": (card.get("brand") or "card").capitalize(),
-                "last4": card.get("last4") or "****",
-            })
-        from api.stripe_utils import is_valid_stripe_subscription_id
-        for o in caption_orders:
+
+        unique_sub_ids = []
+        seen = set()
+        for o in orders:
             sub_id = (o.get("stripe_subscription_id") or "").strip()
-            if not sub_id or not is_valid_stripe_subscription_id(sub_id):
+            if not sub_id or not is_valid_stripe_subscription_id(sub_id) or sub_id in seen:
                 continue
+            seen.add(sub_id)
+            unique_sub_ids.append(sub_id)
+
+        def _list_payment_methods():
+            return stripe.PaymentMethod.list(customer=stripe_customer_id, type="card")
+
+        def _retrieve_subscription(sub_id: str):
             try:
-                sub = stripe.Subscription.retrieve(
+                return sub_id, stripe.Subscription.retrieve(
                     sub_id,
                     expand=["default_payment_method", "items.data.price", "discount.coupon"],
                 )
-                pm = sub.get("default_payment_method")
-                if pm and isinstance(pm, dict):
-                    card = pm.get("card") or {}
-                    out["subscription_payment_methods"][sub_id] = {
-                        "id": pm.get("id"),
-                        "brand": (card.get("brand") or "card").capitalize(),
-                        "last4": card.get("last4") or "****",
-                    }
-                else:
-                    out["subscription_payment_methods"][sub_id] = None
+            except Exception:
+                return sub_id, None
 
-                # Real Stripe pricing context (supports temporary discounts).
+        subs_by_id = {}
+        workers = min(10, max(1, (1 if stripe_customer_id else 0) + len(unique_sub_ids)))
+        if workers > 1 and (stripe_customer_id or unique_sub_ids):
+            with ThreadPoolExecutor(max_workers=workers) as pool:
+                pm_future = pool.submit(_list_payment_methods) if stripe_customer_id else None
+                sub_futures = [pool.submit(_retrieve_subscription, sid) for sid in unique_sub_ids]
+                if pm_future:
+                    try:
+                        pm_list = pm_future.result()
+                        for pm in (pm_list.data or []):
+                            card = (pm.get("card") or {})
+                            out["payment_methods"].append({
+                                "id": pm.get("id"),
+                                "brand": (card.get("brand") or "card").capitalize(),
+                                "last4": card.get("last4") or "****",
+                            })
+                    except Exception:
+                        pass
+                for fut in sub_futures:
+                    sid, sub = fut.result()
+                    subs_by_id[sid] = sub
+        else:
+            if stripe_customer_id:
                 try:
-                    items = ((sub.get("items") or {}).get("data") or [])
-                    subtotal_minor = 0
-                    currency = "gbp"
-                    for item in items:
-                        if not isinstance(item, dict):
-                            continue
-                        price = item.get("price") or {}
-                        unit_amount = int(price.get("unit_amount") or 0)
-                        qty = int(item.get("quantity") or 1)
-                        subtotal_minor += max(0, unit_amount) * max(1, qty)
-                        if price.get("currency"):
-                            currency = str(price.get("currency")).strip().lower()
-                    symbols = {"gbp": "£", "usd": "$", "eur": "€"}
-                    symbol = symbols.get(currency, "£")
-                    standard_monthly = round(subtotal_minor / 100.0, 2)
-                    effective_monthly = standard_monthly
-                    discount_type = None
-                    discount_percent = None
-                    discount_amount = None
-                    discount_duration = None
-                    discount_end = None
-
-                    discount = sub.get("discount")
-                    if isinstance(discount, dict):
-                        coupon = discount.get("coupon") or {}
-                        percent_off = coupon.get("percent_off")
-                        amount_off = coupon.get("amount_off")
-                        if percent_off is not None:
-                            try:
-                                discount_percent = float(percent_off)
-                                effective_monthly = round(
-                                    max(0.0, standard_monthly * (1.0 - (discount_percent / 100.0))),
-                                    2,
-                                )
-                                discount_type = "percent"
-                            except Exception:
-                                pass
-                        elif amount_off is not None:
-                            try:
-                                discount_amount = round(float(amount_off) / 100.0, 2)
-                                effective_monthly = round(
-                                    max(0.0, standard_monthly - float(discount_amount)),
-                                    2,
-                                )
-                                discount_type = "amount"
-                            except Exception:
-                                pass
-                        discount_duration = (coupon.get("duration") or "").strip().lower() or None
-                        discount_end = discount.get("end")
-
-                    out["subscription_pricing"][sub_id] = {
-                        "currency": currency,
-                        "symbol": symbol,
-                        "standard_monthly": standard_monthly,
-                        "effective_monthly": effective_monthly,
-                        "discount_type": discount_type,
-                        "discount_percent": discount_percent,
-                        "discount_amount": discount_amount,
-                        "discount_duration": discount_duration,
-                        "discount_end": discount_end,
-                    }
+                    pm_list = _list_payment_methods()
+                    for pm in (pm_list.data or []):
+                        card = (pm.get("card") or {})
+                        out["payment_methods"].append({
+                            "id": pm.get("id"),
+                            "brand": (card.get("brand") or "card").capitalize(),
+                            "last4": card.get("last4") or "****",
+                        })
                 except Exception:
-                    out["subscription_pricing"][sub_id] = None
+                    pass
+            for sub_id in unique_sub_ids:
+                sid, sub = _retrieve_subscription(sub_id)
+                subs_by_id[sid] = sub
+
+        for o in orders:
+            sub_id = (o.get("stripe_subscription_id") or "").strip()
+            if not sub_id:
+                o["subscription_pause"] = None
+                continue
+            sub = subs_by_id.get(sub_id)
+            if sub is not None:
+                o["subscription_pause"] = _pause_info_from_subscription(sub)
+            elif is_valid_stripe_subscription_id(sub_id):
+                o["subscription_pause"] = dict(_ACCOUNT_SUB_PAUSE_FALLBACK)
+
+        for sub_id in unique_sub_ids:
+            sub = subs_by_id.get(sub_id)
+            if sub is None:
+                out["subscription_payment_methods"][sub_id] = None
+                out["subscription_pricing"][sub_id] = None
+                continue
+            try:
+                _subscription_pricing_from_stripe_sub(sub, sub_id, out)
             except Exception:
                 out["subscription_payment_methods"][sub_id] = None
                 out["subscription_pricing"][sub_id] = None
