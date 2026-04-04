@@ -10,7 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v={{ asset_version }}">
 </head>
-<body class="lumo-landing" style="min-height: 100vh; min-height: 100dvh; margin: 0; display: flex; flex-direction: column;">
+<body class="lumo-landing lumo-landing--error-500">
   {% include '_lumo_nav.html' %}
 
   <main id="main-content" class="lumo-error-500-main">

@@ -167,16 +167,29 @@ input[type="checkbox"] { accent-color: #fff200; }
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
 }
 
-/* 500 page: .lumo-nav is position:fixed — no layout gap; pad main so centred copy clears the bar */
-.lumo-error-500-main {
-  flex: 1 1 auto;
+/* 500 page: fixed nav + vertical centre — body is a column flex; main must grow (flex-basis 0) or centre has no room */
+body.lumo-landing--error-500 {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+body.lumo-landing--error-500 .footer {
+  flex-shrink: 0;
+}
+
+body.lumo-landing--error-500 .lumo-error-500-main {
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 100%;
   box-sizing: border-box;
-  padding: max(5.25rem, calc(env(safe-area-inset-top, 0px) + 4rem)) 1rem 2rem;
+  padding: max(5.5rem, calc(env(safe-area-inset-top, 0px) + 4rem)) 1rem 2rem;
 }
 
 .lumo-nav-left {
