@@ -24,10 +24,10 @@
       <h1 class="account-sidebar-title">Your account</h1>
       <ul class="account-sidebar-nav">
         <li><a href="/account/information" class="{% if current_section == 'information' %}active{% endif %}">Account Information</a></li>
-        <li><a href="/account/history" class="{% if current_section == 'history' %}active{% endif %}">History</a></li>
+        <li><a href="/account/pause" class="{% if current_section == 'pause' %}active{% endif %}">Manage subscription</a></li>
         <li><a href="/account/edit-form" class="{% if current_section == 'edit-form' %}active{% endif %}">Edit form</a></li>
         {% if subscribe_options %}<li><a href="/account/upgrade" class="{% if current_section == 'upgrade' %}active{% endif %}">{% if account_resubscribe_mode|default(false) %}Resubscribe{% else %}Upgrade{% endif %}</a></li>{% endif %}
-        <li><a href="/account/pause" class="{% if current_section == 'pause' %}active{% endif %}">Manage subscription</a></li>
+        <li><a href="/account/history" class="{% if current_section == 'history' %}active{% endif %}">History</a></li>
         <li><a href="/account/refer" class="{% if current_section == 'refer' %}active{% endif %}">Refer a friend</a></li>
       </ul>
       <div class="account-sidebar-logout">
@@ -313,11 +313,11 @@
               <input type="checkbox" id="upgrade-get-pack-today-cb" class="upgrade-get-pack-today-cb" style="margin-top: 0.2rem;"> Get my first subscription pack today
             </label>
             <p id="upgrade-get-pack-today-help" style="font-size: 0.85rem; color: rgba(255,255,255,0.8); margin: 0.35rem 0 0 1.75rem; line-height: 1.4;">You'll be charged at checkout and we'll send your first subscription pack right away. Leave unchecked to be charged when your first pack is ready (30 days after your one-off delivery date).</p>
-            <div id="upgrade-edit-form-first-wrap" style="display: none; margin-top: 1rem; margin-left: 1.75rem; padding: 0.75rem 1rem; background: rgba(255,255,255,0.06); border-radius: 8px; border: 1px solid rgba(255,255,255,0.15);">
-              <p style="font-size: 0.95rem; font-weight: 600; color: #fff; margin: 0 0 0.35rem;">Do you need to update your form?</p>
-              <p style="font-size: 0.9rem; color: rgba(255,255,255,0.9); margin: 0 0 0.5rem;">Update your details or tell us about an event coming up—we'll use this for your first pack. After you submit the form, we'll take you to checkout to complete your subscription.</p>
-              <a href="#" id="upgrade-edit-form-first-link" class="account-billing-portal-link account-btn-swipe-light" style="font-size: 0.85rem;">Edit form</a>
-            </div>
+          </div>
+          <div id="upgrade-edit-form-first-wrap" style="margin-bottom: 1.25rem; padding: 0.75rem 1rem; background: rgba(255,255,255,0.06); border-radius: 8px; border: 1px solid rgba(255,255,255,0.15);">
+            <p style="font-size: 0.95rem; font-weight: 600; color: #fff; margin: 0 0 0.35rem;">Do you need to update your form?</p>
+            <p style="font-size: 0.9rem; color: rgba(255,255,255,0.9); margin: 0 0 0.5rem;">Update your details or tell us about an event coming up—we'll use this for your first pack. After you submit the form, we'll take you to checkout to complete your subscription.</p>
+            <a href="#" id="upgrade-edit-form-first-link" class="account-billing-portal-link account-btn-swipe-light" style="font-size: 0.85rem;">Edit form</a>
           </div>
           <div style="margin-bottom: 1.25rem;">
             <label class="account-settings-label" style="display: block; font-size: 0.95rem; font-weight: 600; color: #fff; margin-bottom: 0.5rem;">Currency</label>
@@ -342,7 +342,6 @@
         var storiesWrap = document.getElementById('upgrade-stories-wrap');
         var storiesCb = document.getElementById('upgrade-stories-cb');
         var getPackTodayCb = document.getElementById('upgrade-get-pack-today-cb');
-        var editFormFirstWrap = document.getElementById('upgrade-edit-form-first-wrap');
         var editFormFirstLink = document.getElementById('upgrade-edit-form-first-link');
         var firstPackCopyEl = document.getElementById('upgrade-first-pack-copy');
         var getPackTodayHelp = document.getElementById('upgrade-get-pack-today-help');
@@ -464,18 +463,15 @@
               checkoutBtn.dataset.checkoutUrl = '';
             }
           }
-          if (editFormFirstWrap) {
-            if (getPackToday && copyFrom) {
-              editFormFirstWrap.style.display = 'block';
-              if (editFormFirstLink) {
-                var upgradeStories = (storiesCb && storiesCb.checked) ? '1' : '0';
-                var params = 't=' + encodeURIComponent(copyFrom) + '&return_url=' + encodeURIComponent('/account/upgrade') + '&upgrade_stories=' + upgradeStories + '&platforms=' + encodeURIComponent(String(n)) + '&currency=' + encodeURIComponent(currency);
-                if (selected) params += '&selected=' + encodeURIComponent(selected);
-                if (getPackToday) params += '&get_pack_now=1';
-                editFormFirstLink.href = '/captions-intake?' + params;
-              }
+          if (editFormFirstLink) {
+            if (copyFrom) {
+              var upgradeStories = (storiesCb && storiesCb.checked) ? '1' : '0';
+              var editParams = 't=' + encodeURIComponent(copyFrom) + '&return_url=' + encodeURIComponent('/account/upgrade') + '&upgrade_stories=' + upgradeStories + '&platforms=' + encodeURIComponent(String(n)) + '&currency=' + encodeURIComponent(currency);
+              if (selected) editParams += '&selected=' + encodeURIComponent(selected);
+              if (getPackToday) editParams += '&get_pack_now=1';
+              editFormFirstLink.href = '/captions-intake?' + editParams;
             } else {
-              editFormFirstWrap.style.display = 'none';
+              editFormFirstLink.href = '#';
             }
           }
           if (firstPackCopyEl) {
