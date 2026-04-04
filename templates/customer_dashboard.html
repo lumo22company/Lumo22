@@ -39,6 +39,11 @@
     </aside>
 
     <main class="account-main{% if current_section == 'history' %} account-main--wide{% endif %}">
+      {% if account_load_error|default(false) %}
+      <div class="account-info-panel" style="margin-bottom: 1rem; background: rgba(180, 100, 40, 0.25); border: 1px solid rgba(255, 200, 80, 0.45); border-radius: 8px; padding: 1rem 1.1rem;">
+        <p style="margin: 0; color: #fff; line-height: 1.55;">We couldn’t load everything on this page. Try <strong>refreshing</strong>. If this keeps happening, email <a href="mailto:hello@lumo22.com" style="color: var(--lum-gold, #fff200); font-weight: 600;">hello@lumo22.com</a>.</p>
+      </div>
+      {% endif %}
       {% if current_section == 'information' %}
       {% if request.args.get('billing') == 'error' %}
       <div class="account-info-panel" style="margin-bottom: 1rem; background: rgba(200,80,80,0.08); border-color: rgba(200,80,80,0.25);">

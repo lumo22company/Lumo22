@@ -5,6 +5,7 @@ import os
 import time
 import json
 import secrets
+import traceback
 from flask import Flask, render_template, request, jsonify, redirect, url_for, send_from_directory, make_response, session
 from flask_cors import CORS
 from config import Config
@@ -1141,11 +1142,64 @@ def _safe_int(val, default: int = 0) -> int:
         return int(default)
 
 
+def _safe_str(val) -> str:
+    """String for display/keys; DB JSON may store numbers or null where we expect text."""
+    if val is None:
+        return ""
+    return str(val).strip()
+
+
+def _account_context_fallback(customer: dict, exc=None) -> dict:
+    """Minimal account shell so /account can render if building full context raises."""
+    if exc is not None:
+        traceback.print_exc()
+        print(f"[account] context fallback after: {exc!r}")
+    base = (Config.BASE_URL or request.url_root or "").strip().rstrip("/")
+    if base and not base.startswith("http"):
+        base = "https://" + base
+    rc = _safe_str(customer.get("referral_code"))
+    ref_coupon = (getattr(Config, "STRIPE_REFERRAL_COUPON_ID", None) or "").strip()
+    ref_secret = (getattr(Config, "STRIPE_SECRET_KEY", None) or "").strip()
+    return {
+        "customer": customer,
+        "caption_orders": [],
+        "current_intake_order": None,
+        "subscription_billing": {"payment_methods": [], "subscription_payment_methods": {}, "subscription_pricing": {}},
+        "billing_accounts": [],
+        "subscribe_options": [],
+        "subscribe_url": None,
+        "subscribe_business_name": None,
+        "one_off_orders": [],
+        "one_off_upgrade_options": [],
+        "edit_form_orders": [],
+        "edit_form_has_subscriptions": False,
+        "edit_form_has_oneoffs": False,
+        "captions_prices": CAPTIONS_DISPLAY_PRICES,
+        "base_url": base,
+        "referral_code": rc,
+        "referral_discount_credits": _safe_int(customer.get("referral_discount_credits"), 0),
+        "referral_mailto_href": _referral_share_mailto_href(base, rc) if rc else "",
+        "referral_sms_href": _referral_share_sms_href(base, rc) if rc else "",
+        "referral_discount_configured": bool(ref_coupon and ref_secret),
+        "referral_stripe_promo_ok": bool(_safe_str(customer.get("stripe_referral_promotion_code_id"))),
+        "account_resubscribe_mode": False,
+        "account_load_error": True,
+    }
+
+
 def _account_context():
     """Load customer and account data for dashboard. Returns dict for template."""
     customer = get_current_customer()
     if not customer:
         return None
+    try:
+        return _account_context_build(customer)
+    except Exception as e:
+        return _account_context_fallback(customer, e)
+
+
+def _account_context_build(customer: dict) -> dict:
+    """Assemble template context; may raise — caller wraps with fallback."""
     email = customer.get("email", "")
     caption_orders = []
     referral_code = None
@@ -1167,7 +1221,7 @@ def _account_context():
             if not (o.get("stripe_subscription_id") or "").strip():
                 continue
             intake = dict(o.get("intake") or {})
-            if (intake.get("business_name") or "").strip():
+            if _safe_str(intake.get("business_name")):
                 continue
             uft = (o.get("upgraded_from_token") or "").strip()
             if not uft:
@@ -1214,8 +1268,10 @@ def _account_context():
             continue
         seen_cids.add(cid)
         intake = o.get("intake") or {}
-        biz = (intake.get("business_name") or "").strip()
-        label = biz.title() if biz else ((o.get("created_at") or "")[:10] or "Subscription")
+        biz = _safe_str(intake.get("business_name"))
+        created_raw = o.get("created_at")
+        created_short = str(created_raw)[:10] if created_raw is not None else ""
+        label = biz.title() if biz else (created_short or "Subscription")
         billing_accounts.append({
             "stripe_customer_id": cid,
             "label": label,
@@ -1251,7 +1307,8 @@ def _account_context():
             if not token:
                 continue
             intake = o.get("intake") or {}
-            business_name = (intake.get("business_name") or "").strip() or None
+            _bn = _safe_str(intake.get("business_name"))
+            business_name = _bn or None
             platforms_count = max(1, _safe_int(o.get("platforms_count"), 1))
             selected_platforms = (o.get("selected_platforms") or "").strip() or ""
             stories_paid = bool(o.get("include_stories"))
@@ -1290,7 +1347,7 @@ def _account_context():
     ref_coupon = (getattr(Config, "STRIPE_REFERRAL_COUPON_ID", None) or "").strip()
     ref_secret = (getattr(Config, "STRIPE_SECRET_KEY", None) or "").strip()
     referral_discount_configured = bool(ref_coupon and ref_secret)
-    referral_stripe_promo_ok = bool((customer.get("stripe_referral_promotion_code_id") or "").strip())
+    referral_stripe_promo_ok = bool(_safe_str(customer.get("stripe_referral_promotion_code_id")))
     # True when every subscribe/upgrade link is for a pack that used to be on a subscription (Stripe sub deleted).
     account_resubscribe_mode = bool(subscribe_options) and all(
         (x.get("is_resubscribe") for x in subscribe_options)
@@ -1318,6 +1375,7 @@ def _account_context():
         "referral_discount_configured": referral_discount_configured,
         "referral_stripe_promo_ok": referral_stripe_promo_ok,
         "account_resubscribe_mode": account_resubscribe_mode,
+        "account_load_error": False,
     }
 
 

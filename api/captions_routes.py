@@ -2559,6 +2559,50 @@ def captions_resend_delivery():
         return jsonify({"ok": False, "error": str(e)}), 500
 
 
+def _pause_info_from_subscription(sub) -> dict:
+    """Build pause + cancellation dict from a Stripe Subscription object (already retrieved)."""
+    from datetime import datetime
+
+    out = {
+        "paused": False,
+        "resumes_at": None,
+        "cancel_at_period_end": False,
+        "cancelled_now": False,
+        "ends_at": None,
+    }
+    pc = sub.get("pause_collection")
+    if pc and isinstance(pc, dict):
+        resumes_ts = pc.get("resumes_at")
+        if resumes_ts:
+            try:
+                dt = datetime.utcfromtimestamp(resumes_ts)
+                out["paused"] = True
+                out["resumes_at"] = dt.strftime("%d %b %Y")
+            except (TypeError, ValueError, OSError):
+                out["paused"] = True
+        else:
+            out["paused"] = True
+    if sub.get("cancel_at_period_end"):
+        out["cancel_at_period_end"] = True
+        cancel_ts = sub.get("cancel_at") or sub.get("current_period_end")
+        if cancel_ts:
+            try:
+                dt = datetime.utcfromtimestamp(cancel_ts)
+                out["ends_at"] = dt.strftime("%d %b %Y")
+            except (TypeError, ValueError, OSError):
+                pass
+    if str(sub.get("status") or "").strip().lower() == "canceled":
+        out["cancelled_now"] = True
+        ended_ts = sub.get("ended_at") or sub.get("canceled_at") or sub.get("cancel_at")
+        if ended_ts:
+            try:
+                dt = datetime.utcfromtimestamp(ended_ts)
+                out["ends_at"] = dt.strftime("%d %b %Y")
+            except (TypeError, ValueError, OSError):
+                pass
+    return out
+
+
 def _get_subscription_pause_info(stripe_subscription_id: str):
     """Fetch subscription from Stripe; return pause + cancellation state for dashboard badges."""
     from api.stripe_utils import is_valid_stripe_subscription_id
@@ -2566,50 +2610,9 @@ def _get_subscription_pause_info(stripe_subscription_id: str):
         return None
     try:
         import stripe
-        from datetime import datetime
         stripe.api_key = Config.STRIPE_SECRET_KEY
         sub = stripe.Subscription.retrieve(stripe_subscription_id.strip())
-        out = {
-            "paused": False,
-            "resumes_at": None,
-            "cancel_at_period_end": False,  # scheduled cancellation
-            "cancelled_now": False,         # immediate cancellation already effective
-            "ends_at": None,
-        }
-        # Pause info
-        pc = sub.get("pause_collection")
-        if pc and isinstance(pc, dict):
-            resumes_ts = pc.get("resumes_at")
-            if resumes_ts:
-                try:
-                    dt = datetime.utcfromtimestamp(resumes_ts)
-                    out["paused"] = True
-                    out["resumes_at"] = dt.strftime("%d %b %Y")
-                except (TypeError, ValueError, OSError):
-                    out["paused"] = True
-            else:
-                out["paused"] = True
-        # Cancellation info (cancel at period end)
-        if sub.get("cancel_at_period_end"):
-            out["cancel_at_period_end"] = True
-            cancel_ts = sub.get("cancel_at") or sub.get("current_period_end")
-            if cancel_ts:
-                try:
-                    dt = datetime.utcfromtimestamp(cancel_ts)
-                    out["ends_at"] = dt.strftime("%d %b %Y")
-                except (TypeError, ValueError, OSError):
-                    pass
-        # Immediate cancellation
-        if (sub.get("status") or "").strip().lower() == "canceled":
-            out["cancelled_now"] = True
-            ended_ts = sub.get("ended_at") or sub.get("canceled_at") or sub.get("cancel_at")
-            if ended_ts:
-                try:
-                    dt = datetime.utcfromtimestamp(ended_ts)
-                    out["ends_at"] = dt.strftime("%d %b %Y")
-                except (TypeError, ValueError, OSError):
-                    pass
-        return out
+        return _pause_info_from_subscription(sub)
     except Exception:
         return None
 
