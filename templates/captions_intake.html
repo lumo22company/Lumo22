@@ -224,7 +224,7 @@
     {% if intake_view_only %}
     {% if oneoff_subscribe_checkout_mode|default(false) %}
     <h1>Upgrade to subscription</h1>
-    <p class="sub" style="margin-bottom: 1rem;">You’re moving from your one-off pack to a monthly subscription. Skim the brief below (it’s the one we already have on file), then use <strong>Confirm and continue to subscription checkout</strong> to open Stripe and finish payment.</p>
+    <p class="sub" style="margin-bottom: 1rem;">You’re moving from your one-off pack to a monthly subscription. Below is a summary of your answers—give them a last look, then use <strong>Confirm and continue to subscription checkout</strong> to open Stripe and pay.</p>
     {% else %}
     <h1>YOUR DETAILS</h1>
     <p class="sub" style="margin-bottom: 1rem;">Read-only snapshot of what we have on file for this <strong>one-off</strong> order. Your delivered PDF does not change.</p>
@@ -479,7 +479,7 @@
 
     {% if not intake_view_only or oneoff_subscribe_checkout_mode|default(false) %}
     <div id="review-step" class="review-step{% if oneoff_subscribe_checkout_mode|default(false) %} show{% endif %}" style="{% if oneoff_subscribe_checkout_mode|default(false) %}display: block;{% endif %}">
-      <h2 class="form-section" style="margin-bottom: 1rem; font-size: 1.75rem;">{% if oneoff_subscribe_checkout_mode|default(false) %}Your brief{% else %}Double-check your answers{% endif %}</h2>
+      <h2 class="form-section" style="margin-bottom: 1rem; font-size: 1.75rem;">Double-check your answers</h2>
       {% if not oneoff_subscribe_checkout_mode|default(false) %}
       <p class="sub" style="margin-bottom: 1.5rem;">Review before sending. Click Edit at the bottom of the form to change anything.</p>
       {% endif %}
