@@ -574,10 +574,20 @@ def captions_intake_page():
     intake_returning_editor = bool(order and order_status and order_status != "awaiting_intake")
     view_raw = (request.args.get("view") or "").strip().lower()
     pending_oneoff_intake = bool(order and is_oneoff and order_status == "awaiting_intake")
+    # Completed one-off (not yet subscribed): form is read-only; review step confirms → subscription checkout (no POST).
+    oneoff_subscribe_checkout_mode = bool(
+        token
+        and order
+        and is_oneoff
+        and not oneoff_consumed_by_subscription
+        and order_status
+        and order_status != "awaiting_intake"
+    )
     intake_view_only = bool(
         (
             view_raw in ("1", "true", "yes")
             or oneoff_consumed_by_subscription
+            or oneoff_subscribe_checkout_mode
         )
         and token
         and order
@@ -590,7 +600,31 @@ def captions_intake_page():
         if token and is_oneoff and not oneoff_consumed_by_subscription
         else ""
     )
-    r = make_response(render_template('captions_intake.html', intake_token=token, existing_intake=existing_intake, platforms_count=platforms_count, prefilled_platform=prefilled_platform, prefilled_primary=prefilled_primary, stories_paid=stories_paid, is_oneoff=is_oneoff, selected_platforms=selected_platforms, subscribe_url=subscribe_url, now=now, return_url=return_url, order_currency=order_currency, intake_add_platform_text=intake_add_platform_text, intake_add_stories_text=intake_add_stories_text, is_upgrade_flow=is_upgrade_flow, intake_returning_editor=intake_returning_editor, intake_view_only=intake_view_only, account_upgrade_base_url=account_upgrade_base_url, oneoff_upgraded_to_subscription=oneoff_consumed_by_subscription))
+    r = make_response(
+        render_template(
+            "captions_intake.html",
+            intake_token=token,
+            existing_intake=existing_intake,
+            platforms_count=platforms_count,
+            prefilled_platform=prefilled_platform,
+            prefilled_primary=prefilled_primary,
+            stories_paid=stories_paid,
+            is_oneoff=is_oneoff,
+            selected_platforms=selected_platforms,
+            subscribe_url=subscribe_url,
+            now=now,
+            return_url=return_url,
+            order_currency=order_currency,
+            intake_add_platform_text=intake_add_platform_text,
+            intake_add_stories_text=intake_add_stories_text,
+            is_upgrade_flow=is_upgrade_flow,
+            intake_returning_editor=intake_returning_editor,
+            intake_view_only=intake_view_only,
+            account_upgrade_base_url=account_upgrade_base_url,
+            oneoff_upgraded_to_subscription=oneoff_consumed_by_subscription,
+            oneoff_subscribe_checkout_mode=oneoff_subscribe_checkout_mode,
+        )
+    )
     r.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     r.headers['Pragma'] = 'no-cache'
     return r

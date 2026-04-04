@@ -215,13 +215,20 @@
     .intake-edit-preferences-modal .modal-error.show { display: block; }
   </style>
 </head>
-<body class="lumo-landing intake-page-body" data-current-customer-email="{{ (current_customer.email or '')|lower if current_customer else '' }}" data-return-url="{{ return_url or '' }}" data-intake-view-only="{{ 'true' if intake_view_only else 'false' }}">
+<body class="lumo-landing intake-page-body" data-current-customer-email="{{ (current_customer.email or '')|lower if current_customer else '' }}" data-return-url="{{ return_url or '' }}" data-intake-view-only="{{ 'true' if intake_view_only else 'false' }}" data-oneoff-subscribe-checkout="{{ 'true' if oneoff_subscribe_checkout_mode|default(false) else 'false' }}" data-subscribe-url="{{ subscribe_url or '' }}" data-auto-open-review="{{ 'true' if oneoff_subscribe_checkout_mode|default(false) else 'false' }}">
   {% include '_lumo_nav.html' %}
 
   <main class="intake-page">
     <!-- intake-form-version: 2025-02-v3 -->
     <div id="intake-intro-block">
     {% if intake_view_only %}
+    {% if oneoff_subscribe_checkout_mode|default(false) %}
+    <h1>READY TO SUBSCRIBE</h1>
+    <p class="sub" style="margin-bottom: 1rem;">Your <strong>one-off</strong> pack is complete and your brief is saved. Review your answers below, then confirm to open secure checkout for your monthly subscription—your saved brief carries into the subscription.</p>
+    <div class="intake-view-only-banner" style="border-color: rgba(201,162,39,0.6);">
+      <strong>This isn’t a save form anymore.</strong> We can’t update this one-off order from here. Use <strong>Confirm and continue to subscription checkout</strong> on the next step to subscribe; Stripe will set up your subscription and we’ll use this brief for your ongoing packs.
+    </div>
+    {% else %}
     <h1>YOUR DETAILS</h1>
     <p class="sub" style="margin-bottom: 1rem;">Read-only snapshot of what we have on file for this <strong>one-off</strong> order. Your delivered PDF does not change.</p>
     <div class="intake-view-only-banner">
@@ -234,6 +241,7 @@
       <span style="display: block; margin-top: 0.65rem; font-size: 0.88rem; font-weight: 500;">Want another 30-day pack without subscribing? <a href="/captions">Buy another one-off</a> (each order has its own brief).</span>
       {% endif %}
     </div>
+    {% endif %}
     {% else %}
     <h1>30 DAYS CAPTIONS — YOUR DETAILS</h1>
     <p class="sub">Complete this form so we can tailor your caption set. Your answers shape your voice, structure, and strategy for the month. The more detail you give, the better we can align your captions with your brand. Edits are free and will apply to your next pack.</p>
@@ -289,7 +297,7 @@
     {% endif %}
     <div id="intake-upgrade-cta" style="display: none; margin: 0 0 2rem; padding: 1rem 0;"></div>
 
-    <form id="captions-intake-form" action="#" method="post" data-platforms-count="{{ platforms_count }}">
+    <form id="captions-intake-form" action="#" method="post" data-platforms-count="{{ platforms_count }}" data-oneoff-subscribe-checkout="{{ 'true' if oneoff_subscribe_checkout_mode|default(false) else 'false' }}"{% if oneoff_subscribe_checkout_mode|default(false) %} style="display: none;"{% endif %}>
       {% if intake_view_only %}<fieldset class="intake-readonly-fieldset" disabled aria-label="Your saved details (read only)">{% endif %}
       <input type="hidden" name="token" id="intake_token" value="{{ intake_token }}" data-testid="intake_token">
       <p id="intake-validation-hint" style="display: none; margin: -0.5rem 0 1rem; font-size: 0.9rem; color: #c00;"></p>
@@ -463,21 +471,29 @@
         <textarea id="caption_examples" name="caption_examples" data-testid="caption_examples" placeholder="Paste example captions here" style="min-height: 140px;">{{ existing_intake.get('caption_examples', '') }}</textarea>
       </div>
       {% if intake_view_only %}</fieldset>{% endif %}
-      {% if not intake_view_only %}
+      {% if not intake_view_only or oneoff_subscribe_checkout_mode|default(false) %}
+      {% if not oneoff_subscribe_checkout_mode|default(false) %}
       <button type="button" class="btn-submit account-btn-swipe-light" id="btn-review">{% if intake_returning_editor %}REVIEW CHANGES{% else %}NEXT STEP{% endif %}</button>
+      {% endif %}
       {% else %}
       <p class="back" style="margin-top: 1.5rem;"><a href="/account/edit-form" class="intake-back-account">← Back to Edit form</a></p>
       {% endif %}
     </form>
 
-    {% if not intake_view_only %}
-    <div id="review-step" class="review-step">
+    {% if not intake_view_only or oneoff_subscribe_checkout_mode|default(false) %}
+    <div id="review-step" class="review-step{% if oneoff_subscribe_checkout_mode|default(false) %} show{% endif %}" style="{% if oneoff_subscribe_checkout_mode|default(false) %}display: block;{% endif %}">
       <h2 class="form-section" style="margin-bottom: 1rem; font-size: 1.75rem;">Double-check your answers</h2>
+      {% if oneoff_subscribe_checkout_mode|default(false) %}
+      <p class="sub" style="margin-bottom: 1.5rem;">This is what we’ll carry into your subscription at checkout. When you’re ready, confirm below to open Stripe and finish subscribing.</p>
+      {% else %}
       <p class="sub" style="margin-bottom: 1.5rem;">Review before sending. Click Edit at the bottom of the form to change anything.</p>
+      {% endif %}
       <div id="review-content"></div>
       <div class="review-actions">
+        {% if not oneoff_subscribe_checkout_mode|default(false) %}
         <button type="button" class="btn-submit btn-secondary account-btn-swipe-light" id="btn-edit">Edit</button>
-        <button type="button" class="btn-submit account-btn-swipe-light" id="btn-confirm">Send details</button>
+        {% endif %}
+        <button type="button" class="btn-submit account-btn-swipe-light" id="btn-confirm">{% if oneoff_subscribe_checkout_mode|default(false) %}Confirm and continue to subscription checkout{% else %}Send details{% endif %}</button>
       </div>
     </div>
     {% endif %}
@@ -850,6 +866,12 @@
         include_stories: !!(document.getElementById('include_stories') && document.getElementById('include_stories').checked),
         align_stories_to_captions: !!(document.getElementById('align_stories') && document.getElementById('align_stories').checked)
       };
+      var fOneOffChk = document.getElementById('captions-intake-form');
+      var subUrlEarly = (document.body.getAttribute('data-subscribe-url') || '').trim();
+      if (fOneOffChk && fOneOffChk.getAttribute('data-oneoff-subscribe-checkout') === 'true' && subUrlEarly) {
+        window.location.href = subUrlEarly;
+        return;
+      }
       var btn = document.getElementById('btn-confirm');
       if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
       fetch('/api/captions-intake', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
@@ -1223,6 +1245,7 @@
         var reviewStep = document.getElementById('review-step');
         var reviewContent = document.getElementById('review-content');
         if (!form || !reviewStep || !reviewContent) return;
+        var checkoutSkip = (document.body.getAttribute('data-oneoff-subscribe-checkout') === 'true');
       var launchHint = document.getElementById('launch-date-hint');
       var hintEl = document.getElementById('intake-validation-hint');
       if (hintEl) { hintEl.style.display = 'none'; hintEl.textContent = ''; }
@@ -1230,7 +1253,7 @@
         syncAudience();
         syncVoiceWords();
         if (document.querySelectorAll('.platform-btn, input[name="platform_cb"]').length) syncPlatforms();
-        if (!form.checkValidity()) {
+        if (!checkoutSkip && !form.checkValidity()) {
           form.reportValidity();
         var invalids = form.querySelectorAll(':invalid');
         invalids.forEach(function(el){ el.style.borderColor = '#c00'; el.style.backgroundColor = 'rgba(200,0,0,0.06)'; });
@@ -1269,7 +1292,9 @@
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
       window.doShowReview = showReview;
-      if (!form || !reviewStep || !reviewContent || !btnReview) return;
+      var checkoutModeEarly = (document.body.getAttribute('data-oneoff-subscribe-checkout') === 'true');
+      if (!form || !reviewStep || !reviewContent) return;
+      if (!btnReview && !checkoutModeEarly) return;
 
       function showForm() {
         var reviewStep = document.getElementById('review-step');
@@ -1278,6 +1303,12 @@
         if (form) form.style.display = 'block';
       }
       function submitForm() {
+        var f0 = document.getElementById('captions-intake-form');
+        var sub0 = (document.body.getAttribute('data-subscribe-url') || '').trim();
+        if (f0 && f0.getAttribute('data-oneoff-subscribe-checkout') === 'true' && sub0) {
+          window.location.href = sub0;
+          return;
+        }
         syncAudience();
         syncVoiceWords();
         if (document.querySelectorAll('.platform-btn, input[name="platform_cb"]').length) syncPlatforms();
@@ -1534,6 +1565,10 @@
         syncVoiceWords();
         toggleConsumerAge();
       })();
+
+      if (document.body.getAttribute('data-auto-open-review') === 'true') {
+        try { showReview(); } catch (eAutoReview) {}
+      }
 
       } catch (e) { if (typeof console !== 'undefined' && console.error) console.error('Intake setup:', e); }
 
