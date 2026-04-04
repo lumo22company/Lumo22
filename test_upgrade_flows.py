@@ -79,6 +79,7 @@ def test_get_pack_today_edit_form_first_ui():
     assert "return_url" in html
     assert "/account/upgrade" in html
     assert "captions-intake?t=" in html or "'/captions-intake?t='" in html
+    assert "edit=1" in html or "'edit=1'" in html or "&edit=1" in html
     assert "getPackToday" in html and "copyFrom" in html
     print("OK: Get my pack today + Edit form first UI and return_url link present.")
 

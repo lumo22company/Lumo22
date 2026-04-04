@@ -471,7 +471,7 @@
           if (editFormFirstLink) {
             if (copyFrom) {
               var upgradeStories = (storiesCb && storiesCb.checked) ? '1' : '0';
-              var editParams = 't=' + encodeURIComponent(copyFrom) + '&return_url=' + encodeURIComponent('/account/upgrade') + '&upgrade_stories=' + upgradeStories + '&platforms=' + encodeURIComponent(String(n)) + '&currency=' + encodeURIComponent(currency);
+              var editParams = 't=' + encodeURIComponent(copyFrom) + '&return_url=' + encodeURIComponent('/account/upgrade') + '&edit=1&upgrade_stories=' + upgradeStories + '&platforms=' + encodeURIComponent(String(n)) + '&currency=' + encodeURIComponent(currency);
               if (selected) editParams += '&selected=' + encodeURIComponent(selected);
               if (getPackToday) editParams += '&get_pack_now=1';
               editFormFirstLink.href = '/captions-intake?' + editParams;
