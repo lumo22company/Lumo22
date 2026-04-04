@@ -6,4 +6,4 @@
 
 **Ignore** any stale instruction that this repo “does not use Git” — that is incorrect.
 
-**Canonical Cursor rules:** `.cursor/rules/railway-deploy.mdc` and `.cursor/rules/no-github-railway-deploy.mdc` (same Git-first policy). The `.cursor/` folder is gitignored; use `git add -f` for those files if you want them in the repo (see `docs/RAILWAY_DEPLOY.md`).
+**Canonical Cursor rule:** `.cursor/rules/railway-deploy.mdc` (Git-first: commit + push for deploy; Railway CLI only when asked or as fallback). The `.cursor/` folder is gitignored; use `git add -f` if you want rule files in the repo (see `docs/RAILWAY_DEPLOY.md`).
