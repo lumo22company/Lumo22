@@ -152,6 +152,22 @@
       box-shadow: none;
     }
     .intake-page #intake-error { background: rgba(200,80,80,0.12); color: #1a1a1a; border: 1px solid rgba(200,80,80,0.3); }
+    .intake-page #intake-error .intake-error-main { margin: 0; }
+    .intake-page #intake-error .intake-error-plan-note { margin: 0.85rem 0 0; font-size: 0.9rem; line-height: 1.45; color: #444; }
+    .intake-draft-banner {
+      display: none;
+      margin: 0 0 1.25rem;
+      padding: 0.85rem 1rem;
+      background: rgba(201, 162, 39, 0.12);
+      border: 1px solid rgba(201, 162, 39, 0.45);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      color: #1a1a1a;
+    }
+    .intake-draft-banner strong { font-weight: 600; }
+    .intake-error-cta { margin-top: 0.85rem; padding-top: 0.75rem; border-top: 1px solid rgba(0,0,0,0.12); }
+    .intake-error-cta p { margin: 0 0 0.5rem; font-size: 0.9rem; font-weight: 600; color: #1a1a1a; }
+    a.intake-error-cta-link { display: inline-flex !important; align-items: center; justify-content: center; margin: 0.35rem 0.5rem 0 0; padding: 0.4rem 0.9rem !important; min-height: auto !important; font-size: 0.7rem !important; font-weight: 600 !important; letter-spacing: 0.2em !important; text-transform: uppercase !important; text-decoration: none !important; border-radius: var(--radius-btn, 8px); }
     .intake-page select { width: 100%; padding: 0.75rem 2.5rem 0.75rem 1rem; background-color: #fff; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 1rem center; background-size: 10px; -webkit-appearance: none; -moz-appearance: none; appearance: none; border: 1px solid #ccc; border-radius: 8px; color: #111; font-family: var(--font-body); font-size: 1rem; margin-bottom: 1.25rem; }
     .intake-page select:focus { outline: none; border-color: #666; }
     .intake-checkbox-group { display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem; margin-bottom: 0.25rem; }
@@ -257,7 +273,20 @@
         <p id="ca-already-has-account" style="display:none; margin:0; font-weight: 500;">You already have an account. <a href="/login" id="ca-login-link" class="intake-account-cta account-billing-portal-link account-btn-swipe-light" style="display: inline-block;">Log in</a></p>
       </div>
     </div>
-    <div id="intake-error" style="display: none; margin: 2rem 0; padding: 1.5rem; background: rgba(200,80,80,0.15); border-radius: 8px; color: #1a1a1a;"></div>
+    <div id="intake-error" style="display: none; margin: 2rem 0; padding: 1.5rem; background: rgba(200,80,80,0.15); border-radius: 8px; color: #1a1a1a;">
+      <p id="intake-error-main" class="intake-error-main"></p>
+      <p id="intake-error-plan-note" class="intake-error-plan-note" style="display: none;"></p>
+      <div id="intake-error-cta" class="intake-error-cta" style="display: none;">
+        <p>What to do next</p>
+        <a href="/account/upgrade" id="intake-error-upgrade-link" class="intake-error-cta-link account-btn-swipe-light" style="display: none;">Account → Upgrade</a>
+        <a href="/account/edit-form" id="intake-error-edit-form-link" class="intake-error-cta-link account-btn-swipe-light" style="display: none;">Edit form (subscription)</a>
+      </div>
+    </div>
+    {% if not intake_view_only %}
+    <div id="intake-draft-banner" class="intake-draft-banner" role="status">
+      <strong>Unsaved edits restored.</strong> We loaded your last answers from this browser. Submit when you are ready so we can save them to your order.
+    </div>
+    {% endif %}
     <div id="intake-upgrade-cta" style="display: none; margin: 0 0 2rem; padding: 1rem 0;"></div>
 
     <form id="captions-intake-form" action="#" method="post" data-platforms-count="{{ platforms_count }}">
@@ -522,6 +551,7 @@
           if (errEl) {
             errEl.textContent = (res.data && res.data.error) || 'Something went wrong. Please try again.';
             errEl.classList.add('show');
+            if (typeof window.lumoIntakeScrollTo === 'function') window.lumoIntakeScrollTo(errEl);
           }
           btns.forEach(function(b) { if (b) b.disabled = false; });
         })
@@ -529,6 +559,7 @@
           if (errEl) {
             errEl.textContent = 'Something went wrong. Please try again.';
             errEl.classList.add('show');
+            if (typeof window.lumoIntakeScrollTo === 'function') window.lumoIntakeScrollTo(errEl);
           }
           btns.forEach(function(b) { if (b) b.disabled = false; });
         });
@@ -567,6 +598,78 @@
   </main>
 
   {% if intake_token %}
+  <script>
+  (function(){
+    var PLAN_UPGRADE = 'Your answers are not saved on our servers yet. After checkout completes and the new price is active, come back to this page and tap Send details again to save (or open the form from your confirmation email).';
+    var PLAN_DOWNGRADE = 'Your answers are not saved yet. Accept the new price below first — then we will save your updates (tap Send details again if needed).';
+    window.lumoIntakeScrollTo = function(el) {
+      if (!el || !el.scrollIntoView) return;
+      try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) { el.scrollIntoView(true); }
+    };
+    window.lumoIntakeSetError = function(msg, planKind, meta) {
+      meta = meta || {};
+      var wrap = document.getElementById('intake-error');
+      var main = document.getElementById('intake-error-main');
+      var plan = document.getElementById('intake-error-plan-note');
+      var cta = document.getElementById('intake-error-cta');
+      var upgradeL = document.getElementById('intake-error-upgrade-link');
+      var editL = document.getElementById('intake-error-edit-form-link');
+      if (main) main.textContent = msg || '';
+      if (plan) {
+        if (planKind === 'upgrade') { plan.textContent = PLAN_UPGRADE; plan.style.display = 'block'; }
+        else if (planKind === 'downgrade') { plan.textContent = PLAN_DOWNGRADE; plan.style.display = 'block'; }
+        else { plan.textContent = ''; plan.style.display = 'none'; }
+      }
+      if (cta && upgradeL && editL) {
+        upgradeL.style.display = 'none';
+        editL.style.display = 'none';
+        var showCta = false;
+        if (meta.upgrade_account_url) {
+          upgradeL.href = meta.upgrade_account_url;
+          upgradeL.style.display = 'inline-flex';
+          showCta = true;
+        }
+        if (meta.upgraded_to_subscription && meta.account_edit_form_url) {
+          editL.href = meta.account_edit_form_url;
+          editL.style.display = 'inline-flex';
+          showCta = true;
+        }
+        cta.style.display = showCta ? 'block' : 'none';
+      }
+      if (wrap) wrap.style.display = 'block';
+      setTimeout(function() {
+        if (wrap && wrap.offsetParent !== null) window.lumoIntakeScrollTo(wrap);
+      }, 50);
+      setTimeout(function() {
+        var stripeCta = document.getElementById('intake-upgrade-cta');
+        if (stripeCta && stripeCta.style.display !== 'none' && stripeCta.offsetHeight) window.lumoIntakeScrollTo(stripeCta);
+      }, 450);
+    };
+    window.lumoIntakeSetErrorFromApiResult = function(result) {
+      var j = result.json || {};
+      var pk = j.downgrade_required ? 'downgrade' : ((j.upgrade_required && j.upgrade_url) ? 'upgrade' : null);
+      window.lumoIntakeSetError(
+        j.error || 'Something didn\'t send — try again or email us at hello@lumo22.com.',
+        pk,
+        { upgrade_account_url: j.upgrade_account_url, account_edit_form_url: j.account_edit_form_url, upgraded_to_subscription: j.upgraded_to_subscription }
+      );
+    };
+    window.lumoIntakeClearError = function() {
+      var wrap = document.getElementById('intake-error');
+      var main = document.getElementById('intake-error-main');
+      var plan = document.getElementById('intake-error-plan-note');
+      var cta = document.getElementById('intake-error-cta');
+      var upgradeL = document.getElementById('intake-error-upgrade-link');
+      var editL = document.getElementById('intake-error-edit-form-link');
+      if (main) main.textContent = '';
+      if (plan) { plan.textContent = ''; plan.style.display = 'none'; }
+      if (cta) cta.style.display = 'none';
+      if (upgradeL) upgradeL.style.display = 'none';
+      if (editL) editL.style.display = 'none';
+      if (wrap) wrap.style.display = 'none';
+    };
+  })();
+  </script>
   <script>
   (function(){
     var c = document.getElementById('audience_cb_consumers');
@@ -659,7 +762,7 @@
         var invalids = form.querySelectorAll(':invalid');
         invalids.forEach(function(el){ el.style.borderColor = '#c00'; el.style.backgroundColor = 'rgba(200,0,0,0.06)'; });
         var inv = invalids[0]; if (inv && inv.scrollIntoView) inv.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        if (hint) { hint.textContent = 'Please complete the required fields.'; hint.style.display = 'block'; }
+        if (hint) { hint.textContent = 'Please complete the required fields.'; hint.style.display = 'block'; if (typeof window.lumoIntakeScrollTo === 'function') window.lumoIntakeScrollTo(hint); }
         return;
       }
       function sect(t,v){ var p = document.createElement('p'); p.textContent = v || '(not provided)'; if(!v) p.className = 'empty'; var h = document.createElement('h3'); h.textContent = t; var d = document.createElement('div'); d.className = 'review-section'; d.appendChild(h); d.appendChild(p); return d; }
@@ -753,6 +856,7 @@
         .then(function(r){ return r.json().then(function(j){ return { status: r.status, json: j }; }); })
         .then(function(result) {
           if (result.status === 200 && result.json.success) {
+            if (typeof window.intakeDraftMarkClean === 'function') window.intakeDraftMarkClean();
             var returnUrl = (document.body.getAttribute('data-return-url') || '').trim();
             if (returnUrl) {
               if (returnUrl.indexOf('/account/upgrade') !== -1) {
@@ -837,9 +941,8 @@
               if (caSignupWrap && custEmail) { caSignupWrap.style.display = 'block'; }
             }
           } else {
-            var errEl = document.getElementById('intake-error');
             var ctaEl = document.getElementById('intake-upgrade-cta');
-            if (errEl) { errEl.textContent = result.json.error || 'Something didn\'t send — try again or email us at hello@lumo22.com.'; errEl.style.display = 'block'; }
+            if (typeof lumoIntakeSetErrorFromApiResult === 'function') lumoIntakeSetErrorFromApiResult(result);
             if (ctaEl) {
               if (result.json.downgrade_required) {
                 var sym = result.json.new_price_symbol || '£';
@@ -865,12 +968,13 @@
                       if (res.ok) {
                         ctaEl.style.display = 'none';
                         ctaEl.innerHTML = '';
-                        if (errEl) errEl.style.display = 'none';
+                        if (typeof lumoIntakeClearError === 'function') lumoIntakeClearError();
                         if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
                         fetch('/api/captions-intake', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
                           .then(function(r){ return r.json().then(function(j){ return { status: r.status, json: j }; }); })
                           .then(function(r2) {
                             if (r2.status === 200 && r2.json.success) {
+                              if (typeof window.intakeDraftMarkClean === 'function') window.intakeDraftMarkClean();
                               var rs = document.getElementById('review-step');
                               if (rs) rs.classList.remove('show');
                               var successEl = document.getElementById('intake-success');
@@ -886,27 +990,27 @@
                               var msgEl = document.getElementById('intake-success-msg');
                               if (msgEl) msgEl.textContent = r2.json.message || 'Your form has been updated.';
                             } else {
-                              if (errEl) { errEl.textContent = r2.json.error || 'Could not save.'; errEl.style.display = 'block'; }
+                              if (typeof lumoIntakeSetError === 'function') lumoIntakeSetError(r2.json.error || 'Could not save.', null);
                               dbtn.disabled = false;
                               dbtn.textContent = 'Accept new price — ' + sym + price + '/month';
                             }
                             if (btn) { btn.disabled = false; btn.textContent = 'Send details'; }
                           })
                           .catch(function() {
-                            if (errEl) { errEl.textContent = 'Could not save — try again.'; errEl.style.display = 'block'; }
+                            if (typeof lumoIntakeSetError === 'function') lumoIntakeSetError('Could not save — try again.', null);
                             dbtn.disabled = false;
                             dbtn.textContent = 'Accept new price — ' + sym + price + '/month';
                             if (btn) { btn.disabled = false; btn.textContent = 'Send details'; }
                           });
                       } else {
-                        if (errEl) { errEl.textContent = res.error || 'Could not update plan.'; errEl.style.display = 'block'; }
+                        if (typeof lumoIntakeSetError === 'function') lumoIntakeSetError(res.error || 'Could not update plan.', null);
                         dbtn.disabled = false;
                         dbtn.textContent = 'Accept new price — ' + sym + price + '/month';
                         if (btn) { btn.disabled = false; btn.textContent = 'Send details'; }
                       }
                     })
                     .catch(function() {
-                      if (errEl) { errEl.textContent = 'Could not update plan — try again.'; errEl.style.display = 'block'; }
+                      if (typeof lumoIntakeSetError === 'function') lumoIntakeSetError('Could not update plan — try again.', null);
                       dbtn.disabled = false;
                       dbtn.textContent = 'Accept new price — ' + sym + price + '/month';
                       if (btn) { btn.disabled = false; btn.textContent = 'Send details'; }
@@ -922,8 +1026,7 @@
           }
         })
         .catch(function() {
-          var errEl = document.getElementById('intake-error');
-          if (errEl) { errEl.textContent = 'Something didn\'t send — try again or email hello@lumo22.com.'; errEl.style.display = 'block'; }
+          if (typeof lumoIntakeSetError === 'function') lumoIntakeSetError('Something didn\'t send — try again or email hello@lumo22.com.', null);
           var ctaEl = document.getElementById('intake-upgrade-cta');
           if (ctaEl) { ctaEl.style.display = 'none'; ctaEl.innerHTML = ''; }
           if (btn) { btn.disabled = false; btn.textContent = 'Send details'; }
@@ -1133,7 +1236,7 @@
         invalids.forEach(function(el){ el.style.borderColor = '#c00'; el.style.backgroundColor = 'rgba(200,0,0,0.06)'; });
         var firstInvalid = invalids[0];
         if (firstInvalid && firstInvalid.scrollIntoView) firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        if (hintEl) { hintEl.textContent = 'Please complete the required fields.'; hintEl.style.display = 'block'; }
+        if (hintEl) { hintEl.textContent = 'Please complete the required fields.'; hintEl.style.display = 'block'; if (typeof window.lumoIntakeScrollTo === 'function') window.lumoIntakeScrollTo(hintEl); }
           return;
         }
         reviewContent.innerHTML = '';
@@ -1215,6 +1318,7 @@
         .then(function(r) { return r.json().then(function(j) { return { status: r.status, json: j }; }); })
         .then(function(result) {
           if (result.status === 200 && result.json.success) {
+            if (typeof window.intakeDraftMarkClean === 'function') window.intakeDraftMarkClean();
             var returnUrl = (document.body.getAttribute('data-return-url') || '').trim();
             if (returnUrl) {
               if (returnUrl.indexOf('/account/upgrade') !== -1) {
@@ -1251,14 +1355,14 @@
             var custEmail = (result.json.customer_email || '').trim();
             document.getElementById('ca-email').value = custEmail;
           } else {
-            var errEl = document.getElementById('intake-error');
             var launchHint = document.getElementById('launch-date-hint');
             var ctaEl = document.getElementById('intake-upgrade-cta');
-            if (errEl) { errEl.textContent = result.json.error || 'Something didn\'t send — try again or email us at hello@lumo22.com.'; errEl.style.display = 'block'; }
+            if (typeof lumoIntakeSetErrorFromApiResult === 'function') lumoIntakeSetErrorFromApiResult(result);
             if (launchHint && result.json && result.json.error && result.json.error.toLowerCase().indexOf("outside your next 30-day captions window") !== -1) {
               launchHint.textContent = result.json.error;
               launchHint.style.display = 'block';
               var launchField = document.getElementById('launch_event_description');
+              if (typeof window.lumoIntakeScrollTo === 'function') window.lumoIntakeScrollTo(launchHint);
               if (launchField && launchField.scrollIntoView) launchField.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
             if (ctaEl) {
@@ -1286,16 +1390,16 @@
                       if (res.ok) {
                         ctaEl.style.display = 'none';
                         ctaEl.innerHTML = '';
-                        if (errEl) errEl.style.display = 'none';
+                        if (typeof lumoIntakeClearError === 'function') lumoIntakeClearError();
                         submitForm();
                       } else {
-                        if (errEl) { errEl.textContent = res.error || 'Could not update plan.'; errEl.style.display = 'block'; }
+                        if (typeof lumoIntakeSetError === 'function') lumoIntakeSetError(res.error || 'Could not update plan.', null);
                         btn.disabled = false;
                         btn.textContent = 'Accept new price — ' + sym + price + '/month';
                       }
                     })
                     .catch(function() {
-                      if (errEl) { errEl.textContent = 'Could not update plan — try again.'; errEl.style.display = 'block'; }
+                      if (typeof lumoIntakeSetError === 'function') lumoIntakeSetError('Could not update plan — try again.', null);
                       btn.disabled = false;
                       btn.textContent = 'Accept new price — ' + sym + price + '/month';
                     });
@@ -1311,8 +1415,7 @@
           }
         })
         .catch(function() {
-          document.getElementById('intake-error').textContent = 'Something didn\'t send — try again or email hello@lumo22.com.';
-          document.getElementById('intake-error').style.display = 'block';
+          if (typeof lumoIntakeSetError === 'function') lumoIntakeSetError('Something didn\'t send — try again or email hello@lumo22.com.', null);
           var ctaEl = document.getElementById('intake-upgrade-cta');
           if (ctaEl) { ctaEl.style.display = 'none'; ctaEl.innerHTML = ''; }
           btnConfirm.disabled = false;
@@ -1437,6 +1540,9 @@
       }); // end runWhenReady
     })();
   </script>
+  {% if not intake_view_only %}
+  <script src="{{ url_for('static', filename='js/intake_draft.js') }}?v={{ asset_version }}"></script>
+  {% endif %}
   {% endif %}
   <script src="{{ url_for('static', filename='js/landing.js') }}?v={{ asset_version }}"></script>
   {% include '_footer.html' %}
