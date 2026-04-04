@@ -289,6 +289,81 @@ def test_oneoff_prefills_platform_when_order_has_no_selected_platforms():
     assert "Instagram &amp; Facebook" in html
 
 
+def test_intake_substantive_brief_helper():
+    from app import _intake_missing_substantive_brief_fields
+
+    assert _intake_missing_substantive_brief_fields(None) is True
+    assert _intake_missing_substantive_brief_fields({}) is True
+    assert _intake_missing_substantive_brief_fields({"business_name": "Only"}) is True
+    assert _intake_missing_substantive_brief_fields(
+        {"business_name": "X", "offer_one_line": "We help", "goal": "Grow"}
+    ) is False
+
+
+def test_subscription_prefill_when_db_only_has_business_name():
+    """Upgrade sub row may only have checkout-seeded business_name; one-off brief must merge for Edit form."""
+    from app import app
+
+    order_a = {
+        "id": "ord-a",
+        "token": "token-a",
+        "customer_email": "same@example.com",
+        "platforms_count": 1,
+        "selected_platforms": "Instagram & Facebook",
+        "include_stories": True,
+        "stripe_subscription_id": None,
+        "intake": {
+            "business_name": "Test Business",
+            "business_type": "Coach / Mentor",
+            "platform": "Instagram & Facebook",
+            "audience": "busy founders",
+            "offer_one_line": "We help founders ship",
+            "goal": "Build authority",
+        },
+    }
+    order_b = {
+        "id": "ord-b",
+        "token": "token-b",
+        "customer_email": "same@example.com",
+        "platforms_count": 1,
+        "selected_platforms": "Instagram & Facebook",
+        "include_stories": True,
+        "stripe_subscription_id": "sub_xxx",
+        "status": "awaiting_intake",
+        "intake": {"business_name": "Test Business"},
+        "upgraded_from_token": "token-a",
+    }
+
+    class FakeService:
+        def get_by_token(self, tok):
+            if tok == "token-a":
+                return order_a
+            if tok == "token-b":
+                return order_b
+            return None
+
+        def update_intake_only(self, order_id, intake):
+            assert str(order_id) == "ord-b"
+            order_b["intake"] = dict(intake)
+            return True
+
+    def fake_get_current_customer():
+        return {"id": "cust-same", "email": "same@example.com"}
+
+    with app.test_client() as client:
+        with patch("services.caption_order_service.CaptionOrderService", FakeService), \
+             patch("api.auth_routes.get_current_customer", side_effect=fake_get_current_customer), \
+             patch("app.get_current_customer", side_effect=fake_get_current_customer):
+            r = client.get("/captions-intake?t=token-b")
+
+    assert r.status_code == 200
+    html = r.data.decode("utf-8")
+    assert "busy founders" in html
+    assert "We help founders ship" in html
+    assert "Coach / Mentor" in html
+    assert order_b.get("intake", {}).get("goal") == "Build authority"
+
+
 if __name__ == "__main__":
     # Patch at module level - app imports CaptionOrderService in the route
     # We need to patch where it's used: in app.captions_intake_page it's "from services.caption_order_service import CaptionOrderService"
@@ -302,4 +377,6 @@ if __name__ == "__main__":
     test_no_subscribe_url_for_subscription()
     test_subscription_checkout_guest_redirects_to_signup()
     test_oneoff_prefills_platform_when_order_has_no_selected_platforms()
+    test_intake_substantive_brief_helper()
+    test_subscription_prefill_when_db_only_has_business_name()
     print("\nAll tests passed.")

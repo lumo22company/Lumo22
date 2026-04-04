@@ -357,6 +357,24 @@ def _normalize_next_url(raw_next: str | None) -> str | None:
     return decoded
 
 
+def _intake_missing_substantive_brief_fields(intake: dict | None) -> bool:
+    """True when intake is empty or only checkout-seeded (e.g. business_name) without real brief answers.
+    Used so one-off → subscription upgrade still pre-fills the full one-off brief when Stripe only stored a name."""
+    if not intake or not isinstance(intake, dict):
+        return True
+    substantive = (
+        "business_type",
+        "offer_one_line",
+        "audience_cares",
+        "goal",
+        "usual_topics",
+        "voice_words",
+        "audience",
+        "launch_event_description",
+    )
+    return not any(str(intake.get(k) or "").strip() for k in substantive)
+
+
 @app.route('/captions-intake')
 def captions_intake_page():
     """Intake form for 30 Days Captions (sent to client after payment). Token in ?t= links form to order.
@@ -393,7 +411,8 @@ def captions_intake_page():
                     oneoff_consumed_by_subscription = svc.has_subscription_upgraded_from_oneoff_token(token)
                 # copy_from: only prefill when this order was explicitly upgraded from that one-off (one-off→subscription flow).
                 # If account was deleted and user resubscribes, order has no upgraded_from_token so we do not prefill.
-                if not existing_intake and copy_from:
+                # Also merge when Stripe only seeded business_name (existing_intake truthy but not a real brief).
+                if (not existing_intake or _intake_missing_substantive_brief_fields(existing_intake)) and copy_from:
                     upgraded_from = (order.get("upgraded_from_token") or "").strip()
                     if upgraded_from and upgraded_from == copy_from:
                         src_order = svc.get_by_token(copy_from)
@@ -401,10 +420,13 @@ def captions_intake_page():
                             src_email = (src_order.get("customer_email") or "").strip().lower()
                             cur_email = (order.get("customer_email") or "").strip().lower()
                             if src_email and cur_email and src_email == cur_email:
-                                existing_intake = src_order.get("intake") or {}
+                                src_i = src_order.get("intake") if isinstance(src_order.get("intake"), dict) else {}
+                                existing_intake = {**src_i, **(existing_intake or {})}
                 # Subscription upgraded from one-off: prefill from base order even without ?copy_from=…
-                # (e.g. "Complete the form" from account only passes ?t=sub_token).
-                if not existing_intake and (order.get("stripe_subscription_id") or "").strip():
+                # (e.g. account "Edit form" only passes ?t=sub_token). Merge if intake empty or seed-only.
+                if (not existing_intake or _intake_missing_substantive_brief_fields(existing_intake)) and (
+                    order.get("stripe_subscription_id") or ""
+                ).strip():
                     upgraded_from = (order.get("upgraded_from_token") or "").strip()
                     if upgraded_from:
                         src_order = svc.get_by_token(upgraded_from)
@@ -412,7 +434,8 @@ def captions_intake_page():
                             src_email = (src_order.get("customer_email") or "").strip().lower()
                             cur_email = (order.get("customer_email") or "").strip().lower()
                             if src_email and cur_email and src_email == cur_email:
-                                existing_intake = src_order.get("intake") or {}
+                                src_i = src_order.get("intake") if isinstance(src_order.get("intake"), dict) else {}
+                                existing_intake = {**src_i, **(existing_intake or {})}
         except Exception:
             pass
     # Subscription orders: require login and session email must match order
@@ -449,12 +472,16 @@ def captions_intake_page():
                 if selected_for_sub:
                     merged["platform"] = selected_for_sub
                 merged["include_stories"] = bool(order.get("include_stories"))
-                if (merged.get("business_name") or "").strip() and not (db_intake.get("business_name") or "").strip():
-                    oid = order.get("id")
-                    if oid and svc_auth.update_intake_only(str(oid), merged):
+                # Always show merged in the form when we have a base one-off (fixes seed-only business_name on sub row).
+                if src_intake:
+                    existing_intake = merged
+                # Persist full merge when the subscription row still lacks a real brief (e.g. only business_name from Stripe).
+                oid = order.get("id")
+                if oid and src_intake and _intake_missing_substantive_brief_fields(db_intake):
+                    if svc_auth.update_intake_only(str(oid), merged):
                         order = svc_auth.get_by_token(token)
-                if order and isinstance(order.get("intake"), dict) and (order["intake"].get("business_name") or "").strip():
-                    existing_intake = order["intake"]
+                        if order and isinstance(order.get("intake"), dict):
+                            existing_intake = order["intake"]
         except Exception:
             pass
     return_url = request.args.get("return_url", "").strip()
