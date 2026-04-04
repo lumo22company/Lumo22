@@ -101,7 +101,7 @@
       {% endif %}
       {% if is_upgrade_from_oneoff|default(false) %}
       <p style="font-size: 0.9rem; color: #fff; margin: 1.5rem 0 1rem; padding: 0.75rem 1rem; background: #000; border-radius: 8px; border: 2px solid #fff;">Your first subscription pack is scheduled <strong>30 days after your one-off pack</strong> (no overlap). We use the answers you confirmed on the previous page for your subscription brief—you can still edit anytime in your account, including if you add platforms or Story Ideas here.</p>
-      <p style="font-size: 0.9rem; color: var(--lum-text-muted); margin: 0 0 0.75rem;">No charge today. <strong>{{ currency_symbol|default('£') }}{{ total_sub|default(79) }}/month</strong> starts when your first subscription pack is ready{% if first_charge_date %} ({{ first_charge_date }}){% else %} (30 days after your one-off pack is delivered){% endif %}. Optional promo code on Stripe. Continuing means you agree.</p>
+      <p style="font-size: 0.9rem; color: var(--lum-text-muted); margin: 0 0 0.75rem;">No charge today. <strong>{{ currency_symbol|default('£') }}{{ total_sub|default(79) }}/month</strong> starts when your first subscription pack is ready{% if first_charge_date %} ({{ first_charge_date }}){% else %} (30 days after your one-off pack is delivered){% endif %}.</p>
       {% if can_get_pack_now|default(false) %}
       <div id="get-pack-now-option" style="margin: 1rem 0 1rem; padding: 1rem; background: rgba(255,242,0,0.08); border: 1px solid rgba(255,242,0,0.35); border-radius: 8px;">
         <label style="display: flex; align-items: flex-start; gap: 0.75rem; cursor: pointer;">
@@ -122,7 +122,7 @@
           </span>
         </label>
       </div>
-      <p class="price-note">Renews monthly until you cancel (Stripe customer portal). After payment you’ll complete a short form—captions ready in about 15 minutes.</p>
+      <p class="price-note">Renews monthly until you cancel (Stripe customer portal).{% if is_upgrade_from_oneoff|default(false) %} Your form answers are already on file—we’ll use them for your subscription packs.{% else %} After payment you’ll complete a short form—captions ready in about 15 minutes.{% endif %}</p>
 
       {% if not platforms_invalid|default(false) %}
       <div class="checkout-business-field">
