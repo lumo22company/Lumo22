@@ -73,30 +73,32 @@ Optional for multi-currency: `STRIPE_CAPTIONS_PRICE_ID_USD`, `STRIPE_CAPTIONS_PR
 
 ---
 
-## 4b. OAuth — Google and Sign in with Apple (optional)
+## 4b. OAuth — Google Sign-In (optional)
 
-Buttons on `/login` and `/signup` appear only when the matching variables are set. Run **`database_customers_oauth.sql`** in the Supabase SQL editor first (`password_hash` nullable + `google_sub` / `apple_sub`).
+**Continue with Google** on `/login` and `/signup` appears only when both variables below are set. Run **`database_customers_oauth.sql`** in the Supabase SQL editor first (`password_hash` nullable + `google_sub`).
 
-**Google Cloud Console** (APIs & Services → Credentials → OAuth 2.0 Client ID, type *Web application*):
+**Google Cloud Console** — register the callback URL (this is what fixes **Error 400: redirect_uri_mismatch**):
 
-- **Authorized redirect URI:** `https://www.lumo22.com/api/auth/oauth/google/callback` (add your Railway preview URL for staging if needed)
+1. **Set `BASE_URL` on Railway** to your real public site, with **no** trailing slash (e.g. `https://www.lumo22.com`). Redeploy if you change it.
+2. **Get the exact callback URL from your live app** (after deploy):
+   - In a browser, open: `https://www.lumo22.com/oauth-config-check` (use your real domain).
+   - Find the line under **“Copy this into Google”** — it looks like:  
+     `https://www.lumo22.com/api/auth/oauth/google/callback`  
+   - **Select that whole line** (triple-click or drag from `https` through `callback`) and **Copy** (Cmd+C / Ctrl+C).  
+   - *Alternative:* open `https://www.lumo22.com/api/auth/oauth/status` in the browser; in the JSON, copy the value of **`redirect_uri`** (quotes not included — only the URL string).
+3. **Paste it into Google Cloud Console:**
+   - Go to [Google Cloud Console](https://console.cloud.google.com/) → select your project.
+   - **APIs & Services** → **Credentials**.
+   - Under **OAuth 2.0 Client IDs**, click your **Web client** (the one whose Client ID matches `GOOGLE_OAUTH_CLIENT_ID` in Railway).
+   - Under **Authorized redirect URIs**, click **+ ADD URI**.
+   - **Paste** what you copied in step 2 into the new field. Do not add a trailing `/` or spaces.
+   - Click **SAVE** at the bottom of the page. Google can take a minute or two to apply the change; try **Continue with Google** again after that.
+4. **If you use a second domain** (e.g. a Railway URL for staging), repeat step 2 on that host’s `/oauth-config-check`, copy that different `redirect_uri`, and **ADD URI** again in the same Google client so **both** URLs are listed.
 
 | Variable | Description |
 |----------|-------------|
 | **GOOGLE_OAUTH_CLIENT_ID** | Client ID ending in `.apps.googleusercontent.com` |
 | **GOOGLE_OAUTH_CLIENT_SECRET** | Client secret |
-
-**Apple Developer** — step-by-step: **`docs/APPLE_SIGN_IN_SETUP.md`**.
-
-- **Return URL (exact):** `https://www.lumo22.com/api/auth/oauth/apple/callback`
-- You need an **App ID** with Sign in with Apple, a **Services ID** (web client id), a **Key** (.p8), and **domain verification** for `www.lumo22.com` when Apple asks.
-
-| Variable | Description |
-|----------|-------------|
-| **APPLE_OAUTH_CLIENT_ID** | **Services ID** identifier (e.g. `com.lumo22.web`) — alias **APPLE_CLIENT_ID** |
-| **APPLE_OAUTH_TEAM_ID** | Team ID — alias **APPLE_TEAM_ID** |
-| **APPLE_OAUTH_KEY_ID** | Key ID — alias **APPLE_KEY_ID** |
-| **APPLE_OAUTH_PRIVATE_KEY** | Full `.p8` PEM (use `\n` for newlines in Railway), **or** prefer **APPLE_OAUTH_PRIVATE_KEY_B64** (base64 of the file — see doc) |
 
 ---
 

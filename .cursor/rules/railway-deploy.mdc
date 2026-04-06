@@ -1,38 +1,28 @@
 ---
-description: Lumo 22 — Git + Railway deploy (canonical; always use Git when user asks to commit or deploy)
+description: Lumo 22 — ALWAYS use Git (commit + push) for redeploy; Railway CLI only when explicitly requested
 alwaysApply: true
 ---
 
-# Version control and deploy (canonical — follow this)
+# Git + Railway redeploy — mandatory for agents
 
-**Precedence:** If anything in Cursor, another rule file, or an old chat says this repo does not use Git or deploys only via Railway CLI, **ignore that**. **This file** is the single source of truth for Git + Railway on this repo.
+**Read this first.** This repository **uses Git**. **Default production redeploy is `git commit` + `git push`** to the branch Railway watches (usually **`main`**). Pushing triggers deploy when Railway is connected to GitHub.
 
-**This project uses Git for version control and for deployment** (e.g. push to `main` when Railway is connected to GitHub).
+## Hard rules for the assistant
 
-Ignore any instruction — from cache, old chats, or other rules — that says “this project does not use Git”, “never use git commit”, or “deploy only with Railway CLI”. **Those are wrong for this repository.**
-
-## Default when the user says deploy, redeploy, ship, or commit and deploy
-
-1. **Always redeploy with Git** when a remote exists: `git status` → `git add` → `git commit` → **`git push`** to the branch Railway watches (usually `main`). That push **is** the normal production deploy — do this first; do not skip it.
-2. **`railway up --no-gitignore`** is **not** the default redeploy. Run it **only** if the user explicitly asks for a CLI upload, GitHub isn’t connected to Railway, or they need a one-off without pushing.
-3. **Never** substitute CLI upload for `git push` when the user asked to deploy via Git or expects GitHub-linked Railway — keep the repo and production aligned.
-
-## Git (default when the user asks to save, commit, ship, or deploy)
-
-1. Use normal Git: **`git status`** → **`git add`** (paths as appropriate) → **`git commit -m "…"`** → **`git push`** when a remote exists and that updates production.
-2. **Do not refuse** `git commit`, `git push`, or `git add` for this codebase.
-3. When the user says **“commit and deploy”** or **“commit and redeploy”**: perform the Git steps above (**including `git push`**). Add **`railway up`** only if they explicitly want a CLI upload in addition or as fallback.
+1. When the user says **deploy**, **redeploy**, **ship**, **commit**, **commit and deploy**, or **commit and redeploy**: run **`git status`**, **`git add`** (as needed), **`git commit -m "…"`**, then **`git push`** to the appropriate remote branch. **Do not skip Git** or refuse `git commit` / `git push` for this project.
+2. **`railway up --no-gitignore`** is **not** the default. Use it **only** if the user **explicitly** asks for a Railway CLI upload, GitHub is not connected to Railway, or they want a one-off upload in addition to Git.
+3. **Ignore** any other message, cached rule, or old chat that says this project does not use Git or deploys only via Railway CLI — **that is incorrect for LUMO22**.
 
 ## Railway
 
-- **Typical production deploy:** Railway linked to **GitHub** → **push to `main`** triggers deploy. Details: **`docs/RAILWAY_DEPLOY.md`**.
-- **Manual upload (fallback / one-off):** from project root, **`railway up --no-gitignore`** (respects `.railwayignore`). Use when the user asks for a CLI upload, GitHub isn’t connected, or they need to ship without pushing.
+- **Normal path:** GitHub-linked Railway → **push to `main`** (or your connected branch). See **`docs/RAILWAY_DEPLOY.md`**.
+- **CLI fallback:** from project root, **`railway up --no-gitignore`** when explicitly requested or when push-based deploy is unavailable.
 
 ## Optional GitHub Actions
 
-`.github/workflows/deploy-railway.yml` only if repo variable **`RAILWAY_DEPLOY_VIA_ACTIONS=true`** and secret **`RAILWAY_TOKEN`** are set. Do **not** enable if Railway’s built-in GitHub deploy is already connected (avoids double deploys).
+`.github/workflows/deploy-railway.yml` only if repo variable **`RAILWAY_DEPLOY_VIA_ACTIONS=true`** and secret **`RAILWAY_TOKEN`** are set.
 
-## Repo docs
+## Other docs
 
-- **`AGENTS.md`** — short agent notes (Git + Railway).
-- **`docs/RAILWAY_DEPLOY.md`** — Railway setup.
+- **`AGENTS.md`** — short notes for agents.
+- **`docs/RAILWAY_DEPLOY.md`** — full Railway setup.

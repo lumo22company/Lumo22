@@ -1,6 +1,7 @@
 """
 Main Flask application for Lumo 22 (30 Days Captions).
 """
+import html
 import os
 import time
 import json
@@ -49,7 +50,7 @@ from api.auth_routes import (
 )
 from api.passkey_routes import passkey_bp
 from api.billing_routes import billing_bp
-from api.oauth_routes import oauth_bp, init_customer_oauth
+from api.oauth_routes import oauth_bp, init_customer_oauth, google_oauth_redirect_uri
 from services.login_guard import check_locked, record_failure, clear_failures
 
 app = Flask(__name__)
@@ -147,10 +148,6 @@ def inject_asset_version():
         out['oauth_google_enabled'] = Config.oauth_google_configured()
     except Exception:
         out['oauth_google_enabled'] = False
-    try:
-        out['oauth_apple_enabled'] = Config.oauth_apple_configured()
-    except Exception:
-        out['oauth_apple_enabled'] = False
     return out
 
 # Register blueprints
@@ -1046,13 +1043,12 @@ def customer_login_page():
             "profile": "We could not load your profile from the provider. Try again.",
             "unverified": "That account’s email is not verified with the provider. Try another method.",
             "link": "This sign-in is already linked to a different account. Contact hello@lumo22.com if you need help.",
-            "exists": "An account with this email already exists. Log in with your password, then use Continue with Google or Apple to link that sign-in.",
-            "registered": "That Google or Apple account is already registered. Log in with the same button.",
+            "exists": "An account with this email already exists. Log in with your password, then use Continue with Google to link that sign-in.",
+            "registered": "That Google account is already registered. Log in with Continue with Google.",
             "create": "We could not create your account. Try again or use email sign-up.",
             "disabled": "That sign-in method is not available yet.",
             "denied": "Sign-in was cancelled.",
-            "apple": "Sign in with Apple did not complete. Try again.",
-            "token": "Could not verify with Apple. Try again.",
+            "token": "Sign-in with the provider did not complete. Try again.",
             "callback": "Sign-in with Google did not complete. Try again.",
         }
         oauth_error_message = _oem.get(oe) or "Sign-in did not complete. Try again or use email and password."
@@ -1954,18 +1950,27 @@ def front_desk_setup_done_page():
 
 @app.route("/oauth-config-check")
 def oauth_config_check_page():
-    """Plain HTML: shows whether Google/Apple OAuth env is visible to the server (for Railway debugging)."""
+    """Plain HTML: shows whether Google OAuth env is visible to the server (for Railway debugging)."""
     google_ok = Config.oauth_google_configured()
-    apple_ok = Config.oauth_apple_configured()
+    redirect_line = ""
+    if google_ok:
+        ru = google_oauth_redirect_uri()
+        redirect_line = (
+            "<h2 style='font-size:1.1rem;margin:1.5rem 0 0.5rem'>Copy this into Google</h2>"
+            "<p><strong>1.</strong> Select the whole line in the box below and copy it (triple-click the line, then Cmd+C or Ctrl+C).</p>"
+            f"<pre style='background:#f4f4f4;padding:0.75rem 1rem;border-radius:8px;overflow:auto;font-size:0.9rem;margin:0.5rem 0 1rem'>{html.escape(ru)}</pre>"
+            "<p><strong>2.</strong> In Google Cloud Console: <strong>APIs &amp; Services</strong> → <strong>Credentials</strong> → your <strong>OAuth 2.0 Client ID</strong> (Web application) → <strong>Authorized redirect URIs</strong> → <strong>+ ADD URI</strong> → paste → <strong>SAVE</strong>.</p>"
+            "<p>The pasted value must match this page <strong>character for character</strong> (including <code>https</code> and <code>www</code> if shown). Wrong host = set Railway <code>BASE_URL</code> to your public URL and redeploy, then refresh this page and update Google.</p>"
+        )
     body = (
         "<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'><title>OAuth config</title>"
         "<meta name='robots' content='noindex'>"
         "<style>body{font-family:system-ui,sans-serif;max-width:36rem;margin:2rem auto;padding:0 1rem;line-height:1.5}"
-        "code{background:#f0f0f0;padding:0.1rem 0.35rem;border-radius:4px}</style></head><body>"
-        "<h1>OAuth on this server</h1>"
+        "code{background:#f0f0f0;padding:0.1rem 0.35rem;border-radius:4px;word-break:break-all}</style></head><body>"
+        "<h1>Google OAuth on this server</h1>"
         f"<p><strong>Google:</strong> {'Yes &mdash; Continue with Google should appear on /login after a hard refresh.' if google_ok else 'No &mdash; set <code>GOOGLE_OAUTH_CLIENT_ID</code> and <code>GOOGLE_OAUTH_CLIENT_SECRET</code> on this Railway service, then redeploy.'}</p>"
-        f"<p><strong>Apple:</strong> {'Yes' if apple_ok else 'No (optional)'}</p>"
-        "<p>JSON: <code>GET /api/auth/oauth/status</code> (same info; use curl if the browser shows a 404 page).</p>"
+        f"{redirect_line}"
+        "<p>JSON: <code>GET /api/auth/oauth/status</code> (includes <code>redirect_uri</code> when configured).</p>"
         "<p><a href='/login'>Log in</a> · <a href='/'>Home</a></p>"
         "</body></html>"
     )

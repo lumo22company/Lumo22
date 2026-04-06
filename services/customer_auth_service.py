@@ -94,20 +94,8 @@ class CustomerAuthService:
             return result.data[0]
         return None
 
-    def get_by_apple_sub(self, apple_sub: str) -> Optional[Dict[str, Any]]:
-        if not (apple_sub or "").strip():
-            return None
-        result = self.client.table(self.table).select("*").eq("apple_sub", apple_sub.strip()).execute()
-        if result.data and len(result.data) > 0:
-            return result.data[0]
-        return None
-
     def _google_sub_taken_by_other(self, google_sub: str, exclude_customer_id: str) -> bool:
         row = self.get_by_google_sub(google_sub)
-        return bool(row and str(row.get("id")) != str(exclude_customer_id))
-
-    def _apple_sub_taken_by_other(self, apple_sub: str, exclude_customer_id: str) -> bool:
-        row = self.get_by_apple_sub(apple_sub)
         return bool(row and str(row.get("id")) != str(exclude_customer_id))
 
     def link_google_sub(self, customer_id: str, google_sub: str) -> bool:
@@ -125,43 +113,24 @@ class CustomerAuthService:
         except Exception:
             return False
 
-    def link_apple_sub(self, customer_id: str, apple_sub: str) -> bool:
-        if not customer_id or not (apple_sub or "").strip():
-            return False
-        if self._apple_sub_taken_by_other(apple_sub, customer_id):
-            return False
-        try:
-            self.client.table(self.table).update({
-                "apple_sub": apple_sub.strip(),
-                "updated_at": datetime.utcnow().isoformat(),
-            }).eq("id", str(customer_id)).execute()
-            return True
-        except Exception:
-            return False
-
     def create_oauth(
         self,
         email: str,
         *,
-        google_sub: Optional[str] = None,
-        apple_sub: Optional[str] = None,
+        google_sub: str,
         referral_code: Optional[str] = None,
         marketing_opt_in: bool = False,
     ) -> Dict[str, Any]:
         """
-        New account from Google or Apple (verified email from IdP).
-        password_hash is omitted (NULL). Exactly one of google_sub / apple_sub must be set.
+        New account from Google (verified email from IdP). password_hash is NULL.
         """
         if not email or "@" not in email:
             raise ValueError("Valid email required")
         gs = (google_sub or "").strip()
-        ap = (apple_sub or "").strip()
-        if bool(gs) == bool(ap):
-            raise ValueError("OAuth provider subject required")
-        if gs and self.get_by_google_sub(gs):
+        if not gs:
+            raise ValueError("Google account subject required")
+        if self.get_by_google_sub(gs):
             raise ValueError("This Google account is already registered")
-        if ap and self.get_by_apple_sub(ap):
-            raise ValueError("This Apple account is already registered")
         existing = self.get_by_email(email)
         if existing:
             raise ValueError("An account with this email already exists")
@@ -174,14 +143,11 @@ class CustomerAuthService:
             "email": email.strip().lower(),
             "password_hash": None,
             "email_verified": True,
+            "google_sub": gs,
             "referral_code": self._generate_referral_code().upper(),
             "referred_by_customer_id": referrer_id,
             "marketing_opt_in": bool(marketing_opt_in),
         }
-        if gs:
-            row["google_sub"] = gs
-        if ap:
-            row["apple_sub"] = ap
         result = self.client.table(self.table).insert(row).execute()
         if not result.data:
             raise RuntimeError("Failed to create customer")
@@ -492,7 +458,7 @@ class CustomerAuthService:
         if not customer.get("password_hash"):
             return (
                 False,
-                "You sign in with Google or Apple. Use Forgot password to set a password for this account, or keep using that sign-in method.",
+                "You sign in with Google. Use Forgot password to set a password for this account, or keep signing in with Google.",
             )
         if not self.verify_password(customer, current_password):
             return (False, "Current password is incorrect.")

@@ -1,18 +1,13 @@
 """
-Google and Sign in with Apple for customer accounts.
-State is signed (itsdangerous) so Apple form_post callbacks work without relying on the session cookie.
+Google OAuth for customer accounts (Sign in with Google).
 """
 from __future__ import annotations
 
 import logging
-import time
+import os
 from typing import Optional
 
-import jwt
-import requests
 from authlib.integrations.flask_client import OAuth
-import os
-
 from flask import Blueprint, jsonify, redirect, request, url_for
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
@@ -26,14 +21,18 @@ oauth = OAuth()
 
 @oauth_bp.route("/status", methods=["GET"])
 def oauth_status():
-    """Debug: whether OAuth env is set (no secrets returned). Open /api/auth/oauth/status on production."""
-    return jsonify(
-        {
-            "google_configured": Config.oauth_google_configured(),
-            "apple_configured": Config.oauth_apple_configured(),
-            "hint": "Railway needs GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET (exact names). Redeploy after adding.",
-        }
-    )
+    """Debug: whether Google OAuth env is set (no secrets returned)."""
+    payload = {
+        "google_configured": Config.oauth_google_configured(),
+        "hint": "Railway needs GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET (exact names). Redeploy after adding.",
+    }
+    if Config.oauth_google_configured():
+        payload["redirect_uri"] = google_oauth_redirect_uri()
+        payload["redirect_uri_hint"] = (
+            "Add this exact URL under Google Cloud Console → APIs & Services → Credentials → "
+            "your OAuth 2.0 Client → Authorized redirect URIs. Error 400 redirect_uri_mismatch means it is missing or differs (www vs non-www, http vs https)."
+        )
+    return jsonify(payload)
 
 
 def _oauth_state_serializer() -> URLSafeTimedSerializer:
@@ -59,6 +58,29 @@ def unpack_oauth_state(state_str: str) -> dict:
     return _oauth_state_serializer().loads(state_str, max_age=900)
 
 
+def _canonical_base_url_for_oauth() -> str:
+    """Public site URL for OAuth callback. Matches Stripe redirect normalization (apex lumo22.com → www)."""
+    base = (Config.BASE_URL or "").strip().rstrip("/")
+    if not base:
+        return ""
+    if not base.startswith("http://") and not base.startswith("https://"):
+        base = "https://" + base
+    if base in ("https://lumo22.com", "http://lumo22.com"):
+        return "https://www.lumo22.com"
+    return base
+
+
+def google_oauth_redirect_uri() -> str:
+    """
+    Exact redirect_uri sent to Google. Must match an Authorized redirect URI in Google Cloud Console
+    character-for-character (scheme, host, path; no trailing slash).
+    """
+    base = _canonical_base_url_for_oauth()
+    if base:
+        return f"{base}/api/auth/oauth/google/callback"
+    return url_for("oauth.google_callback", _external=True)
+
+
 def init_customer_oauth(app):
     oauth.init_app(app)
     g_cid = (os.getenv("GOOGLE_OAUTH_CLIENT_ID") or "").strip()
@@ -71,39 +93,6 @@ def init_customer_oauth(app):
             client_secret=g_sec,
             client_kwargs={"scope": "openid email profile"},
         )
-
-
-def _apple_oauth_client_id() -> str:
-    return (os.getenv("APPLE_OAUTH_CLIENT_ID") or os.getenv("APPLE_CLIENT_ID") or "").strip()
-
-
-def _apple_client_secret() -> str:
-    team = (os.getenv("APPLE_OAUTH_TEAM_ID") or os.getenv("APPLE_TEAM_ID") or "").strip()
-    cid = _apple_oauth_client_id()
-    kid = (os.getenv("APPLE_OAUTH_KEY_ID") or os.getenv("APPLE_KEY_ID") or "").strip()
-    pem = Config.apple_oauth_private_key_pem()
-    now = int(time.time())
-    payload = {
-        "iss": team,
-        "iat": now,
-        "exp": now + 86400 * 150,
-        "aud": "https://appleid.apple.com",
-        "sub": cid,
-    }
-    headers = {"kid": kid, "alg": "ES256"}
-    return jwt.encode(payload, pem, algorithm="ES256", headers=headers)
-
-
-def _decode_apple_id_token(id_token: str) -> dict:
-    jwk_client = jwt.PyJWKClient("https://appleid.apple.com/auth/keys")
-    signing_key = jwk_client.get_signing_key_from_jwt(id_token)
-    return jwt.decode(
-        id_token,
-        signing_key.key,
-        algorithms=["RS256"],
-        audience=_apple_oauth_client_id(),
-        issuer="https://appleid.apple.com",
-    )
 
 
 def _google_userinfo(token: dict) -> dict:
@@ -119,13 +108,7 @@ def _google_userinfo(token: dict) -> dict:
     return {}
 
 
-def _finish_oauth(
-    provider: str,
-    subject: str,
-    email: Optional[str],
-    referral: str,
-    next_url: str,
-):
+def _finish_google_oauth(subject: str, email: str, referral: str, next_url: str):
     subject = (subject or "").strip()
     if not subject:
         return redirect("/login?oauth_error=profile")
@@ -133,11 +116,7 @@ def _finish_oauth(
     svc = CustomerAuthService()
     client_ip = (request.headers.get("X-Forwarded-For") or request.remote_addr or "").split(",")[0].strip()
 
-    if provider == "google":
-        row = svc.get_by_google_sub(subject)
-    else:
-        row = svc.get_by_apple_sub(subject)
-
+    row = svc.get_by_google_sub(subject)
     if row:
         if not row.get("email_verified", True):
             return redirect("/login?oauth_error=unverified")
@@ -155,11 +134,7 @@ def _finish_oauth(
     if by_email:
         if not by_email.get("email_verified", True):
             return redirect("/login?oauth_error=unverified")
-        if provider == "google":
-            ok = svc.link_google_sub(str(by_email["id"]), subject)
-        else:
-            ok = svc.link_apple_sub(str(by_email["id"]), subject)
-        if not ok:
+        if not svc.link_google_sub(str(by_email["id"]), subject):
             return redirect("/login?oauth_error=link")
         svc.update_last_login(by_email["id"])
         fresh = svc.get_by_id(str(by_email["id"]))
@@ -172,8 +147,7 @@ def _finish_oauth(
     try:
         new_row = svc.create_oauth(
             email_l,
-            google_sub=subject if provider == "google" else None,
-            apple_sub=subject if provider == "apple" else None,
+            google_sub=subject,
             referral_code=(referral or "").strip() or None,
             marketing_opt_in=False,
         )
@@ -200,7 +174,7 @@ def google_start():
     next_raw = (request.args.get("next") or "").strip()
     ref = (request.args.get("ref") or "").strip()
     state = pack_oauth_state(next_raw, ref)
-    redirect_uri = url_for("oauth.google_callback", _external=True)
+    redirect_uri = google_oauth_redirect_uri()
     return oauth.google.authorize_redirect(redirect_uri, state=state, prompt="select_account")
 
 
@@ -220,8 +194,7 @@ def google_callback():
             return redirect("/login?oauth_error=unverified")
         if not sub or not email:
             return redirect("/login?oauth_error=profile")
-        return _finish_oauth(
-            "google",
+        return _finish_google_oauth(
             sub,
             email,
             data.get("r") or "",
@@ -232,88 +205,3 @@ def google_callback():
     except Exception as e:
         logging.exception("Google OAuth: %s", e)
         return redirect("/login?oauth_error=callback")
-
-
-@oauth_bp.route("/apple/start")
-def apple_start():
-    if not Config.oauth_apple_configured():
-        return redirect("/login?oauth_error=disabled")
-    next_raw = (request.args.get("next") or "").strip()
-    ref = (request.args.get("ref") or "").strip()
-    state = pack_oauth_state(next_raw, ref)
-    redirect_uri = url_for("oauth.apple_callback", _external=True)
-    qs = {
-        "response_type": "code",
-        "response_mode": "form_post",
-        "client_id": Config.APPLE_OAUTH_CLIENT_ID,
-        "redirect_uri": redirect_uri,
-        "scope": "openid email name",
-        "state": state,
-    }
-    from urllib.parse import urlencode
-
-    return redirect("https://appleid.apple.com/auth/authorize?" + urlencode(qs))
-
-
-@oauth_bp.route("/apple/callback", methods=["POST"])
-def apple_callback():
-    if not Config.oauth_apple_configured():
-        return redirect("/login?oauth_error=disabled")
-    err = (request.form.get("error") or "").strip()
-    if err:
-        return redirect("/login?oauth_error=" + ("denied" if err == "user_cancelled_authorize" else "apple"))
-
-    code = (request.form.get("code") or "").strip()
-    state_raw = (request.form.get("state") or "").strip()
-    if not code or not state_raw:
-        return redirect("/login?oauth_error=apple")
-
-    try:
-        data = unpack_oauth_state(state_raw)
-    except (BadSignature, SignatureExpired, ValueError):
-        return redirect("/login?oauth_error=state")
-
-    redirect_uri = url_for("oauth.apple_callback", _external=True)
-    try:
-        secret = _apple_client_secret()
-    except Exception as e:
-        logging.exception("Apple client secret: %s", e)
-        return redirect("/login?oauth_error=apple")
-
-    tr = requests.post(
-        "https://appleid.apple.com/auth/token",
-        data={
-            "client_id": _apple_oauth_client_id(),
-            "client_secret": secret,
-            "code": code,
-            "grant_type": "authorization_code",
-            "redirect_uri": redirect_uri,
-        },
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-        timeout=25,
-    )
-    if not tr.ok:
-        logging.warning("Apple token exchange: %s %s", tr.status_code, (tr.text or "")[:300])
-        return redirect("/login?oauth_error=token")
-
-    body = tr.json()
-    id_token = body.get("id_token")
-    if not id_token:
-        return redirect("/login?oauth_error=token")
-
-    try:
-        claims = _decode_apple_id_token(id_token)
-    except Exception as e:
-        logging.warning("Apple id_token verify: %s", e)
-        return redirect("/login?oauth_error=token")
-
-    sub = (claims.get("sub") or "").strip()
-    email = (claims.get("email") or "").strip().lower() or None
-
-    return _finish_oauth(
-        "apple",
-        sub,
-        email,
-        data.get("r") or "",
-        data.get("n") or "/account",
-    )

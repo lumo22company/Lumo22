@@ -39,8 +39,20 @@
       border: 1px solid rgba(255,255,255,0.35); transition: transform 0.2s ease, border-color 0.2s ease;
       box-sizing: border-box;
     }
-    .auth-oauth-btn--google { background: #fff; color: #1a1a1a; }
-    .auth-oauth-btn--apple { background: #000; color: #fff; border-color: #333; }
+    .auth-oauth-btn--google {
+      background: var(--lum-gold);
+      color: #000;
+      border: none;
+      text-decoration: none;
+    }
+    a.auth-oauth-btn--google:hover,
+    a.auth-oauth-btn--google:focus,
+    a.auth-oauth-btn--google:visited,
+    a.auth-oauth-btn--google:active {
+      background: var(--lum-gold);
+      color: #000;
+      text-decoration: none;
+    }
     .auth-oauth-btn:hover { transform: translateY(-2px); }
     .auth-oauth-or { text-align: center; font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--lum-text-muted); margin: 0 0 1.25rem; }
     .auth-oauth-or span { display: inline-block; padding: 0 0.5rem; }
@@ -129,14 +141,9 @@
     <h1>Create your account</h1>
     <p class="sub">One account for your Captions.</p>
 
-    {% if oauth_google_enabled|default(false) or oauth_apple_enabled|default(false) %}
-    <div class="auth-oauth-row" role="group" aria-label="Sign up with Google or Apple">
-      {% if oauth_google_enabled|default(false) %}
+    {% if oauth_google_enabled|default(false) %}
+    <div class="auth-oauth-row" role="group" aria-label="Sign up with Google">
       <a class="auth-oauth-btn auth-oauth-btn--google" href="{{ url_for('oauth.google_start', next=(next_url or '/account'), ref=(signup_referral or '')) }}">Continue with Google</a>
-      {% endif %}
-      {% if oauth_apple_enabled|default(false) %}
-      <a class="auth-oauth-btn auth-oauth-btn--apple" href="{{ url_for('oauth.apple_start', next=(next_url or '/account'), ref=(signup_referral or '')) }}">Continue with Apple</a>
-      {% endif %}
     </div>
     <p class="auth-oauth-or"><span>or sign up with email</span></p>
     {% endif %}

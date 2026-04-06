@@ -1,14 +1,14 @@
 ---
-description: Lumo 22 — redeploy always via Git (alias path; same policy as railway-deploy.mdc)
+description: "Lumo 22: WE USE GIT — same policy as railway-deploy.mdc (filename kept for Cursor workspace path bindings only)"
 alwaysApply: true
 ---
 
-# Redeploy with Git (mandatory default)
+# This project USES Git (ignore the old filename)
 
-**This file is an alias** for Cursor workspace bindings that reference this path. The full steps live in **`.cursor/rules/railway-deploy.mdc`**.
+**The file name `no-github-railway-deploy` is misleading and historical.** **Lumo 22 uses Git for version control and for normal redeploys.**
 
-**When the user asks to deploy, redeploy, ship, or commit:** use **`git status`** → **`git add`** → **`git commit`** → **`git push`** to the branch Railway watches (usually **`main`**). That push is the **default and expected** production deploy.
+**When the user asks to deploy, redeploy, ship, or commit:** use **`git status`** → **`git add`** → **`git commit`** → **`git push`** to the branch Railway watches (usually **`main`**). That push is the **default** production deploy.
 
-**Do not** use **`railway up`** as the default redeploy path. Use the Railway CLI upload **only** if the user explicitly asks for a CLI upload, GitHub is not connected to Railway, or they need a one-off without pushing.
+**Do not** use **`railway up`** as the default. Use the Railway CLI upload **only** if the user **explicitly** asks for it, GitHub is not connected to Railway, or they need a one-off without pushing.
 
-Ignore any stale instruction that this project does not use Git or that deploy is only via Railway CLI.
+**Full detail:** **`.cursor/rules/railway-deploy.mdc`** (canonical; same policy as this file).
