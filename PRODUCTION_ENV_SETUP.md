@@ -86,16 +86,17 @@ Buttons on `/login` and `/signup` appear only when the matching variables are se
 | **GOOGLE_OAUTH_CLIENT_ID** | Client ID ending in `.apps.googleusercontent.com` |
 | **GOOGLE_OAUTH_CLIENT_SECRET** | Client secret |
 
-**Apple Developer** (Certificates, Identifiers & Profiles → Identifiers → Services ID for “Sign in with Apple”, plus a **Key** for that service):
+**Apple Developer** — step-by-step: **`docs/APPLE_SIGN_IN_SETUP.md`**.
 
-- **Return URLs:** `https://www.lumo22.com/api/auth/oauth/apple/callback` (must match exactly)
+- **Return URL (exact):** `https://www.lumo22.com/api/auth/oauth/apple/callback`
+- You need an **App ID** with Sign in with Apple, a **Services ID** (web client id), a **Key** (.p8), and **domain verification** for `www.lumo22.com` when Apple asks.
 
 | Variable | Description |
 |----------|-------------|
-| **APPLE_OAUTH_CLIENT_ID** | Services ID (e.g. `com.example.web`) — alias **APPLE_CLIENT_ID** also works |
+| **APPLE_OAUTH_CLIENT_ID** | **Services ID** identifier (e.g. `com.lumo22.web`) — alias **APPLE_CLIENT_ID** |
 | **APPLE_OAUTH_TEAM_ID** | Team ID — alias **APPLE_TEAM_ID** |
 | **APPLE_OAUTH_KEY_ID** | Key ID — alias **APPLE_KEY_ID** |
-| **APPLE_OAUTH_PRIVATE_KEY** | Full `.p8` PEM (use `\n` for newlines in Railway), **or** **APPLE_OAUTH_PRIVATE_KEY_B64** (base64 of the PEM file) |
+| **APPLE_OAUTH_PRIVATE_KEY** | Full `.p8` PEM (use `\n` for newlines in Railway), **or** prefer **APPLE_OAUTH_PRIVATE_KEY_B64** (base64 of the file — see doc) |
 
 ---
 

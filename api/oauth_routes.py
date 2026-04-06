@@ -61,20 +61,26 @@ def unpack_oauth_state(state_str: str) -> dict:
 
 def init_customer_oauth(app):
     oauth.init_app(app)
-    if Config.oauth_google_configured():
+    g_cid = (os.getenv("GOOGLE_OAUTH_CLIENT_ID") or "").strip()
+    g_sec = (os.getenv("GOOGLE_OAUTH_CLIENT_SECRET") or "").strip()
+    if g_cid and g_sec:
         oauth.register(
             name="google",
             server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
-            client_id=Config.GOOGLE_OAUTH_CLIENT_ID,
-            client_secret=Config.GOOGLE_OAUTH_CLIENT_SECRET,
+            client_id=g_cid,
+            client_secret=g_sec,
             client_kwargs={"scope": "openid email profile"},
         )
 
 
+def _apple_oauth_client_id() -> str:
+    return (os.getenv("APPLE_OAUTH_CLIENT_ID") or os.getenv("APPLE_CLIENT_ID") or "").strip()
+
+
 def _apple_client_secret() -> str:
-    team = Config.APPLE_OAUTH_TEAM_ID
-    cid = Config.APPLE_OAUTH_CLIENT_ID
-    kid = Config.APPLE_OAUTH_KEY_ID
+    team = (os.getenv("APPLE_OAUTH_TEAM_ID") or os.getenv("APPLE_TEAM_ID") or "").strip()
+    cid = _apple_oauth_client_id()
+    kid = (os.getenv("APPLE_OAUTH_KEY_ID") or os.getenv("APPLE_KEY_ID") or "").strip()
     pem = Config.apple_oauth_private_key_pem()
     now = int(time.time())
     payload = {
@@ -95,7 +101,7 @@ def _decode_apple_id_token(id_token: str) -> dict:
         id_token,
         signing_key.key,
         algorithms=["RS256"],
-        audience=Config.APPLE_OAUTH_CLIENT_ID,
+        audience=_apple_oauth_client_id(),
         issuer="https://appleid.apple.com",
     )
 
@@ -277,7 +283,7 @@ def apple_callback():
     tr = requests.post(
         "https://appleid.apple.com/auth/token",
         data={
-            "client_id": Config.APPLE_OAUTH_CLIENT_ID,
+            "client_id": _apple_oauth_client_id(),
             "client_secret": secret,
             "code": code,
             "grant_type": "authorization_code",
