@@ -226,9 +226,7 @@ def login():
 
         svc.update_last_login(customer["id"])
 
-        session.permanent = True
-        session["customer_id"] = str(customer["id"])
-        session["customer_email"] = customer["email"]
+        set_customer_session(customer)
         clear_failures(email, client_ip)
 
         return jsonify({"ok": True, "email": customer["email"]}), 200

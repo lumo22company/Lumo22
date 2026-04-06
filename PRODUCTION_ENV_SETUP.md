@@ -73,6 +73,32 @@ Optional for multi-currency: `STRIPE_CAPTIONS_PRICE_ID_USD`, `STRIPE_CAPTIONS_PR
 
 ---
 
+## 4b. OAuth — Google and Sign in with Apple (optional)
+
+Buttons on `/login` and `/signup` appear only when the matching variables are set. Run **`database_customers_oauth.sql`** in the Supabase SQL editor first (`password_hash` nullable + `google_sub` / `apple_sub`).
+
+**Google Cloud Console** (APIs & Services → Credentials → OAuth 2.0 Client ID, type *Web application*):
+
+- **Authorized redirect URI:** `https://www.lumo22.com/api/auth/oauth/google/callback` (add your Railway preview URL for staging if needed)
+
+| Variable | Description |
+|----------|-------------|
+| **GOOGLE_OAUTH_CLIENT_ID** | Client ID ending in `.apps.googleusercontent.com` |
+| **GOOGLE_OAUTH_CLIENT_SECRET** | Client secret |
+
+**Apple Developer** (Certificates, Identifiers & Profiles → Identifiers → Services ID for “Sign in with Apple”, plus a **Key** for that service):
+
+- **Return URLs:** `https://www.lumo22.com/api/auth/oauth/apple/callback` (must match exactly)
+
+| Variable | Description |
+|----------|-------------|
+| **APPLE_OAUTH_CLIENT_ID** | Services ID (e.g. `com.example.web`) — alias **APPLE_CLIENT_ID** also works |
+| **APPLE_OAUTH_TEAM_ID** | Team ID — alias **APPLE_TEAM_ID** |
+| **APPLE_OAUTH_KEY_ID** | Key ID — alias **APPLE_KEY_ID** |
+| **APPLE_OAUTH_PRIVATE_KEY** | Full `.p8` PEM (use `\n` for newlines in Railway), **or** **APPLE_OAUTH_PRIVATE_KEY_B64** (base64 of the PEM file) |
+
+---
+
 ## 5. Railway (or similar) steps
 
 1. Open your project → **Variables** (or **Environment**).

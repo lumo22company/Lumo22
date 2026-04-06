@@ -44,6 +44,19 @@
     .auth-passkey-btn { margin-top: 0; background: transparent !important; color: var(--lum-gold) !important; border: 2px solid var(--lum-gold) !important; }
     .auth-passkey-btn:hover:not(:disabled) { background: var(--lum-gold) !important; color: #000 !important; }
     .auth-passkey-hint { display: none; font-size: 0.78rem; color: var(--lum-text-muted); margin: 0.5rem 0 0; line-height: 1.4; }
+    .auth-oauth-row { display: flex; flex-direction: column; gap: 0.65rem; margin-bottom: 0.75rem; }
+    .auth-oauth-btn {
+      display: flex; align-items: center; justify-content: center;
+      width: 100%; min-height: 48px; padding: 0.65rem 1rem;
+      border-radius: var(--radius-btn); font-size: 0.95rem; font-weight: 600; text-decoration: none;
+      border: 1px solid rgba(255,255,255,0.35); transition: transform 0.2s ease, border-color 0.2s ease;
+      box-sizing: border-box;
+    }
+    .auth-oauth-btn--google { background: #fff; color: #1a1a1a; }
+    .auth-oauth-btn--apple { background: #000; color: #fff; border-color: #333; }
+    .auth-oauth-btn:hover { transform: translateY(-2px); }
+    .auth-oauth-or { text-align: center; font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--lum-text-muted); margin: 0 0 1rem; }
+    .auth-oauth-or span { display: inline-block; padding: 0 0.5rem; }
   </style>
 </head>
 <body class="lumo-landing">
@@ -62,6 +75,22 @@
         <p class="block-label">Your account</p>
         <h1 class="block-title">Log in</h1>
         <p class="block-desc">Access your Captions in one place.</p>
+
+        {% if oauth_error_message|default('') %}
+        <div class="auth-msg error" style="display: block; margin-bottom: 1rem;">{{ oauth_error_message }}</div>
+        {% endif %}
+
+        {% if oauth_google_enabled|default(false) or oauth_apple_enabled|default(false) %}
+        <div class="auth-oauth-row" role="group" aria-label="Log in with Google or Apple">
+          {% if oauth_google_enabled|default(false) %}
+          <a class="auth-oauth-btn auth-oauth-btn--google" href="{{ url_for('oauth.google_start', next=next_url or '/account') }}">Continue with Google</a>
+          {% endif %}
+          {% if oauth_apple_enabled|default(false) %}
+          <a class="auth-oauth-btn auth-oauth-btn--apple" href="{{ url_for('oauth.apple_start', next=next_url or '/account') }}">Continue with Apple</a>
+          {% endif %}
+        </div>
+        <p class="auth-oauth-or"><span>or</span></p>
+        {% endif %}
 
         <form id="login-form" action="/login" method="post">
           <input type="hidden" name="next" value="{{ next_url|default(request.args.get('next', '/account'))|e }}">

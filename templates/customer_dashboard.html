@@ -229,7 +229,7 @@
           <li>Your delivered PDF does not change when you subscribe; new edits apply to future subscription packs.</li>
         </ul>
         {% endif %}
-        <ul class="account-edit-form-list">
+        <ul class="account-edit-form-list" id="account-edit-form-list"{% if defer_stripe_billing|default(false) %} data-needs-billing-fetch="{{ '1' if edit_form_needs_deferred_billing|default(false) else '0' }}"{% endif %}>
           {% for o in edit_form_orders %}
           {% set biz = ((o.get('intake') or {}).get('business_name') or '')|trim %}
           {% set is_sub_row = (o.get('stripe_subscription_id') or '')|trim %}
@@ -855,8 +855,10 @@
       (function deferredAccountBilling() {
         if (!document.body.getAttribute('data-account-defer-stripe')) return;
         var pauseRoot = document.getElementById('account-pause-billing-deferred-root');
-        var editRows = document.querySelectorAll('.account-edit-form-row[data-order-token]');
-        if (!pauseRoot && !editRows.length) return;
+        var editList = document.getElementById('account-edit-form-list');
+        var editNeedsBilling = editList && editList.getAttribute('data-needs-billing-fetch') === '1';
+        // Pause page needs Stripe HTML; Edit form only when at least one subscription row (badges). One-off-only lists skip the extra DB + Stripe round trip.
+        if (!pauseRoot && !editNeedsBilling) return;
         fetch('/api/account/billing-data', { credentials: 'same-origin' })
           .then(function(r) { return r.json(); })
           .then(function(data) {

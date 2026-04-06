@@ -220,6 +220,46 @@ class Config:
             flush=True,
         )
 
+    # Optional OAuth: set in Railway to show "Continue with Google / Apple" on login & signup.
+    GOOGLE_OAUTH_CLIENT_ID = (os.getenv("GOOGLE_OAUTH_CLIENT_ID") or "").strip()
+    GOOGLE_OAUTH_CLIENT_SECRET = (os.getenv("GOOGLE_OAUTH_CLIENT_SECRET") or "").strip()
+    APPLE_OAUTH_CLIENT_ID = (os.getenv("APPLE_OAUTH_CLIENT_ID") or os.getenv("APPLE_CLIENT_ID") or "").strip()
+    APPLE_OAUTH_TEAM_ID = (os.getenv("APPLE_OAUTH_TEAM_ID") or os.getenv("APPLE_TEAM_ID") or "").strip()
+    APPLE_OAUTH_KEY_ID = (os.getenv("APPLE_OAUTH_KEY_ID") or os.getenv("APPLE_KEY_ID") or "").strip()
+
+    @staticmethod
+    def apple_oauth_private_key_pem() -> str:
+        """Apple .p8 key: raw PEM env or base64-encoded PEM."""
+        raw = (os.getenv("APPLE_OAUTH_PRIVATE_KEY") or "").strip().replace("\\n", "\n")
+        if raw:
+            return raw
+        import base64
+        b64 = (os.getenv("APPLE_OAUTH_PRIVATE_KEY_B64") or "").strip()
+        if b64:
+            try:
+                return base64.b64decode(b64).decode("utf-8")
+            except Exception:
+                return ""
+        return ""
+
+    @staticmethod
+    def oauth_google_configured() -> bool:
+        # Read env at call time so Railway variables are visible even if config loaded early.
+        cid = (os.getenv("GOOGLE_OAUTH_CLIENT_ID") or "").strip()
+        sec = (os.getenv("GOOGLE_OAUTH_CLIENT_SECRET") or "").strip()
+        return bool(cid and sec)
+
+    @staticmethod
+    def oauth_apple_configured() -> bool:
+        try:
+            cid = (os.getenv("APPLE_OAUTH_CLIENT_ID") or os.getenv("APPLE_CLIENT_ID") or "").strip()
+            team = (os.getenv("APPLE_OAUTH_TEAM_ID") or os.getenv("APPLE_TEAM_ID") or "").strip()
+            kid = (os.getenv("APPLE_OAUTH_KEY_ID") or os.getenv("APPLE_KEY_ID") or "").strip()
+            pem = Config.apple_oauth_private_key_pem()
+            return bool(cid and team and kid and pem)
+        except Exception:
+            return False
+
     @staticmethod
     def validate():
         """Validate that required configuration is present. Stricter in production."""

@@ -5,6 +5,7 @@ import os
 import time
 import json
 import secrets
+import threading
 import traceback
 from flask import Flask, render_template, request, jsonify, redirect, url_for, send_from_directory, make_response, session
 from flask_cors import CORS
@@ -48,6 +49,7 @@ from api.auth_routes import (
 )
 from api.passkey_routes import passkey_bp
 from api.billing_routes import billing_bp
+from api.oauth_routes import oauth_bp, init_customer_oauth
 from services.login_guard import check_locked, record_failure, clear_failures
 
 app = Flask(__name__)
@@ -141,6 +143,14 @@ def inject_asset_version():
         out['current_customer'] = get_template_current_customer()
     except Exception:
         out['current_customer'] = None
+    try:
+        out['oauth_google_enabled'] = Config.oauth_google_configured()
+    except Exception:
+        out['oauth_google_enabled'] = False
+    try:
+        out['oauth_apple_enabled'] = Config.oauth_apple_configured()
+    except Exception:
+        out['oauth_apple_enabled'] = False
     return out
 
 # Register blueprints
@@ -148,6 +158,8 @@ app.register_blueprint(api_bp)
 app.register_blueprint(webhook_bp)
 app.register_blueprint(captions_bp)
 app.register_blueprint(auth_bp)
+init_customer_oauth(app)
+app.register_blueprint(oauth_bp)
 app.register_blueprint(passkey_bp)
 app.register_blueprint(billing_bp)
 
@@ -978,7 +990,13 @@ def customer_signup_page():
     """Signup for Lumo 22 customers (Captions). Accepts next= and email= for upgrade flow."""
     next_url = _normalize_next_url(request.args.get('next')) or None
     prefilled_email = (request.args.get('email') or '').strip() or None
-    return render_template('customer_signup.html', next_url=next_url, prefilled_email=prefilled_email)
+    signup_referral = (request.args.get('ref') or '').strip() or None
+    return render_template(
+        'customer_signup.html',
+        next_url=next_url,
+        prefilled_email=prefilled_email,
+        signup_referral=signup_referral,
+    )
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -1019,7 +1037,31 @@ def customer_login_page():
             return render_template('customer_login.html', login_error='Something went wrong. Please try again.', next_url=next_url)
     next_url = _normalize_next_url(request.args.get('next')) or '/account'
     prefilled_email = (request.args.get('email') or '').strip() or None
-    return render_template('customer_login.html', next_url=next_url, prefilled_email=prefilled_email)
+    oauth_error_message = None
+    oe = (request.args.get('oauth_error') or '').strip()
+    if oe:
+        _oem = {
+            "state": "That sign-in link expired or was invalid. Please try again.",
+            "email": "We could not read a verified email from the provider. Try again or use email and password.",
+            "profile": "We could not load your profile from the provider. Try again.",
+            "unverified": "That account’s email is not verified with the provider. Try another method.",
+            "link": "This sign-in is already linked to a different account. Contact hello@lumo22.com if you need help.",
+            "exists": "An account with this email already exists. Log in with your password, then use Continue with Google or Apple to link that sign-in.",
+            "registered": "That Google or Apple account is already registered. Log in with the same button.",
+            "create": "We could not create your account. Try again or use email sign-up.",
+            "disabled": "That sign-in method is not available yet.",
+            "denied": "Sign-in was cancelled.",
+            "apple": "Sign in with Apple did not complete. Try again.",
+            "token": "Could not verify with Apple. Try again.",
+            "callback": "Sign-in with Google did not complete. Try again.",
+        }
+        oauth_error_message = _oem.get(oe) or "Sign-in did not complete. Try again or use email and password."
+    return render_template(
+        'customer_login.html',
+        next_url=next_url,
+        prefilled_email=prefilled_email,
+        oauth_error_message=oauth_error_message,
+    )
 
 
 @app.route('/forgot-password')
@@ -1234,6 +1276,7 @@ def _account_context_fallback(customer: dict, exc=None) -> dict:
         "account_resubscribe_mode": False,
         "account_load_error": True,
         "defer_stripe_billing": False,
+        "edit_form_needs_deferred_billing": False,
     }
 
 
@@ -1487,6 +1530,10 @@ def _account_context_build(customer: dict, section: Optional[str] = None) -> dic
     edit_form_orders.sort(key=_edit_form_row_sort_ts, reverse=True)
     edit_form_has_subscriptions = any((o.get("stripe_subscription_id") or "").strip() for o in edit_form_orders)
     edit_form_has_oneoffs = any(not (o.get("stripe_subscription_id") or "").strip() for o in edit_form_orders)
+    # Deferred billing fetch is only needed for subscription rows (pause/cancel badges). Skip when Edit form is one-offs only.
+    edit_form_needs_deferred_billing = any(
+        (o.get("stripe_subscription_id") or "").strip() for o in edit_form_orders
+    )
 
     base = (Config.BASE_URL or request.url_root or "").strip().rstrip("/")
     if base and not base.startswith("http"):
@@ -1514,6 +1561,7 @@ def _account_context_build(customer: dict, section: Optional[str] = None) -> dic
         "edit_form_orders": edit_form_orders,
         "edit_form_has_subscriptions": edit_form_has_subscriptions,
         "edit_form_has_oneoffs": edit_form_has_oneoffs,
+        "edit_form_needs_deferred_billing": edit_form_needs_deferred_billing,
         "captions_prices": CAPTIONS_DISPLAY_PRICES,
         "base_url": base,
         "referral_code": rc,
@@ -1526,6 +1574,36 @@ def _account_context_build(customer: dict, section: Optional[str] = None) -> dic
         "account_load_error": False,
         "defer_stripe_billing": DEFER_ACCOUNT_STRIPE_BILLING,
     }
+
+
+_ACCOUNT_SUB_RETRIEVE_CACHE = {}
+_ACCOUNT_SUB_RETRIEVE_LOCK = threading.Lock()
+_ACCOUNT_SUB_RETRIEVE_TTL_SEC = 45.0
+
+
+def _account_stripe_subscription_retrieve_cached(stripe_mod, sub_id: str):
+    """
+    Subscription.retrieve with a short process-local TTL so /account + /api/account/billing-data
+    (or quick navigation between them) do not each pay full Stripe latency for every sub.
+    Failures are not cached so transient errors retry on the next request.
+    """
+    now = time.monotonic()
+    with _ACCOUNT_SUB_RETRIEVE_LOCK:
+        hit = _ACCOUNT_SUB_RETRIEVE_CACHE.get(sub_id)
+        if hit is not None:
+            ts, obj = hit
+            if (now - ts) < _ACCOUNT_SUB_RETRIEVE_TTL_SEC:
+                return sub_id, obj
+    try:
+        obj = stripe_mod.Subscription.retrieve(
+            sub_id,
+            expand=["default_payment_method", "items.data.price", "discount.coupon"],
+        )
+    except Exception:
+        return sub_id, None
+    with _ACCOUNT_SUB_RETRIEVE_LOCK:
+        _ACCOUNT_SUB_RETRIEVE_CACHE[sub_id] = (now, obj)
+    return sub_id, obj
 
 
 def _subscription_pricing_from_stripe_sub(sub, sub_id, out: dict) -> None:
@@ -1656,20 +1734,14 @@ def _load_account_stripe_subscription_data(caption_orders):
             return stripe.PaymentMethod.list(customer=stripe_customer_id, type="card")
 
         def _retrieve_subscription(sub_id: str):
-            try:
-                return sub_id, stripe.Subscription.retrieve(
-                    sub_id,
-                    expand=["default_payment_method", "items.data.price", "discount.coupon"],
-                )
-            except Exception:
-                return sub_id, None
+            return _account_stripe_subscription_retrieve_cached(stripe, sub_id)
 
         # Saved cards list is only used on the Pause/manage UI next to subscription rows; skip an extra
         # Stripe round trip for one-off-only customers (no subscription ids).
         list_saved_cards = bool(stripe_customer_id and unique_sub_ids)
 
         subs_by_id = {}
-        workers = min(10, max(1, (1 if list_saved_cards else 0) + len(unique_sub_ids)))
+        workers = min(25, max(1, (1 if list_saved_cards else 0) + len(unique_sub_ids)))
         if workers > 1 and (list_saved_cards or unique_sub_ids):
             with ThreadPoolExecutor(max_workers=workers) as pool:
                 pm_future = pool.submit(_list_payment_methods) if list_saved_cards else None
@@ -1878,6 +1950,26 @@ def front_desk_setup_page():
 def front_desk_setup_done_page():
     """DFD shelved — redirect to Captions."""
     return redirect(url_for('captions_page'))
+
+
+@app.route("/oauth-config-check")
+def oauth_config_check_page():
+    """Plain HTML: shows whether Google/Apple OAuth env is visible to the server (for Railway debugging)."""
+    google_ok = Config.oauth_google_configured()
+    apple_ok = Config.oauth_apple_configured()
+    body = (
+        "<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'><title>OAuth config</title>"
+        "<meta name='robots' content='noindex'>"
+        "<style>body{font-family:system-ui,sans-serif;max-width:36rem;margin:2rem auto;padding:0 1rem;line-height:1.5}"
+        "code{background:#f0f0f0;padding:0.1rem 0.35rem;border-radius:4px}</style></head><body>"
+        "<h1>OAuth on this server</h1>"
+        f"<p><strong>Google:</strong> {'Yes &mdash; Continue with Google should appear on /login after a hard refresh.' if google_ok else 'No &mdash; set <code>GOOGLE_OAUTH_CLIENT_ID</code> and <code>GOOGLE_OAUTH_CLIENT_SECRET</code> on this Railway service, then redeploy.'}</p>"
+        f"<p><strong>Apple:</strong> {'Yes' if apple_ok else 'No (optional)'}</p>"
+        "<p>JSON: <code>GET /api/auth/oauth/status</code> (same info; use curl if the browser shows a 404 page).</p>"
+        "<p><a href='/login'>Log in</a> · <a href='/'>Home</a></p>"
+        "</body></html>"
+    )
+    return body, 200, {"Content-Type": "text/html; charset=utf-8"}
 
 
 @app.errorhandler(404)
