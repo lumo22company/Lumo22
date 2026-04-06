@@ -20,8 +20,9 @@
     .auth-form-wrap .auth-btn { display: inline-flex; align-items: center; justify-content: center; width: 100%; min-height: 48px; padding: 14px 24px; background: #ffffff; color: #000000; font-family: var(--font-body); font-weight: 500; font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; border: none; border-radius: var(--radius-btn); cursor: pointer; transition: transform 0.3s ease-in-out, background-color 0.3s ease-in-out; }
     .auth-form-wrap .auth-btn:hover:not(:disabled) { transform: translateY(-3px); background-color: var(--lum-gold); }
     .auth-form-wrap .auth-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-    .auth-form-wrap .pw-toggle { margin: 0.35rem 0 1rem; text-align: right; position: relative; z-index: 2; }
-    .auth-form-wrap .pw-toggle button { background: none; border: 0; color: var(--lum-gold); cursor: pointer; font-size: 0.82rem; padding: 0.35rem 0; font-family: inherit; min-height: 44px; }
+    .auth-form-wrap input#password { margin-bottom: 0; }
+    .auth-form-wrap .pw-toggle { margin: 0.2rem 0 1.25rem; text-align: left; position: relative; z-index: 2; }
+    .auth-form-wrap .pw-toggle button { background: none; border: 0; color: var(--lum-gold); cursor: pointer; font-size: 0.82rem; padding: 0.25rem 0; font-family: inherit; min-height: 44px; text-align: left; }
     .auth-form-wrap .auth-msg { margin-top: 1rem; padding: 0.75rem 1rem; border-radius: var(--radius-btn); font-size: 0.9rem; font-family: var(--font-body); }
     .auth-form-wrap .auth-msg.error {
       background: rgba(200,80,80,0.15);

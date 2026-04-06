@@ -29,8 +29,9 @@
     .auth-page .link a:hover { text-decoration: underline; }
     .auth-page .marketing-optin-row { display:flex; align-items:flex-start; gap:0.5rem; font-size:0.9rem; cursor:pointer; margin:0 0 1.25rem; line-height:1.45; padding-left:0; width:100%; }
     .auth-page .marketing-optin-row input[type="checkbox"] { width:auto; margin:0.2rem 0 0 0; padding:0; flex-shrink:0; }
-    .pw-toggle { margin: 0.35rem 0 1rem; text-align: right; position: relative; z-index: 2; }
-    .pw-toggle button { background: none; border: 0; color: var(--lum-gold); cursor: pointer; font-size: 0.82rem; padding: 0.35rem 0; font-family: inherit; min-height: 44px; }
+    .auth-page input#password { margin-bottom: 0; }
+    .auth-page .pw-toggle { margin: 0.2rem 0 1.25rem; text-align: left; position: relative; z-index: 2; }
+    .auth-page .pw-toggle button { background: none; border: 0; color: var(--lum-gold); cursor: pointer; font-size: 0.82rem; padding: 0.25rem 0; font-family: inherit; min-height: 44px; text-align: left; }
     .auth-oauth-row { display: flex; flex-direction: column; gap: 0.65rem; margin-bottom: 0.75rem; }
     .auth-oauth-btn {
       display: flex; align-items: center; justify-content: center;
@@ -158,10 +159,10 @@
 
       <label for="password">Password <span style="font-weight:400;color:var(--lum-text-muted);">(min 12 characters, include 1 number)</span></label>
       <input type="password" id="password" name="password" required minlength="12" autocomplete="new-password" placeholder="At least 12 characters, 1 number">
+      <div class="pw-toggle"><button type="button" id="toggle-password" aria-pressed="false" aria-label="Show or hide password">Show password</button></div>
 
       <label for="password_confirm">Confirm password</label>
       <input type="password" id="password_confirm" name="password_confirm" required minlength="12" autocomplete="new-password">
-      <div class="pw-toggle"><button type="button" id="toggle-password" aria-pressed="false" aria-label="Show or hide password">Show password</button></div>
 
       <label class="marketing-optin-row">
         <input type="checkbox" id="marketing_opt_in" name="marketing_opt_in" value="1">
