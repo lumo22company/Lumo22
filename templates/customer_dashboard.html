@@ -600,7 +600,7 @@
         {% include 'partials/account_pause_subscription_blocks.html' %}
         {% endif %}
         {% else %}
-        <p class="account-section-desc">You don't have an active subscription. Pause is only available for monthly Captions subscribers.</p>
+        <p class="account-section-desc">You don't have an active subscription.</p>
         {% if subscribe_options %}
         <p class="account-section-desc" style="margin-bottom: 0.75rem;">{% if subscribe_options|selectattr('is_resubscribe')|list|length == subscribe_options|length %}Your subscription has ended. Resubscribe to get monthly packs again—your choices will be prefilled at checkout.{% else %}Want a new pack every month? Upgrade to a subscription and the choices from a previous one-off pack will be prefilled on the checkout page. Your first subscription pack arrives 30 days after that one-off pack.{% endif %}{% if subscribe_options|length > 1 %} You have more than one pack — choose which one to base the subscription on below.{% endif %}</p>
         {% for opt in subscribe_options %}
