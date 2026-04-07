@@ -556,6 +556,12 @@
       {% set get_pack_order_token = request.args.get('order_token', '')|trim %}
       <section class="account-section-block">
         <h2>Manage subscription</h2>
+        {% if not sub_orders %}
+        <p class="account-section-desc account-subscription-status" style="margin-top: 0.35rem; margin-bottom: {% if subscribe_options %}1rem{% else %}0{% endif %}; display: block; line-height: 1.5;">You don't have an active subscription.</p>
+        {% if not subscribe_options %}
+        <p style="margin: 0.75rem 0 1.25rem;"><a href="/captions#pricing" class="dfd-btn dfd-btn-secondary account-btn-swipe-light">View 30 Days Captions</a></p>
+        {% endif %}
+        {% endif %}
         {% if get_pack_sooner and get_pack_order_token %}
         {% set _gps_order = none %}{% for so in (sub_orders or []) %}{% if not _gps_order and (so.get('token') or '') == get_pack_order_token %}{% set _gps_order = so %}{% endif %}{% endfor %}
         {% if _gps_order %}
@@ -600,7 +606,6 @@
         {% include 'partials/account_pause_subscription_blocks.html' %}
         {% endif %}
         {% else %}
-        <p class="account-section-desc">You don't have an active subscription.</p>
         {% if subscribe_options %}
         <p class="account-section-desc" style="margin-bottom: 0.75rem;">{% if subscribe_options|selectattr('is_resubscribe')|list|length == subscribe_options|length %}Your subscription has ended. Resubscribe to get monthly packs again—your choices will be prefilled at checkout.{% else %}Want a new pack every month? Upgrade to a subscription and the choices from a previous one-off pack will be prefilled on the checkout page. Your first subscription pack arrives 30 days after that one-off pack.{% endif %}{% if subscribe_options|length > 1 %} You have more than one pack — choose which one to base the subscription on below.{% endif %}</p>
         {% for opt in subscribe_options %}
