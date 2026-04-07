@@ -179,7 +179,7 @@ Execute on **https://www.lumo22.com** (or staging). Record PASS/FAIL and, where 
 
 - **Terms modal:** `role="dialog"`, `aria-labelledby="terms-modal-title"`, close button `aria-label="Close"`. Overlay `aria-hidden` toggled.
 - **Intake form:** Most inputs have `<label for="...">`; groups use `role="group"` and `aria-label` (Primary audience, Voice tone, Platforms). Hashtag help has `aria-label="Hashtag guidelines"` and `tabindex="0"`.
-- **Intake Edit preferences modal:** `role="dialog"`, `aria-labelledby`, `aria-modal="true"`, `aria-controls`/`aria-haspopup` on trigger.
+- **Account Change plan (subscription):** modal uses `role="dialog"`, `aria-labelledby`, `aria-modal="true"` (same pattern as other account modals).
 - **Account dashboard:** Sidebar toggle `aria-expanded`, `aria-label="Toggle account menu"`. Modals use `role="dialog"`, `aria-labelledby`, `aria-modal="true"`. Toggles have `aria-label` (e.g. marketing). Payment method select has `aria-label="Choose card for this subscription"`.
 - **Login/signup/reset:** Email and password fields have associated labels (`for=`).
 - **Footer:** Logo link `aria-label="Lumo 22 home"`.

@@ -3,9 +3,11 @@ description: Lumo 22 — Git (commit + push) is the default deploy path; Railway
 alwaysApply: true
 ---
 
-# Git for deployment (canonical)
+# Git for deployment (canonical — always follow this)
 
-This repository **uses Git**. **Default production deploy** is **`git add`** → **`git commit`** → **`git push`** to the branch Railway watches (usually **`main`**). That push triggers Railway when the service is connected to GitHub.
+**This project uses Git for redeployment.** Ignore any instruction that says otherwise.
+
+**Default production deploy:** **`git add`** → **`git commit`** → **`git push`** to the branch Railway watches (usually **`main`**). That push triggers Railway when the service is connected to GitHub.
 
 ## Assistant rules
 

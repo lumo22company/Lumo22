@@ -115,16 +115,8 @@
     }
     .intake-page .intake-subscribe-cta a.intake-account-cta.account-btn-swipe-light { margin-left: 0; }
     .intake-page #create-account-box .btn-submit#ca-btn { padding: 12px 24px; min-height: 48px; font-size: 1rem; font-weight: 600; }
-    /* Edit preferences button — same compact swipe style as Your account / Change email */
-    .intake-page .intake-edit-preferences-btn { padding: 0.4rem 0.9rem !important; min-height: auto !important; font-size: 0.7rem !important; font-weight: 600 !important; letter-spacing: 0.2em !important; text-transform: uppercase !important; }
-    /* Modal: Add platform / Add Story Ideas / Cancel — readable */
-    .intake-edit-preferences-modal .modal-actions button {
-      padding: 12px 20px; min-height: 48px; font-size: 1rem !important; font-weight: 600 !important;
-      letter-spacing: 0.02em; text-transform: none !important;
-    }
     /* Price in parentheses: keep ( … ) together so the closing bracket doesn’t sit alone */
-    .intake-price-parenthetical,
-    .intake-modal-btn-price { white-space: nowrap; }
+    .intake-price-parenthetical { white-space: nowrap; }
     .intake-page .help-trigger { display: inline-flex; align-items: center; justify-content: center; width: 1.1rem; height: 1.1rem; border-radius: 50%; background: #999; color: #fff; font-size: 0.7rem; font-weight: 600; cursor: help; margin-left: 0.4rem; vertical-align: middle; position: relative; }
     .intake-page .help-trigger:hover, .intake-page .help-trigger:focus { background: var(--lum-gold); color: #000; outline: none; }
     .intake-page .help-tooltip { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(100% + 0.5rem); width: min(280px, 90vw); padding: 1rem; background: #1a1a1a; color: #f5f5f2; font-family: var(--font-body, 'Century Gothic', CenturyGothic, 'Apple Gothic', sans-serif); font-size: 0.9rem; line-height: 1.5; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); border: 1px solid #333; opacity: 0; visibility: hidden; transition: opacity 0.2s, visibility 0.2s; z-index: 100; pointer-events: none; text-align: left; font-weight: 400; text-transform: none; }
@@ -201,18 +193,6 @@
     .intake-add-platform-link:hover { text-decoration: underline; }
     .intake-add-platform-note { color: var(--lum-text-muted, #666); }
     .intake-page-body .lumo-nav { background: #000; border-bottom: 1px solid rgba(255,255,255,0.06); box-shadow: 0 4px 24px rgba(0,0,0,0.2); }
-    .intake-edit-preferences-modal { position: fixed; inset: 0; z-index: 1000; display: none; align-items: center; justify-content: center; padding: 1rem; box-sizing: border-box; }
-    .intake-edit-preferences-modal.show { display: flex; }
-    .intake-edit-preferences-modal .modal-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.5); cursor: pointer; }
-    .intake-edit-preferences-modal .modal-box { position: relative; max-width: 440px; width: 100%; padding: 1.5rem; background: var(--bg-light, #f8f8f8); border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.2); border: 1px solid #ddd; }
-    .intake-edit-preferences-modal .modal-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.35rem; font-weight: 400; letter-spacing: 0.05em; text-transform: uppercase; margin: 0 0 0.75rem; color: #000; }
-    .intake-edit-preferences-modal .modal-text { font-size: 0.95rem; line-height: 1.5; color: #333; margin: 0 0 1rem; }
-    .intake-edit-preferences-modal .modal-actions { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1rem; }
-    .intake-edit-preferences-modal .modal-actions button { width: 100%; padding: 10px 20px; min-height: 44px; border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer; font-family: inherit; border: 2px solid rgba(0,0,0,0.2); background: transparent; color: #1a1a1a; }
-    .intake-edit-preferences-modal .modal-actions button.account-btn-swipe-light { text-align: center; }
-    .intake-edit-preferences-modal .modal-actions button.modal-cancel { margin-top: 0.25rem; }
-    .intake-edit-preferences-modal .modal-error { font-size: 0.9rem; color: #c00; margin-top: 0.75rem; display: none; }
-    .intake-edit-preferences-modal .modal-error.show { display: block; }
   </style>
 </head>
 <body class="lumo-landing intake-page-body" data-current-customer-email="{{ (current_customer.email or '')|lower if current_customer else '' }}" data-return-url="{{ return_url or '' }}" data-intake-view-only="{{ 'true' if intake_view_only else 'false' }}" data-oneoff-subscribe-checkout="{{ 'true' if oneoff_subscribe_checkout_mode|default(false) else 'false' }}" data-subscribe-url="{{ subscribe_url or '' }}" data-auto-open-review="{{ 'true' if oneoff_subscribe_checkout_mode|default(false) else 'false' }}" data-oneoff-upgrade-edit="{{ 'true' if edit_intake_before_subscribe|default(false) else 'false' }}" data-is-upgrade-flow="{{ 'true' if is_upgrade_flow|default(false) else 'false' }}">
@@ -396,14 +376,6 @@
         {% else %}
         <input type="hidden" id="platform" name="platform" value="{{ prefilled_primary if is_upgrade_flow else (existing_intake.get('platform', '') or prefilled_primary) }}">
         {% endif %}
-        {% if intake_returning_editor and not is_oneoff and not (platforms_count >= 4 and stories_paid) %}
-        {% set _can_add_platform = platforms_count < 4 %}
-        {% set _can_add_stories = not stories_paid %}
-        <p class="intake-change-platform-note field-helper" style="margin: 0.5rem 0 0; font-size: 0.9rem; color: #1a1a1a; line-height: 1.45;">Use <strong>Edit preferences</strong> below to add <strong>{% if _can_add_platform and _can_add_stories %}another platform or Story Ideas{% elif _can_add_platform %}another platform{% else %}Story Ideas{% endif %}</strong> to your subscription (paid add-on). To use fewer platforms or change Story Ideas, {% if platforms_count > 1 %}use <strong>Change plan</strong> as in the note above.{% else %}go to <a href="/account" style="color: var(--lum-gold, #c9a227); font-weight: 600;">your account</a> → <strong>Manage subscription</strong> → <strong>Change plan</strong>.{% endif %}</p>
-        <p class="intake-edit-preferences-wrap" style="margin: 1rem 0 0;">
-          <button type="button" class="btn account-btn-swipe-light intake-edit-preferences-btn" id="btn-edit-preferences" aria-controls="intake-edit-preferences-modal" aria-haspopup="dialog" title="Add platforms or Story Ideas to your subscription">Edit preferences</button>
-        </p>
-        {% endif %}
 
         <label for="platform_habits" style="margin-top: 1.25rem; display: block;">Any platform-specific habits? <span style="color:#999;">(optional)</span></label>
         <input type="text" id="platform_habits" name="platform_habits" placeholder="e.g. shorter on Instagram, longer on LinkedIn" value="{{ existing_intake.get('platform_habits', '') }}">
@@ -496,102 +468,6 @@
         <button type="button" class="btn-submit account-btn-swipe-light" id="btn-confirm">{% if oneoff_subscribe_checkout_mode|default(false) %}Confirm and continue{% elif is_upgrade_flow|default(false) %}Next step{% else %}Send details{% endif %}</button>
       </div>
     </div>
-    {% endif %}
-
-    {% if intake_returning_editor and not is_oneoff and intake_token and not intake_view_only and not (platforms_count >= 4 and stories_paid) %}
-    <div id="intake-edit-preferences-modal" class="intake-edit-preferences-modal" role="dialog" aria-labelledby="intake-edit-preferences-modal-title" aria-modal="true" data-order-token="{{ intake_token }}" hidden>
-      <div class="modal-backdrop" id="intake-edit-preferences-backdrop"></div>
-      <div class="modal-box">
-        <h2 id="intake-edit-preferences-modal-title" class="modal-title">Add to your subscription</h2>
-        <p class="modal-text">Choose an add-on below (extra charge on your subscription). Changes apply to your <strong>next</strong> pack.</p>
-        <div class="modal-actions">
-          {% if platforms_count < 4 %}
-          <button type="button" class="account-btn-swipe-light" id="modal-add-platform" data-new-platforms="{{ platforms_count + 1 }}" data-new-stories="{{ 'true' if stories_paid else 'false' }}">Add another platform <span class="intake-modal-btn-price">({{ intake_add_platform_text|default('+£29 one-off / +£19 monthly') }})</span></button>
-          {% endif %}
-          {% if not stories_paid %}
-          <button type="button" class="account-btn-swipe-light" id="modal-add-stories" data-new-platforms="{{ platforms_count }}" data-new-stories="true">Add Story Ideas <span class="intake-modal-btn-price">({{ intake_add_stories_text|default('+£29 one-off / +£17 monthly') }})</span></button>
-          {% endif %}
-          <p class="modal-text" style="margin: 0.5rem 0 0; font-size: 0.9rem; color: #555; line-height: 1.45;">To <strong>remove</strong> Story Ideas or use <strong>fewer</strong> platforms, use <strong>Manage subscription</strong> → <strong>Change plan</strong> in your account instead of this window.</p>
-          <p id="intake-edit-preferences-error" class="modal-error"></p>
-          <button type="button" class="modal-cancel" id="intake-edit-preferences-cancel">Cancel</button>
-        </div>
-      </div>
-    </div>
-    <script>
-    (function() {
-      var btn = document.getElementById('btn-edit-preferences');
-      var modal = document.getElementById('intake-edit-preferences-modal');
-      if (!btn || !modal) return;
-      var token = modal.getAttribute('data-order-token');
-      var errEl = document.getElementById('intake-edit-preferences-error');
-      var addPlatformBtn = document.getElementById('modal-add-platform');
-      var addStoriesBtn = document.getElementById('modal-add-stories');
-
-      function openModal() {
-        modal.removeAttribute('hidden');
-        modal.classList.add('show');
-        if (errEl) { errEl.textContent = ''; errEl.classList.remove('show'); }
-      }
-      function closeModal() {
-        modal.classList.remove('show');
-        modal.setAttribute('hidden', '');
-      }
-
-      btn.addEventListener('click', openModal);
-      document.getElementById('intake-edit-preferences-backdrop').addEventListener('click', closeModal);
-      document.getElementById('intake-edit-preferences-cancel').addEventListener('click', closeModal);
-      document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && modal.classList.contains('show')) { closeModal(); e.preventDefault(); }
-      });
-
-      function confirmAdd(platforms, stories) {
-        var btns = [addPlatformBtn, addStoriesBtn];
-        btns.forEach(function(b) { if (b) b.disabled = true; });
-        if (errEl) { errEl.textContent = ''; errEl.classList.remove('show'); }
-        fetch('/api/billing/change-subscription-plan', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token: token, new_platforms: platforms, new_stories: stories === true || stories === 'true' })
-        })
-        .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
-        .then(function(res) {
-          if (res.ok && res.data && res.data.ok) {
-            closeModal();
-            window.location.reload();
-            return;
-          }
-          if (errEl) {
-            errEl.textContent = (res.data && res.data.error) || 'Something went wrong. Please try again.';
-            errEl.classList.add('show');
-            if (typeof window.lumoIntakeScrollTo === 'function') window.lumoIntakeScrollTo(errEl);
-          }
-          btns.forEach(function(b) { if (b) b.disabled = false; });
-        })
-        .catch(function() {
-          if (errEl) {
-            errEl.textContent = 'Something went wrong. Please try again.';
-            errEl.classList.add('show');
-            if (typeof window.lumoIntakeScrollTo === 'function') window.lumoIntakeScrollTo(errEl);
-          }
-          btns.forEach(function(b) { if (b) b.disabled = false; });
-        });
-      }
-
-      if (addPlatformBtn) {
-        addPlatformBtn.addEventListener('click', function() {
-          var p = parseInt(addPlatformBtn.getAttribute('data-new-platforms'), 10) || 2;
-          var s = addPlatformBtn.getAttribute('data-new-stories') === 'true';
-          confirmAdd(p, s);
-        });
-      }
-      if (addStoriesBtn) {
-        addStoriesBtn.addEventListener('click', function() {
-          var p = parseInt(addStoriesBtn.getAttribute('data-new-platforms'), 10) || 1;
-          confirmAdd(p, true);
-        });
-      }
-    })();
-    </script>
     {% endif %}
 
     {% if subscribe_url and not is_upgrade_flow and not intake_view_only %}

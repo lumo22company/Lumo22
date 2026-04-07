@@ -174,7 +174,7 @@ Use this to run tests and record results. For each step, note **PASS/FAIL** and,
 - **Nav:** Mobile toggle has `aria-label="Toggle navigation"` and `aria-expanded="false"`.
 - **Terms modal:** `role="dialog"`, `aria-labelledby="terms-modal-title"`, close button `aria-label="Close"`. Overlay `aria-hidden` toggled on open/close.
 - **Intake form:** Most inputs have `<label for="...">`; groups use `role="group"` and `aria-label` (e.g. Primary audience, Voice tone, Platforms). Hashtag help has `aria-label="Hashtag guidelines"` and `tabindex="0"`.
-- **Edit preferences modal (intake):** `role="dialog"`, `aria-labelledby`, `aria-modal="true"`.
+- **Account Change plan (subscription):** `role="dialog"`, `aria-labelledby`, `aria-modal="true"`.
 - **Account dashboard:** Sidebar toggle `aria-expanded` and `aria-label="Toggle account menu"`. Modals (pause, get pack sooner, add/remove stories, delete pack, delete account) use `role="dialog"`, `aria-labelledby`, `aria-modal="true"`. Delete account input has `aria-describedby` for hint. Toggles have `aria-label` (e.g. marketing, form reminders).
 - **Login/signup/forgot/reset:** Email and password fields have associated labels (`for=`).
 - **Captions product:** Section `aria-label="Example and format"`; platform error has `role="alert"`; sticky CTA has `aria-label="Quick action"`.
@@ -183,7 +183,7 @@ Use this to run tests and record results. For each step, note **PASS/FAIL** and,
 
 | # | Issue | WCAG / impact | Severity | Location | Recommended fix |
 |---|--------|----------------|----------|----------|------------------|
-| 1 | Modal focus trap | 2.1.2 Keyboard (operable) | Serious | All dialogs (terms, pause, get pack sooner, intake edit preferences, account modals) | On open: move focus to first focusable element; trap Tab inside dialog; on close: return focus to trigger. Add Escape to close where applicable. |
+| 1 | Modal focus trap | 2.1.2 Keyboard (operable) | Serious | All dialogs (terms, pause, get pack sooner, Change plan, account modals) | On open: move focus to first focusable element; trap Tab inside dialog; on close: return focus to trigger. Add Escape to close where applicable. |
 | 2 | Skip link | 2.4.1 Bypass Blocks | Moderate | Site-wide | Add “Skip to main content” link at top of body targeting `#main-content`; show on focus. |
 | 3 | Some inputs without visible labels | 4.1.2 Name, Role, Value | Moderate | Account: new email input, payment method select (has `aria-label`; verify visible label where needed) | Ensure every form control has a visible label or `aria-label` and that it’s correct. |
 | 4 | Focus visibility | 2.4.7 Focus Visible | Minor | Global | Ensure `:focus-visible` (or `:focus`) is clearly visible on all interactive elements (buttons, links, inputs, toggles). |
