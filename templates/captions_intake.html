@@ -396,17 +396,13 @@
         {% else %}
         <input type="hidden" id="platform" name="platform" value="{{ prefilled_primary if is_upgrade_flow else (existing_intake.get('platform', '') or prefilled_primary) }}">
         {% endif %}
-        {% if intake_returning_editor and not is_oneoff %}
-        {% if platforms_count >= 4 and stories_paid %}
-        <p class="field-helper" style="margin: 0.5rem 0 0; font-size: 0.9rem; color: #1a1a1a; line-height: 1.45;">To change <strong>platforms</strong> or <strong>Story Ideas</strong> on your subscription, use <strong>Change plan</strong> as in the note above.</p>
-        {% else %}
+        {% if intake_returning_editor and not is_oneoff and not (platforms_count >= 4 and stories_paid) %}
         {% set _can_add_platform = platforms_count < 4 %}
         {% set _can_add_stories = not stories_paid %}
         <p class="intake-change-platform-note field-helper" style="margin: 0.5rem 0 0; font-size: 0.9rem; color: #1a1a1a; line-height: 1.45;">Use <strong>Edit preferences</strong> below to add <strong>{% if _can_add_platform and _can_add_stories %}another platform or Story Ideas{% elif _can_add_platform %}another platform{% else %}Story Ideas{% endif %}</strong> to your subscription (paid add-on). To use fewer platforms or change Story Ideas, {% if platforms_count > 1 %}use <strong>Change plan</strong> as in the note above.{% else %}go to <a href="/account" style="color: var(--lum-gold, #c9a227); font-weight: 600;">your account</a> → <strong>Manage subscription</strong> → <strong>Change plan</strong>.{% endif %}</p>
         <p class="intake-edit-preferences-wrap" style="margin: 1rem 0 0;">
           <button type="button" class="btn account-btn-swipe-light intake-edit-preferences-btn" id="btn-edit-preferences" aria-controls="intake-edit-preferences-modal" aria-haspopup="dialog" title="Add platforms or Story Ideas to your subscription">Edit preferences</button>
         </p>
-        {% endif %}
         {% endif %}
 
         <label for="platform_habits" style="margin-top: 1.25rem; display: block;">Any platform-specific habits? <span style="color:#999;">(optional)</span></label>
