@@ -384,7 +384,7 @@
         {% if platforms_count > 1 %}
         <p class="field-helper" style="margin-bottom: {% if not is_oneoff %}0.35rem{% else %}0.5rem{% endif %}; line-height: 1.45;">Platforms included in your order (fixed for this pack — cannot be changed here).</p>
         {% if not is_oneoff %}
-        <p class="field-helper" style="margin: 0 0 0.5rem; font-size: 0.95rem; line-height: 1.45; color: #333;">To update your platform selection and/or Story Ideas for this subscription, go to <a href="/account" style="color: var(--lum-gold, #c9a227); font-weight: 600;">Manage subscription</a> → <strong>Change plan</strong>.</p>
+        <p class="field-helper" style="margin: 0 0 0.5rem; font-size: 0.95rem; line-height: 1.45; color: #333;">To update your platform selection and/or Story Ideas for this subscription, go to <a href="/account" style="color: #000; font-weight: 600; text-decoration: underline;">Manage subscription</a> → <strong>Change plan</strong>.</p>
         {% endif %}
         <div class="intake-checkbox-group" role="group" aria-label="Platforms" id="platform-btn-group" data-testid="platform" data-max-platforms="{{ platforms_count }}" data-platforms-locked="true">
           <button type="button" class="platform-btn" data-platform="Instagram & Facebook">Instagram &amp; Facebook</button>
@@ -397,10 +397,16 @@
         <input type="hidden" id="platform" name="platform" value="{{ prefilled_primary if is_upgrade_flow else (existing_intake.get('platform', '') or prefilled_primary) }}">
         {% endif %}
         {% if intake_returning_editor and not is_oneoff %}
-        <p class="intake-change-platform-note field-helper" style="margin: 0.5rem 0 0; font-size: 0.9rem; color: #1a1a1a; line-height: 1.45;">Use <strong>Edit preferences</strong> below to <strong>add</strong> another platform or Story Ideas (paid add-on).{% if platforms_count > 1 %} To use fewer platforms, remove Story Ideas, or swap networks, use <strong>Change plan</strong> as in the note above.{% else %} To use fewer platforms, remove Story Ideas, or swap networks, go to <a href="/account" style="color: var(--lum-gold, #c9a227); font-weight: 600;">your account</a> → <strong>Manage subscription</strong> → <strong>Change plan</strong>.{% endif %} Voice, audience, and other copy edits on this page are free; billing changes apply to your <strong>next</strong> pack.</p>
+        {% if platforms_count >= 4 and stories_paid %}
+        <p class="field-helper" style="margin: 0.5rem 0 0; font-size: 0.9rem; color: #1a1a1a; line-height: 1.45;">Voice, audience, and other copy edits on this page are free. To change <strong>platforms</strong> or <strong>Story Ideas</strong> on your subscription, use <strong>Change plan</strong> as in the note above.</p>
+        {% else %}
+        {% set _can_add_platform = platforms_count < 4 %}
+        {% set _can_add_stories = not stories_paid %}
+        <p class="intake-change-platform-note field-helper" style="margin: 0.5rem 0 0; font-size: 0.9rem; color: #1a1a1a; line-height: 1.45;">Use <strong>Edit preferences</strong> below to add <strong>{% if _can_add_platform and _can_add_stories %}another platform or Story Ideas{% elif _can_add_platform %}another platform{% else %}Story Ideas{% endif %}</strong> to your subscription (paid add-on). To use fewer platforms or change Story Ideas, {% if platforms_count > 1 %}use <strong>Change plan</strong> as in the note above.{% else %}go to <a href="/account" style="color: var(--lum-gold, #c9a227); font-weight: 600;">your account</a> → <strong>Manage subscription</strong> → <strong>Change plan</strong>.{% endif %} Voice, audience, and other copy edits on this page are free; billing changes apply to your <strong>next</strong> pack.</p>
         <p class="intake-edit-preferences-wrap" style="margin: 1rem 0 0;">
           <button type="button" class="btn account-btn-swipe-light intake-edit-preferences-btn" id="btn-edit-preferences" aria-controls="intake-edit-preferences-modal" aria-haspopup="dialog" title="Add platforms or Story Ideas to your subscription">Edit preferences</button>
         </p>
+        {% endif %}
         {% endif %}
 
         <label for="platform_habits" style="margin-top: 1.25rem; display: block;">Any platform-specific habits? <span style="color:#999;">(optional)</span></label>
@@ -496,19 +502,10 @@
     </div>
     {% endif %}
 
-    {% if intake_returning_editor and not is_oneoff and intake_token and not intake_view_only %}
+    {% if intake_returning_editor and not is_oneoff and intake_token and not intake_view_only and not (platforms_count >= 4 and stories_paid) %}
     <div id="intake-edit-preferences-modal" class="intake-edit-preferences-modal" role="dialog" aria-labelledby="intake-edit-preferences-modal-title" aria-modal="true" data-order-token="{{ intake_token }}" hidden>
       <div class="modal-backdrop" id="intake-edit-preferences-backdrop"></div>
       <div class="modal-box">
-        {% if platforms_count >= 4 and stories_paid %}
-        <h2 id="intake-edit-preferences-modal-title" class="modal-title">Nothing more to add</h2>
-        <p class="modal-text">You’re already on the highest option we offer: <strong>four platforms</strong> and <strong>30 Days Story Ideas</strong>. This dialog is only for <strong>adding</strong> billed items when you’re below that — so there’s nothing to do here.</p>
-        <p class="modal-text" style="margin: 0; font-size: 0.93rem; color: #444; line-height: 1.5;"><strong>Want a lower monthly price?</strong> Remove Story Ideas or reduce how many platforms you use in <a href="/account" style="color: var(--lum-gold, #c9a227); font-weight: 600; text-decoration: underline;">your account</a>: <strong>Manage subscription</strong> → <strong>Change plan</strong>. You’ll confirm the new price there. Changes apply to your <strong>next</strong> pack.</p>
-        <div class="modal-actions">
-          <p id="intake-edit-preferences-error" class="modal-error"></p>
-          <button type="button" class="modal-cancel" id="intake-edit-preferences-cancel">Close</button>
-        </div>
-        {% else %}
         <h2 id="intake-edit-preferences-modal-title" class="modal-title">Add to your subscription</h2>
         <p class="modal-text">Choose an add-on below (extra charge on your subscription). Changes apply to your <strong>next</strong> pack.</p>
         <div class="modal-actions">
@@ -518,11 +515,10 @@
           {% if not stories_paid %}
           <button type="button" class="account-btn-swipe-light" id="modal-add-stories" data-new-platforms="{{ platforms_count }}" data-new-stories="true">Add Story Ideas <span class="intake-modal-btn-price">({{ intake_add_stories_text|default('+£29 one-off / +£17 monthly') }})</span></button>
           {% endif %}
-          <p class="modal-text" style="margin: 0.5rem 0 0; font-size: 0.9rem; color: #555; line-height: 1.45;">To <strong>remove</strong> Story Ideas or use <strong>fewer</strong> platforms, don’t use this window — go to <a href="/account" style="color: var(--lum-gold, #c9a227); font-weight: 600;">your account</a> → <strong>Manage subscription</strong> → <strong>Change plan</strong>.</p>
+          <p class="modal-text" style="margin: 0.5rem 0 0; font-size: 0.9rem; color: #555; line-height: 1.45;">To <strong>remove</strong> Story Ideas or use <strong>fewer</strong> platforms, use <strong>Manage subscription</strong> → <strong>Change plan</strong> in your account instead of this window.</p>
           <p id="intake-edit-preferences-error" class="modal-error"></p>
           <button type="button" class="modal-cancel" id="intake-edit-preferences-cancel">Cancel</button>
         </div>
-        {% endif %}
       </div>
     </div>
     <script>
