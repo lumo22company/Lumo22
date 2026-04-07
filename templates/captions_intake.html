@@ -382,7 +382,10 @@
       <div class="form-section">
         <h2>Platform</h2>
         {% if platforms_count > 1 %}
-        <p class="field-helper" style="margin-bottom: 0.5rem; line-height: 1.45;">Platforms included in your order (fixed for this pack — cannot be changed here).{% if not is_oneoff %} To change which networks are on your subscription or your Story Ideas billing, go to <a href="/account" style="color: var(--lum-gold, #c9a227); font-weight: 600;">your account</a> → <strong>Manage subscription</strong> → <strong>Change plan</strong>.{% endif %}</p>
+        <p class="field-helper" style="margin-bottom: {% if not is_oneoff %}0.35rem{% else %}0.5rem{% endif %}; line-height: 1.45;">Platforms included in your order (fixed for this pack — cannot be changed here).</p>
+        {% if not is_oneoff %}
+        <p class="field-helper" style="margin: 0 0 0.5rem; font-size: 0.95rem; line-height: 1.45; color: #333;">To update your platform selection and/or Story Ideas for this subscription, go to <a href="/account" style="color: var(--lum-gold, #c9a227); font-weight: 600;">Manage subscription</a> → <strong>Change plan</strong>.</p>
+        {% endif %}
         <div class="intake-checkbox-group" role="group" aria-label="Platforms" id="platform-btn-group" data-testid="platform" data-max-platforms="{{ platforms_count }}" data-platforms-locked="true">
           <button type="button" class="platform-btn" data-platform="Instagram & Facebook">Instagram &amp; Facebook</button>
           <button type="button" class="platform-btn" data-platform="LinkedIn">LinkedIn</button>
