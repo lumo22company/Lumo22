@@ -2373,7 +2373,8 @@
 /* Manage billing button on dark background (Manage subscription header) — yellow font and outline */
 .account-pause-manage-billing .account-btn-swipe-dark,
 .account-pause-manage-billing a.account-btn-swipe-dark,
-.account-page-wrap .account-section-block a.account-captions-pricing-cta {
+.account-page-wrap .account-section-block a.account-captions-pricing-cta,
+.account-page-wrap .account-section-block button.account-captions-pricing-cta {
   position: relative;
   overflow: hidden;
   z-index: 1;
@@ -2394,9 +2395,13 @@
   min-height: 44px;
   border-radius: var(--radius-btn);
 }
+.account-page-wrap .account-section-block button.account-captions-pricing-cta {
+  cursor: pointer;
+}
 .account-pause-manage-billing .account-btn-swipe-dark::before,
 .account-pause-manage-billing a.account-btn-swipe-dark::before,
-.account-page-wrap .account-section-block a.account-captions-pricing-cta::before {
+.account-page-wrap .account-section-block a.account-captions-pricing-cta::before,
+.account-page-wrap .account-section-block button.account-captions-pricing-cta::before {
   content: '';
   position: absolute;
   left: 0;
@@ -2411,7 +2416,8 @@
 }
 .account-pause-manage-billing .account-btn-swipe-dark:hover,
 .account-pause-manage-billing a.account-btn-swipe-dark:hover,
-.account-page-wrap .account-section-block a.account-captions-pricing-cta:hover {
+.account-page-wrap .account-section-block a.account-captions-pricing-cta:hover,
+.account-page-wrap .account-section-block button.account-captions-pricing-cta:hover {
   color: #000 !important;
   border-color: var(--lum-gold, #fff200) !important;
   background: transparent !important;
@@ -2419,7 +2425,8 @@
 }
 .account-pause-manage-billing .account-btn-swipe-dark:hover::before,
 .account-pause-manage-billing a.account-btn-swipe-dark:hover::before,
-.account-page-wrap .account-section-block a.account-captions-pricing-cta:hover::before {
+.account-page-wrap .account-section-block a.account-captions-pricing-cta:hover::before,
+.account-page-wrap .account-section-block button.account-captions-pricing-cta:hover::before {
   transform: scaleX(1);
 }
 
