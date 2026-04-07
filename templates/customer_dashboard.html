@@ -205,7 +205,7 @@
         {% if edit_form_orders %}
         <p class="account-section-desc" style="margin: 0 0 1.25rem; line-height: 1.65; color: rgba(255,255,255,0.92);">
           {% if edit_form_has_subscriptions|default(false) %}
-          <strong>Subscriptions:</strong> use <strong>Edit form</strong> below to change your brief for your <strong>next</strong> pack (not packs already delivered). Edits are free; adding Story Ideas or extra platforms may require an additional charge.
+          <strong>Subscriptions:</strong> use <strong>Edit form</strong> below to change your brief (voice, topics, etc.) for your <strong>next</strong> pack (not packs already delivered). Those content edits are free. Changing how many platforms you have or whether Story Ideas are on your plan may change what you pay—use <strong>Manage subscription</strong> → <strong>Change plan</strong> for that.
           {% endif %}
           {% if edit_form_has_oneoffs|default(false) %}
           <span style="display: block; margin-top: {% if edit_form_has_subscriptions|default(false) %}0.65rem{% else %}0{% endif %};"><strong>One-off packs:</strong> use <strong>View form</strong> to read what we have on file. To <strong>change</strong> answers from your account, follow <strong>Upgrade to edit</strong> (subscription checkout—then you can edit anytime for each new pack). Want another 30 days <strong>without</strong> subscribing? <a href="/captions" style="color: #e8d48b; font-weight: 600;">Buy another one-off</a> from pricing—each order has its own brief.</span>
@@ -216,11 +216,10 @@
           <li>Update your voice, topics, and preferences.</li>
           <li>Have a launch, sale, or event coming up? Add it in the Key date section and we'll tailor your next pack to match.</li>
           <li>Changes are reflected in your <strong>next</strong> captions and stories pack, not in packs already delivered.</li>
-          <li>Edits are free; adding Story Ideas or extra platforms may require an additional charge.</li>
-          <li><strong>Platforms:</strong> Edit form is the only place to add, change, or reduce platforms—not Manage subscription.</li>
-          <li>Subscribers: to add more platforms, open the form and use "Add another platform" (+£29 one-off / +£19 monthly).</li>
-          <li>To change which platforms or reduce the number (or remove Story Ideas), edit the form and submit—you'll be asked to accept the new price.</li>
-          <li>All changes apply to your next pack.</li>
+          <li>Edits to copy on the form are free; changing your <strong>subscription plan</strong> (platforms or Story Ideas) may change your monthly price.</li>
+          <li><strong>Plan (platforms &amp; Story Ideas):</strong> use <strong>Manage subscription</strong> → <strong>Change plan</strong> to add, remove, swap networks, or turn Story Ideas on or off. The Platform area on the intake form shows what’s included and is often <strong>read-only</strong>—you don’t change billing there.</li>
+          <li><strong>Quick add from the form:</strong> open <strong>Edit form</strong> and use <strong>Edit preferences</strong> to add a platform or Story Ideas in one step when you’re below the maximum.</li>
+          <li>Billed plan changes apply to your <strong>next</strong> pack.</li>
         </ul>
         {% endif %}
         {% if edit_form_has_oneoffs|default(false) and not edit_form_has_subscriptions|default(false) %}
@@ -735,21 +734,42 @@
       <div class="account-delete-modal-backdrop" onclick="closeChangePlanModal()"></div>
       <div class="account-delete-modal-box remove-stories-modal-box" style="max-width: 520px;">
         <h2 id="change-plan-modal-title" class="account-delete-modal-title">Change your plan</h2>
-        <p class="account-delete-modal-text">Adjust how many platforms you use and whether Story Ideas is included. Changes apply to your <strong>next</strong> pack, not packs already delivered.</p>
+        <p class="account-delete-modal-text">Choose which platforms to include and whether you want Story Ideas. This is saved to your subscription and prefilled on your intake form. Changes apply to your <strong>next</strong> pack, not packs already delivered.</p>
         <div class="account-delete-modal-text" style="margin-bottom: 0.75rem;">
-          <label for="change-plan-platforms" style="display:block; font-weight:600; margin-bottom:0.25rem;">Number of platforms</label>
-          <select id="change-plan-platforms" class="account-change-plan-platforms-select" style="width:100%; padding:0.5rem 2.5rem 0.5rem 0.75rem; border-radius:8px; border:1px solid rgba(255,255,255,0.3); color:#1a1a1a; font-size:0.95rem;">
-            <option value="1">1 platform</option>
-            <option value="2">2 platforms — +£19 monthly</option>
-            <option value="3">3 platforms — +£38 monthly</option>
-            <option value="4">4 platforms — +£57 monthly</option>
-          </select>
+          <span style="display:block; font-weight:600; margin-bottom:0.25rem; color:#fff;">Platforms</span>
+          <p style="font-size:0.82rem; margin:0 0 0.5rem; opacity:0.9; line-height:1.4; color:rgba(255,255,255,0.9);">Select 1–4. Pricing is based on how many you choose.</p>
+          <div id="change-plan-platform-list" role="group" aria-label="Platforms" style="display:flex; flex-direction:column; gap:0.45rem;">
+            <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; font-size:0.95rem; color:#fff;">
+              <input type="checkbox" class="change-plan-platform-cb" value="Instagram & Facebook" style="width:auto;">
+              <span>Instagram &amp; Facebook</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; font-size:0.95rem; color:#fff;">
+              <input type="checkbox" class="change-plan-platform-cb" value="LinkedIn" style="width:auto;">
+              <span>LinkedIn</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; font-size:0.95rem; color:#fff;">
+              <input type="checkbox" class="change-plan-platform-cb" value="TikTok" style="width:auto;">
+              <span>TikTok</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; font-size:0.95rem; color:#fff;">
+              <input type="checkbox" class="change-plan-platform-cb" value="Pinterest" style="width:auto;">
+              <span>Pinterest</span>
+            </label>
+          </div>
+          <p id="change-plan-platforms-hint" class="account-delete-modal-text" style="display:none; font-size:0.85rem; color:#c00; margin:0.5rem 0 0;"></p>
         </div>
         <div class="account-delete-modal-text" style="margin-bottom: 0.75rem;">
-          <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; font-size:0.95rem;">
+          <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; font-size:0.95rem; color:#fff;">
             <input type="checkbox" id="change-plan-stories" style="width:auto;">
             <span>Include 30 Days Story Ideas</span>
           </label>
+        </div>
+        <div id="change-plan-align-wrap" class="account-delete-modal-text" style="display:none; margin-bottom: 0.75rem;">
+          <label style="display:flex; align-items:flex-start; gap:0.5rem; cursor:pointer; font-size:0.92rem; color:#fff;">
+            <input type="checkbox" id="change-plan-align-stories" style="width:auto; margin-top:0.15rem;">
+            <span>Align each Story to that day's caption (same theme)</span>
+          </label>
+          <p style="font-size:0.8rem; margin:0.35rem 0 0 1.5rem; opacity:0.85; line-height:1.35; color:rgba(255,255,255,0.85);">Leave unchecked if you want Stories and captions to differ on the same day.</p>
         </div>
         <p id="change-plan-price" class="account-delete-modal-text change-plan-price-line" style="font-size:1.15rem; margin-bottom:0.5rem;"></p>
         <p class="account-delete-modal-text" style="font-size:0.85rem; margin-bottom:0.75rem;">By confirming you agree to the new price from your next pack.</p>
@@ -757,6 +777,17 @@
         <div class="account-delete-modal-buttons">
           <button type="button" class="account-delete-modal-btn account-delete-modal-keep" onclick="closeChangePlanModal()">Cancel</button>
           <button type="button" id="change-plan-confirm" class="account-delete-modal-btn account-add-stories-confirm" onclick="confirmChangePlan()">Confirm changes</button>
+        </div>
+      </div>
+    </div>
+    <div id="change-plan-success-modal" class="account-delete-modal" role="dialog" aria-labelledby="change-plan-success-title" aria-modal="true" hidden>
+      <div class="account-delete-modal-backdrop" onclick="closeChangePlanSuccessModal(false)"></div>
+      <div class="account-delete-modal-box remove-stories-modal-box" style="max-width: 520px;">
+        <h2 id="change-plan-success-title" class="account-delete-modal-title">Plan updated</h2>
+        <p class="account-delete-modal-text">Your choices are saved and will appear on your intake form. Open the form now to review your full brief and other details, or go back to your account.</p>
+        <div class="account-delete-modal-buttons" style="flex-direction: column; align-items: stretch; gap: 0.65rem;">
+          <button type="button" id="change-plan-success-open-intake" class="account-delete-modal-btn account-add-stories-confirm">Edit intake form</button>
+          <button type="button" class="account-delete-modal-btn account-delete-modal-keep" onclick="closeChangePlanSuccessModal(true)">Back to account</button>
         </div>
       </div>
     </div>
@@ -1193,7 +1224,9 @@
       var changePlanState = {
         token: null,
         oldPlatforms: 1,
+        oldPlatformSig: '',
         oldStories: false,
+        oldAlign: false,
         currency: 'gbp',
         currentEffectiveMonthly: null,
         currentStandardMonthly: null,
@@ -1202,6 +1235,52 @@
         discountAmount: null,
         discountDuration: ''
       };
+
+      var CHANGE_PLAN_ALLOWED = ['Instagram & Facebook', 'LinkedIn', 'TikTok', 'Pinterest'];
+      var CHANGE_PLAN_DEFAULT_ORDER = ['Instagram & Facebook', 'LinkedIn', 'TikTok', 'Pinterest'];
+
+      function changePlanParsePlatformsAttr(raw) {
+        if (!raw || typeof raw !== 'string') return null;
+        var parts = raw.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+        var out = [];
+        for (var i = 0; i < parts.length; i++) {
+          var p = parts[i];
+          if (p === 'Instagram' || p === 'Facebook') p = 'Instagram & Facebook';
+          if (CHANGE_PLAN_ALLOWED.indexOf(p) >= 0 && out.indexOf(p) < 0) out.push(p);
+        }
+        return out.length ? out : null;
+      }
+
+      function changePlanDefaultPlatformsForCount(n) {
+        n = Math.max(1, Math.min(4, parseInt(n, 10) || 1));
+        return CHANGE_PLAN_DEFAULT_ORDER.slice(0, n);
+      }
+
+      function changePlanPlatformSig(arr) {
+        return arr.slice().sort().join('|');
+      }
+
+      function changePlanGetSelectedPlatforms() {
+        var boxes = document.querySelectorAll('.change-plan-platform-cb');
+        var out = [];
+        for (var i = 0; i < boxes.length; i++) {
+          if (boxes[i].checked) out.push(boxes[i].value);
+        }
+        return out;
+      }
+
+      function changePlanSyncAlignRow() {
+        var stories = document.getElementById('change-plan-stories');
+        var wrap = document.getElementById('change-plan-align-wrap');
+        var alignCb = document.getElementById('change-plan-align-stories');
+        if (!wrap) return;
+        if (stories && stories.checked) {
+          wrap.style.display = '';
+        } else {
+          wrap.style.display = 'none';
+          if (alignCb) alignCb.checked = false;
+        }
+      }
 
       function applyActiveDiscount(rawAmount) {
         var amt = parseFloat(rawAmount || 0);
@@ -1218,19 +1297,12 @@
       function updateChangePlanPrice() {
         var priceEl = document.getElementById('change-plan-price');
         if (!CAPTIONS_PRICES || !changePlanState.token) return;
-        var sel = document.getElementById('change-plan-platforms');
         var cb = document.getElementById('change-plan-stories');
         var currency = (changePlanState.currency || 'gbp').toLowerCase();
         var p = CAPTIONS_PRICES[currency] || CAPTIONS_PRICES.gbp;
-        if (sel && sel.options) {
-          var opts = sel.options;
-          if (opts[0]) opts[0].textContent = '1 platform';
-          if (opts[1]) opts[1].textContent = '2 platforms — +' + (p.symbol || '£') + p.extra_sub + ' monthly';
-          if (opts[2]) opts[2].textContent = '3 platforms — +' + (p.symbol || '£') + (2 * p.extra_sub) + ' monthly';
-          if (opts[3]) opts[3].textContent = '4 platforms — +' + (p.symbol || '£') + (3 * p.extra_sub) + ' monthly';
-        }
         if (!priceEl) return;
-        var newPlatforms = parseInt(sel && sel.value ? sel.value : '1', 10);
+        var selected = changePlanGetSelectedPlatforms();
+        var newPlatforms = selected.length;
         if (!newPlatforms || newPlatforms < 1) newPlatforms = 1;
         if (newPlatforms > 4) newPlatforms = 4;
         var newStories = !!(cb && cb.checked);
@@ -1257,9 +1329,15 @@
         var platforms = parseInt(btn.getAttribute('data-platforms') || '1', 10);
         if (!platforms || platforms < 1) platforms = 1;
         var hasStories = (btn.getAttribute('data-has-stories') || '0') === '1';
+        var alignRaw = (btn.getAttribute('data-align-stories') || '0') === '1';
+        var pspAttr = btn.getAttribute('data-selected-platforms') || '';
+        var parsed = changePlanParsePlatformsAttr(pspAttr);
+        var initialList = parsed || changePlanDefaultPlatformsForCount(platforms);
         changePlanState.token = token;
         changePlanState.oldPlatforms = platforms;
         changePlanState.oldStories = hasStories;
+        changePlanState.oldAlign = hasStories ? !!alignRaw : false;
+        changePlanState.oldPlatformSig = changePlanPlatformSig(initialList);
         changePlanState.currency = (btn.getAttribute('data-currency') || 'gbp').toLowerCase();
         var effRaw = parseFloat(btn.getAttribute('data-effective-monthly') || '');
         var stdRaw = parseFloat(btn.getAttribute('data-standard-monthly') || '');
@@ -1271,13 +1349,21 @@
         changePlanState.discountPercent = isFinite(discPctRaw) ? discPctRaw : null;
         changePlanState.discountAmount = isFinite(discAmtRaw) ? discAmtRaw : null;
         changePlanState.discountDuration = (btn.getAttribute('data-discount-duration') || '').toLowerCase();
-        var sel = document.getElementById('change-plan-platforms');
         var cb = document.getElementById('change-plan-stories');
+        var alignCb = document.getElementById('change-plan-align-stories');
         var errEl = document.getElementById('change-plan-error');
-        var priceEl = document.getElementById('change-plan-price');
-        if (sel) sel.value = String(platforms);
+        var hintEl = document.getElementById('change-plan-platforms-hint');
+        var boxes = document.querySelectorAll('.change-plan-platform-cb');
+        var want = {};
+        for (var w = 0; w < initialList.length; w++) want[initialList[w]] = true;
+        for (var b = 0; b < boxes.length; b++) {
+          boxes[b].checked = !!want[boxes[b].value];
+        }
         if (cb) cb.checked = !!hasStories;
+        if (alignCb) alignCb.checked = hasStories ? !!alignRaw : false;
+        changePlanSyncAlignRow();
         if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+        if (hintEl) { hintEl.style.display = 'none'; hintEl.textContent = ''; }
         updateChangePlanPrice();
         var modal = document.getElementById('change-plan-modal');
         if (modal) {
@@ -1294,26 +1380,71 @@
         }
       };
 
+      window.closeChangePlanSuccessModal = function(reload) {
+        var modal = document.getElementById('change-plan-success-modal');
+        if (modal) {
+          modal.setAttribute('hidden', '');
+          modal.classList.remove('account-delete-modal--open');
+        }
+        if (reload) window.location.reload();
+      };
+
+      window.openChangePlanIntake = function() {
+        var t = changePlanState.token;
+        if (t) window.location.href = '/captions-intake?t=' + encodeURIComponent(t);
+      };
+
       (function() {
-        var sel = document.getElementById('change-plan-platforms');
+        var boxes = document.querySelectorAll('.change-plan-platform-cb');
+        for (var i = 0; i < boxes.length; i++) {
+          boxes[i].addEventListener('change', function() {
+            var hintEl = document.getElementById('change-plan-platforms-hint');
+            if (hintEl) { hintEl.style.display = 'none'; hintEl.textContent = ''; }
+            updateChangePlanPrice();
+          });
+        }
         var cb = document.getElementById('change-plan-stories');
-        if (sel) sel.addEventListener('change', updateChangePlanPrice);
-        if (cb) cb.addEventListener('change', updateChangePlanPrice);
+        if (cb) {
+          cb.addEventListener('change', function() {
+            changePlanSyncAlignRow();
+            updateChangePlanPrice();
+          });
+        }
+        var alignCb = document.getElementById('change-plan-align-stories');
+        if (alignCb) alignCb.addEventListener('change', updateChangePlanPrice);
+        var openIntake = document.getElementById('change-plan-success-open-intake');
+        if (openIntake) openIntake.addEventListener('click', window.openChangePlanIntake);
       })();
 
       window.confirmChangePlan = function() {
-        var sel = document.getElementById('change-plan-platforms');
         var cb = document.getElementById('change-plan-stories');
+        var alignCb = document.getElementById('change-plan-align-stories');
         var errEl = document.getElementById('change-plan-error');
-        if (!sel || !cb || !changePlanState.token) return;
+        var hintEl = document.getElementById('change-plan-platforms-hint');
+        if (!cb || !changePlanState.token) return;
         var priceEl = document.getElementById('change-plan-price');
-        var newPlatforms = parseInt(sel.value || '1', 10);
-        if (!newPlatforms || newPlatforms < 1) newPlatforms = 1;
-        if (newPlatforms > 4) newPlatforms = 4;
+        var selected = changePlanGetSelectedPlatforms();
+        if (hintEl) { hintEl.style.display = 'none'; hintEl.textContent = ''; }
+        if (selected.length < 1) {
+          if (hintEl) {
+            hintEl.textContent = 'Select at least one platform.';
+            hintEl.style.display = 'block';
+          }
+          return;
+        }
+        if (selected.length > 4) {
+          if (hintEl) {
+            hintEl.textContent = 'Select at most four platforms.';
+            hintEl.style.display = 'block';
+          }
+          return;
+        }
         var newStories = !!cb.checked;
-        if (newPlatforms === changePlanState.oldPlatforms && newStories === changePlanState.oldStories) {
+        var alignStories = newStories && alignCb ? !!alignCb.checked : false;
+        var newSig = changePlanPlatformSig(selected);
+        if (newSig === changePlanState.oldPlatformSig && newStories === changePlanState.oldStories && alignStories === changePlanState.oldAlign) {
           if (errEl) {
-            errEl.textContent = 'No change — adjust platforms or Story Ideas before confirming.';
+            errEl.textContent = 'No change — adjust platforms, Story Ideas, or alignment before confirming.';
             errEl.style.display = 'block';
           }
           return;
@@ -1331,15 +1462,22 @@
           credentials: 'same-origin',
           body: JSON.stringify({
             token: changePlanState.token,
-            new_platforms: newPlatforms,
-            new_stories: newStories
+            new_stories: newStories,
+            selected_platforms: selected,
+            align_stories_to_captions: alignStories
           })
         })
         .then(function(r) { return r.json().then(function(j){ return { status: r.status, json: j }; }); })
         .then(function(res) {
           if (res.status === 200 && res.json && res.json.ok) {
             window.closeChangePlanModal();
-            window.location.reload();
+            var successModal = document.getElementById('change-plan-success-modal');
+            if (successModal) {
+              successModal.removeAttribute('hidden');
+              successModal.classList.add('account-delete-modal--open');
+            } else {
+              window.location.reload();
+            }
           } else {
             if (errEl) {
               errEl.textContent = (res.json && (res.json.error || res.json.message)) || 'Could not update your plan. Please try again or email hello@lumo22.com.';

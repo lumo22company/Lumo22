@@ -56,8 +56,13 @@ logs/
 .coverage
 htmlcov/
 
-# Cursor / IDE (deploy policy files are force-added: see docs/RAILWAY_DEPLOY.md)
-.cursor/
+# Cursor — ignore local IDE noise; only Lumo deploy policy rules are tracked (see docs/RAILWAY_DEPLOY.md)
+.cursor/**
+!.cursor/rules/
+.cursor/rules/**
+!.cursor/rules/railway-deploy.mdc
+!.cursor/rules/no-github-railway-deploy.mdc
+!.cursor/rules/git-and-railway-deploy.mdc
 
 # Backups and secrets
 .env.bak

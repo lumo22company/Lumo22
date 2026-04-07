@@ -10,13 +10,9 @@ This project **uses Git** for version control and for typical deploys. Ignore an
 
 ### Cursor rules (Git-first deploy for agents)
 
-Canonical agent instructions live under **`.cursor/rules/`** — especially **`railway-deploy.mdc`** and **`no-github-railway-deploy.mdc`** (same Git-first redeploy policy; the second name exists so older Cursor workspace bindings still load the right steps).
+Canonical agent instructions live under **`.cursor/rules/`** — especially **`railway-deploy.mdc`** and **`no-github-railway-deploy.mdc`** (same Git-first redeploy policy; the second filename exists so older Cursor workspace bindings still load the right steps).
 
-The **`.cursor/`** folder is listed in **`.gitignore`** so local editor noise is not committed by default. To **track changes** to those deploy rules in Git, add them explicitly:
-
-```bash
-git add -f .cursor/rules/railway-deploy.mdc .cursor/rules/no-github-railway-deploy.mdc .cursor/rules/git-and-railway-deploy.mdc
-```
+**`.gitignore`** ignores **`.cursor/`** except the three deploy policy files above, so they can be committed with normal **`git add`** (no `-f` needed for those paths).
 
 ---
 

@@ -1,14 +1,10 @@
 ---
-description: "Lumo 22: WE USE GIT — same policy as railway-deploy.mdc (filename kept for Cursor workspace path bindings only)"
+description: "Lumo 22 deploy policy (alias file — same as railway-deploy.mdc; name kept for older Cursor workspace bindings)"
 alwaysApply: true
 ---
 
-# This project USES Git (ignore the old filename)
+# Deploy via Git (same as `railway-deploy.mdc`)
 
-**The file name `no-github-railway-deploy` is misleading and historical.** **Lumo 22 uses Git for version control and for normal redeploys.**
+**Canonical rule:** **`.cursor/rules/railway-deploy.mdc`**
 
-**When the user asks to deploy, redeploy, ship, or commit:** use **`git status`** → **`git add`** → **`git commit`** → **`git push`** to the branch Railway watches (usually **`main`**). That push is the **default** production deploy.
-
-**Do not** use **`railway up`** as the default. Use the Railway CLI upload **only** if the user **explicitly** asks for it, GitHub is not connected to Railway, or they need a one-off without pushing.
-
-**Full detail:** **`.cursor/rules/railway-deploy.mdc`** (canonical; same policy as this file).
+**Summary:** **`git add` → `git commit` → `git push`** (e.g. to **`main`**) for normal production deploys. **`railway up --no-gitignore`** only when the user explicitly wants a CLI upload or push-based deploy is unavailable.

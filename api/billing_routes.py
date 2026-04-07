@@ -2,6 +2,8 @@
 Billing portal: redirect customers to Stripe's hosted billing portal.
 Requires customer login and a stripe_customer_id from a caption subscription.
 """
+from typing import Optional
+
 from flask import Blueprint, request, jsonify, redirect, url_for
 from config import Config
 from api.auth_routes import get_current_customer
@@ -44,6 +46,45 @@ def _normalize_platform_list(raw: str) -> list[str]:
             seen.add(p)
             out.append(p)
     return out
+
+
+ALLOWED_PLATFORMS = frozenset(
+    {"Instagram & Facebook", "LinkedIn", "TikTok", "Pinterest"}
+)
+
+
+def _parse_selected_platforms_from_body(raw_list) -> Optional[list]:
+    """If client sends selected_platforms list, return normalized unique allowed labels; else None."""
+    if raw_list is None:
+        return None
+    if not isinstance(raw_list, list):
+        return None
+    out: list[str] = []
+    seen: set[str] = set()
+    for x in raw_list:
+        s = str(x).strip() if x is not None else ""
+        if not s:
+            continue
+        if s in ("Instagram", "Facebook"):
+            s = "Instagram & Facebook"
+        if s not in ALLOWED_PLATFORMS or s in seen:
+            continue
+        seen.add(s)
+        out.append(s)
+    return out if out else None
+
+
+def _canonical_platform_string_from_order(order: dict) -> str:
+    """Stable string for comparing with new selection after plan change."""
+    intake = order.get("intake") if isinstance(order.get("intake"), dict) else {}
+    raw = (order.get("selected_platforms") or intake.get("platform") or "").strip()
+    pc = max(1, int(order.get("platforms_count", 1)))
+    return _coerce_platform_selection(raw, pc)
+
+
+def _platform_signature(s: str) -> tuple:
+    """Sorted tuple of platform labels for order-independent comparison."""
+    return tuple(sorted(_normalize_platform_list(s)))
 
 
 def _coerce_platform_selection(raw: str, desired_count: int) -> str:
@@ -507,11 +548,15 @@ def reduce_subscription():
 @billing_bp.route("/change-subscription-plan", methods=["POST"])
 def change_subscription_plan():
     """
-    Change subscription plan: supports upgrades and downgrades for platforms and Story Ideas.
-    Body: { token, new_platforms (1–4), new_stories (bool) }.
-    - Uses same Stripe item update logic as reduce_subscription.
-    - Sends a plan-change confirmation email with old/new price.
-    Requires login; order must belong to customer.
+    Change subscription plan: platforms (count + which networks), Story Ideas, and alignment pref for intake.
+    Body: {
+      token, new_stories (bool),
+      new_platforms (1–4) if selected_platforms omitted,
+      selected_platforms (optional): list of 1–4 labels from
+        Instagram & Facebook, LinkedIn, TikTok, Pinterest,
+      align_stories_to_captions (optional bool; only when new_stories is true).
+    - Stripe is updated only when platform count or Story Ideas billing changes.
+    - Intake is always updated so the form can be prefilled.
     """
     customer = get_current_customer()
     if not customer:
@@ -520,8 +565,17 @@ def change_subscription_plan():
     try:
         data = request.get_json() or {}
         token = (data.get("token") or "").strip()
-        new_platforms = max(1, min(4, int(data.get("new_platforms") or 1)))
         new_stories = bool(data.get("new_stories"))
+        selected_list = _parse_selected_platforms_from_body(data.get("selected_platforms"))
+        align_stories_to_captions = bool(data.get("align_stories_to_captions")) if new_stories else False
+        if selected_list is not None:
+            if len(selected_list) < 1 or len(selected_list) > 4:
+                return jsonify({"ok": False, "error": "Select 1–4 platforms"}), 400
+            new_platforms = len(selected_list)
+            selected_synced = ", ".join(selected_list)
+        else:
+            new_platforms = max(1, min(4, int(data.get("new_platforms") or 1)))
+            selected_synced = None
     except (TypeError, ValueError):
         return jsonify({"ok": False, "error": "Invalid request"}), 400
     if not token:
@@ -551,7 +605,22 @@ def change_subscription_plan():
 
     order_platforms = max(1, int(order.get("platforms_count", 1)))
     order_has_stories = bool(order.get("include_stories"))
-    if new_platforms == order_platforms and new_stories == order_has_stories:
+    intake_existing = order.get("intake") if isinstance(order.get("intake"), dict) else {}
+    old_align = bool(intake_existing.get("align_stories_to_captions"))
+
+    if selected_synced is None:
+        selected_raw = (order.get("selected_platforms") or "").strip()
+        intake_platform_raw = (intake_existing.get("platform") or "").strip() if intake_existing else ""
+        selected_source = intake_platform_raw or selected_raw
+        selected_synced = _coerce_platform_selection(selected_source, new_platforms)
+
+    canonical_existing = _canonical_platform_string_from_order(order)
+    billing_changed = (new_platforms != order_platforms) or (new_stories != order_has_stories)
+    meta_changed = (_platform_signature(selected_synced) != _platform_signature(canonical_existing)) or (
+        align_stories_to_captions != old_align
+    )
+
+    if not billing_changed and not meta_changed:
         return jsonify({"ok": False, "error": "No change to plan"}), 400
 
     stories_price_id = (getattr(Config, "STRIPE_CAPTIONS_STORIES_SUBSCRIPTION_PRICE_ID", None) or "").strip()
@@ -559,57 +628,51 @@ def change_subscription_plan():
     if not getattr(Config, "STRIPE_SECRET_KEY", None):
         return jsonify({"ok": False, "error": "Billing not configured"}), 503
 
-    try:
-        import stripe
-        stripe.api_key = Config.STRIPE_SECRET_KEY
-        sub = stripe.Subscription.retrieve(subscription_id, expand=["items.data.price"])
-    except stripe.error.StripeError as e:
-        msg = getattr(e, "user_message", None) or str(e) or "Stripe error"
-        return jsonify({"ok": False, "error": msg}), 400
+    if billing_changed:
+        try:
+            import stripe
+            stripe.api_key = Config.STRIPE_SECRET_KEY
+            sub = stripe.Subscription.retrieve(subscription_id, expand=["items.data.price"])
+        except stripe.error.StripeError as e:
+            msg = getattr(e, "user_message", None) or str(e) or "Stripe error"
+            return jsonify({"ok": False, "error": msg}), 400
 
-    items_data = (sub.get("items") or {}).get("data") if hasattr(sub.get("items"), "get") else getattr(sub.get("items"), "data", None)
-    items_data = items_data or []
-    item_updates = []
-    for item in items_data:
-        si_id = item.get("id") if isinstance(item, dict) else getattr(item, "id", None)
-        if not si_id:
-            continue
-        price = item.get("price") if isinstance(item, dict) else getattr(item, "price", None)
-        price_id = price.get("id") if isinstance(price, dict) else getattr(price, "id", None) if price else None
-        qty = item.get("quantity", 1) if isinstance(item, dict) else getattr(item, "quantity", 1)
-        qty = int(qty) if qty else 1
+        items_data = (sub.get("items") or {}).get("data") if hasattr(sub.get("items"), "get") else getattr(sub.get("items"), "data", None)
+        items_data = items_data or []
+        item_updates = []
+        for item in items_data:
+            si_id = item.get("id") if isinstance(item, dict) else getattr(item, "id", None)
+            if not si_id:
+                continue
+            price = item.get("price") if isinstance(item, dict) else getattr(item, "price", None)
+            price_id = price.get("id") if isinstance(price, dict) else getattr(price, "id", None) if price else None
+            qty = item.get("quantity", 1) if isinstance(item, dict) else getattr(item, "quantity", 1)
+            qty = int(qty) if qty else 1
 
-        if stories_price_id and price_id == stories_price_id:
-            if not new_stories:
-                item_updates.append({"id": si_id, "deleted": True})
+            if stories_price_id and price_id == stories_price_id:
+                if not new_stories:
+                    item_updates.append({"id": si_id, "deleted": True})
+                else:
+                    item_updates.append({"id": si_id, "quantity": 1})
+            elif extra_platform_price_id and price_id == extra_platform_price_id:
+                new_qty = max(0, new_platforms - 1)
+                if new_qty == 0:
+                    item_updates.append({"id": si_id, "deleted": True})
+                else:
+                    item_updates.append({"id": si_id, "quantity": new_qty})
             else:
-                item_updates.append({"id": si_id, "quantity": 1})
-        elif extra_platform_price_id and price_id == extra_platform_price_id:
-            new_qty = max(0, new_platforms - 1)
-            if new_qty == 0:
-                item_updates.append({"id": si_id, "deleted": True})
-            else:
-                item_updates.append({"id": si_id, "quantity": new_qty})
-        else:
-            item_updates.append({"id": si_id, "quantity": qty})
+                item_updates.append({"id": si_id, "quantity": qty})
 
-    try:
-        stripe.Subscription.modify(
-            subscription_id,
-            items=item_updates,
-            proration_behavior="create_prorations",
-        )
-    except stripe.error.StripeError as e:
-        msg = getattr(e, "user_message", None) or str(e) or "Stripe error"
-        return jsonify({"ok": False, "error": msg}), 400
+        try:
+            stripe.Subscription.modify(
+                subscription_id,
+                items=item_updates,
+                proration_behavior="create_prorations",
+            )
+        except stripe.error.StripeError as e:
+            msg = getattr(e, "user_message", None) or str(e) or "Stripe error"
+            return jsonify({"ok": False, "error": msg}), 400
 
-    # Keep DB + intake aligned with Stripe (same as reduce_subscription) so Get pack sooner display
-    # and PDF generation see the same platform count and labels.
-    selected_raw = (order.get("selected_platforms") or "").strip()
-    intake_existing = order.get("intake") if isinstance(order.get("intake"), dict) else {}
-    intake_platform_raw = (intake_existing.get("platform") or "").strip() if intake_existing else ""
-    selected_source = intake_platform_raw or selected_raw
-    selected_synced = _coerce_platform_selection(selected_source, new_platforms)
     updates = {
         "platforms_count": new_platforms,
         "include_stories": new_stories,
@@ -618,6 +681,7 @@ def change_subscription_plan():
     updated_intake = dict(intake_existing or {})
     updated_intake["platform"] = selected_synced
     updated_intake["include_stories"] = new_stories
+    updated_intake["align_stories_to_captions"] = align_stories_to_captions
     updates["intake"] = updated_intake
     co_svc.update(order["id"], updates)
 
@@ -628,14 +692,20 @@ def change_subscription_plan():
             notif = NotificationService()
             change_bits = []
             if new_platforms != order_platforms:
-                direction = "more" if new_platforms > order_platforms else "fewer"
                 change_bits.append(
                     f"your subscription now includes {new_platforms} platform{'s' if new_platforms != 1 else ''} instead of {order_platforms}"
                 )
+            if _platform_signature(selected_synced) != _platform_signature(canonical_existing):
+                change_bits.append(f"your platforms are now: {selected_synced}")
             if not order_has_stories and new_stories:
                 change_bits.append("30 Days Story Ideas has been added to your subscription")
             elif order_has_stories and not new_stories:
                 change_bits.append("Story Ideas has been removed from your subscription")
+            if new_stories and align_stories_to_captions != old_align:
+                if align_stories_to_captions:
+                    change_bits.append("Story Ideas will align to each day's caption")
+                else:
+                    change_bits.append("Story Ideas will not be aligned to each day's caption")
             if not change_bits:
                 change_text = "your plan has been updated."
             else:

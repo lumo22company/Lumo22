@@ -78,6 +78,8 @@
             </div>
             {% set _platforms = (o.get('platforms_count') or 1)|int %}
             {% set _has_stories = o.get('include_stories') %}
+            {% set _intake_plan = o.get('intake') or {} %}
+            {% set _psp = (o.get('selected_platforms') or _intake_plan.get('platform') or '')|trim %}
             {% set _plan_currency = (o.get('currency') or 'gbp')|lower %}
             {% set _pricing_map = (subscription_billing.get('subscription_pricing') or {}) if subscription_billing else {} %}
             {% set _pricing = _pricing_map.get(sub_id) if _pricing_map else None %}
@@ -91,6 +93,8 @@
                     class="account-billing-portal-link account-btn-swipe-light account-change-plan-btn"
                     data-order-token="{{ o.get('token', '') }}"
                     data-platforms="{{ _platforms }}"
+                    data-selected-platforms="{{ _psp|e }}"
+                    data-align-stories="{{ '1' if _intake_plan.get('align_stories_to_captions') else '0' }}"
                     data-has-stories="{{ '1' if _has_stories else '0' }}"
                     data-currency="{{ _plan_currency }}"
                     data-effective-monthly="{{ _eff_monthly if _eff_monthly is not none else '' }}"
