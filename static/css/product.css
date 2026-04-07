@@ -1718,6 +1718,7 @@
   overflow: hidden;
   width: 100%;
   justify-content: center;
+  cursor: pointer;
   background: rgba(255,255,255,0.12);
   color: #fff;
   border: 1px solid rgba(255,255,255,0.25);
