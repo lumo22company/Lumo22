@@ -2004,11 +2004,8 @@
   font-size: 0.9rem;
   line-height: 1.45;
 }
-.change-plan-feedback--hint {
-  background: rgba(255, 250, 235, 0.96);
-  border: 1px solid rgba(201, 162, 39, 0.45);
-  color: #2a2418;
-}
+/* Hint + error: same frame — white text, red outline, no fill */
+.change-plan-feedback--hint,
 .change-plan-feedback--err {
   background: transparent;
   border: 2px solid rgba(220, 60, 60, 0.95);
