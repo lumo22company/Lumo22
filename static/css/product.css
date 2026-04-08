@@ -1589,8 +1589,8 @@
   --dfd-space: 2rem;
   --dfd-space-lg: 4rem;
   --dfd-space-xl: 6rem;
-  /* Align with .account-layout padding-top (fixed nav clearance) — avoids a gap between nav and overlay */
-  --account-modal-below-nav: 80px;
+  /* Overridden at runtime by JS (measured #lumo-nav height). Fallback until sync. */
+  --account-modal-below-nav: 72px;
   /* Light page background, match site (landing/product) */
   background: var(--bg-light, #e5e5e5);
   color: var(--text-on-light, #000);
@@ -1899,14 +1899,17 @@
   right: 0;
   bottom: auto;
   width: 100%;
-  /* Explicit height so absolute backdrop fills the band (not just the dialog card height) */
+  /* Explicit height so absolute backdrop fills below nav; dvh handles mobile browser chrome */
   height: calc(100vh - var(--account-modal-below-nav));
   min-height: calc(100vh - var(--account-modal-below-nav));
+  height: calc(100dvh - var(--account-modal-below-nav));
+  min-height: calc(100dvh - var(--account-modal-below-nav));
   box-sizing: border-box;
 }
 .account-page-wrap .account-delete-modal-box,
 .account-page-wrap .account-delete-modal-box--with-scroll {
   max-height: min(92vh, calc(100vh - var(--account-modal-below-nav) - 2.25rem));
+  max-height: min(92dvh, calc(100dvh - var(--account-modal-below-nav) - 2.25rem));
 }
 
 .account-delete-modal-backdrop {
@@ -2060,6 +2063,8 @@
 .account-page-wrap #change-plan-modal.account-delete-modal.change-plan-modal-root {
   height: calc(100vh - var(--account-modal-below-nav));
   min-height: calc(100vh - var(--account-modal-below-nav));
+  height: calc(100dvh - var(--account-modal-below-nav));
+  min-height: calc(100dvh - var(--account-modal-below-nav));
 }
 #change-plan-modal .account-delete-modal-backdrop {
   z-index: 0;
@@ -2887,9 +2892,6 @@
   }
 
   /* Account page: sidebar as collapsible menu, single column, full-width actions */
-  .account-page-wrap {
-    --account-modal-below-nav: 72px;
-  }
   .account-page-wrap .account-layout {
     flex-direction: column;
     gap: 0;

@@ -840,6 +840,48 @@
   <script>
     (function() {
       var CAPTIONS_PRICES = {{ captions_prices|tojson }};
+      /** Modal overlay top = measured #lumo-nav height (fixes gap below fixed nav vs guessed px). */
+      function lumoSyncAccountModalNavInset() {
+        var nav = document.getElementById('lumo-nav');
+        if (!nav || !document.body.classList.contains('account-page-wrap')) return;
+        var h = nav.getBoundingClientRect().height;
+        if (!isFinite(h) || h <= 0) return;
+        document.body.style.setProperty('--account-modal-below-nav', Math.ceil(h) + 'px');
+      }
+      window.lumoSyncAccountModalNavInset = lumoSyncAccountModalNavInset;
+      function lumoBindAccountModalNavInset() {
+        lumoSyncAccountModalNavInset();
+        requestAnimationFrame(function() { requestAnimationFrame(lumoSyncAccountModalNavInset); });
+        lumoObserveAccountModalsNavInset();
+      }
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', lumoBindAccountModalNavInset);
+      } else {
+        lumoBindAccountModalNavInset();
+      }
+      window.addEventListener('resize', function() { requestAnimationFrame(lumoSyncAccountModalNavInset); });
+      window.addEventListener('orientationchange', function() { setTimeout(lumoSyncAccountModalNavInset, 200); });
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', lumoSyncAccountModalNavInset);
+      }
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(function() { requestAnimationFrame(lumoSyncAccountModalNavInset); }).catch(function() {});
+      }
+      function lumoObserveAccountModalsNavInset() {
+        var modals = document.querySelectorAll('.account-delete-modal');
+        for (var i = 0; i < modals.length; i++) {
+          (function(el) {
+            var obs = new MutationObserver(function() {
+              var open = el.classList && el.classList.contains('account-delete-modal--open');
+              var visible = !el.hasAttribute('hidden') && el.hidden !== true;
+              if (open || visible) {
+                requestAnimationFrame(lumoSyncAccountModalNavInset);
+              }
+            });
+            obs.observe(el, { attributes: true, attributeFilter: ['class', 'hidden'] });
+          })(modals[i]);
+        }
+      }
       if (window.location.search.indexOf('login_token=') !== -1) {
         try { history.replaceState({}, '', window.location.pathname); } catch (e) {}
       }
