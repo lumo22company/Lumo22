@@ -246,6 +246,8 @@
     .intake-page label input[type="checkbox"] { flex-shrink: 0; vertical-align: middle; align-self: center; margin: 0; }
     .intake-add-platform-link { color: var(--lum-gold, #c9a227); font-weight: 600; text-decoration: none; }
     .intake-add-platform-link:hover { text-decoration: underline; }
+    .intake-page a.intake-buy-oneoff-link { color: var(--lum-gold, #fff200) !important; font-weight: 600; text-decoration: none; }
+    .intake-page a.intake-buy-oneoff-link:hover { color: #000 !important; text-decoration: underline; }
     .intake-add-platform-note { color: var(--lum-text-muted, #666); }
     .intake-page-body .lumo-nav { background: #000; border-bottom: 1px solid rgba(255,255,255,0.06); box-shadow: 0 4px 24px rgba(0,0,0,0.2); }
   </style>
@@ -266,11 +268,11 @@
     <div class="intake-view-only-banner">
       {% if oneoff_upgraded_to_subscription %}
       <strong>This pack was used to start your subscription.</strong> To change answers for <strong>future</strong> packs, open <a href="/account/edit-form">Edit form</a> in your account and update the row for your <strong>subscription</strong>.
-      <span style="display: block; margin-top: 0.65rem; font-size: 0.88rem; font-weight: 500;">Want another 30-day pack without subscribing? <a href="/captions">Buy another one-off</a> (each order has its own brief).</span>
+      <span style="display: block; margin-top: 0.65rem; font-size: 0.88rem; font-weight: 500;">Want another 30-day pack without subscribing? <a href="/captions" class="intake-buy-oneoff-link">Buy another one-off</a> (each order has its own brief).</span>
       {% else %}
       <strong>Want to edit these answers from your account?</strong> Upgrade to a monthly subscription—after checkout you can open <strong>Edit form</strong> anytime for your next pack.
       {% if account_upgrade_base_url %}<br><a href="{{ account_upgrade_base_url }}">Upgrade to subscription to edit</a>{% endif %}
-      <span style="display: block; margin-top: 0.65rem; font-size: 0.88rem; font-weight: 500;">Want another 30-day pack without subscribing? <a href="/captions">Buy another one-off</a> (each order has its own brief).</span>
+      <span style="display: block; margin-top: 0.65rem; font-size: 0.88rem; font-weight: 500;">Want another 30-day pack without subscribing? <a href="/captions" class="intake-buy-oneoff-link">Buy another one-off</a> (each order has its own brief).</span>
       {% endif %}
     </div>
     {% endif %}
