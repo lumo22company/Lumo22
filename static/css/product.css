@@ -1868,11 +1868,12 @@
   border-color: #b00;
 }
 
-/* Account modals — dark liquid glass (all modals) */
+/* Account modals — dark liquid glass (all modals)
+   z-index above .lumo-nav (9998) and account mobile nav (99999) so dialogs aren’t covered */
 .account-delete-modal {
   position: fixed;
   inset: 0;
-  z-index: 9999;
+  z-index: 100000;
   display: flex;
   align-items: center;
   justify-content: center;
