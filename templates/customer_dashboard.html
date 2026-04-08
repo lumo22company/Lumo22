@@ -731,8 +731,9 @@
         <p id="resume-subscription-error" style="display: none; margin-top: 0.75rem; color: #c00; font-size: 0.9rem;"></p>
       </div>
     </div>
-    <div id="change-plan-modal" class="account-delete-modal" role="dialog" aria-labelledby="change-plan-modal-title" aria-modal="true" hidden>
+    <div id="change-plan-modal" class="account-delete-modal change-plan-modal-root" role="dialog" aria-labelledby="change-plan-modal-title" aria-modal="true" hidden>
       <div class="account-delete-modal-backdrop" onclick="closeChangePlanModal()"></div>
+      <div class="change-plan-modal-scroll">
       <div class="account-delete-modal-box remove-stories-modal-box change-plan-modal-box" style="max-width: 520px;">
         <h2 id="change-plan-modal-title" class="account-delete-modal-title">Change your plan</h2>
         <div class="change-plan-modal-body">
@@ -783,6 +784,7 @@
           <button type="button" id="change-plan-confirm" class="account-delete-modal-btn account-add-stories-confirm" onclick="confirmChangePlan()">Confirm changes</button>
         </div>
         </div>
+      </div>
       </div>
     </div>
     <div id="change-plan-success-modal" class="account-delete-modal" role="dialog" aria-labelledby="change-plan-success-title" aria-modal="true" hidden>
