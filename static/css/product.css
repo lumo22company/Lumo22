@@ -1589,6 +1589,8 @@
   --dfd-space: 2rem;
   --dfd-space-lg: 4rem;
   --dfd-space-xl: 6rem;
+  /* Match .account-layout padding-top — modal layer starts below fixed .lumo-nav */
+  --account-modal-below-nav: 5rem;
   /* Light page background, match site (landing/product) */
   background: var(--bg-light, #e5e5e5);
   color: var(--text-on-light, #000);
@@ -1888,6 +1890,20 @@
   visibility: visible;
   display: flex;
 }
+
+/* Account page only: overlay fills viewport below fixed nav (navbar stays visible, untinted) */
+.account-page-wrap .account-delete-modal {
+  inset: unset;
+  top: var(--account-modal-below-nav);
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+.account-page-wrap .account-delete-modal-box,
+.account-page-wrap .account-delete-modal-box--with-scroll {
+  max-height: min(92vh, calc(100vh - var(--account-modal-below-nav) - 2.25rem));
+}
+
 .account-delete-modal-backdrop {
   position: absolute;
   inset: 0;
