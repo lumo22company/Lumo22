@@ -2030,20 +2030,33 @@
   color: #ffffff;
 }
 
-/* Change plan modal: scrollable body + footer so feedback never flushes buttons to the card edge */
+/* Change plan: no inner scroll — card grows; scroll the overlay (viewport below nav) as one surface */
+#change-plan-modal.account-delete-modal {
+  align-items: center;
+  justify-content: flex-start;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding: 1rem 1rem 2.5rem;
+  box-sizing: border-box;
+}
 #change-plan-modal .change-plan-modal-box {
+  flex: 0 0 auto;
+  max-height: none;
   min-height: 0;
+  overflow: visible;
+  margin-top: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+.account-page-wrap #change-plan-modal .change-plan-modal-box {
+  max-height: none;
 }
 #change-plan-modal .account-delete-modal-title {
   flex-shrink: 0;
 }
 #change-plan-modal .change-plan-modal-body {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  padding-right: 0.35rem;
-  margin-right: -0.15rem;
+  flex: 0 0 auto;
+  overflow: visible;
 }
 #change-plan-modal .change-plan-modal-footer {
   flex: 0 0 auto;
