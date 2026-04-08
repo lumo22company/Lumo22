@@ -846,7 +846,8 @@
         if (!nav || !document.body.classList.contains('account-page-wrap')) return;
         var h = nav.getBoundingClientRect().height;
         if (!isFinite(h) || h <= 0) return;
-        document.body.style.setProperty('--account-modal-below-nav', Math.ceil(h) + 'px');
+        /* Exact subpixel height — Math.ceil left a thin gap when nav height was fractional */
+        document.body.style.setProperty('--account-modal-below-nav', h + 'px');
       }
       window.lumoSyncAccountModalNavInset = lumoSyncAccountModalNavInset;
       function lumoBindAccountModalNavInset() {

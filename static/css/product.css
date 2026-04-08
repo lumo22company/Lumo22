@@ -1899,6 +1899,8 @@
   right: 0;
   bottom: auto;
   width: 100%;
+  /* No top padding — base .account-delete-modal has padding:1rem which left a visible strip above the backdrop */
+  padding: 0 1rem 1rem;
   /* Explicit height so absolute backdrop fills below nav; dvh handles mobile browser chrome */
   height: calc(100vh - var(--account-modal-below-nav));
   min-height: calc(100vh - var(--account-modal-below-nav));
