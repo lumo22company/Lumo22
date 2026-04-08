@@ -2010,9 +2010,9 @@
   color: #2a2418;
 }
 .change-plan-feedback--err {
-  background: rgba(45, 18, 18, 0.92);
-  border: 1px solid rgba(255, 140, 120, 0.45);
-  color: #ffecec;
+  background: transparent;
+  border: 2px solid rgba(220, 60, 60, 0.95);
+  color: #ffffff;
 }
 .account-delete-modal-type-wrap {
   margin-bottom: 1.25rem;
