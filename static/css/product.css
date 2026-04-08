@@ -2011,6 +2011,35 @@
   border: 2px solid rgba(220, 60, 60, 0.95);
   color: #ffffff;
 }
+
+/* Change plan modal: scrollable body + footer so feedback never flushes buttons to the card edge */
+#change-plan-modal .change-plan-modal-box {
+  min-height: 0;
+}
+#change-plan-modal .account-delete-modal-title {
+  flex-shrink: 0;
+}
+#change-plan-modal .change-plan-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 0.35rem;
+  margin-right: -0.15rem;
+}
+#change-plan-modal .change-plan-modal-footer {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.65rem, 2.2vw, 1.05rem);
+  padding-top: clamp(0.65rem, 1.8vw, 1rem);
+  margin-top: 0.35rem;
+  padding-bottom: max(0.35rem, env(safe-area-inset-bottom, 0px));
+}
+#change-plan-modal .change-plan-modal-footer .change-plan-feedback {
+  margin-top: 0;
+  margin-bottom: 0;
+}
 .account-delete-modal-type-wrap {
   margin-bottom: 1.25rem;
 }
