@@ -1589,8 +1589,8 @@
   --dfd-space: 2rem;
   --dfd-space-lg: 4rem;
   --dfd-space-xl: 6rem;
-  /* Match .account-layout padding-top — modal layer starts below fixed .lumo-nav */
-  --account-modal-below-nav: 5rem;
+  /* Modal overlay starts just under fixed .lumo-nav (tighter than main padding — avoids a visible strip) */
+  --account-modal-below-nav: 4.5rem;
   /* Light page background, match site (landing/product) */
   background: var(--bg-light, #e5e5e5);
   color: var(--text-on-light, #000);
