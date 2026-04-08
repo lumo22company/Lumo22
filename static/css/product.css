@@ -2039,8 +2039,20 @@
   overflow: hidden;
   padding: 0;
 }
+/* Explicit height so absolute backdrop fills the band below nav (not just the card height). */
+.account-page-wrap #change-plan-modal.account-delete-modal.change-plan-modal-root {
+  height: calc(100vh - var(--account-modal-below-nav));
+  min-height: calc(100vh - var(--account-modal-below-nav));
+}
 #change-plan-modal .account-delete-modal-backdrop {
   z-index: 0;
+  /* Stretch to full modal root (parent must have defined height — see above). */
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  min-height: 100%;
 }
 #change-plan-modal .change-plan-modal-scroll {
   position: relative;
