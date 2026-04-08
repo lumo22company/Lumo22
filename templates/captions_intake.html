@@ -379,7 +379,7 @@
       </div>
       <div class="form-section">
         <h2>Voice <span class="intake-h2-meta">(optional)</span></h2>
-        <p class="field-helper intake-helper-before-control">This shapes tone and word choice across your whole pack so captions feel like <em>your</em> brand—not generic social copy. You can skip it, but even a handful of words helps us match how you want to sound.</p>
+        <p class="field-helper intake-helper-before-control">This shapes tone and word choice across your whole pack so captions feel like <em>your</em> brand—not generic social copy. You can skip it, but even a handful of words helps us stay aligned with the voice you’re aiming for.</p>
         <p class="field-helper intake-question">Choose 3–5 words that describe how you want to sound.<span class="intake-pick-any-line">(pick any that apply)</span></p>
         <div class="intake-checkbox-group" role="group" aria-label="Voice tone" data-testid="voice_words">
           <label class="intake-checkbox-label"><input type="checkbox" name="voice_words_cb" value="direct"> Direct</label>
@@ -400,10 +400,10 @@
         <textarea id="voice_avoid" name="voice_avoid" placeholder="e.g. jargon, hype, overly formal" data-testid="voice_avoid">{{ existing_intake.get('voice_avoid', '') }}</textarea>
       </div>
       <div class="form-section">
-        <h2>Language <span class="intake-h2-meta">(optional)</span></h2>
+        <h2>Language <span class="intake-h2-meta">(required)</span></h2>
         <label for="caption_language">What language should your captions be written in?</label>
         <p class="field-helper intake-helper-before-control">For example: British English or American English.</p>
-        <select id="caption_language" name="caption_language" data-testid="caption_language">
+        <select id="caption_language" name="caption_language" data-testid="caption_language" required>
           <option value="English (UK)" {% if existing_intake.get('caption_language') == 'English (UK)' or not existing_intake.get('caption_language') %}selected{% endif %}>English (UK)</option>
           <option value="English (US)" {% if existing_intake.get('caption_language') == 'English (US)' %}selected{% endif %}>English (US)</option>
           <option value="Spanish" {% if existing_intake.get('caption_language') == 'Spanish' %}selected{% endif %}>Spanish</option>
