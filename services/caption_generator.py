@@ -486,6 +486,7 @@ def _build_stories_system_prompt(intake: Dict[str, Any], *, aligned_with_caption
         f"{aligned}"
         "Quality bar: as tailored as a premium 30-day story plan. "
         "Always respect INTAKE exactly: use only the client's real business name and offer—never fictional or example brands.\n\n"
+        "Do not invent suppliers, mile distances, certifications, named product lines, or regional sourcing claims unless they appear in the intake (including Facts / constraints). Prefer generic wording when unsure.\n\n"
         f"{lang_instruction}\n\n"
         f'CRITICAL — Single language for all story content: caption language is "{lang}". '
         "Write every Idea, every Suggested wording line, and hashtag text in that language only. "
@@ -521,6 +522,14 @@ def _build_system_prompt(intake: Dict[str, Any]) -> str:
     lang = (intake.get("caption_language") or "English (UK)").strip()
     lang_instruction = LANGUAGE_INSTRUCTIONS.get(lang, LANGUAGE_INSTRUCTIONS["English (UK)"])
     role_line = _role_line_for_intake(intake)
+    vary_ig_fb_block = ""
+    if _effective_vary_ig_fb_caption_length(intake):
+        vary_ig_fb_block = (
+            "Instagram & Facebook — caption length variety (client opted in): Across the 30 **Instagram & Facebook** captions only, deliberately vary how long each post runs—"
+            "roughly a third very short (1–2 tight lines or one strong sentence with concrete detail), a third medium (about 2–4 short sentences as usual), "
+            "and a third a bit more developed (still feed-appropriate, not essays). Every caption must stand alone: the reader still understands what the business offers "
+            "and who it is for—no cryptic fragments. Other platforms in the intake keep their normal length rules (e.g. LinkedIn may be longer).\n\n"
+        )
     return f"""{role_line} You are also a senior content strategist and conversion-focused copywriter. You write social media captions.
 
 Quality bar: Every caption set must be as tailored and specific as a premium copywriter would deliver for this exact business—no generic filler, no wrong dates, no off-brand tone. Match the standard of a highly polished 30-day plan.
@@ -569,7 +578,9 @@ Named people (CRITICAL): Do not invent specific names of employees, customers, c
 
 Business relevance (CRITICAL): Every caption must be clearly about THIS business—what they actually sell or do, who they serve, and their specific product or service. Do not write generic "founder", "strategy", "building a brand", or "scaling a business" captions that could apply to any company. If the business is cakes and baking, reference cakes, baking, ingredients, orders, customers, flavours, etc. If the business is coaching, reference coaching, clients, sessions, outcomes. Match the vocabulary and examples to the business type and "What they offer" from the intake. A reader should immediately understand which industry and offer the caption is for.
 
-Launch/event phasing (when LAUNCH_EVENT / KEY_DATE_EVENTS is provided in the user prompt): If the user prompt includes **EVENT_CALENDAR**, **WEEKDAY_LOCK**, **WEEKEND_WORDING**, or **COUNTDOWN_RULES**, treat them as authoritative: multi-day windows stay “on-event” for every Pack Day in that window—do not use “tomorrow”, “48 hours”, or “Monday launch” in ways that contradict **DATE_CONTEXT**. Follow **WEEKEND_WORDING** for when “this weekend” / “next weekend” are allowed. When **WEEKDAY_LOCK** lists the weekdays (e.g. Sunday–Monday), never substitute “Saturday and Sunday” or imply Sat–Sun. Otherwise: days before launch = pre-launch; launch / event days = announcement, go-live; days after = post-launch (thank-you, feedback — NOT hype or anticipation). You MUST reflect the client's named event(s), sale(s), or launch date(s) in the **Caption:** body text on the correct days—not only in the document header or intake summary. Caption copy and Story Ideas must follow the same before / on / after timeline."""
+Factual claims (CRITICAL): Do not state specific suppliers, mills, farms, mile distances, organic or other certifications, named product SKUs, regional labels, or sourcing stories unless they appear in the user prompt intake (including **Facts / constraints**, offer line, themes, or example captions). If a detail is not in the intake, use general language (e.g. "thoughtfully sourced ingredients", "local partners", "our kitchen")—never plausible-sounding invented precision.
+
+{vary_ig_fb_block}Launch/event phasing (when LAUNCH_EVENT / KEY_DATE_EVENTS is provided in the user prompt): If the user prompt includes **EVENT_CALENDAR**, **WEEKDAY_LOCK**, **WEEKEND_WORDING**, or **COUNTDOWN_RULES**, treat them as authoritative: multi-day windows stay “on-event” for every Pack Day in that window—do not use “tomorrow”, “48 hours”, or “Monday launch” in ways that contradict **DATE_CONTEXT**. Follow **WEEKEND_WORDING** for when “this weekend” / “next weekend” are allowed. When **WEEKDAY_LOCK** lists the weekdays (e.g. Sunday–Monday), never substitute “Saturday and Sunday” or imply Sat–Sun. Otherwise: days before launch = pre-launch; launch / event days = announcement, go-live; days after = post-launch (thank-you, feedback — NOT hype or anticipation). You MUST reflect the client's named event(s), sale(s), or launch date(s) in the **Caption:** body text on the correct days—not only in the document header or intake summary. Caption copy and Story Ideas must follow the same before / on / after timeline."""
 
 
 def extract_day_categories_from_captions_md(captions_md: str) -> list:
@@ -630,6 +641,7 @@ def _build_user_prompt(
     goal = n(intake.get("goal") or "", sentence_case=False)
     voice_words = n(intake.get("voice_words") or "", sentence_case=False)
     voice_avoid = n(intake.get("voice_avoid") or "", sentence_case=True)
+    facts_guardrails = n(intake.get("facts_guardrails") or "", sentence_case=True)
 
     parts = [
         f"Generate the full 30-day caption document for this client. Current month/year: {month_year}.",
@@ -652,14 +664,22 @@ def _build_user_prompt(
         f"- Platform habits: {platform_habits}",
         f"- Goal for the month: {goal}",
         f"- Caption language: {intake.get('caption_language', 'English (UK)')}",
+        f"- Facts / constraints (only state what is true; never invent contrary claims): {facts_guardrails or 'Not specified'}",
         "",
-        "RELEVANCE: Every caption must be clearly about this business—their product/service, their audience, their offer. Do not write generic business/strategy/founder captions that could apply to any company. Use concrete details from the intake (e.g. if they offer cakes, reference cakes, baking, ingredients, orders; if they offer coaching, reference sessions, clients, outcomes). A reader should know which industry and offer the caption is for.",
+        "RELEVANCE: Every caption must be clearly about this business—their product/service, their audience, their offer. Do not write generic business/strategy/founder captions that could apply to any company. Ground specifics in the intake—use concrete details the client actually provided (offer, themes, examples, Facts / constraints). A reader should know which industry and offer the caption is for.",
         "",
         "Do not invent specific people's names (employees, customers, or collaborators) unless the intake explicitly names them. Use generic roles (e.g. our team, the person who packs your order) instead.",
         "",
+        "FACTUAL GROUNDING: Do not invent suppliers, mills, farms, mile radii, certifications, named product lines, delivery regions, or other concrete operational claims unless they appear in the intake (including Facts / constraints, offer, themes, or example captions). When a detail is not stated, stay general.",
+        "",
         "VOICE: Match the client's voice (Voice / tone to use) and avoid their listed words or style (Words / style to avoid). When the goal is leads or inquiries, include a clear, low-pressure next step (e.g. link in bio, DM, book a call) where it fits naturally.",
         "",
-        "SUBSTANCE: Every caption must be clear enough that a stranger understands the offer—never a cryptic fragment with no context. For **Instagram & Facebook**: keep copy **tight** (hook first, then usually **2–4 short sentences** or a few short lines)—**not** a long essay unless Platform habits asks for longer. For **LinkedIn**: multiple sentences and depth are fine. For **Pinterest**: descriptive, keyword-aware. Days 1–2 set the tone: be specific about the business, location, or guest value.",
+        (
+            "SUBSTANCE: Every caption must be clear enough that a stranger understands the offer—never a cryptic fragment with no context. For **Instagram & Facebook** this client opted into **varied lengths**: across the month mix shorter punchy posts with medium and slightly longer feed-style posts (see system prompt). Short days must still pack concrete detail—no vague fragments. "
+            if _effective_vary_ig_fb_caption_length(intake)
+            else "SUBSTANCE: Every caption must be clear enough that a stranger understands the offer—never a cryptic fragment with no context. For **Instagram & Facebook**: keep copy **tight** (hook first, then usually **2–4 short sentences** or a few short lines)—**not** a long essay unless Platform habits asks for longer. "
+        )
+        + "For **LinkedIn**: multiple sentences and depth are fine. For **Pinterest**: descriptive, keyword-aware. Days 1–2 set the tone: be specific about the business, location, or guest value.",
     ]
     if len(platform_list) > 1:
         parts.append("")
@@ -815,6 +835,9 @@ def _build_doc_header(intake: Dict[str, Any], pack_start_date: Optional[str] = N
     launch_desc = (intake.get("launch_event_description") or "").strip()
     if launch_desc:
         launch_desc = n(launch_desc, sentence_case=True)
+    facts_g = (intake.get("facts_guardrails") or "").strip()
+    if facts_g:
+        facts_g = n(facts_g, sentence_case=True)
     lines = [
         "# 30 Days of Social Media Captions",
         f"{business} | {month_year}",
@@ -828,6 +851,10 @@ def _build_doc_header(intake: Dict[str, Any], pack_start_date: Optional[str] = N
         f"- Platform(s): {(intake.get('platform') or '').strip() or 'Not specified'}",
         f"- Goal: {goal}",
     ]
+    if _effective_vary_ig_fb_caption_length(intake):
+        lines.append("- Instagram & Facebook: varied caption lengths (opt-in)")
+    if facts_g:
+        lines.append(f"- Facts / constraints: {facts_g}")
     if launch_desc:
         lines.append(f"- Key date: {launch_desc}")
     lines.extend([
@@ -886,6 +913,38 @@ def _platform_label_is_tiktok(label: str) -> bool:
     return (label or "").strip().lower() == "tiktok"
 
 
+def _truthy_intake_flag(val: Any) -> bool:
+    if val is True:
+        return True
+    if val is False or val is None:
+        return False
+    if isinstance(val, str):
+        return val.strip().lower() in ("1", "true", "yes", "on")
+    return bool(val)
+
+
+def _platforms_include_ig_fb(platform_list: Optional[List[str]]) -> bool:
+    for p in platform_list or []:
+        low = (p or "").lower()
+        if "instagram" in low and "facebook" in low:
+            return True
+    return False
+
+
+def _effective_vary_ig_fb_caption_length(intake: Dict[str, Any]) -> bool:
+    raw = (intake.get("platform") or "").strip()
+    pl = [x.strip() for x in raw.split(",") if x.strip()] if raw else []
+    return _truthy_intake_flag(intake.get("vary_ig_fb_caption_length")) and _platforms_include_ig_fb(pl)
+
+
+def _platform_label_is_instagram_facebook(label: str) -> bool:
+    """True when **Platform:** matches the combined Instagram & Facebook product label (after normalization)."""
+    s = (label or "").strip().lower()
+    s = re.sub(r"\s*&\s*", " and ", s)
+    s = re.sub(r"\s+", " ", s).strip()
+    return s == "instagram and facebook"
+
+
 def _chunk_structure_error(
     content: str,
     day_start: int,
@@ -895,6 +954,7 @@ def _chunk_structure_error(
     include_hashtags: bool = True,
     hashtag_min: int = 3,
     hashtag_max: int = 10,
+    vary_ig_fb_caption_length: bool = False,
 ) -> Optional[str]:
     """
     Return a validation error string for bad chunk structure, else None.
@@ -1021,17 +1081,36 @@ def _chunk_structure_error(
                 return f"Day {day_num} ({label}) missing caption text"
             # Basic quality guardrails (platform-aware minimum length + substance).
             is_tiktok = _platform_label_is_tiktok(label)
-            min_len = 30 if is_tiktok else 200
+            is_ig_fb = _platform_label_is_instagram_facebook(label)
+            if is_tiktok:
+                min_len = 30
+            elif vary_ig_fb_caption_length and is_ig_fb:
+                min_len = 100
+            else:
+                min_len = 200
             if len(caption) < min_len:
                 return (
                     f"Day {day_num} ({label}) caption too short "
                     f"(min {min_len} characters for this platform)"
                 )
-            if not is_tiktok and _rough_sentence_count(caption) < 2:
-                return (
-                    f"Day {day_num} ({label}) caption must have at least 2 complete sentences "
-                    f"with specifics (not a one-liner or vague fragment)"
-                )
+            if not is_tiktok:
+                rs = _rough_sentence_count(caption)
+                if vary_ig_fb_caption_length and is_ig_fb:
+                    if rs < 1:
+                        return (
+                            f"Day {day_num} ({label}) caption must have at least one complete sentence "
+                            f"with specifics (not a vague fragment)"
+                        )
+                    if rs < 2 and len(caption) < 125:
+                        return (
+                            f"Day {day_num} ({label}) short Instagram & Facebook posts must still be substantive "
+                            f"(min 125 characters when using a single sentence)"
+                        )
+                elif rs < 2:
+                    return (
+                        f"Day {day_num} ({label}) caption must have at least 2 complete sentences "
+                        f"with specifics (not a one-liner or vague fragment)"
+                    )
             if _has_placeholder(caption):
                 return f"Day {day_num} ({label}) caption contains placeholder text"
             if include_hashtags:
@@ -1424,6 +1503,7 @@ class CaptionGenerator:
         hashtag_max = max(0, min(30, int(intake.get("hashtag_max") or 10)))
         if hashtag_min > hashtag_max:
             hashtag_max = hashtag_min
+        vary_ig_fb = _effective_vary_ig_fb_caption_length(intake)
         system = _build_system_prompt(intake)
         header = _build_doc_header(intake, pack_start_date=start_str)
         parts = [header]
@@ -1432,7 +1512,7 @@ class CaptionGenerator:
             content = chat_completion(
                 system=system,
                 user=user,
-            temperature=0.6,
+                temperature=0.6,
                 max_tokens=self.MAX_TOKENS_PER_CHUNK,
             )
             if not content:
@@ -1451,6 +1531,7 @@ class CaptionGenerator:
                     include_hashtags=bool(include_hashtags),
                     hashtag_min=hashtag_min,
                     hashtag_max=hashtag_max,
+                    vary_ig_fb_caption_length=vary_ig_fb,
                 )
                 has_empty = _chunk_has_empty_blocks(content, include_hashtags)
                 if not has_empty and not chunk_err:
@@ -1461,6 +1542,19 @@ class CaptionGenerator:
                         f"AI still returned incomplete content for days {day_start}-{day_end}{suffix}. Please try again."
                     )
                 reason = chunk_err or "empty Caption/Hashtags lines"
+                if vary_ig_fb:
+                    length_retry = (
+                        "For **Instagram & Facebook** this client opted into varied lengths: mix short, medium, and slightly longer feed posts across days—"
+                        "each **Caption:** still standalone-clear (what they offer, who it is for). "
+                        "Single-sentence IG/FB days must be at least ~125 characters with concrete detail; "
+                        "two-or-more-sentence days at least ~100 characters total. "
+                        "For other platforms (LinkedIn, Pinterest, etc.), keep ~200+ characters and multiple sentences unless TikTok."
+                    )
+                else:
+                    length_retry = (
+                        "For Instagram, Facebook, LinkedIn, Pinterest: each **Caption:** must be at least ~200 characters "
+                        "and at least two full sentences with concrete detail—no vague one-line fragments."
+                    )
                 retry_user = user + (
                     "\n\nIMPORTANT: Your previous response was invalid (" + reason + "). "
                     "Regenerate this range exactly with strict structure: "
@@ -1468,8 +1562,7 @@ class CaptionGenerator:
                     "no duplicate platform blocks in a day, and no empty **Caption:** or **Hashtags:** lines. "
                     "If hashtags are requested, each **Hashtags:** line must contain real hashtags starting with # "
                     f"and the count must be between {hashtag_min} and {hashtag_max}. "
-                    "For Instagram, Facebook, LinkedIn, Pinterest: each **Caption:** must be at least ~200 characters "
-                    "and at least two full sentences with concrete detail—no vague one-line fragments."
+                    + length_retry
                 )
                 content = chat_completion(
                     system=system,
@@ -1626,6 +1719,9 @@ CRITICAL — Use ONLY this business name when naming the brand in Idea or Sugges
 Do not invent, substitute, or use example/tagline business names from training (e.g. do not replace the real name with a slogan or another company). You may use "we" / "us" / "our" where natural; if the business name appears, it must be exactly "{business}".
 Ground every suggestion in their intake (offer, audience, goal)—not generic industries from examples."""
 
+        facts_g = n((intake.get("facts_guardrails") or "").strip(), sentence_case=True) if (intake.get("facts_guardrails") or "").strip() else ""
+        facts_line = f"\n- Facts / constraints: {facts_g}" if facts_g else ""
+
         strict_block = f"\n\nSTRICT FIX NOTE: {strict_note}\n" if strict_note else ""
         prompt = f"""Generate 30 Story prompts for Instagram/Facebook Stories. One per day (Day 1–30). Each day must have exactly three parts: Idea, Suggested wording, Story hashtags.
 
@@ -1637,7 +1733,7 @@ INTAKE:
 - Business: {business}
 - What they offer: {intake.get('offer_one_line', '')}
 - Audience: {intake.get('audience', '')}
-- Goal: {intake.get('goal', '')}
+- Goal: {intake.get('goal', '')}{facts_line}
 {date_block}
 {key_date_block}
 {variety_note}
@@ -1733,6 +1829,9 @@ CRITICAL — Use ONLY this business name when naming the brand in Idea or Sugges
 Do not invent, substitute, or use example/tagline business names from training. If the business name appears, it must be exactly "{business}".
 Ground every suggestion in their intake and that day's caption theme—not generic industries from examples."""
 
+        facts_g = n((intake.get("facts_guardrails") or "").strip(), sentence_case=True) if (intake.get("facts_guardrails") or "").strip() else ""
+        facts_line = f"\n- Facts / constraints: {facts_g}" if facts_g else ""
+
         strict_block = f"\n\nSTRICT FIX NOTE: {strict_note}\n" if strict_note else ""
         prompt = f"""Generate 30 Story prompts for Instagram/Facebook Stories. One per day (Day 1–30). Each day must have exactly three parts: Idea, Suggested wording, Story hashtags.
 
@@ -1744,7 +1843,7 @@ INTAKE:
 - Business: {business}
 - What they offer: {intake.get('offer_one_line', '')}
 - Audience: {intake.get('audience', '')}
-- Goal: {intake.get('goal', '')}
+- Goal: {intake.get('goal', '')}{facts_line}
 {date_block}
 {key_date_block}
 {variety_note}

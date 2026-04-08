@@ -446,8 +446,15 @@
         {% endif %}
 
         <label for="platform_habits">Any platform-specific habits or caption length? <span style="color:#999;">(optional)</span></label>
-        <p class="field-helper intake-helper-before-control">Instagram and Facebook feed captions usually work best <strong>short</strong> — hook in the first line, often a few lines total. LinkedIn often suits <strong>longer</strong> posts. TikTok/Pinterest: say if you want minimal vs fuller caption text.</p>
-        <input type="text" id="platform_habits" name="platform_habits" placeholder="e.g. Instagram/Facebook: keep short, 2–4 lines, hook first; LinkedIn: longer storytelling" value="{{ existing_intake.get('platform_habits', '') }}">
+        <p class="field-helper intake-helper-before-control">We tailor caption style to each platform—for example, brief copy where the channel expects it (e.g. TikTok), more room for detail on LinkedIn when it suits the post, and concise, feed-ready wording by default on Instagram and Facebook (clear opening line, then a small block of text). If <strong>Instagram &amp; Facebook</strong> is in your pack and you want <strong>different amounts of copy from day to day</strong> on that channel only, use the option below. Otherwise you can note anything else here (e.g. how you use Pinterest, tone, or formatting habits).</p>
+        <input type="text" id="platform_habits" name="platform_habits" placeholder="e.g. Instagram/Facebook: hook first, 2–4 lines; LinkedIn: paragraph-style case notes" value="{{ existing_intake.get('platform_habits', '') }}">
+        <div id="vary-igfb-length-wrap" class="intake-other-wrap" style="display: none; margin-top: 0.75rem;">
+          <label class="intake-checkbox-label" style="margin: 0;">
+            <input type="checkbox" id="vary_ig_fb_caption_length" name="vary_ig_fb_caption_length" data-testid="vary_ig_fb_caption_length" {% if existing_intake.get('vary_ig_fb_caption_length') %}checked{% endif %} style="width: auto;">
+            <span>Vary how much copy we suggest for <strong>Instagram &amp; Facebook</strong> across the month (some days brief, some days more developed—always clear and on-brand)</span>
+          </label>
+          <p class="field-helper" style="margin: 0.25rem 0 0;">Shown when Instagram &amp; Facebook is in your order. Applies only to those feed captions; other platforms follow their usual rules.</p>
+        </div>
         <div id="stories-addon-wrap" class="intake-other-wrap" data-stories-paid="{{ 'true' if stories_paid else 'false' }}" style="margin-top: 1.25rem; padding: 1rem; background: rgba(255,255,255,0.5); border-radius: 8px; border: 1px solid #ddd; {% if not stories_paid %}display: none;{% endif %}">
           <p class="field-helper" style="margin: 0 0 0.5rem; font-weight: 600;">{% if stories_paid %}{% if is_upgrade_flow %}30 Days Story Ideas included in your upgrade.{% else %}30 Days Story Ideas included with your order.{% endif %}{% else %}Using Instagram &amp; Facebook? Add Story Ideas—optionally align each day's Story to your feed caption (same theme, same day) or leave unaligned so they're different.{% endif %}</p>
           <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; margin-bottom: 0.25rem;">
@@ -458,7 +465,7 @@
           <p class="field-helper intake-stories-disclaimer" style="margin: 0.5rem 0 0; font-size: 0.85rem; color: var(--lum-text-muted);">If you add Story Ideas later (e.g. from Manage subscription in your account), they’ll be delivered with your <strong>next</strong> pack, not instantly.</p>
           <label class="intake-checkbox-label" style="margin-top: 0.75rem;">
             <input type="checkbox" id="align_stories" name="align_stories" {% if stories_paid and existing_intake.get('align_stories_to_captions') %}checked{% endif %} style="width: auto;">
-            <span>Align each Story to that day's caption (tighter pairing)</span>
+            <span>Align each Story to that day’s caption (same theme)</span>
           </label>
           <p class="field-helper" style="margin: 0.25rem 0 0;">Check to align each Story to that day's caption (same theme). Leave unchecked so Stories and captions are different on the same day.</p>
         </div>
@@ -511,6 +518,12 @@
         <h2>Example captions <span class="intake-h2-meta">(optional)</span></h2>
         <label for="caption_examples">Paste 1–3 example captions you like — from your own posts, other accounts or brands you admire, or anywhere you find inspiration. We'll match this style, tone, and structure where relevant.</label>
         <textarea id="caption_examples" name="caption_examples" data-testid="caption_examples" placeholder="Paste example captions here" style="min-height: 140px;">{{ existing_intake.get('caption_examples', '') }}</textarea>
+      </div>
+      <div class="form-section">
+        <h2>Facts for your captions <span class="intake-h2-meta">(optional)</span></h2>
+        <label for="facts_guardrails">True details we should stick to — or things we must never claim or imply (suppliers, places, products, certifications).</label>
+        <p class="field-helper intake-helper-before-control">If you leave this blank, we’ll keep specifics general and avoid inventing names, distances, product lines, or sourcing stories that aren’t in your other answers or example captions.</p>
+        <textarea id="facts_guardrails" name="facts_guardrails" data-testid="facts_guardrails" rows="4" placeholder="e.g. Don’t name our mill or imply organic certification. Our boxes ship UK-wide — don’t say ‘local delivery only’." style="min-height: 96px; resize: vertical;">{{ existing_intake.get('facts_guardrails', '') }}</textarea>
       </div>
       {% if intake_view_only %}</fieldset>{% endif %}
       {% if not intake_view_only or oneoff_subscribe_checkout_mode|default(false) %}
@@ -748,6 +761,12 @@
       reviewContent.appendChild(sect('Caption language', gv('caption_language') || 'English (UK)'));
       reviewContent.appendChild(sect('Primary platform', gv('platform') || '(not provided)'));
       reviewContent.appendChild(sect('Platform habits', gv('platform_habits')));
+      (function () {
+        var v = document.getElementById('vary_ig_fb_caption_length');
+        if (v && v.checked) {
+          reviewContent.appendChild(sect('Instagram & Facebook copy length', 'Yes — vary brief vs more developed feed captions across the month'));
+        }
+      })();
       var inc = document.getElementById('include_hashtags');
       var storiesCb = document.getElementById('include_stories');
       if (storiesCb && storiesCb.offsetParent) {
@@ -765,6 +784,7 @@
       var usualTopics = gv('usual_topics');
       if (usualTopics) reviewContent.appendChild(sect('What you usually talk about', usualTopics));
       reviewContent.appendChild(sect('Example captions', gv('caption_examples')));
+      if (gv('facts_guardrails')) reviewContent.appendChild(sect('Facts for your captions', gv('facts_guardrails')));
       form.style.display = 'none';
       reviewStep.classList.add('show');
       if (typeof window.lumoIntakeIntroLeadVisible === 'function') window.lumoIntakeIntroLeadVisible(false);
@@ -810,6 +830,7 @@
         voice_avoid: gv('voice_avoid'),
         platform: gv('platform'),
         platform_habits: gv('platform_habits'),
+        vary_ig_fb_caption_length: !!(document.getElementById('vary_ig_fb_caption_length') && document.getElementById('vary_ig_fb_caption_length').checked),
         include_hashtags: inc ? inc.checked : true,
         hashtag_min: minH,
         hashtag_max: maxH,
@@ -817,6 +838,7 @@
         launch_event_description: gv('launch_event_description'),
         usual_topics: gv('usual_topics'),
         caption_examples: gv('caption_examples'),
+        facts_guardrails: gv('facts_guardrails'),
         caption_language: gv('caption_language') || 'English (UK)',
         include_stories: !!(document.getElementById('include_stories') && document.getElementById('include_stories').checked),
         align_stories_to_captions: !!(document.getElementById('align_stories') && document.getElementById('align_stories').checked)
@@ -1026,6 +1048,15 @@
         return p;
       }
       var locked = group.getAttribute('data-platforms-locked') === 'true';
+      function syncVaryIgFbLengthOption() {
+        var wrap = document.getElementById('vary-igfb-length-wrap');
+        var cb = document.getElementById('vary_ig_fb_caption_length');
+        var pe = document.getElementById('platform');
+        if (!wrap || !cb || !pe) return;
+        var hasIgFb = (pe.value || '').indexOf('Instagram & Facebook') !== -1;
+        wrap.style.display = hasIgFb ? '' : 'none';
+        if (!hasIgFb) cb.checked = false;
+      }
       function render() {
         btns.forEach(function(btn) {
           var val = btn.getAttribute('data-platform');
@@ -1038,6 +1069,7 @@
           }
         });
         if (platformEl) platformEl.value = selected.join(', ');
+        syncVaryIgFbLengthOption();
       }
       if (!locked) {
         btns.forEach(function(btn) {
@@ -1077,6 +1109,7 @@
       if (platformSelect && platformSelect.tagName === 'SELECT') {
         platformSelect.addEventListener('change', toggleStories);
       }
+      window.lumoSyncVaryIgFbLengthOption = syncVaryIgFbLengthOption;
     })();
     (function setupStoriesForSinglePlatform() {
       var wrap = document.getElementById('stories-addon-wrap');
@@ -1234,6 +1267,12 @@
         reviewContent.appendChild(sect('Caption language', getVal('caption_language') || 'English (UK)'));
         reviewContent.appendChild(sect('Primary platform', getVal('platform') || '(not provided)'));
         reviewContent.appendChild(sect('Platform habits', getVal('platform_habits')));
+        (function () {
+          var v = document.getElementById('vary_ig_fb_caption_length');
+          if (v && v.checked) {
+            reviewContent.appendChild(sect('Instagram & Facebook copy length', 'Yes — vary brief vs more developed feed captions across the month'));
+          }
+        })();
         var storiesCb = document.getElementById('include_stories');
         if (storiesCb && storiesCb.offsetParent) reviewContent.appendChild(sect('Stories add-on', storiesCb.checked ? 'Yes — 30 story prompts' : 'No'));
         var incCb = document.getElementById('include_hashtags');
@@ -1245,6 +1284,7 @@
         var usualTopics = getVal('usual_topics');
         if (usualTopics) reviewContent.appendChild(sect('What you usually talk about', usualTopics));
         reviewContent.appendChild(sect('Example captions', getVal('caption_examples')));
+        if (getVal('facts_guardrails')) reviewContent.appendChild(sect('Facts for your captions', getVal('facts_guardrails')));
         form.style.display = 'none';
         reviewStep.classList.add('show');
         if (typeof window.lumoIntakeIntroLeadVisible === 'function') window.lumoIntakeIntroLeadVisible(false);
@@ -1289,6 +1329,7 @@
           voice_avoid: getVal('voice_avoid'),
           platform: getVal('platform'),
           platform_habits: getVal('platform_habits'),
+          vary_ig_fb_caption_length: !!(document.getElementById('vary_ig_fb_caption_length') && document.getElementById('vary_ig_fb_caption_length').checked),
           include_hashtags: incHashtags,
           hashtag_min: minH,
           hashtag_max: maxH,
@@ -1296,6 +1337,8 @@
           launch_event_description: getVal('launch_event_description'),
           usual_topics: getVal('usual_topics'),
           caption_examples: getVal('caption_examples'),
+          facts_guardrails: getVal('facts_guardrails'),
+          caption_language: getVal('caption_language') || 'English (UK)',
           include_stories: !!(document.getElementById('include_stories') && document.getElementById('include_stories').checked),
           align_stories_to_captions: !!(document.getElementById('align_stories') && document.getElementById('align_stories').checked)
         };

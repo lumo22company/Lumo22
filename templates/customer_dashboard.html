@@ -43,7 +43,7 @@
       <div class="account-info-panel" style="margin-bottom: 1rem; background: rgba(180, 100, 40, 0.25); border: 1px solid rgba(255, 200, 80, 0.45); border-radius: 8px; padding: 1rem 1.1rem;">
         <p style="margin: 0; color: #fff; line-height: 1.55;">We couldn’t load everything on this page. Try <strong>refreshing</strong>. If this keeps happening, email <a href="mailto:hello@lumo22.com" style="color: var(--lum-gold, #fff200); font-weight: 600;">hello@lumo22.com</a>.</p>
       </div>
-      {% endif %}
+    {% endif %}
       {% if current_section == 'information' %}
       {% if request.args.get('billing') == 'error' %}
       <div class="account-info-panel" style="margin-bottom: 1rem; background: rgba(200,80,80,0.08); border-color: rgba(200,80,80,0.25);">
@@ -53,7 +53,7 @@
       {% if request.args.get('email_changed') == '1' %}
       <div class="account-info-panel" style="margin-bottom: 1rem; background: rgba(76,175,80,0.15); border-color: rgba(76,175,80,0.3);">
         <p style="margin: 0; color: #333;">Your email address has been updated.</p>
-      </div>
+    </div>
       {% endif %}
       {% if request.args.get('password_updated') == '1' %}
       <div class="account-info-panel" style="margin-bottom: 1rem; background: rgba(76,175,80,0.15); border-color: rgba(76,175,80,0.3);">
@@ -220,7 +220,7 @@
           <li><strong>Plan (platforms &amp; Story Ideas):</strong> use <strong>Manage subscription</strong> → <strong>Change plan</strong> to add or remove platforms, choose which networks, or turn Story Ideas on or off. The Platform area on the intake form is <strong>read-only</strong>—billing changes are not made there.</li>
           <li>Billed plan changes apply to your <strong>next</strong> pack.</li>
         </ul>
-        {% endif %}
+      {% endif %}
         {% if edit_form_has_oneoffs|default(false) and not edit_form_has_subscriptions|default(false) %}
         <ul class="account-section-desc" style="margin: 0 0 1.25rem; padding-left: 1.25rem; line-height: 1.7; color: #ffffff;">
           <li><strong>View form</strong> is read-only for one-off orders.</li>
@@ -600,7 +600,7 @@
           </div>
           {% endfor %}
         </div>
-        {% else %}
+      {% else %}
         {% include 'partials/account_pause_subscription_blocks.html' %}
         {% endif %}
         {% else %}
@@ -632,7 +632,7 @@
           <div class="referral-row" style="display: flex; gap: 0.75rem; align-items: center; margin-top: 0.5rem;">
             <input type="text" id="referral-code" readonly value="{{ referral_code }}" class="referral-input" aria-label="Your referral code" style="flex: 1; padding: 0.6rem 0.9rem; font-size: 0.9rem; border: 1px solid rgba(0,0,0,0.15); border-radius: 12px; background: #f8f8f6; color: #000;">
             <button type="button" id="referral-copy-code-btn" class="dfd-btn dfd-btn-secondary referral-copy account-btn-swipe-light" onclick="copyReferralCode()">Copy code</button>
-          </div>
+      </div>
           <label class="account-settings-label" for="referral-share-email-btn" style="margin-top: 0.75rem; display: block;">Quick share</label>
           <p class="account-settings-desc" style="margin-top: 0.35rem; margin-bottom: 0;">Opens your email or messages with a ready-to-send draft that includes your code and how to enter it at Stripe checkout.</p>
           <div class="referral-share-actions">

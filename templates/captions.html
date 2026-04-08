@@ -155,7 +155,7 @@
         <ul style="list-style: none; padding: 0; margin: 0; font-size: 1rem; line-height: 1.7; color: var(--text-on-light, #1a1a1a);">
           <li data-reveal style="padding-left: 1.5rem; position: relative;"><span style="position: absolute; left: 0;">→</span> <strong>Captions PDF</strong> — 30 days, one caption per day (or one per platform if you chose multiple). Each day has a category, platform label, caption text, and optional hashtags.</li>
           <li data-reveal style="padding-left: 1.5rem; position: relative; margin-top: 0.5rem;"><span style="position: absolute; left: 0;">→</span> <strong>Stories PDF</strong> (if you add Story Ideas) — 30 days of story prompts. You set aligned vs separate on your intake form.</li>
-        </ul>
+      </ul>
       </div>
       <p data-reveal style="margin: 0 0 1.5rem; font-size: 1rem; color: var(--text-on-light, #1a1a1a); max-width: 560px; text-align: left;">Below is an example written for a specific business type — a coach or consultant — so you can see what "written in your voice" looks like. Yours would sound like your business.</p>
       <div class="captions-examples-grid">
@@ -307,13 +307,13 @@
             <li>No commitment—one pack, one payment</li>
           </ul>
           <div class="dfd-pricing-footer">
-            {% if use_checkout_redirect %}
+          {% if use_checkout_redirect %}
             <a href="/captions-checkout?platforms=1" id="captions-oneoff-cta" class="dfd-btn dfd-btn-secondary captions-btn-swipe">Get my 30 days</a>
-            {% elif captions_payment_link %}
+          {% elif captions_payment_link %}
             <a href="{{ captions_payment_link }}" class="dfd-btn dfd-btn-secondary captions-btn-swipe">Get my 30 days</a>
-            {% else %}
+          {% else %}
             <a href="mailto:hello@lumo22.com?subject=30%20Days%20Captions%20Order" class="dfd-btn dfd-btn-secondary captions-btn-swipe">Get my 30 days</a>
-            {% endif %}
+          {% endif %}
           </div>
         </div>
       </div>

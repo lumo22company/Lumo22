@@ -62,6 +62,7 @@
     var inc = document.getElementById('include_hashtags');
     var incStories = document.getElementById('include_stories');
     var alignStories = document.getElementById('align_stories');
+    var varyIgFb = document.getElementById('vary_ig_fb_caption_length');
 
     return {
       v: SCHEMA,
@@ -73,6 +74,7 @@
       include_hashtags: inc ? !!inc.checked : true,
       include_stories: incStories ? !!incStories.checked : false,
       align_stories: alignStories ? !!alignStories.checked : false,
+      vary_ig_fb_caption_length: varyIgFb ? !!varyIgFb.checked : false,
     };
   }
 
@@ -184,9 +186,14 @@
     }
     var alignStories = document.getElementById('align_stories');
     if (alignStories && typeof state.align_stories === 'boolean') alignStories.checked = state.align_stories;
+    var varyIgFb = document.getElementById('vary_ig_fb_caption_length');
+    if (varyIgFb && typeof state.vary_ig_fb_caption_length === 'boolean') {
+      varyIgFb.checked = state.vary_ig_fb_caption_length;
+    }
 
     syncHiddenAggregates();
     toggleDependents();
+    if (typeof window.lumoSyncVaryIgFbLengthOption === 'function') window.lumoSyncVaryIgFbLengthOption();
     return true;
   }
 

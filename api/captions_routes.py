@@ -1982,6 +1982,8 @@ def _captions_intake_submit_impl(data):
         "launch_event_description": (data.get("launch_event_description") or "").strip(),
         "usual_topics": (data.get("usual_topics") or "").strip(),
         "caption_examples": (data.get("caption_examples") or "").strip(),
+        "facts_guardrails": (data.get("facts_guardrails") or "").strip(),
+        "vary_ig_fb_caption_length": bool(data.get("vary_ig_fb_caption_length")),
         "caption_language": (data.get("caption_language") or "English (UK)").strip(),
         "include_stories": order_has_stories and (bool(data.get("include_stories")) or bool((order.get("intake") or {}).get("include_stories"))),
         "align_stories_to_captions": align_flag,
