@@ -65,7 +65,7 @@
           <div class="account-settings-row account-add-stories-row account-form-reminder-row">
             <div class="account-add-stories-text">
               <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Update form reminders</div>
-              <div class="account-settings-desc">Remind me before each pack so I can update my form—captions are tailored for the month ahead</div>
+              <div class="account-settings-desc">Remind me before each pack so I can update my form.<br>Captions are tailored for the month ahead.</div>
             </div>
             <div class="account-reminder-toggle-wrap">
               <div id="reminder-toggle-{{ o.get('id', '') }}" role="button" tabindex="0" class="account-toggle {% if not o.get('reminder_opt_out') %}on{% endif %}" aria-label="Toggle update form reminders for tailored monthly captions" data-order-id="{{ o.get('id', '') }}" onclick="toggleReminder(this)" onkeydown="if(event.key==='Enter'||event.key===' ') { event.preventDefault(); toggleReminder(this); }"></div>
