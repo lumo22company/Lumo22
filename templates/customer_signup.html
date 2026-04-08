@@ -41,11 +41,13 @@
       box-sizing: border-box;
     }
     .auth-oauth-btn--google {
+      gap: 0.65rem;
       background: var(--lum-gold);
       color: #000;
       border: none;
       text-decoration: none;
     }
+    .auth-oauth-btn__icon { flex-shrink: 0; display: block; width: 20px; height: 20px; }
     a.auth-oauth-btn--google:hover,
     a.auth-oauth-btn--google:focus,
     a.auth-oauth-btn--google:visited,
@@ -144,7 +146,7 @@
 
     {% if oauth_google_enabled|default(false) %}
     <div class="auth-oauth-row" role="group" aria-label="Sign up with Google">
-      <a class="auth-oauth-btn auth-oauth-btn--google" href="{{ url_for('oauth.google_start', next=(next_url or '/account'), ref=(signup_referral or '')) }}">Continue with Google</a>
+      <a class="auth-oauth-btn auth-oauth-btn--google" href="{{ url_for('oauth.google_start', next=(next_url or '/account'), ref=(signup_referral or '')) }}">{% include 'partials/oauth_google_icon.html' %}<span>Continue with Google</span></a>
     </div>
     <p class="auth-oauth-or"><span>or sign up with email</span></p>
     {% endif %}
