@@ -770,9 +770,9 @@
           </label>
           <p style="font-size:0.8rem; margin:0.35rem 0 0 1.5rem; opacity:0.85; line-height:1.35; color:rgba(255,255,255,0.85);">Leave unchecked if you want Stories and captions to differ on the same day.</p>
         </div>
-        <p id="change-plan-price" class="account-delete-modal-text change-plan-price-line" style="font-size:1.15rem; margin-bottom:0.5rem;"></p>
-        <p class="account-delete-modal-text" style="font-size:0.85rem; margin-bottom:0.75rem;">By confirming you agree to the new price from your next pack.</p>
-        <p id="change-plan-error" class="account-delete-modal-text" style="display:none; font-size:0.9rem; color:#c00; margin-top:0.25rem;"></p>
+        <div id="change-plan-price" class="account-delete-modal-text" style="margin-bottom:0.75rem;"></div>
+        <p class="account-delete-modal-text change-plan-legal-note" style="margin-bottom:0.75rem;">By confirming you agree to the new price from your next pack.</p>
+        <p id="change-plan-error" class="account-delete-modal-text change-plan-feedback" style="display:none;"></p>
         <div class="account-delete-modal-buttons">
           <button type="button" class="account-delete-modal-btn account-delete-modal-keep" onclick="closeChangePlanModal()">Cancel</button>
           <button type="button" id="change-plan-confirm" class="account-delete-modal-btn account-add-stories-confirm" onclick="confirmChangePlan()">Confirm changes</button>
@@ -1361,7 +1361,11 @@
         if (cb) cb.checked = !!hasStories;
         if (alignCb) alignCb.checked = hasStories ? !!alignRaw : false;
         changePlanSyncAlignRow();
-        if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+        if (errEl) {
+          errEl.style.display = 'none';
+          errEl.textContent = '';
+          errEl.className = 'account-delete-modal-text change-plan-feedback';
+        }
         if (hintEl) { hintEl.style.display = 'none'; hintEl.textContent = ''; }
         updateChangePlanPrice();
         var modal = document.getElementById('change-plan-modal');
@@ -1444,6 +1448,7 @@
         if (newSig === changePlanState.oldPlatformSig && newStories === changePlanState.oldStories && alignStories === changePlanState.oldAlign) {
           if (errEl) {
             errEl.textContent = 'No change — adjust platforms, Story Ideas, or alignment before confirming.';
+            errEl.className = 'account-delete-modal-text change-plan-feedback change-plan-feedback--hint';
             errEl.style.display = 'block';
           }
           return;
@@ -1453,7 +1458,11 @@
           btn.disabled = true;
           btn.textContent = 'Updating…';
         }
-        if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+        if (errEl) {
+          errEl.style.display = 'none';
+          errEl.textContent = '';
+          errEl.className = 'account-delete-modal-text change-plan-feedback';
+        }
         if (priceEl && CAPTIONS_PRICES) updateChangePlanPrice();
         fetch('/api/billing/change-subscription-plan', {
           method: 'POST',
@@ -1480,6 +1489,7 @@
           } else {
             if (errEl) {
               errEl.textContent = (res.json && (res.json.error || res.json.message)) || 'Could not update your plan. Please try again or email hello@lumo22.com.';
+              errEl.className = 'account-delete-modal-text change-plan-feedback change-plan-feedback--err';
               errEl.style.display = 'block';
             }
           }
@@ -1487,6 +1497,7 @@
         .catch(function() {
           if (errEl) {
             errEl.textContent = 'Could not update your plan. Please try again or email hello@lumo22.com.';
+            errEl.className = 'account-delete-modal-text change-plan-feedback change-plan-feedback--err';
             errEl.style.display = 'block';
           }
         })
