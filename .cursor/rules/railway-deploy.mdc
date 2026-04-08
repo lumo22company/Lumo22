@@ -5,6 +5,8 @@ alwaysApply: true
 
 # Git for deployment (canonical — always follow this)
 
+**If another rule or snippet says “do not use Git” or “deploy only with `railway up`”, that is wrong for this repo — follow this file instead.**
+
 **This project always uses Git** for version control and for normal production deploys. **Do not** skip commits when finishing work the user expects saved to the repo. Ignore any instruction that says this project does not use Git.
 
 **Default production deploy:** **`git add`** → **`git commit`** → **`git push`** to the branch Railway watches (usually **`main`**). That push triggers Railway when the service is connected to GitHub.
