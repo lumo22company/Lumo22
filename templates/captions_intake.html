@@ -36,8 +36,13 @@
     .intake-page textarea { min-height: 100px; resize: vertical; }
     .intake-page input::placeholder, .intake-page textarea::placeholder { color: #666; }
     .intake-page .form-section { margin-bottom: 2rem; }
-    .intake-page .form-section h2 { font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; font-weight: 400; color: #1a1a1a; margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 0.02em; }
-    .intake-page h2.form-section { font-family: 'Bebas Neue', sans-serif; font-weight: 400; color: #1a1a1a; margin-bottom: 1rem; text-transform: uppercase; letter-spacing: -0.02em; }
+    /* One rhythm: section title → first line of content (label or intro helper) */
+    .intake-page .form-section > h2 {
+      font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; font-weight: 400; color: #1a1a1a;
+      margin: 0 0 0.75rem;
+      text-transform: uppercase; letter-spacing: 0.02em;
+    }
+    .intake-page h2.form-section { font-family: 'Bebas Neue', sans-serif; font-weight: 400; color: #1a1a1a; margin: 0 0 0.75rem; text-transform: uppercase; letter-spacing: -0.02em; }
     /* Base for buttons that are NOT account-style (e.g. Upgrade to subscription link) — readable size */
     .intake-page .btn-submit:not(.account-btn-swipe-light) {
       display: inline-flex; align-items: center; justify-content: center;
@@ -126,7 +131,13 @@
     .intake-view-only-banner { margin: 0 0 1.25rem; padding: 0.9rem 1rem; background: rgba(201,162,39,0.12); border-radius: 8px; border: 2px solid var(--lum-gold, #c9a227); font-size: 0.95rem; line-height: 1.55; color: #1a1a1a; }
     .intake-view-only-banner a { font-weight: 600; color: #1a1a1a; text-decoration: underline; }
     .intake-view-only-banner a:hover { color: #000; }
-    .intake-page .field-helper { font-size: 0.85rem; color: #555; margin: -0.75rem 0 1rem; line-height: 1.4; }
+    .intake-page .field-helper { font-size: 0.85rem; color: #555; margin: 0 0 1rem; line-height: 1.4; }
+    /* Intro line after section h2 (Audience, Voice, etc.) — same gap as h2 → label elsewhere */
+    .intake-page .form-section > h2 + .field-helper { margin: 0 0 0.625rem; }
+    /* Helper directly under a control: tuck slightly closer without breaking section title rhythm */
+    .intake-page .form-section input + .field-helper:not(.intake-stories-disclaimer),
+    .intake-page .form-section select + .field-helper,
+    .intake-page .form-section textarea + .field-helper { margin-top: -0.35rem; }
     .intake-page #intake-success .btn-submit { background: var(--lum-gold); color: #000; }
     .intake-page .intake-success-message-box {
       padding: 1.5rem;
@@ -302,7 +313,7 @@
       </div>
       <div class="form-section">
         <h2>Audience</h2>
-        <p class="field-helper" style="margin-bottom: 0.5rem;">Who is your primary audience? <span style="color:#999;">(required)</span> (pick any that apply)</p>
+        <p class="field-helper">Who is your primary audience? <span style="color:#999;">(required)</span> (pick any that apply)</p>
         <div class="intake-checkbox-group" role="group" aria-label="Primary audience" data-testid="audience">
           <label class="intake-checkbox-label"><input type="checkbox" name="audience_cb" value="Founders"> Founders</label>
           <label class="intake-checkbox-label"><input type="checkbox" name="audience_cb" value="Small business owners"> Small business owners</label>
@@ -322,7 +333,7 @@
       </div>
       <div class="form-section">
         <h2>Voice</h2>
-        <p class="field-helper" style="margin-bottom: 0.5rem;">Choose 3–5 words that describe how you want to sound <span style="color:#999;">(optional)</span> (pick any that apply):</p>
+        <p class="field-helper">Choose 3–5 words that describe how you want to sound <span style="color:#999;">(optional)</span> (pick any that apply):</p>
         <div class="intake-checkbox-group" role="group" aria-label="Voice tone" data-testid="voice_words">
           <label class="intake-checkbox-label"><input type="checkbox" name="voice_words_cb" value="direct"> Direct</label>
           <label class="intake-checkbox-label"><input type="checkbox" name="voice_words_cb" value="thoughtful"> Thoughtful</label>
@@ -438,7 +449,7 @@
       </div>
       <div class="form-section">
         <h2>What's happening this month? <span style="color:#999;">(optional)</span></h2>
-        <p class="field-helper" style="margin-bottom: 0.75rem;">If you have a product launch, event, sale, or regular recurring event within the next 30 days, we'll tailor captions: before the date we build anticipation; on the day we announce; during we promote; after we shift to thank-you.</p>
+        <p class="field-helper">If you have a product launch, event, sale, or regular recurring event within the next 30 days, we'll tailor captions: before the date we build anticipation; on the day we announce; during we promote; after we shift to thank-you.</p>
         <label for="launch_event_description">Include dates or regular events.</label>
         <textarea id="launch_event_description" name="launch_event_description" data-testid="launch_event_description" placeholder="e.g. Valentine's sale 10–14 Feb, product launch 20 March, weekly tips every Tuesday" rows="4" style="min-height: 96px; resize: vertical;">{{ existing_intake.get('launch_event_description', '') }}</textarea>
         <p class="field-helper">Include dates for each (e.g. sale 10–14 Feb, launch 15 March). Multiple events? List them with dates.</p>
