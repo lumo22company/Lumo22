@@ -1144,7 +1144,7 @@ def change_email_confirm_page():
         return render_template('change_email_confirm.html', success=False, error="Something went wrong. Please try again or contact hello@lumo22.com.")
 
 
-_ACCOUNT_SECTIONS = frozenset({"information", "history", "edit-form", "upgrade", "pause", "refer"})
+_ACCOUNT_SECTIONS = frozenset({"information", "history", "edit-form", "upgrade", "subscription", "refer"})
 
 
 def _referral_share_mailto_href(base_url: str, code: str) -> str:
@@ -1889,11 +1889,21 @@ def account_billing_data_api():
     )
 
 
+@app.route('/account/pause')
+def account_pause_legacy_redirect():
+    """Old URL — Manage subscription lives at /account/subscription. Preserve query string (e.g. get_pack_sooner)."""
+    target = url_for('account_page', section='subscription')
+    if request.query_string:
+        sep = '&' if '?' in target else '?'
+        target = target + sep + request.query_string.decode('utf-8')
+    return redirect(target, code=301)
+
+
 @app.route('/account')
 @app.route('/account/<section>')
 @customer_login_required
 def account_page(section=None):
-    """Account dashboard: one section per page. Section in {information, history, edit-form, pause, refer}."""
+    """Account dashboard: one section per page. Section in {information, history, edit-form, subscription, refer}."""
     if not get_current_customer():
         return redirect(url_for('customer_login_page'))
     if section is None or section not in _ACCOUNT_SECTIONS:

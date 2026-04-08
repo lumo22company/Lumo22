@@ -24,7 +24,7 @@
       <h1 class="account-sidebar-title">Your account</h1>
       <ul class="account-sidebar-nav">
         <li><a href="/account/information" class="{% if current_section == 'information' %}active{% endif %}">Account Information</a></li>
-        <li><a href="/account/pause" class="{% if current_section == 'pause' %}active{% endif %}">Manage subscription</a></li>
+        <li><a href="/account/subscription" class="{% if current_section == 'subscription' %}active{% endif %}">Manage subscription</a></li>
         <li><a href="/account/edit-form" class="{% if current_section == 'edit-form' %}active{% endif %}">Edit form</a></li>
         {% if subscribe_options %}<li><a href="/account/upgrade" class="{% if current_section == 'upgrade' %}active{% endif %}">{% if account_resubscribe_mode|default(false) %}Resubscribe{% else %}Upgrade{% endif %}</a></li>{% endif %}
         <li><a href="/account/history" class="{% if current_section == 'history' %}active{% endif %}">History</a></li>
@@ -62,7 +62,7 @@
       {% endif %}
       {% if request.args.get('subscription_duplicate') == '1' %}
       <div class="account-info-panel account-subscription-duplicate-alert" style="margin-bottom: 1rem; background: rgba(160, 32, 32, 0.95); border: 1px solid rgba(220, 80, 80, 0.85); border-radius: 8px; padding: 1rem 1.1rem;">
-        <p style="margin: 0; color: #ffffff; line-height: 1.55;"><strong style="color: #ffffff;">You already have an active Captions subscription.</strong> You don’t need to pay again. Use <a href="/account/pause" style="color: var(--lum-gold, #fff200); font-weight: 600; text-decoration: underline;">Manage subscription</a> to change your plan, card, or cancel. If you see more than one subscription below, cancel the extras in Stripe ({% if billing_accounts and billing_accounts[0].order_token %}<a href="/api/billing/portal?order_token={{ billing_accounts[0].order_token }}" style="color: var(--lum-gold, #fff200); font-weight: 600; text-decoration: underline;">{% else %}<a href="/api/billing/portal" style="color: var(--lum-gold, #fff200); font-weight: 600; text-decoration: underline;">{% endif %}Manage billing</a>) so you’re only charged once.</p>
+        <p style="margin: 0; color: #ffffff; line-height: 1.55;"><strong style="color: #ffffff;">You already have an active Captions subscription.</strong> You don’t need to pay again. Use <a href="/account/subscription" style="color: var(--lum-gold, #fff200); font-weight: 600; text-decoration: underline;">Manage subscription</a> to change your plan, card, or cancel. If you see more than one subscription below, cancel the extras in Stripe ({% if billing_accounts and billing_accounts[0].order_token %}<a href="/api/billing/portal?order_token={{ billing_accounts[0].order_token }}" style="color: var(--lum-gold, #fff200); font-weight: 600; text-decoration: underline;">{% else %}<a href="/api/billing/portal" style="color: var(--lum-gold, #fff200); font-weight: 600; text-decoration: underline;">{% endif %}Manage billing</a>) so you’re only charged once.</p>
       </div>
       {% endif %}
 
@@ -115,7 +115,7 @@
             </div>
             <div class="account-info-actions">
               {% if billing_accounts and billing_accounts|length > 1 %}
-              <a href="/account/pause" class="account-billing-portal-link account-btn-swipe-light">Manage billing</a>
+              <a href="/account/subscription" class="account-billing-portal-link account-btn-swipe-light">Manage billing</a>
               {% elif billing_accounts and billing_accounts[0].order_token %}
               <a href="/api/billing/portal?order_token={{ billing_accounts[0].order_token }}" class="account-billing-portal-link account-btn-swipe-light">Manage billing</a>
             {% else %}
@@ -548,7 +548,7 @@
       </script>
       {% endif %}
 
-      {% if current_section == 'pause' %}
+      {% if current_section == 'subscription' %}
       {% set sub_orders = caption_orders|selectattr('stripe_subscription_id')|list if caption_orders else [] %}
       {% set get_pack_sooner = request.args.get('get_pack_sooner') == '1' %}
       {% set get_pack_order_token = request.args.get('order_token', '')|trim %}
@@ -579,7 +579,7 @@
           <p style="margin: 0 0 1rem; font-size: 0.9rem; color: #555;">By confirming you agree to be charged now.</p>
           <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
             <button type="button" id="get-pack-sooner-confirm-btn" class="lumo-btn-primary account-btn-swipe-dark" data-order-token="{{ get_pack_order_token }}" data-order-id="{{ _gps_order.get('id', '') if _gps_order else '' }}">Confirm and get my pack</button>
-            <a href="/account/pause" class="account-billing-portal-link account-btn-swipe-light">Cancel</a>
+            <a href="/account/subscription" class="account-billing-portal-link account-btn-swipe-light">Cancel</a>
           </div>
           <p id="get-pack-sooner-error" style="display: none; margin: 0.75rem 0 0; color: #c00; font-size: 0.9rem;"></p>
         </div>
@@ -825,7 +825,7 @@
           </div>
         </div>
         <div class="account-delete-modal-buttons">
-          <a href="/account/pause" class="account-delete-modal-btn account-delete-modal-cancel-sub">Cancel subscription instead</a>
+          <a href="/account/subscription" class="account-delete-modal-btn account-delete-modal-cancel-sub">Cancel subscription instead</a>
           <button type="button" class="account-delete-modal-btn account-delete-modal-keep">Keep account</button>
           <button type="button" class="account-delete-modal-btn account-delete-modal-confirm" disabled>Confirm account deletion</button>
         </div>
@@ -1795,7 +1795,7 @@
         var link = document.getElementById('get-pack-sooner-update-link');
         if (modal && link) {
           var base = window.location.origin + '/captions-intake';
-          var returnUrl = window.location.origin + '/account/pause?get_pack_sooner=1&order_token=' + encodeURIComponent(token);
+          var returnUrl = window.location.origin + '/account/subscription?get_pack_sooner=1&order_token=' + encodeURIComponent(token);
           link.href = base + '?t=' + encodeURIComponent(token) + '&return_url=' + encodeURIComponent(returnUrl);
           modal.removeAttribute('hidden');
           modal.classList.add('account-delete-modal--open');
@@ -1863,7 +1863,7 @@
         .then(function(data) {
           if (data.ok) {
             alert(data.message || 'Your pack will be emailed to you within a few minutes.');
-            window.location.href = '/account/pause';
+            window.location.href = '/account/subscription';
           } else {
             if (errEl) { errEl.textContent = data.error || 'Something went wrong. Try again.'; errEl.style.display = 'block'; }
             target.disabled = false;
