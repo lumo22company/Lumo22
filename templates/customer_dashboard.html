@@ -649,8 +649,10 @@
     </section>
       {% endif %}
   </main>
+  </div>
 
-    <div id="get-pack-sooner-modal" class="account-delete-modal get-pack-sooner-modal" role="dialog" aria-labelledby="get-pack-sooner-modal-title" aria-modal="true" hidden>
+  {# Modals live outside .account-layout so fixed overlay z-index stacks above .lumo-nav (nav is a sibling; layout has z-index: 2). #}
+  <div id="get-pack-sooner-modal" class="account-delete-modal get-pack-sooner-modal" role="dialog" aria-labelledby="get-pack-sooner-modal-title" aria-modal="true" hidden>
       <div class="account-delete-modal-backdrop" onclick="closeGetPackSoonerModal()"></div>
       <div class="account-delete-modal-box remove-stories-modal-box" style="max-width: 520px;">
         <h2 id="get-pack-sooner-modal-title" class="account-delete-modal-title">Get your pack sooner</h2>
@@ -829,7 +831,6 @@
         </div>
       </div>
     </div>
-  </div>
 
   {% include '_footer.html' %}
 
