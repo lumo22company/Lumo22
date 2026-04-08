@@ -404,7 +404,8 @@
         <label for="caption_language">What language should your captions be written in?</label>
         <p class="field-helper intake-helper-before-control">For example: British English or American English.</p>
         <select id="caption_language" name="caption_language" data-testid="caption_language" required>
-          <option value="English (UK)" {% if existing_intake.get('caption_language') == 'English (UK)' or not existing_intake.get('caption_language') %}selected{% endif %}>English (UK)</option>
+          <option value="" {% if not existing_intake.get('caption_language') %}selected{% endif %}>— Select language —</option>
+          <option value="English (UK)" {% if existing_intake.get('caption_language') == 'English (UK)' %}selected{% endif %}>English (UK)</option>
           <option value="English (US)" {% if existing_intake.get('caption_language') == 'English (US)' %}selected{% endif %}>English (US)</option>
           <option value="Spanish" {% if existing_intake.get('caption_language') == 'Spanish' %}selected{% endif %}>Spanish</option>
           <option value="French" {% if existing_intake.get('caption_language') == 'French' %}selected{% endif %}>French</option>
@@ -758,7 +759,7 @@
       reviewContent.appendChild(sect('What they care about', gv('audience_cares')));
       reviewContent.appendChild(sect('Voice (3–5 words)', gv('voice_words') || '(not provided)'));
       reviewContent.appendChild(sect('Language to avoid', gv('voice_avoid')));
-      reviewContent.appendChild(sect('Caption language', gv('caption_language') || 'English (UK)'));
+      reviewContent.appendChild(sect('Caption language', gv('caption_language') || '(not selected)'));
       reviewContent.appendChild(sect('Primary platform', gv('platform') || '(not provided)'));
       reviewContent.appendChild(sect('Platform habits', gv('platform_habits')));
       (function () {
@@ -1264,7 +1265,7 @@
         reviewContent.appendChild(sect('What they care about', getVal('audience_cares')));
         reviewContent.appendChild(sect('Voice (3–5 words)', getVal('voice_words') || '(not provided)'));
         reviewContent.appendChild(sect('Language to avoid', getVal('voice_avoid')));
-        reviewContent.appendChild(sect('Caption language', getVal('caption_language') || 'English (UK)'));
+        reviewContent.appendChild(sect('Caption language', getVal('caption_language') || '(not selected)'));
         reviewContent.appendChild(sect('Primary platform', getVal('platform') || '(not provided)'));
         reviewContent.appendChild(sect('Platform habits', getVal('platform_habits')));
         (function () {
