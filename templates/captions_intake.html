@@ -374,6 +374,17 @@
         </div>
         <input type="hidden" id="platform" name="platform" value="{{ prefilled_platform if is_upgrade_flow else (existing_intake.get('platform', '') or prefilled_platform) }}">
         {% else %}
+        {# Single platform: same locked chips as multi — hidden-only was invisible to customers #}
+        <p class="field-helper" style="margin-bottom: {% if not is_oneoff %}0.35rem{% else %}0.5rem{% endif %}; line-height: 1.45;">Platform included in your order (fixed for this pack — cannot be changed here).</p>
+        {% if not is_oneoff %}
+        <p class="field-helper" style="margin: 0 0 0.5rem; font-size: 0.95rem; line-height: 1.45; color: #333;">To change platforms, go to <a href="/account" style="color: #000; font-weight: 600; text-decoration: underline;">Manage subscription</a> → <strong>Change plan</strong>.</p>
+        {% endif %}
+        <div class="intake-checkbox-group" role="group" aria-label="Platform" id="platform-btn-group" data-testid="platform" data-max-platforms="1" data-platforms-locked="true">
+          <button type="button" class="platform-btn" data-platform="Instagram & Facebook">Instagram &amp; Facebook</button>
+          <button type="button" class="platform-btn" data-platform="LinkedIn">LinkedIn</button>
+          <button type="button" class="platform-btn" data-platform="TikTok">TikTok</button>
+          <button type="button" class="platform-btn" data-platform="Pinterest">Pinterest</button>
+        </div>
         <input type="hidden" id="platform" name="platform" value="{{ prefilled_primary if is_upgrade_flow else (existing_intake.get('platform', '') or prefilled_primary) }}">
         {% endif %}
 
