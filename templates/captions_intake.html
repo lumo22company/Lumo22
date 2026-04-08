@@ -399,6 +399,7 @@
       <div class="form-section">
         <h2>Language <span class="intake-h2-meta">(optional)</span></h2>
         <label for="caption_language">What language should your captions be written in?</label>
+        <p class="field-helper intake-helper-before-control">For example: British English or American English.</p>
         <select id="caption_language" name="caption_language" data-testid="caption_language">
           <option value="English (UK)" {% if existing_intake.get('caption_language') == 'English (UK)' or not existing_intake.get('caption_language') %}selected{% endif %}>English (UK)</option>
           <option value="English (US)" {% if existing_intake.get('caption_language') == 'English (US)' %}selected{% endif %}>English (US)</option>
@@ -412,7 +413,6 @@
           <option value="Turkish" {% if existing_intake.get('caption_language') == 'Turkish' %}selected{% endif %}>Turkish</option>
           <option value="Swedish" {% if existing_intake.get('caption_language') == 'Swedish' %}selected{% endif %}>Swedish</option>
         </select>
-        <p class="field-helper">For example: British English or American English.</p>
       </div>
       <div class="form-section">
         <h2>Platform</h2>
