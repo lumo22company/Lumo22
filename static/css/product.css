@@ -1589,8 +1589,8 @@
   --dfd-space: 2rem;
   --dfd-space-lg: 4rem;
   --dfd-space-xl: 6rem;
-  /* Modal overlay starts just under fixed .lumo-nav (tighter than main padding — avoids a visible strip) */
-  --account-modal-below-nav: 4.5rem;
+  /* Align with .account-layout padding-top (fixed nav clearance) — avoids a gap between nav and overlay */
+  --account-modal-below-nav: 80px;
   /* Light page background, match site (landing/product) */
   background: var(--bg-light, #e5e5e5);
   color: var(--text-on-light, #000);
@@ -1897,7 +1897,12 @@
   top: var(--account-modal-below-nav);
   left: 0;
   right: 0;
-  bottom: 0;
+  bottom: auto;
+  width: 100%;
+  /* Explicit height so absolute backdrop fills the band (not just the dialog card height) */
+  height: calc(100vh - var(--account-modal-below-nav));
+  min-height: calc(100vh - var(--account-modal-below-nav));
+  box-sizing: border-box;
 }
 .account-page-wrap .account-delete-modal-box,
 .account-page-wrap .account-delete-modal-box--with-scroll {
@@ -2870,6 +2875,9 @@
   }
 
   /* Account page: sidebar as collapsible menu, single column, full-width actions */
+  .account-page-wrap {
+    --account-modal-below-nav: 72px;
+  }
   .account-page-wrap .account-layout {
     flex-direction: column;
     gap: 0;
