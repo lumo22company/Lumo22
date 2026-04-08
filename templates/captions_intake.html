@@ -307,11 +307,11 @@
           <p id="ca-signup-wrap" style="display: none; margin: 0.25rem 0 0; font-size: 0.9rem; color: var(--lum-text-muted);">
             <a id="ca-signup-link" href="#" class="intake-account-cta account-billing-portal-link account-btn-swipe-light" style="display: inline-block;">Sign up</a> (email prefilled)
           </p>
-        </div>
+      </div>
         <p id="ca-done" style="display:none; margin:0; color: #1a1a1a;"><span id="ca-done-msg">Check your email to verify your address — then you can log in.</span> <a href="/login" style="color: #1a1a1a; font-weight: 600; text-decoration: underline;">Log in</a></p>
         <p id="ca-already-logged-in" style="display:none; margin:0; font-weight: 500;">You're logged in. <a href="/account" class="intake-account-cta account-billing-portal-link account-btn-swipe-light">Your account</a></p>
         <p id="ca-already-has-account" style="display:none; margin:0; font-weight: 500;">You already have an account. <a href="/login" id="ca-login-link" class="intake-account-cta account-billing-portal-link account-btn-swipe-light" style="display: inline-block;">Log in</a></p>
-      </div>
+    </div>
     </div>
     <div id="intake-error" style="display: none; margin: 2rem 0; padding: 1.5rem; background: rgba(200,80,80,0.15); border-radius: 8px; color: #1a1a1a;">
       <p id="intake-error-main" class="intake-error-main"></p>
@@ -493,16 +493,16 @@
       </div>
       <div class="form-section">
         <h2>What's happening this month? <span class="intake-h2-meta">(optional)</span></h2>
-        <p class="field-helper">If you have a product launch, event, sale, or regular recurring event <strong>within the next 30 days</strong> (your pack window), we'll tailor captions: before the date we build anticipation; on the day we announce; during we promote; after we shift to thank-you.</p>
+        <p class="field-helper">If you have a product launch, event, sale, or regular recurring event within the next 30 days, we'll tailor captions: before the date we build anticipation; on the day we announce; during we promote; after we shift to thank-you.</p>
         <label for="launch_event_description">Include dates or regular events.</label>
         <textarea id="launch_event_description" name="launch_event_description" data-testid="launch_event_description" placeholder="e.g. Valentine's sale 10–14 Feb, product launch 20 Feb, weekly tips every Tuesday" rows="4" style="min-height: 96px; resize: vertical;">{{ existing_intake.get('launch_event_description', '') }}</textarea>
-        <p class="field-helper">Multiple events? List each with a date in the next 30 days.</p>
         <p id="launch-date-hint" class="field-helper" style="display:none; color:#b45309; font-weight:600;"></p>
       </div>
       <div class="form-section">
         <h2>What do you usually talk about? <span class="intake-h2-meta">(optional)</span></h2>
         <label for="usual_topics">Content themes you often use (e.g. tips, behind the scenes, education, client wins, product drops)</label>
         <textarea id="usual_topics" name="usual_topics" data-testid="usual_topics" placeholder="e.g. weekly tips, behind-the-scenes of our process, client success stories, new product drops" style="min-height: 80px;">{{ existing_intake.get('usual_topics', '') }}</textarea>
+        <p class="field-helper">Helps us pick themes and angles that fit your content mix.</p>
       </div>
       <div class="form-section">
         <h2>Example captions <span class="intake-h2-meta">(optional)</span></h2>
@@ -1365,33 +1365,33 @@
                 var btn = document.getElementById('btn-accept-downgrade');
                 if (btn) {
                   btn.onclick = function() {
-                    btn.disabled = true;
+          btn.disabled = true;
                     btn.textContent = 'Updating…';
                     fetch('/api/billing/reduce-subscription', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({
                         token: payload.token,
                         new_platforms: result.json.new_platforms,
                         new_stories: result.json.new_stories
                       })
-                    })
-                    .then(function(r) { return r.json(); })
+          })
+          .then(function(r) { return r.json(); })
                     .then(function(res) {
                       if (res.ok) {
                         ctaEl.style.display = 'none';
                         ctaEl.innerHTML = '';
                         if (typeof lumoIntakeClearError === 'function') lumoIntakeClearError();
                         submitForm();
-                      } else {
+            } else {
                         if (typeof lumoIntakeSetError === 'function') lumoIntakeSetError(res.error || 'Could not update plan.', null);
-                        btn.disabled = false;
+              btn.disabled = false;
                         btn.textContent = 'Accept new price — ' + sym + price + '/month';
-                      }
-                    })
-                    .catch(function() {
+            }
+          })
+          .catch(function() {
                       if (typeof lumoIntakeSetError === 'function') lumoIntakeSetError('Could not update plan — try again.', null);
-                      btn.disabled = false;
+            btn.disabled = false;
                       btn.textContent = 'Accept new price — ' + sym + price + '/month';
                     });
                   };
