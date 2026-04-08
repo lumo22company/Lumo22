@@ -1,55 +1,78 @@
 #!/usr/bin/env python3
 """
-Test that "Add another platform" link appears only when editing intake (existing_intake set),
-not when completing the form for the first time.
+Test intake template: first-time vs returning editor (button + edit notice).
+Platform billing changes are explained via Manage subscription → Change plan (not an in-form add-platform link).
 """
 from datetime import datetime, timezone
 import sys
 from unittest.mock import MagicMock, patch
 
+_INTAKE_TEMPLATE_KWARGS = {
+    "intake_view_only": False,
+    "account_upgrade_base_url": "",
+    "platforms_count": 1,
+    "stories_paid": False,
+    "selected_platforms": "",
+    "subscribe_url": None,
+    "return_url": "",
+    "order_currency": "gbp",
+    "intake_add_platform_text": "+£29 one-off / +£19 monthly",
+    "intake_add_stories_text": "+£29 one-off / +£17 monthly",
+    "is_upgrade_flow": False,
+    "oneoff_upgraded_to_subscription": False,
+    "oneoff_subscribe_checkout_mode": False,
+    "edit_intake_before_subscribe": False,
+}
+
+
 def test_intake_template():
+    """First-time: NEXT STEP, no edit banner. Returning editor: REVIEW CHANGES + subscription platform help copy."""
     from app import app
     now = datetime.now(timezone.utc)
     with app.test_request_context():
         from flask import render_template
 
-        # First-time completion: no existing intake
         html_first = render_template(
             "captions_intake.html",
             intake_token="test-token-123",
             existing_intake={},
             intake_returning_editor=False,
-            intake_view_only=False,
-            account_upgrade_base_url="",
-            platforms_count=1,
             prefilled_platform="",
-            stories_paid=False,
+            prefilled_primary="",
+            is_oneoff=False,
             now=now,
+            **_INTAKE_TEMPLATE_KWARGS,
         )
-        has_add_platform_first = "Add another platform" in html_first
 
-        # Editing: existing intake present
         html_edit = render_template(
             "captions_intake.html",
             intake_token="test-token-123",
             existing_intake={"business_name": "Test Co", "platform": "LinkedIn"},
             intake_returning_editor=True,
-            intake_view_only=False,
-            account_upgrade_base_url="",
-            platforms_count=1,
             prefilled_platform="LinkedIn",
-            stories_paid=False,
+            prefilled_primary="LinkedIn",
+            is_oneoff=False,
             now=now,
+            **_INTAKE_TEMPLATE_KWARGS,
         )
-        has_add_platform_edit = "Add another platform" in html_edit
 
-        if has_add_platform_first:
-            print("FAIL: First-time intake should NOT show 'Add another platform'")
-            sys.exit(1)
-        if not has_add_platform_edit:
-            print("FAIL: Edit intake should show 'Add another platform'")
-            sys.exit(1)
-        print("PASS: 'Add another platform' only visible when editing (existing_intake set)")
+    if "NEXT STEP" not in html_first or "REVIEW CHANGES" in html_first:
+        print("FAIL: First-time intake should show NEXT STEP, not REVIEW CHANGES")
+        sys.exit(1)
+    if 'id="intake-edit-notice"' in html_first:
+        print("FAIL: First-time intake should not show the gold edit notice")
+        sys.exit(1)
+
+    if "REVIEW CHANGES" not in html_edit:
+        print("FAIL: Edit intake should show REVIEW CHANGES")
+        sys.exit(1)
+    if 'id="intake-edit-notice"' not in html_edit:
+        print("FAIL: Edit intake should show the edit notice banner")
+        sys.exit(1)
+    if "Manage subscription" not in html_edit or "Change plan" not in html_edit:
+        print("FAIL: Subscription edit should show Manage subscription → Change plan for platform billing")
+        sys.exit(1)
+    print("PASS: First-time vs returning editor + platform billing copy")
 
 
 def test_awaiting_intake_with_seeded_business_shows_next_step():
@@ -115,6 +138,7 @@ def test_upgrade_required_response():
                     "token": "test-tok",
                     "t": "test-tok",
                     "business_name": "Test Co",
+                    "voice_words": "warm",
                     "include_stories": True,
                 },
                 content_type="application/json",
@@ -154,6 +178,7 @@ def test_oneoff_edit_blocked_after_completed():
         "offer_one_line": "We help teams",
         "audience": "Founders",
         "audience_cares": "Growth",
+        "voice_words": "professional",
         "platform": "LinkedIn",
         "goal": "Build authority",
     }

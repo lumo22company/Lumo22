@@ -378,10 +378,10 @@
         <textarea id="audience_cares" name="audience_cares" required placeholder="e.g. quick wins, feeling less overwhelmed, practical tips" data-testid="audience_cares">{{ existing_intake.get('audience_cares', '') }}</textarea>
       </div>
       <div class="form-section">
-        <h2>Voice <span class="intake-h2-meta">(optional)</span></h2>
-        <p class="field-helper intake-helper-before-control">This shapes tone and word choice across your whole pack so captions feel like <em>your</em> brand—not generic social copy. You can skip it, but even a handful of words helps us stay aligned with the voice you’re aiming for.</p>
+        <h2>Voice <span class="intake-h2-meta">(required)</span></h2>
+        <p class="field-helper intake-helper-before-control">This shapes tone and word choice across your whole pack so captions feel like <em>your</em> brand—not generic social copy. A handful of words keeps every caption aligned with the voice you’re aiming for.</p>
         <p class="field-helper intake-question">Choose 3–5 words that describe how you want to sound.<span class="intake-pick-any-line">(pick any that apply)</span></p>
-        <div class="intake-checkbox-group" role="group" aria-label="Voice tone" data-testid="voice_words">
+        <div class="intake-checkbox-group" role="group" aria-label="Voice tone (required)" data-testid="voice_words">
           <label class="intake-checkbox-label"><input type="checkbox" name="voice_words_cb" value="direct"> Direct</label>
           <label class="intake-checkbox-label"><input type="checkbox" name="voice_words_cb" value="thoughtful"> Thoughtful</label>
           <label class="intake-checkbox-label"><input type="checkbox" name="voice_words_cb" value="warm"> Warm</label>
@@ -733,6 +733,14 @@
       var vw = [].map.call(vwCk, function(x){ return x.value; }).join(', ');
       if (gv('voice_words_other')) vw = vw ? vw + ', ' + gv('voice_words_other') : gv('voice_words_other');
       var vwEl = document.getElementById('voice_words'); if(vwEl) vwEl.value = vw;
+      var vwoEl = document.getElementById('voice_words_other');
+      if (vwoEl) {
+        if (!gv('voice_words')) {
+          vwoEl.setCustomValidity('Choose at least one tone above, or add words in Other.');
+        } else {
+          vwoEl.setCustomValidity('');
+        }
+      }
       var pBtns = document.querySelectorAll('.platform-btn.selected');
       if (pBtns.length) { var pv = [].map.call(pBtns, function(b){ return b.getAttribute('data-platform'); }).filter(Boolean); var pEl = document.getElementById('platform'); if(pEl) pEl.value = pv.join(', '); }
       else { var pCbs = document.querySelectorAll('input[name="platform_cb"]'); if (pCbs.length) { var pv = [].filter.call(pCbs, function(x){ return x.checked; }).map(function(x){ return x.value; }); var pEl = document.getElementById('platform'); if(pEl) pEl.value = pv.join(', '); } }
@@ -811,6 +819,20 @@
       var vw = [].map.call(vwCk, function(x){ return x.value; }).join(', ');
       if (gv('voice_words_other')) vw = vw ? vw + ', ' + gv('voice_words_other') : gv('voice_words_other');
       var vwEl = document.getElementById('voice_words'); if(vwEl) vwEl.value = vw;
+      var vwoEl2 = document.getElementById('voice_words_other');
+      if (vwoEl2) {
+        if (!gv('voice_words')) {
+          vwoEl2.setCustomValidity('Choose at least one tone above, or add words in Other.');
+          var rs = document.getElementById('review-step');
+          var f = document.getElementById('captions-intake-form');
+          if (rs) rs.classList.remove('show');
+          if (f) f.style.display = 'block';
+          if (typeof window.lumoIntakeIntroLeadVisible === 'function') window.lumoIntakeIntroLeadVisible(true);
+          vwoEl2.reportValidity();
+          return;
+        }
+        vwoEl2.setCustomValidity('');
+      }
       var pBtns = document.querySelectorAll('.platform-btn.selected');
       if (pBtns.length) { var pv = [].map.call(pBtns, function(b){ return b.getAttribute('data-platform'); }).filter(Boolean); var pEl = document.getElementById('platform'); if(pEl) pEl.value = pv.join(', '); }
       else { var pCbs = document.querySelectorAll('input[name="platform_cb"]'); if (pCbs.length) { var pv = [].filter.call(pCbs, function(x){ return x.checked; }).map(function(x){ return x.value; }); var pEl = document.getElementById('platform'); if(pEl) pEl.value = pv.join(', '); } }
@@ -1245,6 +1267,20 @@
         syncAudience();
         syncVoiceWords();
         if (document.querySelectorAll('.platform-btn, input[name="platform_cb"]').length) syncPlatforms();
+        var vwoReview = document.getElementById('voice_words_other');
+        if (vwoReview) {
+          if (!getVal('voice_words')) {
+            vwoReview.setCustomValidity('Choose at least one tone above, or add words in Other.');
+            form.reportValidity();
+            var invalidsVoice = form.querySelectorAll(':invalid');
+            invalidsVoice.forEach(function(el){ el.style.borderColor = '#c00'; el.style.backgroundColor = 'rgba(200,0,0,0.06)'; });
+            var firstVoice = invalidsVoice[0];
+            if (firstVoice && firstVoice.scrollIntoView) firstVoice.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            if (hintEl) { hintEl.textContent = 'Please complete the required fields.'; hintEl.style.display = 'block'; if (typeof window.lumoIntakeScrollTo === 'function') window.lumoIntakeScrollTo(hintEl); }
+            return;
+          }
+          vwoReview.setCustomValidity('');
+        }
         if (!checkoutSkip && !form.checkValidity()) {
           form.reportValidity();
         var invalids = form.querySelectorAll(':invalid');
@@ -1313,6 +1349,16 @@
         syncAudience();
         syncVoiceWords();
         if (document.querySelectorAll('.platform-btn, input[name="platform_cb"]').length) syncPlatforms();
+        var vwoSubmit = document.getElementById('voice_words_other');
+        if (vwoSubmit) {
+          if (!getVal('voice_words')) {
+            vwoSubmit.setCustomValidity('Choose at least one tone above, or add words in Other.');
+            showForm();
+            vwoSubmit.reportValidity();
+            return;
+          }
+          vwoSubmit.setCustomValidity('');
+        }
         var incHashtags = document.getElementById('include_hashtags').checked;
         var minH = parseInt(document.getElementById('hashtag_min').value, 10) || 3;
         var maxH = parseInt(document.getElementById('hashtag_max').value, 10) || 10;
@@ -1540,7 +1586,16 @@
         toggleConsumerAge();
       }
       document.querySelectorAll('input[name="audience_cb"], #audience_other').forEach(function(el) { el.addEventListener('change', syncAudience); el.addEventListener('input', syncAudience); });
-      document.querySelectorAll('input[name="voice_words_cb"], #voice_words_other').forEach(function(el) { el.addEventListener('change', syncVoiceWords); el.addEventListener('input', syncVoiceWords); });
+      document.querySelectorAll('input[name="voice_words_cb"], #voice_words_other').forEach(function(el) {
+        function syncVoiceAndClearValidity() {
+          syncVoiceWords();
+          var vwo = document.getElementById('voice_words_other');
+          var h = document.getElementById('voice_words');
+          if (vwo && h && h.value.trim()) vwo.setCustomValidity('');
+        }
+        el.addEventListener('change', syncVoiceAndClearValidity);
+        el.addEventListener('input', syncVoiceAndClearValidity);
+      });
       (function prefillCheckboxes() {
         var aud = getVal('audience');
         if (aud) {

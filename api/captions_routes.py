@@ -1928,6 +1928,10 @@ def _captions_intake_submit_impl(data):
     if not business_name:
         return jsonify({"error": "Business name is required. Please enter your business name."}), 400
 
+    voice_words_raw = (data.get("voice_words") or "").strip()
+    if not voice_words_raw:
+        return jsonify({"error": "Voice is required. Choose at least one tone or add words in Other."}), 400
+
     try:
         order_service = CaptionOrderService()
     except ValueError:
@@ -1971,7 +1975,7 @@ def _captions_intake_submit_impl(data):
         "audience": (data.get("audience") or "").strip(),
         "consumer_age_range": (data.get("consumer_age_range") or "").strip(),
         "audience_cares": (data.get("audience_cares") or "").strip(),
-        "voice_words": (data.get("voice_words") or "").strip(),
+        "voice_words": voice_words_raw,
         "voice_avoid": (data.get("voice_avoid") or "").strip(),
         "platform": (data.get("platform") or "").strip(),
         "platform_habits": (data.get("platform_habits") or "").strip(),
