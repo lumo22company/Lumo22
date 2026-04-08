@@ -515,13 +515,13 @@
       </div>
       <div class="form-section">
         <h2>Example captions <span class="intake-h2-meta">(optional)</span></h2>
-        <label for="caption_examples">Paste 1–3 example captions you like — from your own posts, other accounts or brands you admire, or anywhere you find inspiration. We'll match this style, tone, and structure where relevant.</label>
+        <label for="caption_examples">Paste 1–3 example captions you like — from your own posts, other accounts or brands you admire, or anywhere you find inspiration. We’ll match style, tone, and structure; we won’t copy their factual claims as if they were about your business unless you state those facts elsewhere in the form.</label>
         <textarea id="caption_examples" name="caption_examples" data-testid="caption_examples" placeholder="Paste example captions here" style="min-height: 140px;">{{ existing_intake.get('caption_examples', '') }}</textarea>
       </div>
       <div class="form-section">
         <h2>Facts for your captions <span class="intake-h2-meta">(optional)</span></h2>
         <label for="facts_guardrails">True details we should stick to — or things we must never claim or imply (suppliers, places, products, certifications).</label>
-        <p class="field-helper intake-helper-before-control">If you leave this blank, we’ll keep specifics general and avoid inventing names, distances, product lines, or sourcing stories that aren’t in your other answers or example captions.</p>
+        <p class="field-helper intake-helper-before-control">If you leave this blank, we’ll keep specifics general and avoid inventing names, distances, product lines, or sourcing stories that aren’t in your other answers.</p>
         <textarea id="facts_guardrails" name="facts_guardrails" data-testid="facts_guardrails" rows="4" placeholder="e.g. Don’t name our mill or imply organic certification. Our boxes ship UK-wide — don’t say ‘local delivery only’." style="min-height: 96px; resize: vertical;">{{ existing_intake.get('facts_guardrails', '') }}</textarea>
       </div>
       {% if intake_view_only %}</fieldset>{% endif %}

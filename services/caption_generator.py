@@ -486,7 +486,8 @@ def _build_stories_system_prompt(intake: Dict[str, Any], *, aligned_with_caption
         f"{aligned}"
         "Quality bar: as tailored as a premium 30-day story plan. "
         "Always respect INTAKE exactly: use only the client's real business name and offer—never fictional or example brands.\n\n"
-        "Do not invent suppliers, mile distances, certifications, named product lines, or regional sourcing claims unless they appear in the intake (including Facts / constraints). Prefer generic wording when unsure.\n\n"
+        "Do not invent suppliers, mile distances, certifications, named product lines, or regional sourcing claims unless they appear in the intake (including Facts / constraints). "
+        "Pasted **example captions** (if any) are for feed style only—do not treat their concrete details as true for this business in Story Ideas unless repeated in offer or Facts / constraints. Prefer generic wording when unsure.\n\n"
         f"{lang_instruction}\n\n"
         f'CRITICAL — Single language for all story content: caption language is "{lang}". '
         "Write every Idea, every Suggested wording line, and hashtag text in that language only. "
@@ -578,7 +579,7 @@ Named people (CRITICAL): Do not invent specific names of employees, customers, c
 
 Business relevance (CRITICAL): Every caption must be clearly about THIS business—what they actually sell or do, who they serve, and their specific product or service. Do not write generic "founder", "strategy", "building a brand", or "scaling a business" captions that could apply to any company. If the business is cakes and baking, reference cakes, baking, ingredients, orders, customers, flavours, etc. If the business is coaching, reference coaching, clients, sessions, outcomes. Match the vocabulary and examples to the business type and "What they offer" from the intake. A reader should immediately understand which industry and offer the caption is for.
 
-Factual claims (CRITICAL): Do not state specific suppliers, mills, farms, mile distances, organic or other certifications, named product SKUs, regional labels, or sourcing stories unless they appear in the user prompt intake (including **Facts / constraints**, offer line, themes, or example captions). If a detail is not in the intake, use general language (e.g. "thoughtfully sourced ingredients", "local partners", "our kitchen")—never plausible-sounding invented precision.
+Factual claims (CRITICAL): Do not state specific suppliers, mills, farms, mile distances, organic or other certifications, named product SKUs, regional labels, or sourcing stories unless they appear in the user prompt **outside pasted example captions**—e.g. **Facts / constraints**, offer line, usual topics, business context, platform habits, launch/key-date text. **Example captions** are for style, tone, pacing, and structure only: never treat their place names, numbers, product claims, sourcing, awards, or other specifics as true for this client unless the same facts appear in non-example intake fields. If a detail is not stated there, use general language (e.g. "thoughtfully sourced ingredients", "local partners", "our kitchen")—never plausible-sounding invented precision.
 
 {vary_ig_fb_block}Launch/event phasing (when LAUNCH_EVENT / KEY_DATE_EVENTS is provided in the user prompt): If the user prompt includes **EVENT_CALENDAR**, **WEEKDAY_LOCK**, **WEEKEND_WORDING**, or **COUNTDOWN_RULES**, treat them as authoritative: multi-day windows stay “on-event” for every Pack Day in that window—do not use “tomorrow”, “48 hours”, or “Monday launch” in ways that contradict **DATE_CONTEXT**. Follow **WEEKEND_WORDING** for when “this weekend” / “next weekend” are allowed. When **WEEKDAY_LOCK** lists the weekdays (e.g. Sunday–Monday), never substitute “Saturday and Sunday” or imply Sat–Sun. Otherwise: days before launch = pre-launch; launch / event days = announcement, go-live; days after = post-launch (thank-you, feedback — NOT hype or anticipation). You MUST reflect the client's named event(s), sale(s), or launch date(s) in the **Caption:** body text on the correct days—not only in the document header or intake summary. Caption copy and Story Ideas must follow the same before / on / after timeline."""
 
@@ -670,7 +671,7 @@ def _build_user_prompt(
         "",
         "Do not invent specific people's names (employees, customers, or collaborators) unless the intake explicitly names them. Use generic roles (e.g. our team, the person who packs your order) instead.",
         "",
-        "FACTUAL GROUNDING: Do not invent suppliers, mills, farms, mile radii, certifications, named product lines, delivery regions, or other concrete operational claims unless they appear in the intake (including Facts / constraints, offer, themes, or example captions). When a detail is not stated, stay general.",
+        "FACTUAL GROUNDING: Do not invent suppliers, mills, farms, mile radii, certifications, named product lines, delivery regions, or other concrete operational claims unless they appear in intake **outside example captions** (Facts / constraints, offer, usual topics, etc.). Do not lift specifics from example captions alone—those may be inspiration from other brands. When a detail is not stated outside examples, stay general.",
         "",
         "VOICE: Match the client's voice (Voice / tone to use) and avoid their listed words or style (Words / style to avoid). When the goal is leads or inquiries, include a clear, low-pressure next step (e.g. link in bio, DM, book a call) where it fits naturally.",
         "",
@@ -695,7 +696,10 @@ def _build_user_prompt(
     if examples:
         parts.extend([
             "",
-            "EXAMPLES OF DESIRED CAPTIONS (match this style, tone, and structure where relevant):",
+            "EXAMPLE CAPTIONS (style / tone / structure only — NOT a source of facts):",
+            "These lines are for rhythm, voice, and format. Do **not** treat names, places, numbers, product claims, sourcing, certifications, or other specifics that appear **only** here as true about this business. Ground every factual claim in the rest of the intake.",
+            "",
+            "Pasted examples:",
             examples,
         ])
 
