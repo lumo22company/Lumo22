@@ -443,8 +443,9 @@
         <input type="hidden" id="platform" name="platform" value="{{ prefilled_primary if is_upgrade_flow else (existing_intake.get('platform', '') or prefilled_primary) }}">
         {% endif %}
 
-        <label for="platform_habits">Any platform-specific habits? <span style="color:#999;">(optional)</span></label>
-        <input type="text" id="platform_habits" name="platform_habits" placeholder="e.g. shorter on Instagram, longer on LinkedIn" value="{{ existing_intake.get('platform_habits', '') }}">
+        <label for="platform_habits">Any platform-specific habits or caption length? <span style="color:#999;">(optional)</span></label>
+        <p class="field-helper intake-helper-before-control">Instagram and Facebook feed captions usually work best <strong>short</strong> — hook in the first line, often a few lines total. LinkedIn often suits <strong>longer</strong> posts. TikTok/Pinterest: say if you want minimal vs fuller caption text.</p>
+        <input type="text" id="platform_habits" name="platform_habits" placeholder="e.g. Instagram/Facebook: keep short, 2–4 lines, hook first; LinkedIn: longer storytelling" value="{{ existing_intake.get('platform_habits', '') }}">
         <div id="stories-addon-wrap" class="intake-other-wrap" data-stories-paid="{{ 'true' if stories_paid else 'false' }}" style="margin-top: 1.25rem; padding: 1rem; background: rgba(255,255,255,0.5); border-radius: 8px; border: 1px solid #ddd; {% if not stories_paid %}display: none;{% endif %}">
           <p class="field-helper" style="margin: 0 0 0.5rem; font-weight: 600;">{% if stories_paid %}{% if is_upgrade_flow %}30 Days Story Ideas included in your upgrade.{% else %}30 Days Story Ideas included with your order.{% endif %}{% else %}Using Instagram &amp; Facebook? Add Story Ideas—optionally align each day's Story to your feed caption (same theme, same day) or leave unaligned so they're different.{% endif %}</p>
           <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; margin-bottom: 0.25rem;">
