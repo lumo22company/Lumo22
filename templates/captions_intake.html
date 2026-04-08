@@ -134,10 +134,17 @@
     .intake-page .field-helper { font-size: 0.85rem; color: #555; margin: 0 0 1rem; line-height: 1.4; }
     /* Intro line after section h2 (Audience, Voice, etc.) — same gap as h2 → label elsewhere */
     .intake-page .form-section > h2 + .field-helper { margin: 0 0 0.625rem; }
-    /* Helper directly under a control: tuck slightly closer without breaking section title rhythm */
+    /* Helper immediately after an answer control: pull helper up by shortening the control’s bottom margin */
+    .intake-page .form-section input:has(+ .field-helper),
+    .intake-page .form-section select:has(+ .field-helper),
+    .intake-page .form-section textarea:has(+ .field-helper) {
+      margin-bottom: 0.4rem;
+    }
     .intake-page .form-section input + .field-helper:not(.intake-stories-disclaimer),
     .intake-page .form-section select + .field-helper,
-    .intake-page .form-section textarea + .field-helper { margin-top: -0.35rem; }
+    .intake-page .form-section textarea + .field-helper {
+      margin-top: 0;
+    }
     .intake-page #intake-success .btn-submit { background: var(--lum-gold); color: #000; }
     .intake-page .intake-success-message-box {
       padding: 1.5rem;
