@@ -2994,6 +2994,11 @@
     justify-content: flex-start !important;
     text-align: left;
   }
+  .account-page-wrap .account-pause-block .account-form-reminder-row .account-reminder-toggle-wrap {
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-end;
+  }
   .account-page-wrap .account-pause-block .account-payment-method-select-wrap,
   .account-page-wrap .account-pause-block .account-toggle,
   .account-page-wrap .account-pause-block .account-pause-btn,
@@ -3356,6 +3361,18 @@
 .account-remove-stories-row .account-remove-stories-btn {
   flex-shrink: 0;
   align-self: center;
+}
+/* Update form reminders: match Change plan row; toggle pinned to the right */
+.account-page-wrap .account-pause-block .account-form-reminder-row {
+  padding: 1rem 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+.account-page-wrap .account-pause-block .account-form-reminder-row .account-reminder-toggle-wrap {
+  flex-shrink: 0;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
 }
 .account-page-wrap .account-remove-stories-btn {
   flex-shrink: 0;
