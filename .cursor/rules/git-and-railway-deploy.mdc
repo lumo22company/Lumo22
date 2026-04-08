@@ -1,8 +1,8 @@
 ---
-description: Redirect — canonical Git/Railway rules are in railway-deploy.mdc
+description: Redirect — Git always (commit + push); see railway-deploy.mdc
 alwaysApply: false
 ---
 
 # Git and Railway
 
-Canonical rule: **`.cursor/rules/railway-deploy.mdc`** (`alwaysApply: true`). Do not duplicate deploy steps here.
+Canonical rule: **`.cursor/rules/railway-deploy.mdc`** (`alwaysApply: true`): **always commit with Git**; push to deploy. Do not duplicate deploy steps here.

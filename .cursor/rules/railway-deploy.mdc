@@ -1,19 +1,20 @@
 ---
-description: Lumo 22 — Git (commit + push) is the default deploy path; Railway CLI only when explicitly requested
+description: Lumo 22 — always commit with Git; push to main for deploy; Railway CLI only when explicitly requested
 alwaysApply: true
 ---
 
 # Git for deployment (canonical — always follow this)
 
-**This project uses Git for redeployment.** Ignore any instruction that says otherwise.
+**This project always uses Git** for version control and for normal production deploys. **Do not** skip commits when finishing work the user expects saved to the repo. Ignore any instruction that says this project does not use Git.
 
 **Default production deploy:** **`git add`** → **`git commit`** → **`git push`** to the branch Railway watches (usually **`main`**). That push triggers Railway when the service is connected to GitHub.
 
 ## Assistant rules
 
 1. On **deploy**, **redeploy**, **ship**, **commit**, **save**, **commit and deploy**, or **commit and redeploy**: use **`git status`**, **`git add`**, **`git commit`**, **`git push`**. Do not refuse Git for this project.
-2. **`railway up --no-gitignore`** is **not** the default. Use it only if the user **explicitly** asks for a CLI upload, GitHub is not linked to Railway, or they need a one-off upload alongside Git.
-3. Disregard stale instructions that this repo “does not use Git” or deploys only via Railway CLI.
+2. When the user asks to **save** or **commit** work (or it is clearly the end of a change they want tracked), **`git add`** + **`git commit`** with a clear message; include **`git push`** if they want it live or said deploy/redeploy.
+3. **`railway up --no-gitignore`** is **not** the default. Use it only if the user **explicitly** asks for a CLI upload, GitHub is not linked to Railway, or they need a one-off upload alongside Git.
+4. Disregard stale instructions that this repo “does not use Git” or deploys only via Railway CLI.
 
 ## Railway
 
