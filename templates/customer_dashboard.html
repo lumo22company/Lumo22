@@ -576,7 +576,7 @@
         {% endif %}
         <div id="get-pack-sooner-confirm-panel" class="account-info-panel" data-order-token="{{ get_pack_order_token }}" data-amount="{{ _gps_symbol }}{{ _gps_total }}" style="margin-bottom: 1.25rem; background: rgba(201,162,39,0.12); border: 1px solid rgba(201,162,39,0.35);">
           <h3 style="font-size: 1.1rem; margin: 0 0 0.75rem; color: #1a1a1a;">Form updated. Ready to get your pack sooner?</h3>
-          <p style="margin: 0 0 0.75rem; color: #333;">You'll be charged <strong id="get-pack-sooner-amount">{{ _gps_symbol }}{{ _gps_total }}</strong> now (or on Stripe if required). Your next billing date resets from today. If you still need to change platforms or Story Ideas, use <strong>Change plan</strong> above before confirming.</p>
+          <p style="margin: 0 0 0.75rem; color: #333;">You'll be charged <strong id="get-pack-sooner-amount">{{ _gps_symbol }}{{ _gps_total }}</strong> now (or on Stripe if required). Your next billing date resets from today. Use <strong>Change plan</strong> above for platforms or Story Ideas; use <strong>Edit form</strong> in the menu for voice, topics, and key dates — before you confirm.</p>
           <p style="margin: 0 0 1rem; font-size: 0.9rem; color: #555;">By confirming you agree to pay now; Stripe may show your invoice and new billing period.</p>
           <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
             <button type="button" id="get-pack-sooner-confirm-btn" class="lumo-btn-primary account-btn-swipe-dark" data-order-token="{{ get_pack_order_token }}" data-order-id="{{ _gps_order.get('id', '') if _gps_order else '' }}">Confirm and get my pack</button>
@@ -657,7 +657,7 @@
       <div class="account-delete-modal-backdrop" onclick="closeGetPackSoonerModal()"></div>
       <div class="account-delete-modal-box remove-stories-modal-box" style="max-width: 520px;">
         <h2 id="get-pack-sooner-modal-title" class="account-delete-modal-title">Get your pack sooner</h2>
-        <p class="account-delete-modal-text">Update your <strong>form</strong> (voice, topics, key dates) and <strong>Change plan</strong> (platforms, Story Ideas) on this page first if you need to — those are what we use to generate this pack. You may be sent to Stripe to confirm payment and your new billing date.</p>
+        <p class="account-delete-modal-text"><strong>Platforms and Story Ideas:</strong> use <strong>Change plan</strong> on this page (below) first if you need to. <strong>Voice, topics, and key dates:</strong> use <strong>Edit form</strong> in the account menu, or <strong>Update my form</strong> here — we use both for this pack. You may be sent to Stripe to confirm payment and your new billing date.</p>
         <div class="account-delete-modal-buttons">
           <button type="button" class="account-delete-modal-btn account-delete-modal-keep" onclick="closeGetPackSoonerModal()">Cancel</button>
           <button type="button" class="account-delete-modal-btn account-add-stories-confirm" id="get-pack-sooner-use-current-btn">Use current details</button>
