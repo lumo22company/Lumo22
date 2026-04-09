@@ -251,6 +251,68 @@ _DISPLAY_PRICES = {
     "eur": {"symbol": "€", "sub": 89, "extra_sub": 22, "stories_sub": 19},
 }
 
+
+def _pack_sooner_checkout_line_items(currency: str, platforms: int, include_stories: bool) -> tuple[list, int]:
+    """
+    Itemized Stripe Checkout line items for get-pack-sooner (mode=payment).
+    Same monthly breakdown as subscription checkout / _subscription_monthly_price: base + extra platforms + Story Ideas.
+    Uses price_data (one-time amounts); recurring Price IDs cannot be used in payment mode.
+    Returns (line_items, total_amount_minor) for validation.
+    """
+    cur = (currency or "gbp").strip().lower()
+    if cur not in ("gbp", "usd", "eur"):
+        cur = "gbp"
+    prices = _DISPLAY_PRICES.get(cur, _DISPLAY_PRICES["gbp"])
+    amounts = _CURRENCY_ADDON_AMOUNTS.get(cur, _CURRENCY_ADDON_AMOUNTS["gbp"])
+    n = max(1, min(4, int(platforms or 1)))
+
+    line_items: list = [
+        {
+            "price_data": {
+                "currency": cur,
+                "unit_amount": int(prices["sub"]) * 100,
+                "product_data": {
+                    "name": "30 Days Captions (1 platform)",
+                    "description": "Monthly subscription pack — one-time charge for get pack sooner; your billing date resets after payment.",
+                },
+            },
+            "quantity": 1,
+        }
+    ]
+    total_minor = int(prices["sub"]) * 100
+    if n > 1:
+        addon_qty = n - 1
+        label = f"Extra platform ({addon_qty}×)" if addon_qty == 1 else f"Extra platforms ({addon_qty}×)"
+        u = int(amounts["extra_sub"])
+        line_items.append({
+            "price_data": {
+                "currency": cur,
+                "unit_amount": u,
+                "product_data": {
+                    "name": label,
+                    "description": "Additional platform add-ons at the monthly rate. One-time charge for this pack sooner payment.",
+                },
+            },
+            "quantity": addon_qty,
+        })
+        total_minor += u * addon_qty
+    if include_stories:
+        u = int(amounts["stories_sub"])
+        line_items.append({
+            "price_data": {
+                "currency": cur,
+                "unit_amount": u,
+                "product_data": {
+                    "name": "30 Days Story Ideas",
+                    "description": "Story prompts add-on at the monthly rate. One-time charge for this pack sooner payment.",
+                },
+            },
+            "quantity": 1,
+        })
+        total_minor += u
+    return line_items, total_minor
+
+
 def _get_base_price_id(currency: str) -> str:
     """Return Stripe Price ID for captions one-off in the given currency. Raises if not configured."""
     if currency == "gbp":
@@ -3132,11 +3194,19 @@ def captions_get_pack_sooner():
         include_stories = bool(order.get("include_stories"))
         _, amt_whole = _subscription_monthly_price(currency, platforms, include_stories)
         try:
-            unit_amount = int(amt_whole) * 100
+            expected_minor = int(amt_whole) * 100
         except (TypeError, ValueError):
             return jsonify({"ok": False, "error": "Could not compute pack price."}), 500
-        if unit_amount <= 0:
+        if expected_minor <= 0:
             return jsonify({"ok": False, "error": "Invalid pack amount."}), 400
+
+        line_items, total_minor = _pack_sooner_checkout_line_items(currency, platforms, include_stories)
+        if total_minor != expected_minor:
+            print(
+                f"[get-pack-sooner] line item total {total_minor} != expected {expected_minor} "
+                f"(currency={currency} platforms={platforms} stories={include_stories})"
+            )
+            return jsonify({"ok": False, "error": "Could not build checkout line items."}), 500
 
         base = _base_url_for_redirect()
         if not base:
@@ -3150,22 +3220,9 @@ def captions_get_pack_sooner():
             "order_id": str(order_id),
             "order_token": ot[:200] if ot else "",
             "stripe_subscription_id": sub_id,
+            "platforms": str(platforms),
+            "include_stories": "1" if include_stories else "0",
         }
-        line_items = [
-            {
-                "price_data": {
-                    "currency": currency,
-                    "unit_amount": unit_amount,
-                    "product_data": {
-                        "name": "Get your pack sooner — 30 Days Captions",
-                        "description": (
-                            "Fixed monthly pack price. Resets your billing date from today after payment."
-                        ),
-                    },
-                },
-                "quantity": 1,
-            }
-        ]
         create_params = {
             "mode": "payment",
             "line_items": line_items,
