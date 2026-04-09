@@ -19,6 +19,8 @@ _INTAKE_TEMPLATE_KWARGS = {
     "intake_add_platform_text": "+£29 one-off / +£19 monthly",
     "intake_add_stories_text": "+£29 one-off / +£17 monthly",
     "is_upgrade_flow": False,
+    "is_prepare_pack_sooner_return": False,
+    "account_hub_plan_picker": False,
     "oneoff_upgraded_to_subscription": False,
     "oneoff_subscribe_checkout_mode": False,
     "edit_intake_before_subscribe": False,

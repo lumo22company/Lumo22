@@ -419,32 +419,32 @@
         </select>
       </div>
       <div class="form-section">
-        <h2>Platform</h2>
+        <h2>Platform selection</h2>
         {% if platforms_count > 1 %}
         <p class="field-helper" style="margin-bottom: {% if not is_oneoff %}0.35rem{% else %}0.5rem{% endif %}; line-height: 1.45;">Platforms included in your order (fixed for this pack — cannot be changed here).</p>
         {% if not is_oneoff %}
         <p class="field-helper" style="margin: 0 0 0.5rem; font-size: 0.95rem; line-height: 1.45; color: #333;">To update your platform selection and add or remove Story Ideas for this subscription, go to <a href="/account" style="color: #000; font-weight: 600; text-decoration: underline;">Manage subscription</a> → <strong>Change plan</strong>.</p>
         {% endif %}
-        <div class="intake-checkbox-group" role="group" aria-label="Platforms" id="platform-btn-group" data-testid="platform" data-max-platforms="{{ platforms_count }}" data-platforms-locked="true">
+        <div class="intake-checkbox-group" role="group" aria-label="Platform selection" id="platform-btn-group" data-testid="platform" data-max-platforms="{{ platforms_count }}" data-platforms-locked="true">
           <button type="button" class="platform-btn" data-platform="Instagram & Facebook">Instagram &amp; Facebook</button>
           <button type="button" class="platform-btn" data-platform="LinkedIn">LinkedIn</button>
           <button type="button" class="platform-btn" data-platform="TikTok">TikTok</button>
           <button type="button" class="platform-btn" data-platform="Pinterest">Pinterest</button>
         </div>
-        <input type="hidden" id="platform" name="platform" value="{{ prefilled_platform if is_upgrade_flow else (existing_intake.get('platform', '') or prefilled_platform) }}">
+        <input type="hidden" id="platform" name="platform" value="{{ prefilled_platform if account_hub_plan_picker|default(false) else (existing_intake.get('platform', '') or prefilled_platform) }}">
         {% else %}
         {# Single platform: same locked chips as multi — hidden-only was invisible to customers #}
         <p class="field-helper" style="margin-bottom: {% if not is_oneoff %}0.35rem{% else %}0.5rem{% endif %}; line-height: 1.45;">Platform included in your order (fixed for this pack — cannot be changed here).</p>
         {% if not is_oneoff %}
         <p class="field-helper" style="margin: 0 0 0.5rem; font-size: 0.95rem; line-height: 1.45; color: #333;">To change platforms, go to <a href="/account" style="color: #000; font-weight: 600; text-decoration: underline;">Manage subscription</a> → <strong>Change plan</strong>.</p>
         {% endif %}
-        <div class="intake-checkbox-group" role="group" aria-label="Platform" id="platform-btn-group" data-testid="platform" data-max-platforms="1" data-platforms-locked="true">
+        <div class="intake-checkbox-group" role="group" aria-label="Platform selection" id="platform-btn-group" data-testid="platform" data-max-platforms="1" data-platforms-locked="true">
           <button type="button" class="platform-btn" data-platform="Instagram & Facebook">Instagram &amp; Facebook</button>
           <button type="button" class="platform-btn" data-platform="LinkedIn">LinkedIn</button>
           <button type="button" class="platform-btn" data-platform="TikTok">TikTok</button>
           <button type="button" class="platform-btn" data-platform="Pinterest">Pinterest</button>
         </div>
-        <input type="hidden" id="platform" name="platform" value="{{ prefilled_primary if is_upgrade_flow else (existing_intake.get('platform', '') or prefilled_primary) }}">
+        <input type="hidden" id="platform" name="platform" value="{{ prefilled_primary if account_hub_plan_picker|default(false) else (existing_intake.get('platform', '') or prefilled_primary) }}">
         {% endif %}
 
         <div id="vary-igfb-length-wrap" class="intake-other-wrap" style="display: none; margin-bottom: 0.75rem;">
@@ -459,7 +459,7 @@
         <div id="stories-addon-wrap" class="intake-other-wrap" data-stories-paid="{{ 'true' if stories_paid else 'false' }}" style="margin-top: 1.25rem; padding: 1rem; background: rgba(255,255,255,0.5); border-radius: 8px; border: 1px solid #ddd; {% if not stories_paid %}display: none;{% endif %}">
           <p class="field-helper" style="margin: 0 0 0.5rem; font-weight: 600;">{% if stories_paid %}{% if is_upgrade_flow %}30 Days Story Ideas included in your upgrade.{% else %}30 Days Story Ideas included with your order.{% endif %}{% else %}Using Instagram &amp; Facebook? Add Story Ideas—optionally align each day's Story to your feed caption (same theme, same day) or leave unaligned so they're different.{% endif %}</p>
           <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; margin-bottom: 0.25rem;">
-            <input type="checkbox" id="include_stories" name="include_stories" {% if stories_paid or (not is_upgrade_flow and existing_intake.get('include_stories')) %}checked{% endif %} {% if stories_paid %}disabled{% endif %} style="width: auto;">
+            <input type="checkbox" id="include_stories" name="include_stories" {% if stories_paid or (not account_hub_plan_picker|default(false) and existing_intake.get('include_stories')) %}checked{% endif %} {% if stories_paid %}disabled{% endif %} style="width: auto;">
             <span>{% if stories_paid %}{% if is_upgrade_flow %}30 Stories included{% else %}30 Stories included (already paid){% endif %}{% else %}Add 30 Stories prompts <span class="intake-price-parenthetical">({{ intake_add_stories_text|default('+£29 one-off / +£17 monthly') }})</span>{% endif %}</span>
           </label>
           <p class="field-helper" style="margin: 0.5rem 0 0;">One-line prompts for Instagram/Facebook Stories each day. Check the box below to align each Story to that day's caption—or leave unchecked so Stories and captions are different on the same day.</p>
@@ -768,7 +768,7 @@
       reviewContent.appendChild(sect('Voice (3–5 words)', gv('voice_words') || '(not provided)'));
       reviewContent.appendChild(sect('Language to avoid', gv('voice_avoid')));
       reviewContent.appendChild(sect('Caption language', gv('caption_language') || '(not selected)'));
-      reviewContent.appendChild(sect('Primary platform', gv('platform') || '(not provided)'));
+      reviewContent.appendChild(sect('Platform selection', gv('platform') || '(not provided)'));
       reviewContent.appendChild(sect('Platform habits', gv('platform_habits')));
       (function () {
         var v = document.getElementById('vary_ig_fb_caption_length');
@@ -1302,7 +1302,7 @@
         reviewContent.appendChild(sect('Voice (3–5 words)', getVal('voice_words') || '(not provided)'));
         reviewContent.appendChild(sect('Language to avoid', getVal('voice_avoid')));
         reviewContent.appendChild(sect('Caption language', getVal('caption_language') || '(not selected)'));
-        reviewContent.appendChild(sect('Primary platform', getVal('platform') || '(not provided)'));
+        reviewContent.appendChild(sect('Platform selection', getVal('platform') || '(not provided)'));
         reviewContent.appendChild(sect('Platform habits', getVal('platform_habits')));
         (function () {
           var v = document.getElementById('vary_ig_fb_caption_length');

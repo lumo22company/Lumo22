@@ -504,16 +504,17 @@ def captions_intake_page():
             pass
     return_url = request.args.get("return_url", "").strip()
     is_upgrade_flow = bool(return_url and "/account/upgrade" in return_url)
-    # Upgrade flow: Story Ideas selection on the upgrade page overrides the one-off's value so the form matches what they're subscribing to
-    if is_upgrade_flow and token:
+    is_prepare_pack_sooner_return = bool(return_url and "/account/prepare-pack-sooner" in return_url)
+    account_hub_plan_picker = is_upgrade_flow or is_prepare_pack_sooner_return
+    # Account hub (upgrade or prepare-pack-sooner): query params match the hub form before intake
+    if account_hub_plan_picker and token:
         upgrade_stories = request.args.get("upgrade_stories", "").strip()
         if upgrade_stories == "0":
             stories_paid = False
         elif upgrade_stories == "1":
             stories_paid = True
-    # Upgrade flow: if they chose platform count/selection on the upgrade page, show that on the form (not the one-off's old values)
-    upgrade_selected = (request.args.get("selected", "").strip() if is_upgrade_flow else "") or ""
-    if is_upgrade_flow and token:
+    upgrade_selected = (request.args.get("selected", "").strip() if account_hub_plan_picker else "") or ""
+    if account_hub_plan_picker and token:
         upgrade_platforms = request.args.get("platforms", "").strip()
         if upgrade_platforms:
             try:
@@ -534,7 +535,7 @@ def captions_intake_page():
     # Checkout links often use ?platforms=1 without ?selected=; Stripe metadata then omits selected_platforms.
     if not prefilled_platform and order and platforms_count == 1:
         prefilled_platform = "Instagram & Facebook"
-    if is_upgrade_flow and upgrade_selected:
+    if account_hub_plan_picker and upgrade_selected:
         prefilled_platform = upgrade_selected
     # Normalise legacy "Instagram" / "Facebook" to grouped "Instagram & Facebook"
     if prefilled_platform in ("Instagram", "Facebook"):
@@ -630,6 +631,8 @@ def captions_intake_page():
             intake_add_platform_text=intake_add_platform_text,
             intake_add_stories_text=intake_add_stories_text,
             is_upgrade_flow=is_upgrade_flow,
+            is_prepare_pack_sooner_return=is_prepare_pack_sooner_return,
+            account_hub_plan_picker=account_hub_plan_picker,
             intake_returning_editor=intake_returning_editor,
             intake_view_only=intake_view_only,
             account_upgrade_base_url=account_upgrade_base_url,
@@ -1179,7 +1182,25 @@ def _prepare_pack_sooner_hub_context(customer: dict) -> tuple:
     intake = order.get("intake") or {}
     biz = _safe_str(intake.get("business_name"))
     label = biz.title() if biz else "Your subscription"
-    return {"token": token, "label": label}, None
+    platforms_count = max(1, min(4, _safe_int(order.get("platforms_count"), 1)))
+    selected_platforms = (order.get("selected_platforms") or "").strip() or ""
+    selected_platforms_list = [p.strip() for p in selected_platforms.split(",") if p.strip()]
+    include_stories = bool(order.get("include_stories"))
+    align_stories_to_captions = bool(intake.get("align_stories_to_captions"))
+    currency = (order.get("currency") or "gbp").strip().lower()
+    if currency not in ("gbp", "usd", "eur"):
+        currency = "gbp"
+    return {
+        "token": token,
+        "order_id": str(order.get("id") or ""),
+        "label": label,
+        "platforms_count": platforms_count,
+        "selected_platforms": selected_platforms,
+        "selected_platforms_list": selected_platforms_list,
+        "include_stories": include_stories,
+        "align_stories_to_captions": align_stories_to_captions,
+        "currency": currency,
+    }, None
 
 
 def _referral_share_mailto_href(base_url: str, code: str) -> str:

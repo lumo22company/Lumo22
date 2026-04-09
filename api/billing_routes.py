@@ -621,7 +621,7 @@ def change_subscription_plan():
     )
 
     if not billing_changed and not meta_changed:
-        return jsonify({"ok": False, "error": "No change to plan"}), 400
+        return jsonify({"ok": True, "no_op": True, "message": "Plan unchanged."}), 200
 
     stories_price_id = (getattr(Config, "STRIPE_CAPTIONS_STORIES_SUBSCRIPTION_PRICE_ID", None) or "").strip()
     extra_platform_price_id = (getattr(Config, "STRIPE_CAPTIONS_EXTRA_PLATFORM_SUBSCRIPTION_PRICE_ID", None) or "").strip()
