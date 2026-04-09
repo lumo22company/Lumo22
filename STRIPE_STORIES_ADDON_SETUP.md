@@ -39,4 +39,4 @@ ALTER TABLE caption_orders ADD COLUMN IF NOT EXISTS include_stories BOOLEAN NOT 
 - Visit `/captions`, select Instagram & Facebook as platform
 - Stories add-on checkbox should appear
 - Select it and proceed to checkout — total should include +£19 (one-off) or +£12/mo (subscription)
-- After payment, intake form should show "30 Days Story Ideas included (already paid)" when applicable
+- After payment, intake form should show "30 Stories included (already paid)" when applicable
