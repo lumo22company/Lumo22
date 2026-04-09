@@ -423,7 +423,7 @@
         {% if platforms_count > 1 %}
         <p class="field-helper" style="margin-bottom: {% if not is_oneoff %}0.35rem{% else %}0.5rem{% endif %}; line-height: 1.45;">Platforms included in your order (fixed for this pack — cannot be changed here).</p>
         {% if not is_oneoff %}
-        <p class="field-helper" style="margin: 0 0 0.5rem; font-size: 0.95rem; line-height: 1.45; color: #333;">To update your platform selection and add or remove Story Ideas for this subscription, go to <a href="/account" style="color: #000; font-weight: 600; text-decoration: underline;">Manage subscription</a> → <strong>Change plan</strong>.</p>
+        <p class="field-helper" style="margin: 0 0 0.5rem; font-size: 0.95rem; line-height: 1.45; color: #333;">{% if is_prepare_pack_sooner_return|default(false) %}Platforms and Story Ideas are fixed on this form; when you’re back on <strong>Update preferences</strong>, you can adjust them before checkout—or anytime under <a href="/account" style="color: #000; font-weight: 600; text-decoration: underline;">Manage subscription</a> → <strong>Change plan</strong>.{% else %}To update your platform selection and add or remove Story Ideas for this subscription, go to <a href="/account" style="color: #000; font-weight: 600; text-decoration: underline;">Manage subscription</a> → <strong>Change plan</strong>.{% endif %}</p>
         {% endif %}
         <div class="intake-checkbox-group" role="group" aria-label="Platform selection" id="platform-btn-group" data-testid="platform" data-max-platforms="{{ platforms_count }}" data-platforms-locked="true">
           <button type="button" class="platform-btn" data-platform="Instagram & Facebook">Instagram &amp; Facebook</button>
