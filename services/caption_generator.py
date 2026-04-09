@@ -371,7 +371,8 @@ def _build_date_alignment_weekend_block(pack_start_date: str) -> str:
         "when the post day is Sunday). You may still state opening hours (e.g. open Saturday, closed Sunday) — factual — "
         "but the **narrative time** must match the post day."
         "\n- **Monday–Friday:** Weekend-forward lines (e.g. \"this weekend\") are fine when the calendar day is before Saturday; "
-        "**Friday** is natural for teeing up the weekend."
+        "on **Friday**, teeing up the **weekend** is natural — but if the caption promotes **this Friday’s** own class or event (same day), "
+        "use **this morning / today**, not **this Friday morning** (see **SAME_POST_DAY_AS_EVENT**)."
         "\n- **Month phrases:** \"Final weekend of [month]\" must match the calendar: if the post falls **during** that weekend, "
         "do not frame it as if you are still *before* it."
         + ex
@@ -420,9 +421,70 @@ def _build_weekday_hook_alignment_block() -> str:
         "- Prefer **non-weekday** scene-setting when variety is needed: “Mornings at [Business]…”, “Midweek classes…”, “Here at [Business]…”, “Today's …”.\n"
         "- **Factual operating hours** may list multiple weekdays (e.g. “Open Mon–Thu 8–5, Fri–Sat mornings”, “closed Sunday”) on **any** Day N — "
         "that is schedule copy, not pretending the post falls on Monday.\n"
-        "- **Promoting a future class** is OK when unambiguous (e.g. “This **Friday** morning we’re hosting…” on a Tuesday post) so the reader knows the event is Friday.\n"
+        "- **Promoting a class or event on a *future* calendar day** is OK (e.g. on **Tuesday**, “This **Friday** morning we’re hosting…” so the reader knows which day). "
+        "On the **same** calendar day as that event, do **not** use “this [weekday] morning” for that event — see **SAME_POST_DAY_AS_EVENT** below.\n"
         "- Hashtags: avoid **#MondayMotivation** (etc.) on a calendar day that is not that weekday; use neutral tags or day-appropriate tags "
         "(e.g. #WellnessWednesday on Wednesday)."
+    )
+
+
+def _build_same_post_day_as_event_block(pack_start_date: str) -> str:
+    """
+    When Day N in DATE_CONTEXT is the same weekday as a recurring class (e.g. Friday class on a Friday post),
+    avoid 'This Friday morning…' (sounds like a future Friday). Use 'this morning', 'today', etc.
+    """
+    s = (pack_start_date or "").strip()
+    if not s:
+        return ""
+    try:
+        datetime.strptime(s[:10], "%Y-%m-%d")
+    except ValueError:
+        return ""
+    return (
+        "SAME_POST_DAY_AS_EVENT (CRITICAL — applies to **Caption:** and **Suggested hook**; read **Day N** in DATE_CONTEXT; "
+        "valid for **every** weekday **Mon–Sun**, not only Friday):\n"
+        "- If the post promotes a **session, class, opening, or offer that happens on the same calendar day as Day N** "
+        "(e.g. Day 2 = Fri 10 Apr 2026 and you invite people to **that** Friday’s free class), the reader opens the feed **on that Friday**. "
+        "Do **not** write **“This Friday morning…”**, **“Join us this Friday…”**, or **“We’re opening our doors this Friday morning…”** — that frames Friday as still **ahead**. "
+        "Use **“This morning…”**, **“Today we’re…”**, **“Join us in a few hours…”**, **“We’re here until…”**, or **“Right now at [business]…”**.\n"
+        "- **Very short Instagram & Facebook lines** (one or two lines): the rule still applies — do **not** open with **“This Friday morning…”** "
+        "on a **Friday** post; use **“This morning…”** or **“Today…”** for a same-day class.\n"
+        "- Same rule for **any** weekday: if Day N **is** Tuesday and the event is **that Tuesday**, do not say **“this Tuesday evening”** as if Tuesday were still coming — say **tonight**, **today**, **this evening**. "
+        "**“This [weekday] morning/afternoon/evening”** is only when **Day N’s calendar day is *before* the day of the event** "
+        "(e.g. Monday post → “this Wednesday evening” for Wednesday’s workshop). If Day N **is** that weekday, use **today / tonight / this morning**.\n"
+        "- **Factual schedules** are fine on any day (e.g. “Classes run Friday and Saturday mornings”) — that is recurring hours, not pretending the post is another day.\n"
+        "- **Hashtags** like #FridayMorning on an actual Friday post are OK; the **sentence copy** must still read as same-day."
+    )
+
+
+def _build_stories_posting_day_alignment_block(pack_start_date: str) -> str:
+    """
+    Story Ideas are printed beside DATE_CONTEXT dates; Suggested wording must read correctly on that calendar day.
+    Fixes e.g. 'tomorrow morning … Friday' on a Friday post, or 'Friday morning' as upcoming on Saturday.
+    """
+    s = (pack_start_date or "").strip()
+    if not s:
+        return ""
+    try:
+        datetime.strptime(s[:10], "%Y-%m-%d")
+    except ValueError:
+        return ""
+    return (
+        "STORY_POSTING_DAY_ALIGNMENT (CRITICAL — each **Day N** row is for the calendar date shown in **DATE_CONTEXT** "
+        "for that N; the PDF prints that date beside the story. **Suggested wording** is copy for posting **on that day**):\n"
+        "- Before **tomorrow**, **today**, **this morning**, or naming a **weekday**, check **Day N** and **Day N+1** in DATE_CONTEXT. "
+        "**Tomorrow** must mean only the **calendar day after** Day N — never a trick where “tomorrow” refers to the **same** "
+        "weekday as Day N’s date.\n"
+        "- If the story promotes an event on **the same calendar day as Day N** (e.g. Day 2 = Fri 10 Apr 2026 and the class is "
+        "**that** Friday morning), use **this morning**, **today**, **this Friday**, **we’re live**, or **join us in a few hours** — "
+        "**not** “tomorrow morning” for that same Friday.\n"
+        "- On a **Friday** post, never write **“tomorrow is Friday”** or **“tomorrow morning … [Friday event]”** for the event that falls "
+        "on that Friday — it is already Friday.\n"
+        "- On **Saturday** or **Sunday**, do not describe **Friday’s** class as **Friday morning** in the **upcoming** sense; use "
+        "**yesterday**, **last night**, **Friday’s session**, **replay**, or **who joined us**.\n"
+        "- **Thursday** teasing **Friday** may use **tomorrow** correctly. **Teaser** vs **live**: a teaser the day **before** the event "
+        "may use “tomorrow”; the **on-day** story must use **today / now / this morning** for that event.\n"
+        "- Keep **Idea** and **Suggested wording** consistent: do not label an Idea as same-day live content but use teaser-only time words."
     )
 
 
@@ -484,6 +546,8 @@ def _build_stories_system_prompt(intake: Dict[str, Any], *, aligned_with_caption
     return (
         "You write concise Story prompts (Idea, Suggested wording, Story hashtags). "
         f"{aligned}"
+        "Calendar-day consistency: each Day N pairs with DATE_CONTEXT; never use “tomorrow” to mean the same calendar day as that row, "
+        "and never treat a weekday named in the copy as still in the future when DATE_CONTEXT shows the post is already that day.\n\n"
         "Quality bar: as tailored as a premium 30-day story plan. "
         "Always respect INTAKE exactly: use only the client's real business name and offer—never fictional or example brands.\n\n"
         "Do not invent suppliers, mile distances, certifications, named product lines, or regional sourcing claims unless they appear in the intake (including Facts / constraints). "
@@ -548,6 +612,8 @@ You produce a 30-day caption plan using exactly these five categories, distribut
 - Soft Promotion (invite a next step, mention offer, low pressure)
 - Engagement (questions, prompts, conversation starters)
 
+Engagement category (CRITICAL — intra-pack variety): The plan has **six** Engagement days. Each must use a **different conversation mechanic** — do not repeat the same question type or “origin story” angle twice in one pack. Rotate, for example: a specific scenario (“when was the last time…”), fill-in-the-blank, this-or-that / A vs B, a quick 1–10 or poll, myth vs fact, favourite ritual/prop/teacher, or “what surprised you when…”. **Forbidden:** Multiple Engagement days that all ask “what brought you to [topic]?” / “why did you start?” / “share your origin story” in the same shape. **Forbidden:** Reusing the same opener twice (e.g. “Was it a recommendation from a friend…” or “We’d love to hear your story—drop a comment”) on more than one Engagement day. If Day A asks how people discovered the practice, Day B must change the angle (obstacles, habits, class vibe, what keeps them coming back phrased differently — not a second “why did you start?”). Vary CTAs and hooks so the six days feel deliberately different.
+
 Output format: You must respond with a single markdown document. Structure:
 1. Title: "# 30 Days of Social Media Captions"
 2. Subtitle: "[Business name from intake, or a brief identifier] | [Current month year]"
@@ -571,7 +637,7 @@ Single platform: Write 30 distinct captions (one per day). Multiple platforms: W
 
 Day headings (CRITICAL): Each line must be exactly `## Day N — [one of the five category names]`. Do not put calendar dates, weekdays, or "6 Apr 2026"-style text in the day heading—the client's PDF adds dates automatically; dates in the heading duplicate in the exported PDF.
 
-Calendar-day alignment (CRITICAL): The user prompt includes **DATE_CONTEXT** (and may include **DATE_ALIGNMENT**). Each **Caption:** for Day N must read correctly **on the calendar day** for that N. If that day is **Saturday** or **Sunday**, do **not** use "heading into the weekend", "ahead of the weekend", or "this weekend" as something still **in the future**. On **Sunday**, never imply the weekend has not started yet. **Friday** and **Mon–Thu** may tee up the weekend when natural.
+Calendar-day alignment (CRITICAL): The user prompt includes **DATE_CONTEXT** (and may include **DATE_ALIGNMENT**, **SAME_POST_DAY_AS_EVENT**). Each **Caption:** for Day N must read correctly **on the calendar day** for that N. If that day is **Saturday** or **Sunday**, do **not** use "heading into the weekend", "ahead of the weekend", or "this weekend" as something still **in the future**. On **Sunday**, never imply the weekend has not started yet. **Mon–Thu** may tee up the weekend when natural. If the caption promotes a **class or offer on the same calendar day as Day N** (e.g. Friday class on a Friday post), do **not** open with **"this Friday morning"** / **"this [weekday]…"** for that same-day event — use **this morning**, **today**; reserve **"this [weekday]"** for posts **before** that weekday. **Applies to short and long copy alike** (including a two-line IG post): never **This Tuesday evening** on a Tuesday, etc. **Calendar month:** If **DATE_CONTEXT** for Day N is in **May**, do not write “closing out **April**” or “**April** draws to a close” for that day — match the **actual month** of that date line (see **MONTH_NARRATIVE_ALIGNMENT** in the user prompt).
 
 Deadlines and registration (CRITICAL): When **DATE_CONTEXT** and/or **DEADLINE_AND_REGISTRATION_ALIGNMENT** are in the user prompt, do **not** state a **registration close**, **early-bird end**, or **deadline** on a **calendar date before** that Day N’s post date while making it sound like the deadline is still **upcoming** (e.g. “closes on 8 April” on a 10 April post). Use past tense or move the deadline to on/after the post day.
 
@@ -774,6 +840,7 @@ def _build_user_prompt(
         align_block = _build_date_alignment_weekend_block(start_str)
         deadline_block = _build_deadline_alignment_block(start_str)
         weekday_hook_block = _build_weekday_hook_alignment_block()
+        same_day_event_block = _build_same_post_day_as_event_block(start_str)
         parts.extend([
             "",
             "DATE_CONTEXT (the client's 30 days start on a specific date; use when it adds value):",
@@ -785,10 +852,19 @@ def _build_user_prompt(
             "",
             weekday_hook_block,
             "",
+            same_day_event_block,
+            "",
             "When KEY_DATE_EVENTS is also set, prioritize event timing from KEY_DATE_EVENTS over casual weekday mentions. "
             "When only DATE_CONTEXT applies (no KEY_DATE_EVENTS), you may reference weekday/weekend lightly only where it matches **DATE_CONTEXT** "
             "and **WEEKDAY_IN_HOOK_ALIGNMENT** — do not force a calendar date into every caption, but **never** name the wrong weekday in a scene-setting hook. "
-            "**DATE_ALIGNMENT**, **DEADLINE_AND_REGISTRATION_ALIGNMENT**, and **WEEKDAY_IN_HOOK_ALIGNMENT** above still apply.",
+            "**DATE_ALIGNMENT**, **DEADLINE_AND_REGISTRATION_ALIGNMENT**, **WEEKDAY_IN_HOOK_ALIGNMENT**, and **SAME_POST_DAY_AS_EVENT** above still apply.",
+            "",
+            "MONTH_NARRATIVE_ALIGNMENT (CRITICAL): The document subtitle may show **two months** (e.g. April – May 2026) when "
+            "the 30-day window crosses a calendar month. **Ignore** any single-month habit: every **Caption:** for **Day N** "
+            "must match the **calendar month (and date)** on that day’s **DATE_CONTEXT** line — not the first month of the subtitle alone. "
+            "If **Day 30 = Fri 08 May 2026**, do **not** write “as we close out April”, “April draws to a close”, or “throughout April we…” — "
+            "May has already started; use May-appropriate or month-neutral wrap-up language. "
+            "If **Day N** is still in April, April-themed framing for that day is fine.",
         ])
 
     # Subscription variety: avoid repeating the same day-by-day category pattern as previous packs
@@ -826,12 +902,16 @@ def _build_user_prompt(
 def _build_doc_header(intake: Dict[str, Any], pack_start_date: Optional[str] = None) -> str:
     """Build title, subtitle, and intake summary so we can prepend to chunked output. Uses normalized case (no ALL CAPS)."""
     from datetime import datetime
+    from services.caption_pdf import pack_month_range_label
+
     n = _normalize_intake_case
     start_str = (pack_start_date or "").strip() or datetime.utcnow().strftime("%Y-%m-%d")
-    try:
-        month_year = datetime.strptime(start_str[:10], "%Y-%m-%d").strftime("%B %Y")
-    except ValueError:
-        month_year = datetime.utcnow().strftime("%B %Y")
+    month_year = pack_month_range_label(start_str)
+    if not month_year:
+        try:
+            month_year = datetime.strptime(start_str[:10], "%Y-%m-%d").strftime("%B %Y")
+        except ValueError:
+            month_year = datetime.utcnow().strftime("%B %Y")
     business = n((intake.get("business_name") or "").strip(), sentence_case=False) or "Client"
     audience = n(intake.get("audience") or "", sentence_case=False) or "Not specified"
     voice = n((intake.get("voice_words") or intake.get("voice_avoid") or "").strip(), sentence_case=False) or "Not specified"
@@ -941,6 +1021,170 @@ def _effective_vary_ig_fb_caption_length(intake: Dict[str, Any]) -> bool:
     return _truthy_intake_flag(intake.get("vary_ig_fb_caption_length")) and _platforms_include_ig_fb(pl)
 
 
+def _category_from_day_heading_line(line: str) -> str:
+    mm = re.match(r"^##\s*Day\s+\d+\s*[—\-]\s*(.+)$", (line or "").strip(), re.I)
+    return (mm.group(1).strip() if mm else "")
+
+
+def _is_engagement_category_heading(cat: str) -> bool:
+    c = (cat or "").strip().lower()
+    return c == "engagement" or c.startswith("engagement ")
+
+
+def _engagement_duplicate_hook_overlap(caption_a: str, caption_b: str) -> bool:
+    """
+    True when two captions reuse the same stale engagement prompt shape (e.g. duplicate
+    "what brought you" origin-story asks across different days).
+    """
+    a, b = (caption_a or "").lower(), (caption_b or "").lower()
+    if not a or not b:
+        return False
+    hooks = (
+        "what brought you",
+        "what drew you",
+        "we'd love to hear your story",
+        "was it a recommendation from a friend",
+        "we're curious about the journeys that bring",
+    )
+    for h in hooks:
+        if h in a and h in b:
+            return True
+    return False
+
+
+_WEEKDAY_NAMES = (
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+    "sunday",
+)
+
+
+def _extract_caption_from_platform_block_body(block_body: str) -> str:
+    body = block_body or ""
+    cap_match = re.search(
+        r"(?:\*\*)?Caption(?:\*\*)?\s*:\s*(.+?)(?=(?:\n\s*(?:\*\*)?Hashtags?(?:\*\*)?\s*:)|\Z)",
+        body,
+        re.I | re.S,
+    )
+    return (cap_match.group(1).strip() if cap_match else "").strip()
+
+
+def _iter_day_platform_captions(captions_md: str) -> List[Tuple[int, str, str]]:
+    """Yield (day_num, platform_label, caption_text) for each platform block in captions markdown."""
+    out: List[Tuple[int, str, str]] = []
+    blocks = _split_caption_md_by_day(captions_md)
+    for day_num, day_block in sorted(blocks.items()):
+        lines = day_block.splitlines()
+        i = 0
+        while i < len(lines):
+            line = lines[i].strip()
+            m = re.match(r"(?:\*\*)?Platform(?:\*\*)?\s*:\s*(.+)", line, re.I)
+            if not m:
+                i += 1
+                continue
+            platform_raw = (m.group(1) or "").strip()
+            start = i + 1
+            j = start
+            while j < len(lines):
+                if re.match(r"(?:\*\*)?Platform(?:\*\*)?\s*:\s*(.+)", lines[j].strip(), re.I):
+                    break
+                j += 1
+            body = "\n".join(lines[start:j]).strip()
+            cap = _extract_caption_from_platform_block_body(body)
+            if platform_raw and cap:
+                out.append((day_num, platform_raw, cap))
+            i = j
+    return out
+
+
+def _caption_uses_this_weekday_on_same_calendar_day(caption: str, post_date: date) -> bool:
+    """
+    True when copy uses “this [Weekday]…” while the post already falls on that weekday
+    (SAME_POST_DAY_AS_EVENT — use today / this morning / tonight instead).
+    """
+    if not caption or not post_date:
+        return False
+    wname = _WEEKDAY_NAMES[post_date.weekday()]
+    t = caption.lower()
+    if re.search(rf"(?is)\bthis\s+{re.escape(wname)}\b", t):
+        return True
+    if re.search(rf"(?is)\bjoin\s+us\s+this\s+{re.escape(wname)}\b", t):
+        return True
+    if re.search(rf"(?is)\bcome\s+this\s+{re.escape(wname)}\b", t):
+        return True
+    return False
+
+
+def _calendar_weekday_alignment_error(captions_md: str, pack_start_date: str) -> Optional[str]:
+    """
+    Fail validation when any **Caption:** uses “This Friday…”, “Join us this Tuesday…”, etc.
+    on a calendar day that is already that weekday (must use this morning / today / tonight).
+    """
+    if not captions_md or not pack_start_date:
+        return None
+    try:
+        start = datetime.strptime(pack_start_date.strip()[:10], "%Y-%m-%d").date()
+    except ValueError:
+        return None
+    for day_num, _platform, caption in _iter_day_platform_captions(captions_md):
+        post_date = start + timedelta(days=day_num - 1)
+        if _caption_uses_this_weekday_on_same_calendar_day(caption, post_date):
+            return (
+                f"Day {day_num} ({post_date.strftime('%a %d %b %Y')}) uses 'this [weekday]' while the post is already "
+                "that weekday — use **this morning / today / tonight** instead of **this [Weekday]** "
+                "(SAME_POST_DAY_AS_EVENT)."
+            )
+    return None
+
+
+def _april_month_wrap_on_non_april_calendar_day(caption: str, post_date: date) -> bool:
+    """
+    True when copy frames April as the month being wrapped up while the post day is not in April.
+    """
+    if not caption or not post_date or post_date.month == 4:
+        return False
+    tl = caption.lower()
+    phrases = (
+        "close out april",
+        "closing out april",
+        "as we close out april",
+        "april draws to a close",
+        "as april draws to a close",
+        "at the end of april",
+        "the end of april",
+        "throughout april, we",
+        "throughout april we've",
+        "throughout april we",
+        "all april long",
+    )
+    return any(p in tl for p in phrases)
+
+
+def _caption_month_calendar_alignment_error(captions_md: str, pack_start_date: str) -> Optional[str]:
+    """
+    Fail when month wrap-up copy (e.g. 'closing out April') appears on a DATE_CONTEXT day in May+.
+    """
+    if not captions_md or not pack_start_date:
+        return None
+    try:
+        start = datetime.strptime(pack_start_date.strip()[:10], "%Y-%m-%d").date()
+    except ValueError:
+        return None
+    for day_num, _platform, caption in _iter_day_platform_captions(captions_md):
+        post_date = start + timedelta(days=day_num - 1)
+        if _april_month_wrap_on_non_april_calendar_day(caption, post_date):
+            return (
+                f"Day {day_num} ({post_date.strftime('%a %d %b %Y')}) treats April as the current/closing month "
+                "but that calendar day is not in April — align month references with **DATE_CONTEXT** for that day "
+                "(MONTH_NARRATIVE_ALIGNMENT)."
+            )
+    return None
+
+
 def _platform_label_is_instagram_facebook(label: str) -> bool:
     """True when **Platform:** matches the combined Instagram & Facebook product label (after normalization)."""
     s = (label or "").strip().lower()
@@ -967,7 +1211,8 @@ def _chunk_structure_error(
     - each day has exactly expected_platform_count platform blocks
     - no duplicate platform label within the same day
     - hashtags count and basic content sanity
-    - near-duplicate caption text within the same chunk
+    - near-duplicate caption text within the same chunk (stricter for Engagement + same platform;
+      plus blocked duplicate hooks like repeated "what brought you" across Engagement days)
     """
     if not content:
         return "Chunk is empty."
@@ -993,6 +1238,14 @@ def _chunk_structure_error(
     unexpected = sorted(d for d in set(found_days) if d not in expected_days)
     if unexpected:
         return f"Unexpected day headings in chunk: {unexpected}"
+
+    category_by_day: Dict[int, str] = {}
+    for m in day_matches:
+        try:
+            dn = int(m.group(1))
+        except (ValueError, IndexError):
+            continue
+        category_by_day[dn] = _category_from_day_heading_line(m.group(0))
 
     def _canonical_platform_label(raw: str) -> str:
         s = (raw or "").replace("*", "").strip().lower()
@@ -1127,15 +1380,29 @@ def _chunk_structure_error(
             similarity_texts.append((day_num, label, _normalize_caption_for_similarity(caption)))
         if dup_platforms:
             return f"Day {day_num} has duplicate platform blocks: {sorted(set(dup_platforms))}"
-    # Near-duplicate detection across whole chunk.
+    # Near-duplicate detection across whole chunk (stricter for Engagement + same platform).
     for i in range(len(similarity_texts)):
         d1, p1, t1 = similarity_texts[i]
         for j in range(i + 1, len(similarity_texts)):
             d2, p2, t2 = similarity_texts[j]
             if not t1 or not t2:
                 continue
+            cat1 = category_by_day.get(d1, "")
+            cat2 = category_by_day.get(d2, "")
+            both_eng = _is_engagement_category_heading(cat1) and _is_engagement_category_heading(cat2)
+            same_plat = (p1 or "").strip().lower() == (p2 or "").strip().lower()
+            if (
+                both_eng
+                and same_plat
+                and d1 != d2
+                and _engagement_duplicate_hook_overlap(t1, t2)
+            ):
+                return (
+                    f"Engagement captions repeat the same prompt pattern: Day {d1} ({p1}) and Day {d2} ({p2})"
+                )
             ratio = SequenceMatcher(None, t1, t2).ratio()
-            if ratio >= 0.92:
+            thresh = 0.78 if (both_eng and same_plat) else 0.92
+            if ratio >= thresh:
                 return (
                     f"Near-duplicate captions detected: Day {d1} ({p1}) and Day {d2} ({p2})"
                 )
@@ -1510,74 +1777,120 @@ class CaptionGenerator:
         vary_ig_fb = _effective_vary_ig_fb_caption_length(intake)
         system = _build_system_prompt(intake)
         header = _build_doc_header(intake, pack_start_date=start_str)
-        parts = [header]
-        for day_start, day_end in self.CHUNKS:
-            user = _build_user_prompt(intake, day_start=day_start, day_end=day_end, previous_pack_themes=previous_pack_themes, pack_start_date=start_str)
-            content = chat_completion(
-                system=system,
-                user=user,
-                temperature=0.6,
-                max_tokens=self.MAX_TOKENS_PER_CHUNK,
-            )
-            if not content:
-                raise RuntimeError(f"AI returned empty content for days {day_start}-{day_end}")
-            # Retry up to 3 times if chunk has incomplete/invalid structure
-            # (empty blocks, missing day/platform, duplicates). This reduces
-            # transient provider-format failures that otherwise block delivery.
-            chunk_err = None
-            for attempt in range(3):
-                chunk_err = _chunk_structure_error(
-                    content,
-                    day_start,
-                    day_end,
-                    expected_platform_count,
-                    expected_platform_labels=platform_list,
-                    include_hashtags=bool(include_hashtags),
-                    hashtag_min=hashtag_min,
-                    hashtag_max=hashtag_max,
-                    vary_ig_fb_caption_length=vary_ig_fb,
-                )
-                has_empty = _chunk_has_empty_blocks(content, include_hashtags)
-                if not has_empty and not chunk_err:
-                    break
-                if attempt >= 2:
-                    suffix = f" ({chunk_err})" if chunk_err else " (empty Caption or Hashtags)"
-                    raise RuntimeError(
-                        f"AI still returned incomplete content for days {day_start}-{day_end}{suffix}. Please try again."
+        full_pack_suffix = ""
+        result = ""
+        for full_attempt in range(2):
+            parts = [header]
+            for day_start, day_end in self.CHUNKS:
+                user = (
+                    _build_user_prompt(
+                        intake,
+                        day_start=day_start,
+                        day_end=day_end,
+                        previous_pack_themes=previous_pack_themes,
+                        pack_start_date=start_str,
                     )
-                reason = chunk_err or "empty Caption/Hashtags lines"
-                if vary_ig_fb:
-                    length_retry = (
-                        "For **Instagram & Facebook** this client opted into varied lengths: mix short, medium, and slightly longer feed posts across days—"
-                        "each **Caption:** still standalone-clear (what they offer, who it is for). "
-                        "Single-sentence IG/FB days must be at least ~125 characters with concrete detail; "
-                        "two-or-more-sentence days at least ~100 characters total. "
-                        "For other platforms (LinkedIn, Pinterest, etc.), keep ~200+ characters and multiple sentences unless TikTok."
-                    )
-                else:
-                    length_retry = (
-                        "For Instagram, Facebook, LinkedIn, Pinterest: each **Caption:** must be at least ~200 characters "
-                        "and at least two full sentences with concrete detail—no vague one-line fragments."
-                    )
-                retry_user = user + (
-                    "\n\nIMPORTANT: Your previous response was invalid (" + reason + "). "
-                    "Regenerate this range exactly with strict structure: "
-                    "each expected day heading once, one platform block per platform per day, "
-                    "no duplicate platform blocks in a day, and no empty **Caption:** or **Hashtags:** lines. "
-                    "If hashtags are requested, each **Hashtags:** line must contain real hashtags starting with # "
-                    f"and the count must be between {hashtag_min} and {hashtag_max}. "
-                    + length_retry
+                    + full_pack_suffix
                 )
                 content = chat_completion(
                     system=system,
-                    user=retry_user,
-                    temperature=0.35,
+                    user=user,
+                    temperature=0.6,
                     max_tokens=self.MAX_TOKENS_PER_CHUNK,
                 )
                 if not content:
-                    raise RuntimeError(f"AI returned empty content on retry for days {day_start}-{day_end}")
-            parts.append(content)
-        result = "\n".join(parts)
+                    raise RuntimeError(f"AI returned empty content for days {day_start}-{day_end}")
+                # Retry up to 3 times if chunk has incomplete/invalid structure
+                # (empty blocks, missing day/platform, duplicates). This reduces
+                # transient provider-format failures that otherwise block delivery.
+                chunk_err = None
+                for attempt in range(3):
+                    chunk_err = _chunk_structure_error(
+                        content,
+                        day_start,
+                        day_end,
+                        expected_platform_count,
+                        expected_platform_labels=platform_list,
+                        include_hashtags=bool(include_hashtags),
+                        hashtag_min=hashtag_min,
+                        hashtag_max=hashtag_max,
+                        vary_ig_fb_caption_length=vary_ig_fb,
+                    )
+                    has_empty = _chunk_has_empty_blocks(content, include_hashtags)
+                    if not has_empty and not chunk_err:
+                        break
+                    if attempt >= 2:
+                        suffix = f" ({chunk_err})" if chunk_err else " (empty Caption or Hashtags)"
+                        raise RuntimeError(
+                            f"AI still returned incomplete content for days {day_start}-{day_end}{suffix}. Please try again."
+                        )
+                    reason = chunk_err or "empty Caption/Hashtags lines"
+                    if vary_ig_fb:
+                        length_retry = (
+                            "For **Instagram & Facebook** this client opted into varied lengths: mix short, medium, and slightly longer feed posts across days—"
+                            "each **Caption:** still standalone-clear (what they offer, who it is for). "
+                            "Single-sentence IG/FB days must be at least ~125 characters with concrete detail; "
+                            "two-or-more-sentence days at least ~100 characters total. "
+                            "For other platforms (LinkedIn, Pinterest, etc.), keep ~200+ characters and multiple sentences unless TikTok."
+                        )
+                    else:
+                        length_retry = (
+                            "For Instagram, Facebook, LinkedIn, Pinterest: each **Caption:** must be at least ~200 characters "
+                            "and at least two full sentences with concrete detail—no vague one-line fragments."
+                        )
+                    retry_user = user + (
+                        "\n\nIMPORTANT: Your previous response was invalid (" + reason + "). "
+                        "Regenerate this range exactly with strict structure: "
+                        "each expected day heading once, one platform block per platform per day, "
+                        "no duplicate platform blocks in a day, and no empty **Caption:** or **Hashtags:** lines. "
+                        "If hashtags are requested, each **Hashtags:** line must contain real hashtags starting with # "
+                        f"and the count must be between {hashtag_min} and {hashtag_max}. "
+                        + length_retry
+                    )
+                    content = chat_completion(
+                        system=system,
+                        user=retry_user,
+                        temperature=0.35,
+                        max_tokens=self.MAX_TOKENS_PER_CHUNK,
+                    )
+                    if not content:
+                        raise RuntimeError(f"AI returned empty content on retry for days {day_start}-{day_end}")
+                parts.append(content)
+            result = "\n".join(parts)
+            # Cross-chunk checks (e.g. Engagement day 4 vs day 14): per-chunk validation cannot see both.
+            captions_only = _strip_stories_section_from_captions_md(result)
+            full_err = _chunk_structure_error(
+                captions_only,
+                1,
+                30,
+                expected_platform_count,
+                expected_platform_labels=platform_list,
+                include_hashtags=bool(include_hashtags),
+                hashtag_min=hashtag_min,
+                hashtag_max=hashtag_max,
+                vary_ig_fb_caption_length=vary_ig_fb,
+            )
+            if not full_err:
+                full_err = _calendar_weekday_alignment_error(captions_only, start_str)
+            if not full_err:
+                full_err = _caption_month_calendar_alignment_error(captions_only, start_str)
+            if not full_err:
+                break
+            if full_attempt >= 1:
+                raise RuntimeError(
+                    f"Caption pack failed full 30-day validation: {full_err}. Please try again."
+                )
+            full_pack_suffix = (
+                "\n\nIMPORTANT — full 30-day pack validation failed: "
+                + full_err
+                + " Regenerate all three day ranges with that fixed. "
+                "If the error is about **this [weekday]** vs **DATE_CONTEXT**: when the post goes live on the **same** "
+                "calendar day as the class or event, open with **this morning / today / tonight** — never "
+                "**This Friday morning** (etc.) on a Friday post. "
+                "If the error is about **month** vs **DATE_CONTEXT**: each Day N’s **Caption:** must match the **calendar month** "
+                "of that day’s line in DATE_CONTEXT — do not write “close out April” on a day that is already in May. "
+                "Engagement days must use different hooks across the month; do not duplicate origin-story question patterns."
+            )
 
         # Stories add-on: when IG & FB selected and include_stories
         platform_raw = (intake.get("platform") or "").strip().lower()
@@ -1702,12 +2015,15 @@ class CaptionGenerator:
         date_block = ""
         if date_context:
             deadline_block = _build_deadline_alignment_block(start_str)
+            story_day_block = _build_stories_posting_day_alignment_block(start_str)
             date_block = f"""
 
 DATE_CONTEXT (their 30 days start on a specific date; use when relevant, e.g. weekday/weekend):
 {date_context}
 
 {deadline_block}
+
+{story_day_block}
 
 You may reference the actual day/date where it helps (e.g. Monday tip, weekend post). Use only when natural.
 """
@@ -1811,12 +2127,15 @@ Use the exact labels "Idea:", "Suggested wording:", and "Story hashtags:" on eve
         date_block = ""
         if date_context:
             deadline_block = _build_deadline_alignment_block(start_str)
+            story_day_block = _build_stories_posting_day_alignment_block(start_str)
             date_block = f"""
 
 DATE_CONTEXT (their 30 days start on a specific date; use when relevant):
 {date_context}
 
 {deadline_block}
+
+{story_day_block}
 
 You may reference the actual day/date where it helps. Use only when natural.
 """

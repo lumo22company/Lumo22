@@ -12,6 +12,30 @@ BLACK = "#000000"
 LUMO_GOLD = "#fff200"  # Accent yellow from brand (landing.css, BRAND_STYLE_GUIDE.md)
 
 
+def pack_month_range_label(pack_start_date: Optional[str]) -> str:
+    """
+    Cover / markdown subtitle month line for a 30-day pack.
+    Single calendar month → 'March 2026'. Spans two months → 'April – May 2026'
+    so copy does not treat the whole pack as the start month only.
+    """
+    s = (pack_start_date or "").strip()
+    if not s:
+        return ""
+    try:
+        from datetime import datetime, timedelta
+
+        start = datetime.strptime(s[:10], "%Y-%m-%d")
+        end = start + timedelta(days=29)
+    except ValueError:
+        return ""
+    if start.month == end.month and start.year == end.year:
+        return start.strftime("%B %Y")
+    sm, em = start.strftime("%B"), end.strftime("%B")
+    if start.year == end.year:
+        return f"{sm} – {em} {start.year}"
+    return f"{sm} {start.year} – {em} {end.year}"
+
+
 def _parse_markdown_to_structure(md: str) -> Tuple[Dict[str, str], List[Tuple[str, List[Dict[str, str]]]]]:
     cover = {
         "title": "30 Days of Social Media Captions",
@@ -686,13 +710,11 @@ def build_caption_pdf(captions_md: str, logo_path: Optional[str] = None, pack_st
     cover, days = _parse_markdown_to_structure(captions_md)
     if not days and "## Day" in captions_md:
         cover, days = _parse_legacy_to_structure(captions_md, cover)
-    # Keep month label aligned to the billed pack date.
+    # Keep month label aligned to the billed pack date (span if 30 days cross months).
     if pack_start_date:
-        try:
-            from datetime import datetime
-            cover["month_year"] = datetime.strptime(pack_start_date.strip()[:10], "%Y-%m-%d").strftime("%B %Y")
-        except Exception:
-            pass
+        my = pack_month_range_label(pack_start_date)
+        if my:
+            cover["month_year"] = my
     data = _cover_and_days_to_dict(cover, days, pack_start_date=pack_start_date)
     return build_caption_pdf_from_dict(data, logo_path=logo_path or get_logo_path())
 

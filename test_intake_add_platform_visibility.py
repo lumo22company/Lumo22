@@ -203,6 +203,71 @@ def test_prepare_pack_sooner_edit_skips_stories_upgrade_gate():
     print("PASS: prepare_pack_sooner_edit skips Stories upgrade gate for subscriptions")
 
 
+def test_prepare_pack_sooner_edit_skips_platforms_upgrade_gate():
+    """Subscription + prepare_pack_sooner_edit: extra platforms chosen on hub before checkout must not force captions-upgrade."""
+    from app import app
+    from unittest.mock import patch, MagicMock
+
+    sub_one_platform = {
+        "id": "ord-pps2",
+        "token": "pps2-tok",
+        "status": "intake_completed",
+        "platforms_count": 1,
+        "include_stories": False,
+        "stripe_subscription_id": "sub_pps2",
+        "captions_md": "# prior pack",
+        "intake": {
+            "business_name": "Co",
+            "platform": "Instagram & Facebook",
+            "goal": "Grow",
+            "voice_words": "warm",
+        },
+        "customer_email": "c@example.com",
+    }
+    payload = {
+        "token": "pps2-tok",
+        "business_name": "Co",
+        "business_type": "Brand",
+        "offer_one_line": "x",
+        "audience": "y",
+        "audience_cares": "z",
+        "voice_words": "warm",
+        "platform": "Instagram & Facebook, LinkedIn",
+        "goal": "Grow",
+        "prepare_pack_sooner_edit": True,
+    }
+    with app.test_client() as client:
+        with patch("services.caption_order_service.CaptionOrderService") as MockSvc:
+            mock_svc = MagicMock()
+            mock_svc.get_by_token.return_value = dict(sub_one_platform)
+            mock_svc.update_intake_only.return_value = True
+            MockSvc.return_value = mock_svc
+            r = client.post("/api/captions-intake", json=payload, content_type="application/json")
+    data = r.get_json() or {}
+    if r.status_code != 200 or not data.get("success"):
+        print("FAIL: prepare_pack_sooner_edit + 2 platforms should save", r.status_code, data)
+        sys.exit(1)
+    if mock_svc.update_intake_only.call_count < 1:
+        print("FAIL: intake should have been persisted")
+        sys.exit(1)
+
+    with app.test_client() as client:
+        with patch("services.caption_order_service.CaptionOrderService") as MockSvc:
+            mock_svc2 = MagicMock()
+            mock_svc2.get_by_token.return_value = dict(sub_one_platform)
+            MockSvc.return_value = mock_svc2
+            r2 = client.post(
+                "/api/captions-intake",
+                json={**payload, "prepare_pack_sooner_edit": False},
+                content_type="application/json",
+            )
+    d2 = r2.get_json() or {}
+    if r2.status_code != 400 or not d2.get("upgrade_required") or d2.get("upgrade_type") != "platforms":
+        print("FAIL: without prepare_pack_sooner_edit, 2 vs 1 platforms should require upgrade", r2.status_code, d2)
+        sys.exit(1)
+    print("PASS: prepare_pack_sooner_edit skips platforms upgrade gate for subscriptions")
+
+
 def test_oneoff_edit_blocked_after_completed():
     """One-off orders cannot POST intake updates after first submit; subscription edits still allowed."""
     from app import app
@@ -275,5 +340,6 @@ if __name__ == "__main__":
     test_awaiting_intake_with_seeded_business_shows_next_step()
     test_upgrade_required_response()
     test_prepare_pack_sooner_edit_skips_stories_upgrade_gate()
+    test_prepare_pack_sooner_edit_skips_platforms_upgrade_gate()
     test_oneoff_edit_blocked_after_completed()
     print("All tests passed.")

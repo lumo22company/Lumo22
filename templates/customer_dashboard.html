@@ -155,7 +155,7 @@
       <section class="account-section-block">
         <h2>History</h2>
         <p class="account-section-desc" style="font-size: 0.9rem; color: rgba(255,255,255,0.8); margin-bottom: 0.5rem;">Showing orders for: <strong>{{ customer.email if customer and customer.email else '' }}</strong></p>
-        {% set delivered_orders = (caption_orders|selectattr('status', 'equalto', 'delivered')|list)|sort(attribute='delivered_at', reverse=True) %}
+        {% set delivered_orders = history_delivered_orders|default([]) %}
         {% if delivered_orders %}
         <p class="account-section-desc">View or download your previous packs. Each pack is available as a PDF; if you added Story Ideas, you get a separate Stories PDF. Only delivered packs appear here — for current orders use <strong>Edit form</strong> or Manage subscription. <strong>Subscriptions:</strong> one row per business — the date shown is when your <em>latest</em> pack was delivered; view/download always uses your current PDFs.</p>
         <div class="account-history-filters" id="account-history-filters">
@@ -180,7 +180,7 @@
                 <a href="/api/captions-download?t={{ o.token }}&inline=1" target="_blank" rel="noopener" class="account-btn-link account-btn-link--primary">View captions</a>
                 <a href="/api/captions-download?t={{ o.token }}" class="account-btn-link account-btn-link--secondary">Download captions</a>
               </span>
-              {% if o.include_stories %}
+              {% if order_includes_stories(o) %}
               <span class="account-history-actions-row account-history-actions-stories">
                 <a href="/api/captions-download?t={{ o.token }}&type=stories&inline=1" target="_blank" rel="noopener" class="account-btn-link account-btn-link--primary">View stories</a>
                 <a href="/api/captions-download?t={{ o.token }}&type=stories" class="account-btn-link account-btn-link--secondary">Download stories</a>
@@ -280,7 +280,7 @@
         <p style="margin: 0;"><a href="{{ url_for('account_page', section='subscription') }}" class="account-billing-portal-link account-btn-swipe-light">Back to Manage subscription</a></p>
         {% elif prepare_pack_sooner %}
         {% set pps = prepare_pack_sooner %}
-        {% set pps_return = url_for('account_page', section='prepare-pack-sooner', order_token=pps.token) %}
+        {% set pps_return = url_for('account_page', section='subscription', order_token=pps.token, get_pack_sooner='1', scroll_to='get_pack_sooner') %}
         {% if pps.selected_platforms_list %}
           {% set pps_cb = pps.selected_platforms_list %}
         {% elif (pps.platforms_count or 1)|int == 1 %}
@@ -289,6 +289,9 @@
           {% set pps_cb = [] %}
         {% endif %}
         {% set pps_change_plan = url_for('account_page', section='subscription', order_token=pps.token, scroll_to='change_plan') %}
+        {% set _pps_p = captions_prices.get(pps.currency) or captions_prices.get('gbp') %}
+        {% set _pps_n = (pps.platforms_count or 1)|int %}
+        {% set _pps_monthly = _pps_p.sub + (_pps_n - 1) * _pps_p.extra_sub + (_pps_p.stories_sub if pps.include_stories else 0) %}
         <p class="account-section-desc"><strong>Business: {{ pps.label }}</strong></p>
         <p class="account-section-desc" style="margin-top: 0.5rem;">Adjust platforms and Story Ideas below—the monthly price updates as you go. Continue to edit your form if you need to, or go straight to checkout to confirm payment and your new billing date.</p>
         <div class="account-upgrade-form" style="max-width: 480px;">
@@ -319,7 +322,7 @@
               <input type="checkbox" id="pps-stories-cb" class="pps-stories-cb" {% if pps.include_stories %}checked{% endif %}> 30 Days Story Ideas <span id="pps-stories-price-wrap">(+£17 monthly)</span>
             </label>
           </div>
-          <p class="account-upgrade-price" style="font-size: 1.15rem; font-weight: 600; color: var(--lum-gold); margin: 0 0 0.35rem;"><span id="pps-price-display">£79</span> <span>/month</span></p>
+          <p class="account-upgrade-price" style="font-size: 1.15rem; font-weight: 600; color: var(--lum-gold); margin: 0 0 0.35rem;"><span id="pps-price-display">{{ _pps_p.symbol }}{{ _pps_monthly }}</span> <span>/month</span></p>
           <p id="pps-currency-note" style="font-size: 0.85rem; color: rgba(255,255,255,0.78); margin: 0 0 1.25rem; line-height: 1.45;">Estimated subscription total from your selections above (your subscription currency).</p>
           <p id="pps-continue-error" style="display: none; margin: 0 0 0.75rem; font-size: 0.9rem; color: #ffb4b4; line-height: 1.45;"></p>
           <div class="pps-prepare-actions" style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: stretch; margin-bottom: 1.25rem;">
@@ -375,6 +378,66 @@
             if (opts[2]) opts[2].textContent = '3 platforms — +' + p.symbol + (2 * p.extra_sub) + ' monthly';
             if (opts[3]) opts[3].textContent = '4 platforms — +' + p.symbol + (3 * p.extra_sub) + ' monthly';
           }
+          function savePpsHubState() {
+            try {
+              if (!token || !platformsSelect) return;
+              sessionStorage.setItem('pps_hub_' + token, JSON.stringify({
+                platforms: parseInt(platformsSelect.value, 10) || 1,
+                stories: !!(storiesCb && storiesCb.checked),
+                selected: getSelectedList()
+              }));
+            } catch (e) {}
+          }
+          function restorePpsHubState() {
+            try {
+              var raw = sessionStorage.getItem('pps_hub_' + token);
+              if (!raw) return false;
+              var s = JSON.parse(raw);
+              if (platformsSelect && s.platforms != null) {
+                var np = Math.max(1, Math.min(4, parseInt(s.platforms, 10) || 1));
+                platformsSelect.value = String(np);
+              }
+              if (s.selected && Array.isArray(s.selected)) {
+                document.querySelectorAll('.pps-which-cb').forEach(function(cb) {
+                  cb.checked = s.selected.indexOf(cb.value) !== -1;
+                });
+              }
+              if (storiesCb && typeof s.stories === 'boolean') storiesCb.checked = s.stories;
+              return true;
+            } catch (e) {
+              return false;
+            }
+          }
+          function clearPpsHubState() {
+            try {
+              if (token) sessionStorage.removeItem('pps_hub_' + token);
+            } catch (e) {}
+          }
+          /** When sessionStorage matches platform count ↔ selection, use it for checkout — DOM can be wrong after history navigation. */
+          function readValidatedPpsHubFromStorage() {
+            try {
+              if (!token) return null;
+              var raw = sessionStorage.getItem('pps_hub_' + token);
+              if (!raw) return null;
+              var s = JSON.parse(raw);
+              var np = Math.max(1, Math.min(4, parseInt(s.platforms, 10) || 1));
+              var selected = Array.isArray(s.selected) ? s.selected : [];
+              if (selected.length !== np) return null;
+              var hasIg = false;
+              for (var i = 0; i < selected.length; i++) {
+                if (selected[i] === 'Instagram & Facebook') { hasIg = true; break; }
+              }
+              var storiesOn = !!s.stories;
+              var newStories = storiesOn && hasIg;
+              return {
+                selected_platforms: selected,
+                new_stories: newStories,
+                align_stories_to_captions: newStories && !!ppsAlignStories
+              };
+            } catch (e) {
+              return null;
+            }
+          }
           function updatePpsForm() {
             var p = prices[currency] || prices.gbp;
             var n = parseInt(platformsSelect.value, 10) || 1;
@@ -389,6 +452,7 @@
             if (selected) editParams += '&selected=' + encodeURIComponent(selected);
             if (editFormFirstLink) editFormFirstLink.href = '/captions-intake?' + editParams;
             syncPpsPlatformAtMax();
+            savePpsHubState();
           }
           function syncPpsPlatformAtMax() {
             var wrap = document.querySelector('#pps-which-wrap .platform-choices-wrap');
@@ -423,14 +487,25 @@
             continueErr.style.display = msg ? 'block' : 'none';
           }
           function runPrepareCheckout() {
-            if (!validatePps()) {
-              alert('Please pick exactly ' + (platformsSelect.value || 1) + ' platform(s) to match your number of platforms.');
-              return;
+            refreshPpsHubFromStorage();
+            var fromStore = readValidatedPpsHubFromStorage();
+            var selectedList;
+            var newStories;
+            var alignStories;
+            if (fromStore) {
+              selectedList = fromStore.selected_platforms;
+              newStories = fromStore.new_stories;
+              alignStories = fromStore.align_stories_to_captions;
+            } else {
+              if (!validatePps()) {
+                alert('Please pick exactly ' + (platformsSelect.value || 1) + ' platform(s) to match your number of platforms.');
+                return;
+              }
+              newStories = !!(storiesCb && storiesCb.checked && hasInstaFb());
+              alignStories = newStories && !!ppsAlignStories;
+              selectedList = getSelectedList();
             }
             showPpsContinueErr('');
-            var newStories = !!(storiesCb && storiesCb.checked && hasInstaFb());
-            var alignStories = newStories && !!ppsAlignStories;
-            var selectedList = getSelectedList();
             var payloadPlan = {
               token: token,
               new_stories: newStories,
@@ -464,6 +539,7 @@
             .then(function(r) { return r.json(); })
             .then(function(data) {
               if (data.ok) {
+                clearPpsHubState();
                 if (data.stripe_invoice_url) {
                   window.location.href = data.stripe_invoice_url;
                   return;
@@ -498,9 +574,23 @@
             });
           });
           if (storiesCb) storiesCb.addEventListener('change', function() { updatePpsForm(); });
-          syncPpsStoriesAddon();
-          updatePpsForm();
+          function refreshPpsHubFromStorage() {
+            restorePpsHubState();
+            syncPpsStoriesAddon();
+            updatePpsForm();
+          }
+          refreshPpsHubFromStorage();
           attachPpsGuard(editFormFirstLink);
+          // Back/forward: bfcache restores the page without re-running this script; a full reload
+          // re-runs it but server HTML may still reflect DB-only pricing. Always re-apply
+          // sessionStorage and recalc the price (not only when ev.persisted — that misses some navigations).
+          window.addEventListener('pageshow', function() {
+            refreshPpsHubFromStorage();
+          });
+          // Flush hub state when leaving so the next visit/back has the latest selections in storage.
+          window.addEventListener('pagehide', function() {
+            savePpsHubState();
+          });
         })();
         </script>
         {% endif %}
@@ -1225,6 +1315,7 @@
               pauseRoot.innerHTML = data.pause_subscription_inner_html;
               if (typeof window.lumoInitPauseSubFilter === 'function') window.lumoInitPauseSubFilter();
               if (typeof window.lumoScrollToPackSoonerChangePlan === 'function') window.lumoScrollToPackSoonerChangePlan();
+              if (typeof window.lumoScrollToGetPackSoonerConfirm === 'function') window.lumoScrollToGetPackSoonerConfirm();
             }
             if (data.edit_pause_by_token && typeof window.lumoApplyEditPauseBadges === 'function') {
               window.lumoApplyEditPauseBadges(data.edit_pause_by_token);

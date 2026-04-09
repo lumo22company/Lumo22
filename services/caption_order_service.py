@@ -41,6 +41,24 @@ def _sanitize_url(u: str) -> str:
     return re.sub(r"[\x00-\x1f\x7f]", "", (u or "").strip()).rstrip("/").strip()
 
 
+def order_includes_stories_addon(order: Optional[Dict[str, Any]]) -> bool:
+    """
+    True when this pack includes Story Ideas for UI and downloads.
+    Prefer caption_orders.include_stories; also respect intake.include_stories and stored stories PDF
+    when the column was not synced (e.g. legacy rows or partial webhook updates).
+    """
+    if not order:
+        return False
+    if bool(order.get("include_stories")):
+        return True
+    if (order.get("stories_pdf_base64") or "").strip():
+        return True
+    intake = order.get("intake")
+    if isinstance(intake, dict) and bool(intake.get("include_stories")):
+        return True
+    return False
+
+
 class CaptionOrderService:
     """CRUD for caption_orders table."""
 

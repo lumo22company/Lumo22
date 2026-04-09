@@ -15,6 +15,8 @@ from concurrent.futures import ThreadPoolExecutor
 from functools import wraps
 from typing import Optional
 
+from services.caption_order_service import order_includes_stories_addon
+
 # One-time login tokens: when session cookie does not persist (e.g. proxy), redirect to /account?login_token=X
 # so the account page can set session from the token and render (cookie is set in that response).
 _login_tokens = {}  # token -> {"customer_id": str, "email": str, "expires": float}
@@ -55,6 +57,7 @@ from services.login_guard import check_locked, record_failure, clear_failures
 
 app = Flask(__name__)
 app.config.from_object(Config)
+app.jinja_env.globals["order_includes_stories"] = order_includes_stories_addon
 if Config.is_production():
     app.config['SESSION_COOKIE_SECURE'] = True
 
@@ -504,7 +507,16 @@ def captions_intake_page():
             pass
     return_url = request.args.get("return_url", "").strip()
     is_upgrade_flow = bool(return_url and "/account/upgrade" in return_url)
-    is_prepare_pack_sooner_return = bool(return_url and "/account/prepare-pack-sooner" in return_url)
+    # Hub flow: return may be Update preferences OR Manage subscription → get pack sooner checkout panel.
+    _ru = return_url or ""
+    is_prepare_pack_sooner_return = bool(
+        "/account/prepare-pack-sooner" in _ru
+        or (
+            "/account/subscription" in _ru
+            and "get_pack_sooner" in _ru
+            and "order_token" in _ru
+        )
+    )
     account_hub_plan_picker = is_upgrade_flow or is_prepare_pack_sooner_return
     # Account hub (upgrade or prepare-pack-sooner): query params match the hub form before intake
     if account_hub_plan_picker and token:
@@ -1275,6 +1287,29 @@ def _order_hidden_from_account(o: dict) -> bool:
     return (o.get("status") or "").strip().lower() == "hidden"
 
 
+def _history_delivered_orders(caption_orders: list) -> list:
+    """
+    Account → History: rows with a delivered pack (PDFs / download links).
+    Primary rule: status == delivered. Also include rows that have delivered_at + captions_md
+    (same signal as has_delivered_pack elsewhere) so a pack still appears if status was mis-set in DB.
+    Excludes hidden (user deleted from History).
+    """
+    out = []
+    for o in caption_orders or []:
+        if _order_hidden_from_account(o):
+            continue
+        st = (o.get("status") or "").strip().lower()
+        has_md = bool((o.get("captions_md") or "").strip())
+        has_delivered_ts = bool(o.get("delivered_at"))
+        if st == "delivered" or (has_delivered_ts and has_md):
+            out.append(o)
+    out.sort(
+        key=lambda x: (x.get("delivered_at") or x.get("updated_at") or x.get("created_at") or ""),
+        reverse=True,
+    )
+    return out
+
+
 def _safe_int(val, default: int = 0) -> int:
     """Coerce to int without raising. DB JSON may have null or bad strings (e.g. platforms_count)."""
     try:
@@ -1329,6 +1364,7 @@ def _account_context_fallback(customer: dict, exc=None) -> dict:
         "account_load_error": True,
         "defer_stripe_billing": False,
         "edit_form_needs_deferred_billing": False,
+        "history_delivered_orders": [],
     }
 
 
@@ -1600,9 +1636,11 @@ def _account_context_build(customer: dict, section: Optional[str] = None) -> dic
     account_resubscribe_mode = bool(subscribe_options) and all(
         (x.get("is_resubscribe") for x in subscribe_options)
     )
+    history_delivered_orders = _history_delivered_orders(caption_orders)
     return {
         "customer": customer,
         "caption_orders": caption_orders,
+        "history_delivered_orders": history_delivered_orders,
         "current_intake_order": current_intake_order,
         "subscription_billing": subscription_billing,
         "billing_accounts": billing_accounts,
@@ -1657,6 +1695,18 @@ def _account_stripe_subscription_retrieve_cached(stripe_mod, sub_id: str):
     with _ACCOUNT_SUB_RETRIEVE_LOCK:
         _ACCOUNT_SUB_RETRIEVE_CACHE[sub_id] = (now, obj)
     return sub_id, obj
+
+
+def invalidate_account_stripe_subscription_cache(subscription_id: str) -> None:
+    """
+    Drop cached Stripe Subscription.retrieve for this id so the next account / billing-data
+    request reflects Subscription.modify (plan changes, get-pack-sooner anchor, etc.).
+    """
+    sid = (subscription_id or "").strip()
+    if not sid:
+        return
+    with _ACCOUNT_SUB_RETRIEVE_LOCK:
+        _ACCOUNT_SUB_RETRIEVE_CACHE.pop(sid, None)
 
 
 def _subscription_pricing_from_stripe_sub(sub, sub_id, out: dict) -> None:

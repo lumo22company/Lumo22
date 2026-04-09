@@ -1998,6 +1998,7 @@ def _captions_intake_submit_impl(data):
     order_has_stories = bool(order.get("include_stories"))
     order_platforms_count = max(1, int(order.get("platforms_count", 1)))
     subscription_id = (order.get("stripe_subscription_id") or "").strip()
+    prepare_pps = bool(data.get("prepare_pack_sooner_edit"))
 
     include_hashtags = data.get("include_hashtags")
     if isinstance(include_hashtags, bool):
@@ -2067,7 +2068,6 @@ def _captions_intake_submit_impl(data):
         # Get pack sooner / Update preferences: hub passes upgrade_stories=1 so Story Ideas appear selected
         # before checkout; billing runs on the hub, not captions-upgrade. Allow save — merged intake keeps
         # include_stories false until the subscription row is updated after payment.
-        prepare_pps = bool(data.get("prepare_pack_sooner_edit"))
         if not (subscription_id and prepare_pps):
             base = (Config.BASE_URL or request.url_root or "").strip().rstrip("/")
             if base and not base.startswith("http"):
@@ -2125,7 +2125,7 @@ def _captions_intake_submit_impl(data):
         platform_val = (intake.get("platform") or "").strip()
         if platform_val and "," in platform_val:
             platform_parts = [p.strip() for p in platform_val.split(",") if p.strip()]
-            if len(platform_parts) > order_platforms_count:
+            if len(platform_parts) > order_platforms_count and not (subscription_id and prepare_pps):
                 base = (Config.BASE_URL or request.url_root or "").strip().rstrip("/")
                 if base and not base.startswith("http"):
                     base = "https://" + base
@@ -2298,7 +2298,7 @@ def _captions_intake_submit_impl(data):
         platform_val = (intake.get("platform") or "").strip()
         if platform_val and "," in platform_val:
             platform_parts = [p.strip() for p in platform_val.split(",") if p.strip()]
-            if len(platform_parts) > order_platforms_count:
+            if len(platform_parts) > order_platforms_count and not (subscription_id and prepare_pps):
                 base = (Config.BASE_URL or request.url_root or "").strip().rstrip("/")
                 if base and not base.startswith("http"):
                     base = "https://" + base
@@ -2375,7 +2375,9 @@ def captions_download():
     name_label = business_name if business_name else "Pack"
 
     if download_type == "stories":
-        if not order.get("include_stories"):
+        from services.caption_order_service import order_includes_stories_addon
+
+        if not order_includes_stories_addon(order):
             return jsonify({"error": "This order did not include the Stories add-on"}), 400
         import base64
         stored_b64 = (order.get("stories_pdf_base64") or "").strip()
@@ -2472,7 +2474,9 @@ def captions_download_public():
     business_name = _filename_safe((intake.get("business_name") or "").strip())
     name_label = business_name if business_name else "Pack"
     if download_type == "stories":
-        if not order.get("include_stories"):
+        from services.caption_order_service import order_includes_stories_addon
+
+        if not order_includes_stories_addon(order):
             return jsonify({"error": "This order did not include the Stories add-on"}), 400
         import base64
         stored_b64 = (order.get("stories_pdf_base64") or "").strip()
@@ -2530,7 +2534,7 @@ def captions_resend_delivery():
     Body: { "token": "..." }  or  { "order_id": "..." }
     """
     from api.auth_routes import get_current_customer
-    from services.caption_order_service import CaptionOrderService
+    from services.caption_order_service import CaptionOrderService, order_includes_stories_addon
     from services.notifications import NotificationService, _captions_delivery_email_html
     import base64
 
@@ -2575,7 +2579,7 @@ def captions_resend_delivery():
             date_str = (order.get("created_at") or "")[:10] or time.strftime("%Y-%m-%d")
             captions_pdf = build_caption_pdf(captions_md, logo_path=get_logo_path(), pack_start_date=date_str)
 
-        include_stories = bool(order.get("include_stories"))
+        include_stories = order_includes_stories_addon(order)
         extra_attachments = []
         if include_stories:
             stories_pdf = None
@@ -3015,6 +3019,60 @@ def captions_reminder_preference():
         return jsonify({"ok": False, "error": str(e)}), 500
 
 
+def _resolve_pack_sooner_invoice_hosted_url(inv_raw) -> tuple:
+    """
+    Return (hosted_invoice_url, invoice_dict) for Subscription.modify latest_invoice.
+    Expanded objects sometimes omit hosted_invoice_url; draft invoices need finalize_invoice
+    before Stripe exposes a hosted URL.
+    """
+    import stripe
+
+    inv_id = None
+    if isinstance(inv_raw, str):
+        inv_id = inv_raw.strip() or None
+    elif isinstance(inv_raw, dict):
+        inv_id = (inv_raw.get("id") or "").strip() or None
+    if not inv_id:
+        return "", {}
+    try:
+        inv = stripe.Invoice.retrieve(inv_id, expand=["payment_intent"])
+    except Exception as e:
+        print(f"[get-pack-sooner] Invoice.retrieve failed ({inv_id}): {e}")
+        return "", {}
+    inv = inv if isinstance(inv, dict) else {}
+    status = (inv.get("status") or "").strip()
+    if status == "draft":
+        try:
+            inv = stripe.Invoice.finalize_invoice(inv_id)
+            inv = inv if isinstance(inv, dict) else {}
+        except Exception as e:
+            print(f"[get-pack-sooner] finalize_invoice ({inv_id}): {e}")
+    hosted = (inv.get("hosted_invoice_url") or "").strip()
+    if not hosted:
+        try:
+            inv = stripe.Invoice.retrieve(inv_id)
+            inv = inv if isinstance(inv, dict) else {}
+            hosted = (inv.get("hosted_invoice_url") or "").strip()
+        except Exception as e:
+            print(f"[get-pack-sooner] second Invoice.retrieve ({inv_id}): {e}")
+    return hosted, inv
+
+
+def _fallback_subscription_invoice_hosted_url(subscription_id: str) -> str:
+    """Most recent subscription invoice that exposes a hosted Stripe URL (view/pay)."""
+    import stripe
+
+    try:
+        invs = stripe.Invoice.list(subscription=subscription_id, limit=10)
+        for inv in getattr(invs, "data", []) or []:
+            u = (inv.get("hosted_invoice_url") or "").strip()
+            if u:
+                return u
+    except Exception as e:
+        print(f"[get-pack-sooner] Invoice.list fallback: {e}")
+    return ""
+
+
 GET_PACK_SOONER_META_KEY = "lumo_get_pack_sooner"
 
 
@@ -3094,6 +3152,15 @@ def captions_get_pack_sooner():
         import stripe
 
         stripe.api_key = Config.STRIPE_SECRET_KEY
+
+        def _invalidate_account_subscription_cache():
+            try:
+                from app import invalidate_account_stripe_subscription_cache
+
+                invalidate_account_stripe_subscription_cache(sub_id)
+            except Exception:
+                pass
+
         sub_cur = stripe.Subscription.retrieve(sub_id)
         meta = dict(sub_cur.get("metadata") or {})
         meta[GET_PACK_SOONER_META_KEY] = "1"
@@ -3106,6 +3173,7 @@ def captions_get_pack_sooner():
                 metadata=meta,
                 expand=["latest_invoice"],
             )
+            _invalidate_account_subscription_cache()
         except stripe.error.InvalidRequestError as ire:
             # Older API configs may reject payment_behavior on update; fall back to legacy charge path.
             print(f"[get-pack-sooner] pending_if_incomplete not applied ({ire!r}); falling back")
@@ -3114,6 +3182,7 @@ def captions_get_pack_sooner():
                 billing_cycle_anchor="now",
                 proration_behavior="create_prorations",
             )
+            _invalidate_account_subscription_cache()
             thread = threading.Thread(
                 target=_run_generation_and_deliver,
                 args=(order_id,),
@@ -3126,20 +3195,45 @@ def captions_get_pack_sooner():
                 "message": "Your pack will be generated and emailed to you within a few minutes.",
             }), 200
 
-        inv = sub.get("latest_invoice")
-        if isinstance(inv, str):
-            inv = stripe.Invoice.retrieve(inv, expand=["payment_intent"])
-        inv = inv if isinstance(inv, dict) else {}
-        status = (inv.get("status") or "").strip()
-        hosted = (inv.get("hosted_invoice_url") or "").strip()
+        latest_inv = sub.get("latest_invoice")
+        hosted, inv = _resolve_pack_sooner_invoice_hosted_url(latest_inv)
+        if not hosted:
+            hosted = _fallback_subscription_invoice_hosted_url(sub_id)
+        status = ((inv.get("status") or "") if inv else "").strip()
         try:
-            amount_due = int(inv.get("amount_due") or 0)
+            amount_due = int(inv.get("amount_due") or 0) if inv else 0
         except (TypeError, ValueError):
             amount_due = 0
+
+        # Customer must confirm on Stripe when invoice is unpaid or draft.
+        if hosted and status in ("open", "draft"):
+            if amount_due > 0:
+                pay_msg = (
+                    "Complete payment on the next screen to confirm. Your pack will be emailed within a few minutes after payment succeeds."
+                )
+            else:
+                pay_msg = "Confirm payment on checkout to finish."
+            return jsonify({
+                "ok": True,
+                "stripe_invoice_url": hosted,
+                "message": pay_msg,
+            }), 200
+
+        if status in ("open", "draft") and not hosted and inv:
+            try:
+                ad = int(inv.get("amount_due") or 0)
+            except (TypeError, ValueError):
+                ad = 0
+            if ad > 0:
+                return jsonify({
+                    "ok": False,
+                    "error": "Could not open Stripe checkout. Please try again or use Manage subscription.",
+                }), 503
 
         if status == "paid":
             try:
                 stripe.Subscription.modify(sub_id, metadata={GET_PACK_SOONER_META_KEY: ""})
+                _invalidate_account_subscription_cache()
             except Exception as meta_err:
                 print(f"[get-pack-sooner] could not clear metadata: {meta_err}")
             thread = threading.Thread(
@@ -3153,8 +3247,6 @@ def captions_get_pack_sooner():
                 "ok": True,
                 "message": "Your pack will be generated and emailed to you within a few minutes.",
             }
-            # When Stripe provides a hosted invoice URL, send the customer there so billing
-            # (amount + period) is confirmed on Stripe even if the charge already succeeded.
             if hosted:
                 payload["stripe_invoice_url"] = hosted
                 payload["message"] = (
@@ -3163,19 +3255,11 @@ def captions_get_pack_sooner():
                 )
             return jsonify(payload), 200
 
-        if hosted and amount_due > 0 and status in ("open", "draft"):
+        if hosted:
             return jsonify({
                 "ok": True,
                 "stripe_invoice_url": hosted,
-                "message": "Complete payment on the next screen to confirm. Your pack will be emailed within a few minutes after payment succeeds.",
-            }), 200
-
-        # No hosted URL but invoice still open — surface Stripe message if any
-        if status in ("open", "draft") and hosted:
-            return jsonify({
-                "ok": True,
-                "stripe_invoice_url": hosted,
-                "message": "Confirm payment on checkout to finish.",
+                "message": "Open Stripe to confirm payment and invoice details.",
             }), 200
 
         thread = threading.Thread(
@@ -3187,6 +3271,7 @@ def captions_get_pack_sooner():
         thread.start()
         try:
             stripe.Subscription.modify(sub_id, metadata={GET_PACK_SOONER_META_KEY: ""})
+            _invalidate_account_subscription_cache()
         except Exception:
             pass
         return jsonify({

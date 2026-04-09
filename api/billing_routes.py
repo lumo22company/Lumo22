@@ -108,6 +108,59 @@ def _coerce_platform_selection(raw: str, desired_count: int) -> str:
     return ", ".join(items)
 
 
+def _stripe_subscription_item_updates_for_plan(
+    items_data: list,
+    new_platforms: int,
+    new_stories: bool,
+    stories_price_id: str,
+    extra_platform_price_id: str,
+) -> list:
+    """
+    Build the `items` array for stripe.Subscription.modify when changing plan.
+    Updates existing base / extra / stories lines; **appends** `{price, quantity}` for add-ons
+    that are not yet on the subscription (base-only checkouts never got extra/stories lines).
+    Without this, DB and PDFs can show multi-platform + stories while Stripe stays on base price only.
+    """
+    item_updates: list = []
+    had_extra_line = False
+    had_stories_line = False
+    for item in items_data:
+        if not isinstance(item, dict):
+            continue
+        si_id = item.get("id")
+        if not si_id:
+            continue
+        price = item.get("price")
+        price_id = (price.get("id") if isinstance(price, dict) else None) or (
+            price if isinstance(price, str) else None
+        )
+        qty = int(item.get("quantity", 1) or 1)
+
+        if stories_price_id and price_id == stories_price_id:
+            had_stories_line = True
+            if not new_stories:
+                item_updates.append({"id": si_id, "deleted": True})
+            else:
+                item_updates.append({"id": si_id, "quantity": 1})
+        elif extra_platform_price_id and price_id == extra_platform_price_id:
+            had_extra_line = True
+            new_qty = max(0, new_platforms - 1)
+            if new_qty == 0:
+                item_updates.append({"id": si_id, "deleted": True})
+            else:
+                item_updates.append({"id": si_id, "quantity": new_qty})
+        else:
+            item_updates.append({"id": si_id, "quantity": qty})
+
+    if new_stories and stories_price_id and not had_stories_line:
+        item_updates.append({"price": stories_price_id, "quantity": 1})
+    need_extra_qty = max(0, new_platforms - 1)
+    if need_extra_qty > 0 and extra_platform_price_id and not had_extra_line:
+        item_updates.append({"price": extra_platform_price_id, "quantity": need_extra_qty})
+
+    return item_updates
+
+
 def subscription_platforms_and_stories_from_stripe(sub_obj: dict) -> tuple[int, bool]:
     """
     Parse a Stripe subscription object (from API or webhook event) into our plan shape.
@@ -352,6 +405,12 @@ def add_stories_to_subscription():
             items=items,
             proration_behavior="create_prorations",
         )
+        try:
+            from app import invalidate_account_stripe_subscription_cache
+
+            invalidate_account_stripe_subscription_cache(subscription_id)
+        except Exception:
+            pass
         co_svc.update(order["id"], {"include_stories": True})
         intake = order.get("intake") or {}
         if isinstance(intake, dict):
@@ -486,6 +545,12 @@ def reduce_subscription():
     except stripe.error.StripeError as e:
         msg = getattr(e, "user_message", None) or str(e) or "Stripe error"
         return jsonify({"ok": False, "error": msg}), 400
+    try:
+        from app import invalidate_account_stripe_subscription_cache
+
+        invalidate_account_stripe_subscription_cache(subscription_id)
+    except Exception:
+        pass
 
     selected_raw = (order.get("selected_platforms") or "").strip()
     intake_existing = order.get("intake") if isinstance(order.get("intake"), dict) else {}
@@ -628,41 +693,30 @@ def change_subscription_plan():
     if not getattr(Config, "STRIPE_SECRET_KEY", None):
         return jsonify({"ok": False, "error": "Billing not configured"}), 503
 
-    if billing_changed:
-        try:
-            import stripe
-            stripe.api_key = Config.STRIPE_SECRET_KEY
-            sub = stripe.Subscription.retrieve(subscription_id, expand=["items.data.price"])
-        except stripe.error.StripeError as e:
-            msg = getattr(e, "user_message", None) or str(e) or "Stripe error"
-            return jsonify({"ok": False, "error": msg}), 400
+    try:
+        import stripe
 
+        stripe.api_key = Config.STRIPE_SECRET_KEY
+        sub = stripe.Subscription.retrieve(subscription_id, expand=["items.data.price"])
+    except stripe.error.StripeError as e:
+        msg = getattr(e, "user_message", None) or str(e) or "Stripe error"
+        return jsonify({"ok": False, "error": msg}), 400
+
+    must_sync_stripe = bool(billing_changed)
+    if not must_sync_stripe:
+        sp, ss = subscription_platforms_and_stories_from_stripe(sub)
+        must_sync_stripe = (sp != new_platforms) or (ss != new_stories)
+
+    if must_sync_stripe:
         items_data = (sub.get("items") or {}).get("data") if hasattr(sub.get("items"), "get") else getattr(sub.get("items"), "data", None)
         items_data = items_data or []
-        item_updates = []
-        for item in items_data:
-            si_id = item.get("id") if isinstance(item, dict) else getattr(item, "id", None)
-            if not si_id:
-                continue
-            price = item.get("price") if isinstance(item, dict) else getattr(item, "price", None)
-            price_id = price.get("id") if isinstance(price, dict) else getattr(price, "id", None) if price else None
-            qty = item.get("quantity", 1) if isinstance(item, dict) else getattr(item, "quantity", 1)
-            qty = int(qty) if qty else 1
-
-            if stories_price_id and price_id == stories_price_id:
-                if not new_stories:
-                    item_updates.append({"id": si_id, "deleted": True})
-                else:
-                    item_updates.append({"id": si_id, "quantity": 1})
-            elif extra_platform_price_id and price_id == extra_platform_price_id:
-                new_qty = max(0, new_platforms - 1)
-                if new_qty == 0:
-                    item_updates.append({"id": si_id, "deleted": True})
-                else:
-                    item_updates.append({"id": si_id, "quantity": new_qty})
-            else:
-                item_updates.append({"id": si_id, "quantity": qty})
-
+        item_updates = _stripe_subscription_item_updates_for_plan(
+            items_data,
+            new_platforms,
+            new_stories,
+            stories_price_id,
+            extra_platform_price_id,
+        )
         try:
             stripe.Subscription.modify(
                 subscription_id,
@@ -672,6 +726,12 @@ def change_subscription_plan():
         except stripe.error.StripeError as e:
             msg = getattr(e, "user_message", None) or str(e) or "Stripe error"
             return jsonify({"ok": False, "error": msg}), 400
+        try:
+            from app import invalidate_account_stripe_subscription_cache
+
+            invalidate_account_stripe_subscription_cache(subscription_id)
+        except Exception:
+            pass
 
     updates = {
         "platforms_count": new_platforms,
