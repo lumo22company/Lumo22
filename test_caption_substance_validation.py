@@ -6,6 +6,8 @@ from services.caption_generator import (
     _caption_month_calendar_alignment_error,
     _chunk_structure_error,
     _rough_sentence_count,
+    _stories_month_calendar_alignment_error,
+    _stories_month_future_framing_error,
 )
 from services.caption_pdf import pack_month_range_label
 
@@ -303,4 +305,54 @@ def test_month_alignment_allows_april_wrap_on_april_day():
 **Hashtags:** #a #b #c #d #e
 """.strip()
     err = _caption_month_calendar_alignment_error(md, "2026-04-09")
+    assert err is None
+
+
+def test_month_alignment_rejects_april_has_been_on_may_caption_day():
+    """Phrases like 'April has been incredible' on a May calendar day must fail validation."""
+    md = """
+## Day 30 — Brand Personality
+**Platform:** Instagram & Facebook
+**Caption:** Friday wrap: April has been incredible. Here is to May and what is next.
+**Hashtags:** #a #b #c #d #e
+""".strip()
+    err = _caption_month_calendar_alignment_error(md, "2026-04-09")
+    assert err is not None
+    assert "day 30" in err.lower()
+
+
+def test_stories_month_alignment_rejects_april_wrap_on_may_day():
+    stories = """
+**Day 30:** Idea: Friday thank-you. Suggested wording: Friday wrap: April has been incredible — here is to May. Story hashtags: #a #b #c
+""".strip()
+    err = _stories_month_calendar_alignment_error(stories, "2026-04-09")
+    assert err is not None
+    assert "story day 30" in err.lower()
+
+
+def test_stories_month_alignment_allows_look_back_april_on_may_day():
+    """Explicit look-back framing can name April on a May posting day."""
+    stories = """
+**Day 30:** Idea: Friday thank-you. Suggested wording: Looking back at April — thank you. Here is to May. Story hashtags: #a #b #c
+""".strip()
+    err = _stories_month_calendar_alignment_error(stories, "2026-04-09")
+    assert err is None
+
+
+def test_stories_reject_may_is_coming_on_may_calendar_day():
+    """Day 23 = 1 May 2026 when pack starts 9 Apr — 'May is coming' is wrong on 1 May."""
+    stories = """
+**Day 23:** Idea: Friday teaser. Suggested wording: May is coming, and we have new menu items. Story hashtags: #a #b #c
+""".strip()
+    err = _stories_month_future_framing_error(stories, "2026-04-09")
+    assert err is not None
+    assert "day 23" in err.lower()
+
+
+def test_stories_allow_may_is_coming_before_may():
+    """Teasing May from April is OK."""
+    stories = """
+**Day 22:** Idea: Teaser. Suggested wording: May is coming — get ready. Story hashtags: #a #b #c
+""".strip()
+    err = _stories_month_future_framing_error(stories, "2026-04-09")
     assert err is None

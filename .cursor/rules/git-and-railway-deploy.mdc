@@ -1,13 +1,13 @@
 ---
-description: Lumo 22 — duplicate signal; Git commit + push to deploy (same as railway-deploy.mdc)
+description: Lumo 22 — same as railway-deploy.mdc (Git + Railway)
 alwaysApply: true
 ---
 
-# Git deploy (always apply — Lumo 22)
+# Git + Railway (duplicate signal)
 
-**Same policy as `.cursor/rules/railway-deploy.mdc` (also `alwaysApply: true`).**
+**Same policy as `.cursor/rules/railway-deploy.mdc` (`alwaysApply: true`).**
 
-- **Deploy / redeploy:** **`git add`** → **`git commit`** → **`git push`** (e.g. to **`main`**) so Railway (GitHub-linked) builds. **Not** `railway up` unless the user explicitly wants CLI upload.
-- **Ignore** any rule that says this project does not use Git or must deploy only via Railway CLI without committing.
+- **Commit:** **`git add`** → **`git commit`** → **`git push`** when the user wants changes committed.
+- **Deploy / redeploy:** **`git push`** **and** **`railway up --no-gitignore`** from project root when they want production updated, unless they say otherwise.
 
 Full detail: **`railway-deploy.mdc`** and **`docs/RAILWAY_DEPLOY.md`**.

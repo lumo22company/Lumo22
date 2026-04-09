@@ -484,7 +484,44 @@ def _build_stories_posting_day_alignment_block(pack_start_date: str) -> str:
         "**yesterday**, **last night**, **Friday’s session**, **replay**, or **who joined us**.\n"
         "- **Thursday** teasing **Friday** may use **tomorrow** correctly. **Teaser** vs **live**: a teaser the day **before** the event "
         "may use “tomorrow”; the **on-day** story must use **today / now / this morning** for that event.\n"
+        "- **Calendar month (same rule as weekdays):** Read the **month name** on **Day N**’s line in **DATE_CONTEXT** (e.g. Fri **01 May** 2026 = already **May**). "
+        "Do **not** frame that **same** calendar month as still **coming**, **approaching**, or **ahead** (e.g. “May is coming”, “as we head into May”, "
+        "“[Month] is almost here” when the date is **already in that month** — including the 1st). "
+        "Use **this month**, **early [Month]**, **[Month] is here**, **what’s new this month**, or tease **reveals this week** instead.\n"
         "- Keep **Idea** and **Suggested wording** consistent: do not label an Idea as same-day live content but use teaser-only time words."
+    )
+
+
+def _build_month_narrative_alignment_block(*, for_stories: bool = False) -> str:
+    """
+    When the 30-day window crosses a month boundary, copy must match each Day N's calendar month in DATE_CONTEXT.
+    Captions already had this; stories used to omit it, causing e.g. 'April wrap' on Day 30 = Fri 08 May.
+    """
+    if for_stories:
+        return (
+            "MONTH_NARRATIVE_ALIGNMENT (CRITICAL): The story title may show **two months** (e.g. April – May 2026) when "
+            "the 30-day window crosses a calendar month. **Ignore** treating the whole pack as a single month: for **each Day N**, "
+            "**Idea** and **Suggested wording** must match the **calendar month** on that day's **DATE_CONTEXT** line — "
+            "not only the first month in the title. "
+            "If **Day 30 = Fri 08 May 2026**, do **not** write a Friday thank-you or “month wrap” that says **April** has been incredible, "
+            "we're closing **April**, or throughout **April** — the reader's calendar day is **May**. "
+            "Prefer **May**-appropriate framing (early month, what's ahead), month-neutral wrap language, or explicit **look-back** "
+            "phrasing (e.g. “looking back at April”, “April was…”) so it is clear you mean the past month, not that the **current** "
+            "calendar month is still April. "
+            "If **Day N**’s DATE_CONTEXT date is **already in** a month (e.g. **01 May**), do **not** say that **same** month is "
+            "**coming** or **approaching** (“May is coming”, “as we head into May”) — the reader is **in** that month; use **this month**, "
+            "**early May**, **what’s new**, or tease **this week’s** reveal. "
+            "If **Day N** is still in April per DATE_CONTEXT, April-themed framing for that day is fine."
+        )
+    return (
+        "MONTH_NARRATIVE_ALIGNMENT (CRITICAL): The document subtitle may show **two months** (e.g. April – May 2026) when "
+        "the 30-day window crosses a calendar month. **Ignore** any single-month habit: every **Caption:** for **Day N** "
+        "must match the **calendar month (and date)** on that day's **DATE_CONTEXT** line — not the first month of the subtitle alone. "
+        "If **Day 30 = Fri 08 May 2026**, do **not** write “as we close out April”, “April draws to a close”, or “throughout April we…” — "
+        "May has already started; use May-appropriate or month-neutral wrap-up language. "
+        "If **Day N** is already in **May** per DATE_CONTEXT, do **not** write “May is coming” or “as we head into May” — the reader is **in** May; "
+        "use **this month**, **early May**, or **what’s new**. "
+        "If **Day N** is still in April, April-themed framing for that day is fine."
     )
 
 
@@ -547,7 +584,10 @@ def _build_stories_system_prompt(intake: Dict[str, Any], *, aligned_with_caption
         "You write concise Story prompts (Idea, Suggested wording, Story hashtags). "
         f"{aligned}"
         "Calendar-day consistency: each Day N pairs with DATE_CONTEXT; never use “tomorrow” to mean the same calendar day as that row, "
-        "and never treat a weekday named in the copy as still in the future when DATE_CONTEXT shows the post is already that day.\n\n"
+        "and never treat a weekday named in the copy as still in the future when DATE_CONTEXT shows the post is already that day. "
+        "**Calendar month:** **Idea** and **Suggested wording** must match the **calendar month** on that row of DATE_CONTEXT "
+        "(see **MONTH_NARRATIVE_ALIGNMENT** in the user prompt)—do not frame **April** as the month you are in or closing when that day is already in **May**; "
+        "and do not say that **same** month is **coming** or **approaching** when the date is **already in that month** (e.g. not “May is coming” on 1 May).\n\n"
         "Quality bar: as tailored as a premium 30-day story plan. "
         "Always respect INTAKE exactly: use only the client's real business name and offer—never fictional or example brands.\n\n"
         "Do not invent suppliers, mile distances, certifications, named product lines, or regional sourcing claims unless they appear in the intake (including Facts / constraints). "
@@ -637,7 +677,7 @@ Single platform: Write 30 distinct captions (one per day). Multiple platforms: W
 
 Day headings (CRITICAL): Each line must be exactly `## Day N — [one of the five category names]`. Do not put calendar dates, weekdays, or "6 Apr 2026"-style text in the day heading—the client's PDF adds dates automatically; dates in the heading duplicate in the exported PDF.
 
-Calendar-day alignment (CRITICAL): The user prompt includes **DATE_CONTEXT** (and may include **DATE_ALIGNMENT**, **SAME_POST_DAY_AS_EVENT**). Each **Caption:** for Day N must read correctly **on the calendar day** for that N. If that day is **Saturday** or **Sunday**, do **not** use "heading into the weekend", "ahead of the weekend", or "this weekend" as something still **in the future**. On **Sunday**, never imply the weekend has not started yet. **Mon–Thu** may tee up the weekend when natural. If the caption promotes a **class or offer on the same calendar day as Day N** (e.g. Friday class on a Friday post), do **not** open with **"this Friday morning"** / **"this [weekday]…"** for that same-day event — use **this morning**, **today**; reserve **"this [weekday]"** for posts **before** that weekday. **Applies to short and long copy alike** (including a two-line IG post): never **This Tuesday evening** on a Tuesday, etc. **Calendar month:** If **DATE_CONTEXT** for Day N is in **May**, do not write “closing out **April**” or “**April** draws to a close” for that day — match the **actual month** of that date line (see **MONTH_NARRATIVE_ALIGNMENT** in the user prompt).
+Calendar-day alignment (CRITICAL): The user prompt includes **DATE_CONTEXT** (and may include **DATE_ALIGNMENT**, **SAME_POST_DAY_AS_EVENT**). Each **Caption:** for Day N must read correctly **on the calendar day** for that N. If that day is **Saturday** or **Sunday**, do **not** use "heading into the weekend", "ahead of the weekend", or "this weekend" as something still **in the future**. On **Sunday**, never imply the weekend has not started yet. **Mon–Thu** may tee up the weekend when natural. If the caption promotes a **class or offer on the same calendar day as Day N** (e.g. Friday class on a Friday post), do **not** open with **"this Friday morning"** / **"this [weekday]…"** for that same-day event — use **this morning**, **today**; reserve **"this [weekday]"** for posts **before** that weekday. **Applies to short and long copy alike** (including a two-line IG post): never **This Tuesday evening** on a Tuesday, etc. **Calendar month:** If **DATE_CONTEXT** for Day N is in **May**, do not write “closing out **April**” or “**April** draws to a close” for that day — match the **actual month** of that date line (see **MONTH_NARRATIVE_ALIGNMENT** in the user prompt). Do not frame that **same** calendar month as still **coming** when the post is **already in that month** (e.g. not “May is coming” on 1 May).
 
 Deadlines and registration (CRITICAL): When **DATE_CONTEXT** and/or **DEADLINE_AND_REGISTRATION_ALIGNMENT** are in the user prompt, do **not** state a **registration close**, **early-bird end**, or **deadline** on a **calendar date before** that Day N’s post date while making it sound like the deadline is still **upcoming** (e.g. “closes on 8 April” on a 10 April post). Use past tense or move the deadline to on/after the post day.
 
@@ -858,13 +898,9 @@ def _build_user_prompt(
             "When only DATE_CONTEXT applies (no KEY_DATE_EVENTS), you may reference weekday/weekend lightly only where it matches **DATE_CONTEXT** "
             "and **WEEKDAY_IN_HOOK_ALIGNMENT** — do not force a calendar date into every caption, but **never** name the wrong weekday in a scene-setting hook. "
             "**DATE_ALIGNMENT**, **DEADLINE_AND_REGISTRATION_ALIGNMENT**, **WEEKDAY_IN_HOOK_ALIGNMENT**, and **SAME_POST_DAY_AS_EVENT** above still apply.",
+
             "",
-            "MONTH_NARRATIVE_ALIGNMENT (CRITICAL): The document subtitle may show **two months** (e.g. April – May 2026) when "
-            "the 30-day window crosses a calendar month. **Ignore** any single-month habit: every **Caption:** for **Day N** "
-            "must match the **calendar month (and date)** on that day’s **DATE_CONTEXT** line — not the first month of the subtitle alone. "
-            "If **Day 30 = Fri 08 May 2026**, do **not** write “as we close out April”, “April draws to a close”, or “throughout April we…” — "
-            "May has already started; use May-appropriate or month-neutral wrap-up language. "
-            "If **Day N** is still in April, April-themed framing for that day is fine.",
+            _build_month_narrative_alignment_block(for_stories=False),
         ])
 
     # Subscription variety: avoid repeating the same day-by-day category pattern as previous packs
@@ -1160,6 +1196,9 @@ def _april_month_wrap_on_non_april_calendar_day(caption: str, post_date: date) -
         "throughout april we've",
         "throughout april we",
         "all april long",
+        # Month-wrap / thank-you phrasing that names April as the period being summed up (wrong on a May calendar day).
+        "april has been",
+        "wrap: april",
     )
     return any(p in tl for p in phrases)
 
@@ -1181,6 +1220,118 @@ def _caption_month_calendar_alignment_error(captions_md: str, pack_start_date: s
                 f"Day {day_num} ({post_date.strftime('%a %d %b %Y')}) treats April as the current/closing month "
                 "but that calendar day is not in April — align month references with **DATE_CONTEXT** for that day "
                 "(MONTH_NARRATIVE_ALIGNMENT)."
+            )
+    return None
+
+
+def _stories_month_calendar_alignment_error(stories_md: str, pack_start_date: str) -> Optional[str]:
+    """
+    Same rule as captions: no April-as-current-month wrap on a DATE_CONTEXT day outside April.
+    """
+    if not stories_md or not pack_start_date:
+        return None
+    try:
+        start = datetime.strptime(pack_start_date.strip()[:10], "%Y-%m-%d").date()
+    except ValueError:
+        return None
+    day_pat = r"(?:\*\*)?Day\s+(\d+)\s*:(?:\*\*)?"
+    for m in re.finditer(
+        day_pat + r"\s*(.*?)(?=\s*" + day_pat + r"|$)",
+        stories_md,
+        re.I | re.DOTALL,
+    ):
+        day_num = int(m.group(1))
+        content = (m.group(2) or "").strip()
+        if not (1 <= day_num <= 30):
+            continue
+        idea_m = re.search(r"\bIdea\s*:\s*(.+?)(?=\bSuggested wording\s*:|\Z)", content, re.I | re.S)
+        sugg_m = re.search(r"\bSuggested wording\s*:\s*(.+?)(?=\bStory hashtags\s*:|\bHashtags?\s*:|\Z)", content, re.I | re.S)
+        idea = (idea_m.group(1).strip() if idea_m else "")
+        suggested = (sugg_m.group(1).strip() if sugg_m else "")
+        combined = f"{idea}\n{suggested}"
+        post_date = start + timedelta(days=day_num - 1)
+        if _april_month_wrap_on_non_april_calendar_day(combined, post_date):
+            return (
+                f"Story Day {day_num} ({post_date.strftime('%a %d %b %Y')}) frames April as the current/closing month "
+                "but that calendar day is not in April — align month references with **DATE_CONTEXT** for that day "
+                "(MONTH_NARRATIVE_ALIGNMENT)."
+            )
+    return None
+
+
+_EN_MONTH_FULL = (
+    "january",
+    "february",
+    "march",
+    "april",
+    "may",
+    "june",
+    "july",
+    "august",
+    "september",
+    "october",
+    "november",
+    "december",
+)
+
+
+def _story_month_future_framing_mismatch(text: str, post_date: date) -> bool:
+    """
+    True when English copy frames the current calendar month as still 'coming' while the post day is already in that month.
+    e.g. Day 23 = Fri 01 May 2026 + 'May is coming'.
+    """
+    if not text or not post_date:
+        return False
+    tl = text.lower()
+    mnum = post_date.month
+    name = _EN_MONTH_FULL[mnum - 1]
+    if name == "may":
+        patterns = (
+            r"\bmay\s+is\s+coming\b",
+            r"\bmay\s+is\s+almost\s+here\b",
+            r"\bheading\s+into\s+may\b",
+            r"\bas\s+may\s+approaches\b",
+        )
+        return any(re.search(p, tl) for p in patterns)
+    n = re.escape(name)
+    patterns = (
+        rf"\b{n}\s+is\s+coming\b",
+        rf"\b{n}\s+is\s+almost\s+here\b",
+        rf"\bheading\s+into\s+{n}\b",
+        rf"\bas\s+{n}\s+approaches\b",
+    )
+    return any(re.search(p, tl) for p in patterns)
+
+
+def _stories_month_future_framing_error(stories_md: str, pack_start_date: str) -> Optional[str]:
+    """Reject stories where Idea/Suggested wording say 'May is coming' on a day already in May, etc."""
+    if not stories_md or not pack_start_date:
+        return None
+    try:
+        start = datetime.strptime(pack_start_date.strip()[:10], "%Y-%m-%d").date()
+    except ValueError:
+        return None
+    day_pat = r"(?:\*\*)?Day\s+(\d+)\s*:(?:\*\*)?"
+    for m in re.finditer(
+        day_pat + r"\s*(.*?)(?=\s*" + day_pat + r"|$)",
+        stories_md,
+        re.I | re.DOTALL,
+    ):
+        day_num = int(m.group(1))
+        content = (m.group(2) or "").strip()
+        if not (1 <= day_num <= 30):
+            continue
+        idea_m = re.search(r"\bIdea\s*:\s*(.+?)(?=\bSuggested wording\s*:|\Z)", content, re.I | re.S)
+        sugg_m = re.search(r"\bSuggested wording\s*:\s*(.+?)(?=\bStory hashtags\s*:|\bHashtags?\s*:|\Z)", content, re.I | re.S)
+        idea = (idea_m.group(1).strip() if idea_m else "")
+        suggested = (sugg_m.group(1).strip() if sugg_m else "")
+        combined = f"{idea}\n{suggested}"
+        post_date = start + timedelta(days=day_num - 1)
+        if _story_month_future_framing_mismatch(combined, post_date):
+            return (
+                f"Story Day {day_num} ({post_date.strftime('%a %d %b %Y')}) treats that calendar month as still "
+                "'coming' but the post is already in that month — use **this month**, **early [Month]**, or **what's new** "
+                "(STORY_POSTING_DAY_ALIGNMENT)."
             )
     return None
 
@@ -1917,6 +2068,10 @@ class CaptionGenerator:
                     hashtag_min=hashtag_min,
                     hashtag_max=hashtag_max,
                 )
+                if not story_err:
+                    story_err = _stories_month_calendar_alignment_error(stories_md, start_str)
+                if not story_err:
+                    story_err = _stories_month_future_framing_error(stories_md, start_str)
                 if story_err:
                     stories_md = self._generate_stories_with_retry(
                         intake,
@@ -1990,6 +2145,16 @@ class CaptionGenerator:
             raise RuntimeError(
                 f"Stories output invalid after retry (initial: {reason}; retry: {story_err})"
             )
+        month_err = _stories_month_calendar_alignment_error(stories_md, pack_start_date or "")
+        if month_err:
+            raise RuntimeError(
+                f"Stories output invalid after retry (initial: {reason}; retry: {month_err})"
+            )
+        framing_err = _stories_month_future_framing_error(stories_md, pack_start_date or "")
+        if framing_err:
+            raise RuntimeError(
+                f"Stories output invalid after retry (initial: {reason}; retry: {framing_err})"
+            )
         return stories_md
 
     def _generate_stories(
@@ -2016,6 +2181,7 @@ class CaptionGenerator:
         if date_context:
             deadline_block = _build_deadline_alignment_block(start_str)
             story_day_block = _build_stories_posting_day_alignment_block(start_str)
+            month_narrative_block = _build_month_narrative_alignment_block(for_stories=True)
             date_block = f"""
 
 DATE_CONTEXT (their 30 days start on a specific date; use when relevant, e.g. weekday/weekend):
@@ -2024,6 +2190,8 @@ DATE_CONTEXT (their 30 days start on a specific date; use when relevant, e.g. we
 {deadline_block}
 
 {story_day_block}
+
+{month_narrative_block}
 
 You may reference the actual day/date where it helps (e.g. Monday tip, weekend post). Use only when natural.
 """
@@ -2128,6 +2296,7 @@ Use the exact labels "Idea:", "Suggested wording:", and "Story hashtags:" on eve
         if date_context:
             deadline_block = _build_deadline_alignment_block(start_str)
             story_day_block = _build_stories_posting_day_alignment_block(start_str)
+            month_narrative_block = _build_month_narrative_alignment_block(for_stories=True)
             date_block = f"""
 
 DATE_CONTEXT (their 30 days start on a specific date; use when relevant):
@@ -2136,6 +2305,8 @@ DATE_CONTEXT (their 30 days start on a specific date; use when relevant):
 {deadline_block}
 
 {story_day_block}
+
+{month_narrative_block}
 
 You may reference the actual day/date where it helps. Use only when natural.
 """

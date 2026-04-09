@@ -1310,6 +1310,58 @@ def _history_delivered_orders(caption_orders: list) -> list:
     return out
 
 
+def _history_delivered_entries(caption_orders: list) -> list:
+    """
+    Account → History: one row per delivered pack with downloadable PDFs.
+    Past subscription months live in delivery_archive (each index); the order row holds the latest pack.
+    List every archive entry plus the current row — no cap from pack_history. Newest first.
+    """
+    from services.caption_order_service import (
+        archive_entry_includes_stories,
+        coerce_json_list,
+        order_includes_stories_addon,
+    )
+
+    rows = _history_delivered_orders(caption_orders)
+    out = []
+    for o in rows:
+        token = (o.get("token") or "").strip()
+        if not token:
+            continue
+        arch = coerce_json_list(o.get("delivery_archive"))
+        packs = []
+        for i, a in enumerate(arch):
+            if not isinstance(a, dict):
+                continue
+            packs.append(
+                {
+                    "order": o,
+                    "token": token,
+                    "archive_index": i,
+                    "delivered_at": (a.get("delivered_at") or "").strip(),
+                    "include_stories": archive_entry_includes_stories(a),
+                }
+            )
+        packs.append(
+            {
+                "order": o,
+                "token": token,
+                "archive_index": None,
+                "delivered_at": (o.get("delivered_at") or "").strip(),
+                "include_stories": order_includes_stories_addon(o),
+            }
+        )
+        out.extend(packs)
+
+    def _history_entry_sort_key(entry: dict) -> str:
+        d = (entry.get("delivered_at") or "").strip()
+        # Missing dates last when sorting newest-first
+        return d if d else "1970-01-01T00:00:00Z"
+
+    out.sort(key=_history_entry_sort_key, reverse=True)
+    return out
+
+
 def _safe_int(val, default: int = 0) -> int:
     """Coerce to int without raising. DB JSON may have null or bad strings (e.g. platforms_count)."""
     try:
@@ -1365,6 +1417,7 @@ def _account_context_fallback(customer: dict, exc=None) -> dict:
         "defer_stripe_billing": False,
         "edit_form_needs_deferred_billing": False,
         "history_delivered_orders": [],
+        "history_delivered_entries": [],
     }
 
 
@@ -1637,10 +1690,12 @@ def _account_context_build(customer: dict, section: Optional[str] = None) -> dic
         (x.get("is_resubscribe") for x in subscribe_options)
     )
     history_delivered_orders = _history_delivered_orders(caption_orders)
+    history_delivered_entries = _history_delivered_entries(caption_orders)
     return {
         "customer": customer,
         "caption_orders": caption_orders,
         "history_delivered_orders": history_delivered_orders,
+        "history_delivered_entries": history_delivered_entries,
         "current_intake_order": current_intake_order,
         "subscription_billing": subscription_billing,
         "billing_accounts": billing_accounts,

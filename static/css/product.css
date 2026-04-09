@@ -3780,6 +3780,12 @@
   }
 }
 
+/* Get your pack sooner: darker dim behind the dialog (default account backdrop is 0.22) */
+#get-pack-sooner-modal .account-delete-modal-backdrop,
+#get-pack-sooner-confirm-modal .account-delete-modal-backdrop {
+  background: rgba(0, 0, 0, 0.58);
+}
+
 /* Get your pack sooner: yellow primary buttons (match Add Story Ideas), no black outline */
 #get-pack-sooner-modal .account-delete-modal-buttons .account-delete-modal-btn,
 #get-pack-sooner-confirm-modal .account-delete-modal-buttons .account-delete-modal-btn {

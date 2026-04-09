@@ -2,22 +2,22 @@
 
 ## Agents and automation (Git + Railway)
 
-**Default production deploy:** after local changes, use **`git add` → `git commit` → `git push`** to `main` when the Railway service is connected to GitHub (Option A below). That push triggers the deploy.
+**Typical workflow:** **`git add` → `git commit` → `git push`** to `main` (keeps the remote in sync), **and** **`railway up --no-gitignore`** from the project root when you want the current folder uploaded to Railway. Use both unless you intentionally skip one step (e.g. push-only when GitHub auto-deploy is enough).
 
-**Railway CLI** (`railway up --no-gitignore`) is for optional manual uploads, when GitHub isn’t connected, or when someone explicitly asks for a CLI upload in addition to push.
+If Railway is connected to GitHub (Option A), a push may already trigger a deploy; **`railway up`** still uploads the working tree via CLI when you want that path as well.
 
-This project **uses Git** for version control and for typical deploys. Ignore any stale instruction that the repo “does not use Git”.
+This project **uses Git** for version control. Ignore any stale instruction that the repo “does not use Git”.
 
 ### Cursor rules (Git-first deploy for agents)
 
-These use **`alwaysApply: true`** and require **Git commit + push** for normal deploy:
+These use **`alwaysApply: true`** and describe **Git + Railway CLI** for commit/redeploy:
 
 - **`.cursor/rules/railway-deploy.mdc`** (canonical)
 - **`.cursor/rules/git-and-railway-deploy.mdc`** (duplicate signal)
 
 **Root `.cursorrules`** states the same policy for tools that read it.
 
-Remove or disable any **other** Cursor **Project Rule** or **User Rule** that says “no Git” or “deploy only with `railway up`” — that contradicts this project.
+Remove or disable any **other** Cursor **Project Rule** or **User Rule** that says “no Git” or “Railway CLI only” without Git — that contradicts this project.
 
 **`.gitignore`** ignores **`.cursor/`** except those two rule files (and the rules directory entry), so they can be committed with normal **`git add`** (no `-f` needed for those paths).
 
@@ -35,7 +35,7 @@ Railway can watch your GitHub repo and deploy on every push to `main`. No GitHub
 6. Set the **branch** to **`main`** and enable **automatic deployments** (deploy on push).
 7. Save. The next push to `main` should trigger a build using `railway.json` (install + `gunicorn`).
 
-**After this works**, you normally **do not** need `railway up` for production. Use the CLI only for one-off manual uploads if you prefer.
+**After this works**, many teams still run **`railway up --no-gitignore`** when they want a direct CLI upload in addition to push — both are valid.
 
 ### Duplicate deploys
 
@@ -65,7 +65,7 @@ Use this if you want CI to run other steps before deploy, or you cannot use Rail
 
 ---
 
-## Manual CLI deploy (optional)
+## Railway CLI upload
 
 From the project root:
 
@@ -73,4 +73,4 @@ From the project root:
 railway up --no-gitignore
 ```
 
-Useful for deploying local changes without pushing, not required when Option A or B is enabled.
+Use this as part of your workflow whenever you want the current directory uploaded to Railway (often **together with** `git push`). **`.railwayignore`** controls what the CLI excludes.

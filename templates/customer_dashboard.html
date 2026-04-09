@@ -155,9 +155,9 @@
       <section class="account-section-block">
         <h2>History</h2>
         <p class="account-section-desc" style="font-size: 0.9rem; color: rgba(255,255,255,0.8); margin-bottom: 0.5rem;">Showing orders for: <strong>{{ customer.email if customer and customer.email else '' }}</strong></p>
-        {% set delivered_orders = history_delivered_orders|default([]) %}
-        {% if delivered_orders %}
-        <p class="account-section-desc">View or download your previous packs. Each pack is available as a PDF; if you added Story Ideas, you get a separate Stories PDF. Only delivered packs appear here — for current orders use <strong>Edit form</strong> or Manage subscription. <strong>Subscriptions:</strong> one row per business — the date shown is when your <em>latest</em> pack was delivered; view/download always uses your current PDFs.</p>
+        {% set delivered_entries = history_delivered_entries|default([]) %}
+        {% if delivered_entries %}
+        <p class="account-section-desc">View or download your delivered packs. Each month is listed separately for subscriptions. Each pack is available as a PDF; if you added Story Ideas, you get a separate Stories PDF. Only delivered packs appear here — for current orders use <strong>Edit form</strong> or Manage subscription.</p>
         <div class="account-history-filters" id="account-history-filters">
           <label for="account-history-business-filter">Business</label>
           <select id="account-history-business-filter" style="padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: #ffffff; color: #1a1a1a; font-size: 0.95rem;">
@@ -165,11 +165,17 @@
           </select>
             </div>
         <div class="account-history-list">
-          {% for o in delivered_orders %}
+          {% for item in delivered_entries %}
+          {% set o = item.order %}
           {% set biz = (o.get('intake') or {}).get('business_name', '')|trim %}
           {% set is_sub = (o.get('stripe_subscription_id') or '')|trim %}
           {% set label = (biz|title) if biz else ('Subscription' if is_sub else 'One-off') %}
-          {% set pack_date_src = (o.get('delivered_at') or o.get('created_at') or '') %}
+          {% set pack_date_src = item.delivered_at %}
+          {% if item.archive_index is not none %}
+            {% set archive_q = '&archive=' ~ item.archive_index %}
+          {% else %}
+            {% set archive_q = '' %}
+          {% endif %}
           <div class="account-history-item" data-history-token="{{ o.token }}" data-business="{{ biz }}">
             <div class="account-history-item-title-row">
               <span>{{ label }} — Pack {{ pack_date_src[:10] if pack_date_src else '—' }}</span>
@@ -177,16 +183,18 @@
             </div>
             <div class="account-history-actions">
               <span class="account-history-actions-row account-history-actions-captions">
-                <a href="/api/captions-download?t={{ o.token }}&inline=1" target="_blank" rel="noopener" class="account-btn-link account-btn-link--primary">View captions</a>
-                <a href="/api/captions-download?t={{ o.token }}" class="account-btn-link account-btn-link--secondary">Download captions</a>
+                <a href="/api/captions-download?t={{ o.token }}{{ archive_q }}&inline=1" target="_blank" rel="noopener" class="account-btn-link account-btn-link--primary">View captions</a>
+                <a href="/api/captions-download?t={{ o.token }}{{ archive_q }}" class="account-btn-link account-btn-link--secondary">Download captions</a>
               </span>
-              {% if order_includes_stories(o) %}
+              {% if item.include_stories %}
               <span class="account-history-actions-row account-history-actions-stories">
-                <a href="/api/captions-download?t={{ o.token }}&type=stories&inline=1" target="_blank" rel="noopener" class="account-btn-link account-btn-link--primary">View stories</a>
-                <a href="/api/captions-download?t={{ o.token }}&type=stories" class="account-btn-link account-btn-link--secondary">Download stories</a>
+                <a href="/api/captions-download?t={{ o.token }}{{ archive_q }}&type=stories&inline=1" target="_blank" rel="noopener" class="account-btn-link account-btn-link--primary">View stories</a>
+                <a href="/api/captions-download?t={{ o.token }}{{ archive_q }}&type=stories" class="account-btn-link account-btn-link--secondary">Download stories</a>
               </span>
             {% endif %}
+              {% if item.archive_index is none %}
               <button type="button" class="account-btn-link account-history-delete" data-token="{{ o.token }}" data-is-subscription="{{ '1' if is_sub else '0' }}" onclick="showDeletePackModal(this)" aria-label="Delete pack from history">Delete</button>
+              {% endif %}
             </div>
           </div>
           {% endfor %}

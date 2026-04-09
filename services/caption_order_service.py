@@ -3,8 +3,9 @@ Caption order service: create and update 30 Days Captions orders in Supabase.
 Used by Stripe webhook (create) and intake API (update + trigger generation).
 """
 import base64
+import json
 import re
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from supabase import create_client, Client
 from postgrest.types import CountMethod
 from datetime import datetime, timezone, timedelta
@@ -34,6 +35,99 @@ def _token() -> str:
     return secrets.token_urlsafe(16)
 
 
+def coerce_json_list(val: Any) -> list:
+    """Normalize JSONB list columns (PostgREST sometimes returns a JSON string)."""
+    if val is None:
+        return []
+    if isinstance(val, list):
+        return val
+    if isinstance(val, str):
+        s = val.strip()
+        if not s:
+            return []
+        try:
+            parsed = json.loads(s)
+            return parsed if isinstance(parsed, list) else []
+        except Exception:
+            return []
+    return []
+
+
+def _stripe_customer_ids_for_login_email(email: str) -> list:
+    """
+    Stripe Customer.list(email=...) for the account email. Used when caption_orders has no row
+    for this email (e.g. checkout used another address) but Stripe still has this email on the
+    customer record, so we can load orders by stripe_customer_id.
+    """
+    if not email or "@" not in email:
+        return []
+    key = (getattr(Config, "STRIPE_SECRET_KEY", None) or "").strip()
+    if not key:
+        return []
+    try:
+        import stripe
+
+        stripe.api_key = key
+        em = (email or "").strip().lower()
+        out: List[str] = []
+        seen: set = set()
+
+        def _add_customer_obj(c) -> None:
+            cid = (getattr(c, "id", None) or (c.get("id") if isinstance(c, dict) else None) or "").strip()
+            if cid and cid not in seen:
+                seen.add(cid)
+                out.append(cid)
+
+        resp = stripe.Customer.list(email=em, limit=20)
+        for c in resp.data or []:
+            _add_customer_obj(c)
+        if not out:
+            try:
+                safe = em.replace("\\", "\\\\").replace('"', '\\"')
+                sresp = stripe.Customer.search(query=f'email:"{safe}"', limit=20)
+                for c in getattr(sresp, "data", None) or []:
+                    _add_customer_obj(c)
+            except Exception:
+                pass
+        return out
+    except Exception:
+        return []
+
+
+def _stripe_subscription_ids_for_customer_ids(customer_ids: List[str]) -> List[str]:
+    """List active/past subscription ids for Stripe customer ids (links orders missing stripe_customer_id)."""
+    if not customer_ids:
+        return []
+    key = (getattr(Config, "STRIPE_SECRET_KEY", None) or "").strip()
+    if not key:
+        return []
+    out: List[str] = []
+    seen: set = set()
+    try:
+        import stripe
+
+        stripe.api_key = key
+        for cus in customer_ids:
+            cus = (cus or "").strip()
+            if not cus:
+                continue
+            try:
+                subs = stripe.Subscription.list(customer=cus, limit=100)
+                for sub in subs.data or []:
+                    sid = getattr(sub, "id", None)
+                    if not sid and isinstance(sub, dict):
+                        sid = sub.get("id")
+                    sid = (sid or "").strip()
+                    if sid and sid not in seen:
+                        seen.add(sid)
+                        out.append(sid)
+            except Exception:
+                pass
+        return out
+    except Exception:
+        return []
+
+
 def _sanitize_url(u: str) -> str:
     """Remove control chars so httpx/urlparse don't raise InvalidURL (e.g. newline in env)."""
     if not u or not isinstance(u, str):
@@ -57,6 +151,51 @@ def order_includes_stories_addon(order: Optional[Dict[str, Any]]) -> bool:
     if isinstance(intake, dict) and bool(intake.get("include_stories")):
         return True
     return False
+
+
+def archive_entry_includes_stories(entry: Optional[Dict[str, Any]]) -> bool:
+    """True if a delivery_archive row had Story Ideas (flag or stored PDF)."""
+    if not entry or not isinstance(entry, dict):
+        return False
+    if bool(entry.get("include_stories")):
+        return True
+    if (entry.get("stories_pdf_base64") or "").strip():
+        return True
+    return False
+
+
+def get_pack_download_payload(
+    order: Optional[Dict[str, Any]], archive_index: Optional[int]
+) -> Optional[Dict[str, Any]]:
+    """
+    Resolve captions/stories source for download. archive_index None = current row;
+    0..n = delivery_archive[index] (subscription past packs).
+    """
+    if not order:
+        return None
+    if archive_index is None:
+        dm = (order.get("delivered_at") or order.get("created_at") or "")[:10]
+        return {
+            "captions_md": order.get("captions_md") or "",
+            "captions_pdf_base64": (order.get("captions_pdf_base64") or "").strip(),
+            "stories_pdf_base64": (order.get("stories_pdf_base64") or "").strip(),
+            "include_stories": order_includes_stories_addon(order),
+            "date_str": dm,
+        }
+    arch = coerce_json_list(order.get("delivery_archive"))
+    if archive_index < 0 or archive_index >= len(arch):
+        return None
+    a = arch[archive_index]
+    if not isinstance(a, dict):
+        return None
+    da = (a.get("delivered_at") or "")[:10]
+    return {
+        "captions_md": a.get("captions_md") or "",
+        "captions_pdf_base64": (a.get("captions_pdf_base64") or "").strip(),
+        "stories_pdf_base64": (a.get("stories_pdf_base64") or "").strip(),
+        "include_stories": archive_entry_includes_stories(a),
+        "date_str": da,
+    }
 
 
 class CaptionOrderService:
@@ -192,6 +331,11 @@ class CaptionOrderService:
             if sc and sc not in seen_sc:
                 seen_sc.add(sc)
                 unique_sc_ids.append(sc)
+        # Stripe may have this login email on file even when every caption_orders row used another email
+        for sc in _stripe_customer_ids_for_login_email(email):
+            if sc and sc not in seen_sc:
+                seen_sc.add(sc)
+                unique_sc_ids.append(sc)
         if unique_sc_ids:
             try:
                 result = (
@@ -212,6 +356,37 @@ class CaptionOrderService:
                             self.client.table(self.table)
                             .select("*")
                             .eq("stripe_customer_id", sc_id)
+                            .order("created_at", desc=True)
+                            .execute()
+                        )
+                        for o in result.data or []:
+                            if o.get("id") and o["id"] not in seen_ids:
+                                seen_ids.add(o["id"])
+                                orders_by_email.append(o)
+                    except Exception:
+                        pass
+        # Orders tied to this Stripe account by subscription id even when stripe_customer_id was never stored.
+        sub_ids = _stripe_subscription_ids_for_customer_ids(unique_sc_ids)
+        if sub_ids:
+            try:
+                result = (
+                    self.client.table(self.table)
+                    .select("*")
+                    .in_("stripe_subscription_id", sub_ids)
+                    .order("created_at", desc=True)
+                    .execute()
+                )
+                for row in result.data or []:
+                    if row.get("id") and row["id"] not in seen_ids:
+                        seen_ids.add(row["id"])
+                        orders_by_email.append(row)
+            except Exception:
+                for sid in sub_ids:
+                    try:
+                        result = (
+                            self.client.table(self.table)
+                            .select("*")
+                            .eq("stripe_subscription_id", sid)
                             .order("created_at", desc=True)
                             .execute()
                         )
@@ -320,15 +495,48 @@ class CaptionOrderService:
         stories_pdf_bytes: Optional[bytes] = None,
         captions_pdf_bytes: Optional[bytes] = None,
     ) -> bool:
-        """Mark order delivered; optionally store PDF artifacts as base64 for reliable re-download/resend."""
+        """Mark order delivered; optionally store PDF artifacts as base64 for reliable re-download/resend.
+        For subscriptions, archives the previous pack (md + PDFs) into delivery_archive before overwriting."""
+        row = self.get_by_id(order_id) or {}
         now_iso = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
-        updates = {
+        delivery_archive = coerce_json_list(row.get("delivery_archive"))
+        sub_id = (row.get("stripe_subscription_id") or "").strip()
+        prev_delivered = (row.get("delivered_at") or "").strip()
+        prev_md = (row.get("captions_md") or "").strip()
+        new_md = (captions_md or "").strip()
+        did_archive_prior_pack = False
+        if (
+            sub_id
+            and prev_delivered
+            and prev_md
+            and new_md
+            and prev_md != new_md
+            and (row.get("status") or "").strip().lower() == "delivered"
+        ):
+            entry: Dict[str, Any] = {
+                "delivered_at": prev_delivered,
+                "captions_md": prev_md,
+                "include_stories": order_includes_stories_addon(row),
+            }
+            cap_b64 = (row.get("captions_pdf_base64") or "").strip()
+            st_b64 = (row.get("stories_pdf_base64") or "").strip()
+            if cap_b64:
+                entry["captions_pdf_base64"] = cap_b64
+            if st_b64:
+                entry["stories_pdf_base64"] = st_b64
+            delivery_archive.append(entry)
+            if len(delivery_archive) > 48:
+                delivery_archive = delivery_archive[-48:]
+            did_archive_prior_pack = True
+        updates: Dict[str, Any] = {
             "status": "delivered",
             "captions_md": captions_md,
             "delivered_at": now_iso,
             "delivery_failure_count": 0,
             "delivery_last_error": None,
         }
+        if did_archive_prior_pack:
+            updates["delivery_archive"] = delivery_archive
         if captions_pdf_bytes is not None:
             try:
                 updates["captions_pdf_base64"] = base64.b64encode(captions_pdf_bytes).decode("ascii")
@@ -346,9 +554,7 @@ class CaptionOrderService:
         row = self.get_by_id(order_id)
         if not row:
             return False
-        history = list(row.get("pack_history") or [])
-        if not isinstance(history, list):
-            history = []
+        history = coerce_json_list(row.get("pack_history"))
         entry = {"month": month_str, "day_categories": (day_categories or [])[:30]}
         history.append(entry)
         # Keep last 12 months to avoid unbounded growth

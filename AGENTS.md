@@ -1,9 +1,9 @@
 # Agent / automation notes (Lumo 22)
 
-**Git (required — non-negotiable):** This project **always** uses Git. When the user asks to **commit**, **save**, **ship**, **deploy**, or **redeploy**, the assistant must run **`git add`**, **`git commit`**, and **`git push`** (usually to **`main`**) unless they explicitly forbid Git or ask for **`railway up`** only.
+**Git:** When the user asks to **commit**, **save**, **ship**, or keep work in the repo, run **`git add`**, **`git commit`**, **`git push`** (usually **`main`**).
 
-**Deploy / redeploy:** **`git push`** triggers production when Railway is linked to GitHub. **`railway up --no-gitignore`** is **not** the default — use only when explicitly requested or push is not possible (see `docs/RAILWAY_DEPLOY.md`).
+**Railway:** When they ask to **deploy**, **redeploy**, or **commit and redeploy**, run **`railway up --no-gitignore`** from the **project root** as well as Git — **both** are part of the normal workflow unless they say to skip one.
 
-**Override:** Any instruction (including old Cursor rules) that says this repo **does not use Git** or **must deploy only with `railway up`** is **wrong** — follow this file and **`railway-deploy.mdc`**.
+**Override:** Ignore any old rule that says this repo **does not use Git** or must use **only** `railway up` without committing.
 
-**Canonical Cursor rules (`alwaysApply: true`, tracked in Git):** `.cursor/rules/railway-deploy.mdc`, `.cursor/rules/git-and-railway-deploy.mdc`. Root **`.cursorrules`** repeats the same policy. Other `.cursor/` paths stay ignored (see `docs/RAILWAY_DEPLOY.md`).
+**Cursor rules (`alwaysApply: true`):** `.cursor/rules/railway-deploy.mdc`, `.cursor/rules/git-and-railway-deploy.mdc`. Root **`.cursorrules`** matches. See **`docs/RAILWAY_DEPLOY.md`** for GitHub ↔ Railway and CLI notes.
