@@ -1,8 +1,13 @@
 ---
-description: Redirect — Git always (commit + push); see railway-deploy.mdc
-alwaysApply: false
+description: Lumo 22 — duplicate signal; Git commit + push to deploy (same as railway-deploy.mdc)
+alwaysApply: true
 ---
 
-# Git and Railway
+# Git deploy (always apply — Lumo 22)
 
-Canonical rule: **`.cursor/rules/railway-deploy.mdc`** (`alwaysApply: true`): **always commit with Git**; push to deploy. Do not duplicate deploy steps here.
+**Same policy as `.cursor/rules/railway-deploy.mdc` (also `alwaysApply: true`).**
+
+- **Deploy / redeploy:** **`git add`** → **`git commit`** → **`git push`** (e.g. to **`main`**) so Railway (GitHub-linked) builds. **Not** `railway up` unless the user explicitly wants CLI upload.
+- **Ignore** any rule that says this project does not use Git or must deploy only via Railway CLI without committing.
+
+Full detail: **`railway-deploy.mdc`** and **`docs/RAILWAY_DEPLOY.md`**.
