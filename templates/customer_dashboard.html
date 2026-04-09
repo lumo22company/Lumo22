@@ -2044,32 +2044,7 @@
             });
           });
         }
-
-        // Show only most recent packs by default, with option to reveal all
-        var MAX_VISIBLE = 10;
-        if (items.length > MAX_VISIBLE) {
-          items.forEach(function(item, idx) {
-            if (idx >= MAX_VISIBLE) item.classList.add('account-history-item--hidden-extra');
-          });
-          var moreWrap = document.createElement('div');
-          moreWrap.className = 'account-history-more-wrap';
-          var moreBtn = document.createElement('button');
-          moreBtn.type = 'button';
-          moreBtn.className = 'account-history-more-btn';
-          moreBtn.textContent = 'View full history';
-          moreBtn.addEventListener('click', function() {
-            items.forEach(function(item) {
-              item.classList.remove('account-history-item--hidden-extra');
-            });
-            if (selectEl && typeof Event === 'function') {
-              var ev = new Event('change');
-              selectEl.dispatchEvent(ev);
-            }
-            if (moreWrap.parentNode) moreWrap.parentNode.removeChild(moreWrap);
-          });
-          moreWrap.appendChild(moreBtn);
-          if (list.parentNode) list.parentNode.appendChild(moreWrap);
-        }
+        // All delivered packs are listed (newest first from server); no client-side cap.
       })();
 
       var addStoriesPendingBtn = null;
