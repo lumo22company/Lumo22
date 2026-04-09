@@ -1310,11 +1310,15 @@ def _history_delivered_orders(caption_orders: list) -> list:
     return out
 
 
-def _history_delivered_entries(caption_orders: list) -> list:
+def _history_order_activity_ts(o: dict) -> str:
+    """Most recent delivery / activity first when sorting subscription order rows."""
+    return (o.get("delivered_at") or o.get("updated_at") or o.get("created_at") or "").strip()
+
+
+def _history_pack_entries_for_order(o: dict, *, include_current: bool) -> list:
     """
-    Account → History: one row per delivered pack with downloadable PDFs.
-    Past subscription months live in delivery_archive (each index); the order row holds the latest pack.
-    List every archive entry plus the current row — no cap from pack_history. Newest first.
+    Build history list rows for one caption_orders row: each delivery_archive slice + optionally current pack.
+    Downloads resolve via (token, archive_index) — each row keeps its own token.
     """
     from services.caption_order_service import (
         archive_entry_includes_stories,
@@ -1322,26 +1326,24 @@ def _history_delivered_entries(caption_orders: list) -> list:
         order_includes_stories_addon,
     )
 
-    rows = _history_delivered_orders(caption_orders)
-    out = []
-    for o in rows:
-        token = (o.get("token") or "").strip()
-        if not token:
+    token = (o.get("token") or "").strip()
+    if not token:
+        return []
+    arch = coerce_json_list(o.get("delivery_archive"))
+    packs = []
+    for i, a in enumerate(arch):
+        if not isinstance(a, dict):
             continue
-        arch = coerce_json_list(o.get("delivery_archive"))
-        packs = []
-        for i, a in enumerate(arch):
-            if not isinstance(a, dict):
-                continue
-            packs.append(
-                {
-                    "order": o,
-                    "token": token,
-                    "archive_index": i,
-                    "delivered_at": (a.get("delivered_at") or "").strip(),
-                    "include_stories": archive_entry_includes_stories(a),
-                }
-            )
+        packs.append(
+            {
+                "order": o,
+                "token": token,
+                "archive_index": i,
+                "delivered_at": (a.get("delivered_at") or "").strip(),
+                "include_stories": archive_entry_includes_stories(a),
+            }
+        )
+    if include_current:
         packs.append(
             {
                 "order": o,
@@ -1351,7 +1353,53 @@ def _history_delivered_entries(caption_orders: list) -> list:
                 "include_stories": order_includes_stories_addon(o),
             }
         )
-        out.extend(packs)
+    return packs
+
+
+def _history_delivered_entries(caption_orders: list) -> list:
+    """
+    Account → History: one row per delivered pack with downloadable PDFs.
+    Past subscription months live in delivery_archive (each index); the order row holds the latest pack.
+    List every archive entry plus the current row — no cap from pack_history. Newest first.
+
+    If multiple caption_orders rows share the same stripe_subscription_id (duplicates / migrations),
+    archives from *every* row are listed; only the most recently active row gets a “current pack” line so
+    stale duplicate currents do not hide older months.
+    """
+    from services.caption_order_service import coerce_json_list
+
+    rows = _history_delivered_orders(caption_orders)
+    by_sub: dict = {}
+    no_sub: list = []
+    for o in rows:
+        sid = (o.get("stripe_subscription_id") or "").strip()
+        if sid:
+            by_sub.setdefault(sid, []).append(o)
+        else:
+            no_sub.append(o)
+
+    out = []
+    for o in no_sub:
+        out.extend(_history_pack_entries_for_order(o, include_current=True))
+
+    for _sid, group in by_sub.items():
+        if len(group) == 1:
+            out.extend(_history_pack_entries_for_order(group[0], include_current=True))
+            continue
+        group = sorted(group, key=_history_order_activity_ts, reverse=True)
+        newest = group[0]
+        newest_id = str(newest.get("id") or "")
+        for o in group:
+            oid = str(o.get("id") or "")
+            if newest_id:
+                include_current = oid == newest_id
+            else:
+                include_current = o is newest
+            # If we skip this row's "current" as duplicate of the newest row, but this row has no
+            # delivery_archive and only live captions_md, still expose one download line (stale row).
+            if not include_current and not coerce_json_list(o.get("delivery_archive")) and (o.get("captions_md") or "").strip():
+                include_current = True
+            out.extend(_history_pack_entries_for_order(o, include_current=include_current))
 
     def _history_entry_sort_key(entry: dict) -> str:
         d = (entry.get("delivered_at") or "").strip()

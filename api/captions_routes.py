@@ -3060,6 +3060,26 @@ def _resolve_pack_sooner_invoice_hosted_url(inv_raw) -> tuple:
         inv_id = inv_raw.strip() or None
     elif inv_raw is not None:
         inv_id = (_stripe_obj_get(inv_raw, "id") or "").strip() or None
+        # Expanded Invoice from Subscription.modify may already be open/finalized with a hosted URL.
+        if inv_id:
+            st0 = (_stripe_obj_get(inv_raw, "status") or "").strip()
+            inv_try = inv_raw
+            if st0 == "draft":
+                try:
+                    inv_try = stripe.Invoice.finalize_invoice(inv_id)
+                except Exception as e:
+                    print(f"[get-pack-sooner] finalize_invoice (expanded) ({inv_id}): {e}")
+            hosted0 = (_stripe_obj_get(inv_try, "hosted_invoice_url") or "").strip()
+            if hosted0:
+                try:
+                    ad0 = int(_stripe_obj_get(inv_try, "amount_due", 0) or 0)
+                except (TypeError, ValueError):
+                    ad0 = 0
+                return hosted0, {
+                    "id": inv_id,
+                    "status": (_stripe_obj_get(inv_try, "status") or "").strip(),
+                    "amount_due": ad0,
+                }
     if not inv_id:
         return "", {}
     try:
@@ -3105,6 +3125,67 @@ def _fallback_subscription_invoice_hosted_url(subscription_id: str) -> str:
     except Exception as e:
         print(f"[get-pack-sooner] Invoice.list fallback: {e}")
     return ""
+
+
+def _pack_sooner_collect_hosted_invoice_url(sub_id: str, latest_inv_raw) -> tuple:
+    """
+    Resolve Stripe hosted invoice URL after billing_cycle_anchor=now (confirm proration / $0 / 3DS).
+    Retries: resolve latest_invoice → refresh Subscription → list fallbacks → finalize draft invoices.
+    """
+    import stripe
+
+    hosted, inv = _resolve_pack_sooner_invoice_hosted_url(latest_inv_raw)
+    if hosted:
+        return hosted, inv
+    try:
+        sub = stripe.Subscription.retrieve(sub_id, expand=["latest_invoice"])
+        li = _stripe_obj_get(sub, "latest_invoice")
+        hosted, inv = _resolve_pack_sooner_invoice_hosted_url(li)
+    except Exception as e:
+        print(f"[get-pack-sooner] Subscription.retrieve refresh for invoice URL: {e}")
+    if hosted:
+        return hosted, inv
+    hosted = _fallback_subscription_invoice_hosted_url(sub_id)
+    if hosted:
+        return hosted, inv or {"status": "open", "amount_due": 0}
+    try:
+        invs = stripe.Invoice.list(subscription=sub_id, limit=8, status="draft")
+        for inv in getattr(invs, "data", []) or []:
+            iid = (_stripe_obj_get(inv, "id") or "").strip()
+            if not iid:
+                continue
+            try:
+                fin = stripe.Invoice.finalize_invoice(iid)
+                u = (_stripe_obj_get(fin, "hosted_invoice_url") or "").strip()
+                if u:
+                    try:
+                        ad = int(_stripe_obj_get(fin, "amount_due", 0) or 0)
+                    except (TypeError, ValueError):
+                        ad = 0
+                    return u, {
+                        "id": iid,
+                        "status": (_stripe_obj_get(fin, "status") or "").strip(),
+                        "amount_due": ad,
+                    }
+            except Exception as ex:
+                print(f"[get-pack-sooner] finalize draft {iid}: {ex}")
+    except Exception as e:
+        print(f"[get-pack-sooner] Invoice.list(draft) last resort: {e}")
+    try:
+        invs2 = stripe.Invoice.list(subscription=sub_id, limit=8)
+        for inv in getattr(invs2, "data", []) or []:
+            u = (_stripe_obj_get(inv, "hosted_invoice_url") or "").strip()
+            if u:
+                iid = (_stripe_obj_get(inv, "id") or "").strip()
+                st = (_stripe_obj_get(inv, "status") or "").strip()
+                try:
+                    ad = int(_stripe_obj_get(inv, "amount_due", 0) or 0)
+                except (TypeError, ValueError):
+                    ad = 0
+                return u, {"id": iid, "status": st, "amount_due": ad}
+    except Exception as e:
+        print(f"[get-pack-sooner] Invoice.list last resort: {e}")
+    return "", {}
 
 
 GET_PACK_SOONER_META_KEY = "lumo_get_pack_sooner"
@@ -3209,30 +3290,20 @@ def captions_get_pack_sooner():
             )
             _invalidate_account_subscription_cache()
         except stripe.error.InvalidRequestError as ire:
-            # Older API configs may reject payment_behavior on update; fall back to legacy charge path.
-            print(f"[get-pack-sooner] pending_if_incomplete not applied ({ire!r}); falling back")
-            stripe.Subscription.modify(
+            # Older API stacks may reject payment_behavior on Subscription.modify; still anchor billing
+            # now and resolve a hosted invoice URL so the customer can confirm on Stripe.
+            print(f"[get-pack-sooner] pending_if_incomplete not applied ({ire!r}); modify without payment_behavior")
+            sub = stripe.Subscription.modify(
                 sub_id,
                 billing_cycle_anchor="now",
                 proration_behavior="create_prorations",
+                metadata=meta,
+                expand=["latest_invoice"],
             )
             _invalidate_account_subscription_cache()
-            thread = threading.Thread(
-                target=_run_generation_and_deliver,
-                args=(order_id,),
-                kwargs={"force_redeliver": True},
-            )
-            thread.daemon = False
-            thread.start()
-            return jsonify({
-                "ok": True,
-                "message": "Your pack will be generated and emailed to you within a few minutes.",
-            }), 200
 
         latest_inv = _stripe_obj_get(sub, "latest_invoice")
-        hosted, inv = _resolve_pack_sooner_invoice_hosted_url(latest_inv)
-        if not hosted:
-            hosted = _fallback_subscription_invoice_hosted_url(sub_id)
+        hosted, inv = _pack_sooner_collect_hosted_invoice_url(sub_id, latest_inv)
         status = (inv.get("status") or "").strip() if inv else ""
         try:
             amount_due = int(inv.get("amount_due") or 0) if inv else 0
@@ -3293,22 +3364,14 @@ def captions_get_pack_sooner():
                     "error": "Could not open Stripe checkout. Please try again or use Manage subscription.",
                 }), 503
 
-        thread = threading.Thread(
-            target=_run_generation_and_deliver,
-            args=(order_id,),
-            kwargs={"force_redeliver": True},
-        )
-        thread.daemon = False
-        thread.start()
-        try:
-            stripe.Subscription.modify(sub_id, metadata={GET_PACK_SOONER_META_KEY: ""})
-            _invalidate_account_subscription_cache()
-        except Exception:
-            pass
+        # Do not start generation without a hosted invoice URL — user must confirm on Stripe.
         return jsonify({
-            "ok": True,
-            "message": "Your pack will be generated and emailed to you within a few minutes.",
-        }), 200
+            "ok": False,
+            "error": (
+                "We could not open Stripe to confirm your payment and billing date. "
+                "Please try again in a few seconds, or use Manage subscription → Get my pack sooner."
+            ),
+        }), 503
     except stripe.error.CardError as e:
         return jsonify({"ok": False, "error": e.user_message or "Your card was declined. Please try a different payment method."}), 400
     except stripe.error.StripeError as e:

@@ -544,19 +544,23 @@
                 body: JSON.stringify({ token: token, order_id: orderId || undefined })
               });
             })
-            .then(function(r) { return r.json(); })
-            .then(function(data) {
-              if (data.ok) {
-                clearPpsHubState();
-                if (data.stripe_invoice_url) {
-                  window.location.href = data.stripe_invoice_url;
-                  return;
-                }
-                alert(data.message || 'Your pack will be emailed to you within a few minutes.');
-                window.location.href = '/account/subscription';
+            .then(function(r) {
+              return r.json().then(function(data) {
+                return { ok: r.ok, data: data };
+              });
+            })
+            .then(function(res) {
+              var data = res.data || {};
+              if (!res.ok || !data.ok) {
+                throw new Error((data && data.error) || 'Could not start checkout.');
+              }
+              clearPpsHubState();
+              var payUrl = data.stripe_invoice_url || data.stripeInvoiceUrl;
+              if (payUrl) {
+                window.location.href = payUrl;
                 return;
               }
-              throw new Error(data.error || 'Could not start checkout.');
+              throw new Error('Could not open Stripe checkout. Please try again or use Manage subscription.');
             })
             .catch(function(err) {
               showPpsContinueErr(err.message || 'Something went wrong. Try again.');
@@ -2270,20 +2274,27 @@
           body: JSON.stringify({ order_id: orderId || undefined, token: token || undefined }),
           credentials: 'same-origin'
         })
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          if (data.ok) {
-            if (data.stripe_invoice_url) {
-              window.location.href = data.stripe_invoice_url;
-              return;
-            }
-            alert(data.message || 'Your pack will be emailed to you within a few minutes.');
-            window.location.href = '/account/subscription';
-          } else {
-            if (errEl) { errEl.textContent = data.error || 'Something went wrong. Try again.'; errEl.style.display = 'block'; }
+        .then(function(r) {
+          return r.json().then(function(data) {
+            return { ok: r.ok, data: data };
+          });
+        })
+        .then(function(res) {
+          var data = res.data || {};
+          if (!res.ok || !data.ok) {
+            if (errEl) { errEl.textContent = (data && data.error) || 'Something went wrong. Try again.'; errEl.style.display = 'block'; }
             target.disabled = false;
             target.textContent = 'Confirm and get my pack';
+            return;
           }
+          var payUrl = data.stripe_invoice_url || data.stripeInvoiceUrl;
+          if (payUrl) {
+            window.location.href = payUrl;
+            return;
+          }
+          if (errEl) { errEl.textContent = 'Could not open Stripe checkout. Please try again.'; errEl.style.display = 'block'; }
+          target.disabled = false;
+          target.textContent = 'Confirm and get my pack';
         })
         .catch(function() {
           if (errEl) { errEl.textContent = 'Something went wrong. Try again.'; errEl.style.display = 'block'; }

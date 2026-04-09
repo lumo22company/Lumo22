@@ -505,13 +505,17 @@ class CaptionOrderService:
         prev_md = (row.get("captions_md") or "").strip()
         new_md = (captions_md or "").strip()
         did_archive_prior_pack = False
+        # Subscription renewals call set_generating() before AI; when set_delivered runs, status is
+        # usually "generating" while the row still holds the previous pack — archive must still run.
+        st = (row.get("status") or "").strip().lower()
+        status_allows_archive = st in ("delivered", "generating")
         if (
             sub_id
             and prev_delivered
             and prev_md
             and new_md
             and prev_md != new_md
-            and (row.get("status") or "").strip().lower() == "delivered"
+            and status_allows_archive
         ):
             entry: Dict[str, Any] = {
                 "delivered_at": prev_delivered,
