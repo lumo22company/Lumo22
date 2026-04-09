@@ -3188,6 +3188,18 @@
 
 .account-page-wrap .account-settings-row:last-child { border-bottom: none; }
 
+.account-pack-sooner-plan-highlight {
+  outline: 2px solid var(--lum-gold, #c9a227);
+  outline-offset: 4px;
+  border-radius: 8px;
+  transition: outline-color 0.25s ease;
+}
+
+.account-page-wrap a.account-prepare-hub-card:hover {
+  border-color: rgba(201, 162, 39, 0.4) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
+}
+
 .account-page-wrap .account-settings-label {
   font-size: 0.95rem;
   font-weight: 500;

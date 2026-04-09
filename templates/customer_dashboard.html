@@ -270,6 +270,41 @@
       </section>
               {% endif %}
 
+      {% if current_section == 'prepare-pack-sooner' %}
+      <section class="account-section-block">
+        <h2>Update preferences</h2>
+        {% if prepare_pack_sooner_error %}
+        <p class="account-section-desc" style="margin-bottom: 1rem;">
+          {% if prepare_pack_sooner_error == 'missing_token' %}Choose <strong>Get my pack sooner</strong> from Manage subscription again, or open Manage subscription and pick your subscription.{% elif prepare_pack_sooner_error in ('not_found', 'forbidden') %}We couldn’t find that pack for your account.{% elif prepare_pack_sooner_error == 'not_subscription' %}That order isn’t an active subscription.{% elif prepare_pack_sooner_error == 'no_intake' %}Complete your form first under <strong>Edit form</strong>, then try again.{% else %}Something went wrong. Go back to Manage subscription and try again.{% endif %}
+        </p>
+        <p style="margin: 0;"><a href="{{ url_for('account_page', section='subscription') }}" class="account-billing-portal-link account-btn-swipe-light">Back to Manage subscription</a></p>
+        {% elif prepare_pack_sooner %}
+        {% set pps = prepare_pack_sooner %}
+        {% set pps_return = url_for('account_page', section='prepare-pack-sooner', order_token=pps.token) %}
+        {% set pps_intake = url_for('captions_intake_page', t=pps.token, return_url=pps_return) %}
+        {% set pps_change_plan = url_for('account_page', section='subscription', order_token=pps.token, scroll_to='change_plan') %}
+        {% set pps_continue = url_for('account_page', section='subscription', get_pack_sooner='1', order_token=pps.token) %}
+        <p class="account-section-desc" style="margin: 0 0 1.25rem; line-height: 1.65; max-width: 36rem;">
+          For <strong>{{ pps.label }}</strong>: set <strong>platforms and Story Ideas</strong> (paid plan), then your <strong>form brief</strong> (voice, topics, key dates). When you’re ready, continue to confirm payment and get your pack sooner.
+        </p>
+        <div class="account-prepare-hub-cards" style="display: flex; flex-direction: column; gap: 1rem; max-width: 36rem; margin-bottom: 1.5rem;">
+          <a href="{{ pps_change_plan }}" class="account-prepare-hub-card" style="display: block; padding: 1.15rem 1.25rem; background: #fafaf8; border: 1px solid rgba(0,0,0,0.1); border-radius: 12px; text-decoration: none; color: #1a1a1a; box-shadow: 0 2px 10px rgba(0,0,0,0.05); transition: border-color 0.2s ease, box-shadow 0.2s ease;">
+            <span style="display: block; font-size: 0.95rem; font-weight: 600; margin-bottom: 0.35rem;">1. Platforms &amp; Story Ideas</span>
+            <span style="display: block; font-size: 0.88rem; line-height: 1.5; color: #444;">Opens Manage subscription and scrolls to <strong>Change plan</strong> for this subscription.</span>
+          </a>
+          <a href="{{ pps_intake }}" class="account-prepare-hub-card" style="display: block; padding: 1.15rem 1.25rem; background: #fafaf8; border: 1px solid rgba(0,0,0,0.1); border-radius: 12px; text-decoration: none; color: #1a1a1a; box-shadow: 0 2px 10px rgba(0,0,0,0.05); transition: border-color 0.2s ease, box-shadow 0.2s ease;">
+            <span style="display: block; font-size: 0.95rem; font-weight: 600; margin-bottom: 0.35rem;">2. Form (voice, topics, key dates)</span>
+            <span style="display: block; font-size: 0.88rem; line-height: 1.5; color: #444;">Opens your intake form. After you save, you’ll return here.</span>
+          </a>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
+          <a href="{{ pps_continue }}" class="lumo-btn-primary account-btn-swipe-dark">Continue — get my pack sooner</a>
+          <a href="{{ url_for('account_page', section='subscription') }}" class="account-billing-portal-link account-btn-swipe-light">Back to Manage subscription</a>
+        </div>
+        {% endif %}
+      </section>
+      {% endif %}
+
       {% if current_section == 'upgrade' and one_off_upgrade_options %}
       <section class="account-section-block account-upgrade-section">
         <h2>{% if account_resubscribe_mode|default(false) %}Resubscribe{% else %}Upgrade to subscription{% endif %}</h2>
@@ -657,11 +692,12 @@
       <div class="account-delete-modal-backdrop" onclick="closeGetPackSoonerModal()"></div>
       <div class="account-delete-modal-box remove-stories-modal-box" style="max-width: 520px;">
         <h2 id="get-pack-sooner-modal-title" class="account-delete-modal-title">Get your pack sooner</h2>
-        <p class="account-delete-modal-text"><strong>Platforms and Story Ideas:</strong> use <strong>Change plan</strong> on this page (below) first if you need to. <strong>Voice, topics, and key dates:</strong> use <strong>Edit form</strong> in the account menu, or <strong>Update my form</strong> here — we use both for this pack. You may be sent to Stripe to confirm payment and your new billing date.</p>
-        <div class="account-delete-modal-buttons">
+        <p class="account-delete-modal-text">We use your <strong>plan</strong> (platforms, Story Ideas) and <strong>form brief</strong> (voice, topics, key dates) for this pack. You may be sent to Stripe to confirm payment and your new billing date.</p>
+        <div class="account-delete-modal-buttons" style="flex-wrap: wrap; justify-content: flex-end; gap: 0.5rem;">
           <button type="button" class="account-delete-modal-btn account-delete-modal-keep" onclick="closeGetPackSoonerModal()">Cancel</button>
+          <button type="button" class="account-delete-modal-btn account-add-stories-confirm" id="get-pack-sooner-prepare-btn">Update preferences first</button>
+          <a href="#" id="get-pack-sooner-update-link" class="account-delete-modal-btn account-add-stories-confirm" style="text-decoration: none; text-align: center;">Update my form only</a>
           <button type="button" class="account-delete-modal-btn account-add-stories-confirm" id="get-pack-sooner-use-current-btn">Use current details</button>
-          <a href="#" id="get-pack-sooner-update-link" class="account-delete-modal-btn account-add-stories-confirm" style="text-decoration: none; text-align: center;">Update my form</a>
         </div>
       </div>
     </div>
@@ -938,6 +974,25 @@
         });
       };
       document.addEventListener('DOMContentLoaded', function() { if (typeof lumoInitPauseSubFilter === 'function') lumoInitPauseSubFilter(); });
+      window.lumoScrollToPackSoonerChangePlan = function () {
+        try {
+          var p = new URLSearchParams(window.location.search);
+          if (p.get('scroll_to') !== 'change_plan') return;
+          var tok = (p.get('order_token') || '').trim();
+          if (!tok) return;
+          var el = document.getElementById('pack-sooner-plan-' + tok);
+          if (!el) {
+            el = document.querySelector('[data-pack-sooner-plan-row][data-order-token="' + tok.replace(/"/g, '') + '"]');
+          }
+          if (!el) return;
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.classList.add('account-pack-sooner-plan-highlight');
+          window.setTimeout(function () { el.classList.remove('account-pack-sooner-plan-highlight'); }, 2600);
+        } catch (e) {}
+      };
+      document.addEventListener('DOMContentLoaded', function () {
+        if (typeof window.lumoScrollToPackSoonerChangePlan === 'function') window.lumoScrollToPackSoonerChangePlan();
+      });
       (function deferredAccountBilling() {
         if (!document.body.getAttribute('data-account-defer-stripe')) return;
         var pauseRoot = document.getElementById('account-pause-billing-deferred-root');
@@ -952,6 +1007,7 @@
             if (pauseRoot && data.pause_subscription_inner_html) {
               pauseRoot.innerHTML = data.pause_subscription_inner_html;
               if (typeof window.lumoInitPauseSubFilter === 'function') window.lumoInitPauseSubFilter();
+              if (typeof window.lumoScrollToPackSoonerChangePlan === 'function') window.lumoScrollToPackSoonerChangePlan();
             }
             if (data.edit_pause_by_token && typeof window.lumoApplyEditPauseBadges === 'function') {
               window.lumoApplyEditPauseBadges(data.edit_pause_by_token);
@@ -1851,6 +1907,12 @@
           var data = getPackSoonerPending;
           closeGetPackSoonerModal();
           showGetPackSoonerConfirmModal(data);
+        };
+        var prepareBtn = document.getElementById('get-pack-sooner-prepare-btn');
+        if (prepareBtn) prepareBtn.onclick = function() {
+          var data = getPackSoonerPending;
+          if (!data || !data.token) return;
+          window.location.href = window.location.origin + '/account/prepare-pack-sooner?order_token=' + encodeURIComponent(data.token);
         };
       }
       function closeGetPackSoonerModal() {

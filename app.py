@@ -550,7 +550,7 @@ def captions_intake_page():
                 seen.add(p)
                 normalized.append(p)
         prefilled_platform = ", ".join(normalized)
-    # For "Primary platform" dropdown (single-platform): use first platform so it preselects
+    # For "Platform selection" (single-platform): use first platform so it preselects
     prefilled_primary = prefilled_platform.split(",")[0].strip() if prefilled_platform else ""
     if prefilled_primary in ("Instagram", "Facebook"):
         prefilled_primary = "Instagram & Facebook"
@@ -1144,7 +1144,42 @@ def change_email_confirm_page():
         return render_template('change_email_confirm.html', success=False, error="Something went wrong. Please try again or contact hello@lumo22.com.")
 
 
-_ACCOUNT_SECTIONS = frozenset({"information", "history", "edit-form", "upgrade", "subscription", "refer"})
+_ACCOUNT_SECTIONS = frozenset(
+    {"information", "history", "edit-form", "upgrade", "subscription", "refer", "prepare-pack-sooner"}
+)
+
+
+def _prepare_pack_sooner_hub_context(customer: dict) -> tuple:
+    """
+    Validate ?order_token= for /account/prepare-pack-sooner.
+    Returns (prep dict or None, error_code or None). prep keys: token, label.
+    """
+    from services.caption_order_service import CaptionOrderService
+
+    token = (request.args.get("order_token") or "").strip()
+    email = (customer.get("email") or "").strip().lower()
+    if not token:
+        return None, "missing_token"
+    if not email or "@" not in email:
+        return None, "invalid_session"
+    try:
+        svc = CaptionOrderService()
+        order = svc.get_by_token(token)
+    except Exception:
+        return None, "load_error"
+    if not order:
+        return None, "not_found"
+    order_email = (order.get("customer_email") or "").strip().lower()
+    if order_email != email:
+        return None, "forbidden"
+    if not (order.get("stripe_subscription_id") or "").strip():
+        return None, "not_subscription"
+    if not order.get("intake"):
+        return None, "no_intake"
+    intake = order.get("intake") or {}
+    biz = _safe_str(intake.get("business_name"))
+    label = biz.title() if biz else "Your subscription"
+    return {"token": token, "label": label}, None
 
 
 def _referral_share_mailto_href(base_url: str, code: str) -> str:
@@ -1904,7 +1939,7 @@ def account_pause_legacy_redirect():
 @app.route('/account/<section>')
 @customer_login_required
 def account_page(section=None):
-    """Account dashboard: one section per page. Section in {information, history, edit-form, subscription, refer}."""
+    """Account dashboard: one section per page. Section in {information, history, edit-form, subscription, refer, prepare-pack-sooner}."""
     if not get_current_customer():
         return redirect(url_for('customer_login_page'))
     if section is None or section not in _ACCOUNT_SECTIONS:
@@ -1917,6 +1952,13 @@ def account_page(section=None):
         section = "edit-form"
     ctx["current_section"] = section
     ctx["upgrade_url_base_token"] = (request.args.get("base") or "").strip()
+    if section == "prepare-pack-sooner":
+        prep, prep_err = _prepare_pack_sooner_hub_context(get_current_customer() or {})
+        ctx["prepare_pack_sooner"] = prep
+        ctx["prepare_pack_sooner_error"] = prep_err
+    else:
+        ctx["prepare_pack_sooner"] = None
+        ctx["prepare_pack_sooner_error"] = None
     return render_template("customer_dashboard.html", **ctx)
 
 

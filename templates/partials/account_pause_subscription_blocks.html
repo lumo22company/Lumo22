@@ -82,7 +82,7 @@
           </div>
           {% endif %}
           {% if not _cancelled %}
-          <div class="account-settings-row account-add-stories-row">
+          <div id="pack-sooner-plan-{{ o.get('token', '') }}" class="account-settings-row account-add-stories-row" data-pack-sooner-plan-row="1" data-order-token="{{ o.get('token', '') }}">
             <div class="account-add-stories-text">
               <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Change plan</div>
               <div class="account-settings-desc">Change platforms or Story Ideas for this subscription.<br>Changes apply to your next pack.</div>
