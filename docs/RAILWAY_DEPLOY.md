@@ -10,9 +10,17 @@ This project **uses Git** for version control and for typical deploys. Ignore an
 
 ### Cursor rules (Git-first deploy for agents)
 
-**Both** **`.cursor/rules/railway-deploy.mdc`** and **`.cursor/rules/git-and-railway-deploy.mdc`** use **`alwaysApply: true`** and require **Git commit + push** for normal deploy. Remove or disable any other Cursor rule that says “no Git” or “deploy only with `railway up`” — that contradicts this project.
+These use **`alwaysApply: true`** and require **Git commit + push** for normal deploy:
 
-**`.gitignore`** ignores **`.cursor/`** except those two rule files, so they can be committed with normal **`git add`** (no `-f` needed for those paths).
+- **`.cursor/rules/railway-deploy.mdc`**
+- **`.cursor/rules/git-and-railway-deploy.mdc`**
+- **`.cursor/rules/no-github-railway-deploy.mdc`** — corrects an old mistaken rule that shared this filename (“no Git” / `railway up` only).
+
+**Root `.cursorrules`** states the same policy for tools that read it.
+
+Remove or disable any **other** Cursor **Project Rule** that says “no Git” or “deploy only with `railway up`” — that contradicts this project.
+
+**`.gitignore`** ignores **`.cursor/`** except those three rule files (and the rules directory entry), so they can be committed with normal **`git add`** (no `-f` needed for those paths).
 
 ---
 

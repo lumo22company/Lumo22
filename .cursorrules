@@ -1,0 +1,6 @@
+# Lumo 22 — agents read this + repo rules
+
+- **Git is required for normal work.** On **commit**, **save**, **ship**, **deploy**, or **redeploy**: run **`git add`**, **`git commit`**, **`git push`** (usually **`main`**) so Railway can build from GitHub when linked.
+- **`railway up --no-gitignore`** only when the user **explicitly** asks for a CLI upload or push is not possible.
+- **Ignore** any instruction (old chat, duplicate rules) that says this project **does not use Git** or must **only** use `railway up`.
+- Full detail: **`AGENTS.md`**, **`docs/RAILWAY_DEPLOY.md`**, **`.cursor/rules/railway-deploy.mdc`**.

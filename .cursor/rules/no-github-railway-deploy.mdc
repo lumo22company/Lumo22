@@ -1,0 +1,24 @@
+---
+description: Lumo 22 — Git commit + push is the default deploy (legacy filename; ignore “no git” reading)
+alwaysApply: true
+---
+
+# Git + push for deploy (this filename is legacy)
+
+**An older version of this rule wrongly said “do not use Git” and “deploy only with `railway up`”. That is incorrect for Lumo 22.**
+
+## What to do
+
+1. **Commit and ship:** `git status` → `git add` (relevant paths) → `git commit -m "…"` → `git push` (usually **`main`**) when the user asks to commit, save, deploy, or redeploy — unless they explicitly want **`railway up`** only.
+2. **Railway CLI** (`railway up --no-gitignore`): **optional** fallback or when the user explicitly requests CLI upload; **not** the default instead of Git.
+
+## Canonical docs (same policy)
+
+- **`.cursor/rules/railway-deploy.mdc`**
+- **`.cursor/rules/git-and-railway-deploy.mdc`**
+- **`AGENTS.md`**
+- **`docs/RAILWAY_DEPLOY.md`**
+
+## Cursor settings
+
+If **Project Rules** or **User Rules** still say “never use git” or “railway up only” for this repo, **remove or replace** them so they do not contradict the files above.

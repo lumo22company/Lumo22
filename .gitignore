@@ -62,6 +62,7 @@ htmlcov/
 .cursor/rules/**
 !.cursor/rules/railway-deploy.mdc
 !.cursor/rules/git-and-railway-deploy.mdc
+!.cursor/rules/no-github-railway-deploy.mdc
 
 # Backups and secrets
 .env.bak

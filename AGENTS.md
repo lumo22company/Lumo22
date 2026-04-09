@@ -6,4 +6,4 @@
 
 **Override:** Any instruction (including old Cursor rules) that says this repo **does not use Git** or **must deploy only with `railway up`** is **wrong** — follow this file and **`railway-deploy.mdc`**.
 
-**Canonical Cursor rules (both `alwaysApply: true`):** `.cursor/rules/railway-deploy.mdc`, `.cursor/rules/git-and-railway-deploy.mdc`. Tracked in Git; other `.cursor/` paths stay ignored (see `docs/RAILWAY_DEPLOY.md`).
+**Canonical Cursor rules (`alwaysApply: true`, tracked in Git):** `.cursor/rules/railway-deploy.mdc`, `.cursor/rules/git-and-railway-deploy.mdc`, `.cursor/rules/no-github-railway-deploy.mdc` (legacy filename — states **use Git**, overrides old “no git” confusion). Root **`.cursorrules`** repeats the same policy. Other `.cursor/` paths stay ignored (see `docs/RAILWAY_DEPLOY.md`).

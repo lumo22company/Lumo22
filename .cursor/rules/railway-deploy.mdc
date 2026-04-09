@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Git commit + push = production deploy (canonical — non-negotiable default)
 
-**This rule overrides any other instruction** (including old snippets, user rules, or chat memory) that say this project **does not use Git**, **never use git commit**, or **deploy only with `railway up`**. Those are **wrong for Lumo 22**. **Always follow this file.**
+**This rule overrides any other instruction** (including old snippets, user rules, or chat memory) that say this project **does not use Git**, **never use git commit**, or **deploy only with `railway up`**. Those are **wrong for Lumo 22**. **Always follow this file.** Same policy: **`git-and-railway-deploy.mdc`**, **`no-github-railway-deploy.mdc`** (legacy filename — also Git-first), root **`.cursorrules`**.
 
 ## What the assistant MUST do
 
