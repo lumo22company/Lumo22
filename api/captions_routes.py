@@ -1997,6 +1997,7 @@ def _captions_intake_submit_impl(data):
 
     order_has_stories = bool(order.get("include_stories"))
     order_platforms_count = max(1, int(order.get("platforms_count", 1)))
+    subscription_id = (order.get("stripe_subscription_id") or "").strip()
 
     include_hashtags = data.get("include_hashtags")
     if isinstance(include_hashtags, bool):
@@ -2063,21 +2064,25 @@ def _captions_intake_submit_impl(data):
 
     form_wants_stories = bool(data.get("include_stories"))
     if form_wants_stories and not order_has_stories:
-        base = (Config.BASE_URL or request.url_root or "").strip().rstrip("/")
-        if base and not base.startswith("http"):
-            base = "https://" + base
-        return_url = quote(f"{base}/captions-intake?t={token}") if base else ""
-        upgrade_url = f"{base}/captions-upgrade?token={quote(token)}&stories=1" + (f"&return_url={return_url}" if return_url else "") if base else f"/captions-upgrade?token={quote(token)}&stories=1"
-        return jsonify({
-            "error": "To include Story Ideas you need to add the add-on. Please confirm and accept the new price. Note: Story Ideas added later are delivered with your next caption pack, not instantly.",
-            "upgrade_required": True,
-            "upgrade_type": "stories",
-            "upgrade_url": upgrade_url,
-        }), 400
+        # Get pack sooner / Update preferences: hub passes upgrade_stories=1 so Story Ideas appear selected
+        # before checkout; billing runs on the hub, not captions-upgrade. Allow save — merged intake keeps
+        # include_stories false until the subscription row is updated after payment.
+        prepare_pps = bool(data.get("prepare_pack_sooner_edit"))
+        if not (subscription_id and prepare_pps):
+            base = (Config.BASE_URL or request.url_root or "").strip().rstrip("/")
+            if base and not base.startswith("http"):
+                base = "https://" + base
+            return_url = quote(f"{base}/captions-intake?t={token}") if base else ""
+            upgrade_url = f"{base}/captions-upgrade?token={quote(token)}&stories=1" + (f"&return_url={return_url}" if return_url else "") if base else f"/captions-upgrade?token={quote(token)}&stories=1"
+            return jsonify({
+                "error": "To include Story Ideas you need to add the add-on. Please confirm and accept the new price. Note: Story Ideas added later are delivered with your next caption pack, not instantly.",
+                "upgrade_required": True,
+                "upgrade_type": "stories",
+                "upgrade_url": upgrade_url,
+            }), 400
 
     # Downgrade: reducing platforms or removing Stories requires accepting new (lower) price.
     # Only applies to subscriptions (one-off orders can't change price).
-    subscription_id = (order.get("stripe_subscription_id") or "").strip()
     form_platforms_count = 1
     platform_val = (intake.get("platform") or "").strip()
     if platform_val and "," in platform_val:

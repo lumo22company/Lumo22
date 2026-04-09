@@ -252,7 +252,7 @@
     .intake-page-body .lumo-nav { background: #000; border-bottom: 1px solid rgba(255,255,255,0.06); box-shadow: 0 4px 24px rgba(0,0,0,0.2); }
   </style>
 </head>
-<body class="lumo-landing intake-page-body" data-current-customer-email="{{ (current_customer.email or '')|lower if current_customer else '' }}" data-return-url="{{ return_url or '' }}" data-intake-view-only="{{ 'true' if intake_view_only else 'false' }}" data-oneoff-subscribe-checkout="{{ 'true' if oneoff_subscribe_checkout_mode|default(false) else 'false' }}" data-subscribe-url="{{ subscribe_url or '' }}" data-auto-open-review="{{ 'true' if oneoff_subscribe_checkout_mode|default(false) else 'false' }}" data-oneoff-upgrade-edit="{{ 'true' if edit_intake_before_subscribe|default(false) else 'false' }}" data-is-upgrade-flow="{{ 'true' if is_upgrade_flow|default(false) else 'false' }}">
+<body class="lumo-landing intake-page-body" data-current-customer-email="{{ (current_customer.email or '')|lower if current_customer else '' }}" data-return-url="{{ return_url or '' }}" data-intake-view-only="{{ 'true' if intake_view_only else 'false' }}" data-oneoff-subscribe-checkout="{{ 'true' if oneoff_subscribe_checkout_mode|default(false) else 'false' }}" data-subscribe-url="{{ subscribe_url or '' }}" data-auto-open-review="{{ 'true' if oneoff_subscribe_checkout_mode|default(false) else 'false' }}" data-oneoff-upgrade-edit="{{ 'true' if edit_intake_before_subscribe|default(false) else 'false' }}" data-is-upgrade-flow="{{ 'true' if is_upgrade_flow|default(false) else 'false' }}" data-prepare-pack-sooner-edit="{{ 'true' if is_prepare_pack_sooner_return|default(false) and edit_intake_before_subscribe|default(false) else 'false' }}">
   {% include '_lumo_nav.html' %}
 
   <main class="intake-page">
@@ -457,10 +457,10 @@
         <p class="field-helper intake-helper-before-control">By default we optimise length and style to each platform. Use this box for anything extra you want us to follow (e.g. formatting or caption-length preferences).</p>
         <textarea id="platform_habits" name="platform_habits" data-testid="platform_habits" rows="4" placeholder="e.g. Instagram/Facebook: hook first, 2–4 lines&#10;LinkedIn: short case-study paragraphs&#10;No exclamation marks in hooks" style="min-height: 96px; resize: vertical;">{{ existing_intake.get('platform_habits', '') }}</textarea>
         <div id="stories-addon-wrap" class="intake-other-wrap" data-stories-paid="{{ 'true' if stories_paid else 'false' }}" style="margin-top: 1.25rem; padding: 1rem; background: rgba(255,255,255,0.5); border-radius: 8px; border: 1px solid #ddd; {% if not stories_paid %}display: none;{% endif %}">
-          <p class="field-helper" style="margin: 0 0 0.5rem; font-weight: 600;">{% if stories_paid %}{% if is_upgrade_flow %}30 Days Story Ideas included in your upgrade.{% else %}30 Days Story Ideas included with your order.{% endif %}{% else %}Using Instagram &amp; Facebook? Add Story Ideas—optionally align each day's Story to your feed caption (same theme, same day) or leave unaligned so they're different.{% endif %}</p>
+          <p class="field-helper" style="margin: 0 0 0.5rem; font-weight: 600;">{% if stories_paid %}{% if is_upgrade_flow %}30 Days Story Ideas included in your upgrade.{% elif is_prepare_pack_sooner_return|default(false) %}30 Days Story Ideas match what you selected on <strong>Update preferences</strong> — finish checkout there to activate billing.{% else %}30 Days Story Ideas included with your order.{% endif %}{% else %}Using Instagram &amp; Facebook? Add Story Ideas—optionally align each day's Story to your feed caption (same theme, same day) or leave unaligned so they're different.{% endif %}</p>
           <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; margin-bottom: 0.25rem;">
             <input type="checkbox" id="include_stories" name="include_stories" {% if stories_paid or (not account_hub_plan_picker|default(false) and existing_intake.get('include_stories')) %}checked{% endif %} {% if stories_paid %}disabled{% endif %} style="width: auto;">
-            <span>{% if stories_paid %}{% if is_upgrade_flow %}30 Stories included{% else %}30 Stories included (already paid){% endif %}{% else %}Add 30 Stories prompts <span class="intake-price-parenthetical">({{ intake_add_stories_text|default('+£29 one-off / +£17 monthly') }})</span>{% endif %}</span>
+            <span>{% if stories_paid %}{% if is_upgrade_flow %}30 Stories included{% elif is_prepare_pack_sooner_return|default(false) %}30 Stories included (confirm on Update preferences checkout){% else %}30 Stories included (already paid){% endif %}{% else %}Add 30 Stories prompts <span class="intake-price-parenthetical">({{ intake_add_stories_text|default('+£29 one-off / +£17 monthly') }})</span>{% endif %}</span>
           </label>
           <p class="field-helper" style="margin: 0.5rem 0 0;">One-line prompts for Instagram/Facebook Stories each day. Check the box below to align each Story to that day's caption—or leave unchecked so Stories and captions are different on the same day.</p>
           <p class="field-helper intake-stories-disclaimer" style="margin: 0.5rem 0 0; font-size: 0.85rem; color: var(--lum-text-muted);">If you add Story Ideas later (e.g. from Manage subscription in your account), they’ll be delivered with your <strong>next</strong> pack, not instantly.</p>
@@ -868,6 +868,9 @@
       };
       if (document.body.getAttribute('data-oneoff-upgrade-edit') === 'true') {
         payload.oneoff_upgrade_edit = true;
+      }
+      if (document.body.getAttribute('data-prepare-pack-sooner-edit') === 'true') {
+        payload.prepare_pack_sooner_edit = true;
       }
       var fOneOffChk = document.getElementById('captions-intake-form');
       var subUrlEarly = (document.body.getAttribute('data-subscribe-url') || '').trim();
@@ -1391,6 +1394,9 @@
         };
         if (document.body.getAttribute('data-oneoff-upgrade-edit') === 'true') {
           payload.oneoff_upgrade_edit = true;
+        }
+        if (document.body.getAttribute('data-prepare-pack-sooner-edit') === 'true') {
+          payload.prepare_pack_sooner_edit = true;
         }
         btnConfirm.disabled = true;
         btnConfirm.textContent = 'Sending…';
