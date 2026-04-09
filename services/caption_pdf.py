@@ -278,7 +278,7 @@ def _make_story_table_vertical(cover: Dict, days: List, normal_style, heading_st
             hashtags_val = _strip_label(cap.get("hashtags", ""), "Hashtags", also=["Hashtag"])
             data.extend([
                 [Paragraph("<nobr>Platform:</nobr>", lbl), Paragraph(_escape_and_breaks(platform_val), tight_style)],
-                [Paragraph("<nobr>Suggested hook:</nobr>", lbl), Paragraph(_escape_and_breaks(caption_val), tight_style)],
+                [Paragraph("<nobr>Caption:</nobr>", lbl), Paragraph(_escape_and_breaks(caption_val), tight_style)],
                 [Paragraph("<nobr>Hashtags:</nobr>", lbl), Paragraph(_escape_and_breaks(hashtags_val), tight_style)],
             ])
             if j < len(caption_list) - 1:
