@@ -155,9 +155,9 @@
       <section class="account-section-block">
         <h2>History</h2>
         <p class="account-section-desc" style="font-size: 0.9rem; color: rgba(255,255,255,0.8); margin-bottom: 0.5rem;">Showing orders for: <strong>{{ customer.email if customer and customer.email else '' }}</strong></p>
-        {% set delivered_orders = (caption_orders|selectattr('status', 'equalto', 'delivered')|list)|sort(attribute='created_at', reverse=True) %}
+        {% set delivered_orders = (caption_orders|selectattr('status', 'equalto', 'delivered')|list)|sort(attribute='delivered_at', reverse=True) %}
         {% if delivered_orders %}
-        <p class="account-section-desc">View or download your previous packs. Each pack is available as a PDF; if you added Story Ideas, you get a separate Stories PDF. Only delivered packs appear here — for current orders use <strong>Edit form</strong> or Manage subscription.</p>
+        <p class="account-section-desc">View or download your previous packs. Each pack is available as a PDF; if you added Story Ideas, you get a separate Stories PDF. Only delivered packs appear here — for current orders use <strong>Edit form</strong> or Manage subscription. <strong>Subscriptions:</strong> one row per business — the date shown is when your <em>latest</em> pack was delivered; view/download always uses your current PDFs.</p>
         <div class="account-history-filters" id="account-history-filters">
           <label for="account-history-business-filter">Business</label>
           <select id="account-history-business-filter" style="padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: #ffffff; color: #1a1a1a; font-size: 0.95rem;">
@@ -169,9 +169,10 @@
           {% set biz = (o.get('intake') or {}).get('business_name', '')|trim %}
           {% set is_sub = (o.get('stripe_subscription_id') or '')|trim %}
           {% set label = (biz|title) if biz else ('Subscription' if is_sub else 'One-off') %}
+          {% set pack_date_src = (o.get('delivered_at') or o.get('created_at') or '') %}
           <div class="account-history-item" data-history-token="{{ o.token }}" data-business="{{ biz }}">
             <div class="account-history-item-title-row">
-              <span>{{ label }} — Pack {{ o.created_at[:10] if o.created_at else '—' }}</span>
+              <span>{{ label }} — Pack {{ pack_date_src[:10] if pack_date_src else '—' }}</span>
               <span class="account-history-type account-history-type--{{ 'subscription' if is_sub else 'oneoff' }}">{{ 'Subscription' if is_sub else 'One-off' }}</span>
             </div>
             <div class="account-history-actions">
@@ -575,8 +576,8 @@
         {% endif %}
         <div id="get-pack-sooner-confirm-panel" class="account-info-panel" data-order-token="{{ get_pack_order_token }}" data-amount="{{ _gps_symbol }}{{ _gps_total }}" style="margin-bottom: 1.25rem; background: rgba(201,162,39,0.12); border: 1px solid rgba(201,162,39,0.35);">
           <h3 style="font-size: 1.1rem; margin: 0 0 0.75rem; color: #1a1a1a;">Form updated. Ready to get your pack sooner?</h3>
-          <p style="margin: 0 0 0.75rem; color: #333;">You'll be charged <strong id="get-pack-sooner-amount">{{ _gps_symbol }}{{ _gps_total }}</strong> now. Your next billing date will be 30 days from today. Your pack will be emailed to you within a few minutes.</p>
-          <p style="margin: 0 0 1rem; font-size: 0.9rem; color: #555;">By confirming you agree to be charged now.</p>
+          <p style="margin: 0 0 0.75rem; color: #333;">You'll be charged <strong id="get-pack-sooner-amount">{{ _gps_symbol }}{{ _gps_total }}</strong> now (or on Stripe if required). Your next billing date resets from today. If you still need to change platforms or Story Ideas, use <strong>Change plan</strong> above before confirming.</p>
+          <p style="margin: 0 0 1rem; font-size: 0.9rem; color: #555;">By confirming you agree to pay now; Stripe may show your invoice and new billing period.</p>
           <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
             <button type="button" id="get-pack-sooner-confirm-btn" class="lumo-btn-primary account-btn-swipe-dark" data-order-token="{{ get_pack_order_token }}" data-order-id="{{ _gps_order.get('id', '') if _gps_order else '' }}">Confirm and get my pack</button>
             <a href="/account/subscription" class="account-billing-portal-link account-btn-swipe-light">Cancel</a>
@@ -656,7 +657,7 @@
       <div class="account-delete-modal-backdrop" onclick="closeGetPackSoonerModal()"></div>
       <div class="account-delete-modal-box remove-stories-modal-box" style="max-width: 520px;">
         <h2 id="get-pack-sooner-modal-title" class="account-delete-modal-title">Get your pack sooner</h2>
-        <p class="account-delete-modal-text">Do you need to update your form first? Changes (voice, topics, key dates) will be reflected in this pack.</p>
+        <p class="account-delete-modal-text">Update your <strong>form</strong> (voice, topics, key dates) and <strong>Change plan</strong> (platforms, Story Ideas) on this page first if you need to — those are what we use to generate this pack. You may be sent to Stripe to confirm payment and your new billing date.</p>
         <div class="account-delete-modal-buttons">
           <button type="button" class="account-delete-modal-btn account-delete-modal-keep" onclick="closeGetPackSoonerModal()">Cancel</button>
           <button type="button" class="account-delete-modal-btn account-add-stories-confirm" id="get-pack-sooner-use-current-btn">Use current details</button>
@@ -1907,6 +1908,10 @@
         .then(function(r) { return r.json(); })
         .then(function(data) {
           if (data.ok) {
+            if (data.stripe_invoice_url) {
+              window.location.href = data.stripe_invoice_url;
+              return;
+            }
             alert(data.message || 'Your pack will be emailed to you within a few minutes.');
             window.location.href = '/account/subscription';
           } else {

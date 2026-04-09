@@ -1326,6 +1326,7 @@ _ACCOUNT_SUB_PAUSE_FALLBACK = {
     "cancel_at_period_end": False,
     "cancelled_now": False,
     "ends_at": None,
+    "next_pack_due": None,
 }
 
 

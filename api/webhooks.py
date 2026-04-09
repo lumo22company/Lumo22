@@ -723,20 +723,43 @@ def stripe_webhook():
                 print("[Stripe webhook] invoice.paid: missing or invalid invoice; skipping.")
                 return jsonify({"received": True}), 200
             billing_reason = (invoice.get("billing_reason") or "").strip()
-            if billing_reason != "subscription_cycle":
-                print(f"[Stripe webhook] invoice.paid: billing_reason={billing_reason}, not subscription_cycle; skipping.")
-                return jsonify({"received": True}), 200
             sub_id = (invoice.get("subscription") or "").strip()
             if not sub_id:
                 print("[Stripe webhook] invoice.paid: no subscription on invoice; skipping.")
                 return jsonify({"received": True}), 200
-            # Accept any captions subscription price (GBP, USD, EUR)
+
+            pack_sooner_update = False
+            if billing_reason == "subscription_cycle":
+                pass
+            elif billing_reason == "subscription_update":
+                stripe.api_key = Config.STRIPE_SECRET_KEY
+                try:
+                    sub_gate = stripe.Subscription.retrieve(sub_id)
+                    md_gate = sub_gate.get("metadata") or {}
+                    if (md_gate.get("lumo_get_pack_sooner") or "").strip() != "1":
+                        print(
+                            f"[Stripe webhook] invoice.paid: billing_reason=subscription_update "
+                            f"but no lumo_get_pack_sooner flag; skipping."
+                        )
+                        return jsonify({"received": True}), 200
+                    pack_sooner_update = True
+                except Exception as e_gate:
+                    print(f"[Stripe webhook] invoice.paid: subscription gate failed: {e_gate!r}; skipping.")
+                    return jsonify({"received": True}), 200
+            else:
+                print(f"[Stripe webhook] invoice.paid: billing_reason={billing_reason}; skipping.")
+                return jsonify({"received": True}), 200
+            # Accept any captions subscription line (base + add-ons; proration invoices may only list add-on prices)
             valid_price_ids = [
-                p for p in [
+                p
+                for p in [
                     (getattr(Config, "STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID", None) or "").strip(),
                     (getattr(Config, "STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID_USD", None) or "").strip(),
                     (getattr(Config, "STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID_EUR", None) or "").strip(),
-                ] if p
+                    (getattr(Config, "STRIPE_CAPTIONS_EXTRA_PLATFORM_SUBSCRIPTION_PRICE_ID", None) or "").strip(),
+                    (getattr(Config, "STRIPE_CAPTIONS_STORIES_SUBSCRIPTION_PRICE_ID", None) or "").strip(),
+                ]
+                if p
             ]
             if not valid_price_ids:
                 return jsonify({"received": True}), 200
@@ -780,8 +803,23 @@ def stripe_webhook():
                 if not order.get("intake"):
                     print(f"[Stripe webhook] invoice.paid: order {order_id} has no intake; skipping delivery.")
                     return jsonify({"received": True}), 200
-            print(f"[Stripe webhook] invoice.paid: triggering generation for order {order_id} (subscription renewal)")
-            thread = threading.Thread(target=_run_generation_and_deliver, args=(order_id,))
+            if pack_sooner_update:
+                try:
+                    stripe.api_key = Config.STRIPE_SECRET_KEY
+                    stripe.Subscription.modify(sub_id, metadata={"lumo_get_pack_sooner": ""})
+                except Exception as e_clr:
+                    print(f"[Stripe webhook] invoice.paid: could not clear lumo_get_pack_sooner: {e_clr!r}")
+                print(
+                    f"[Stripe webhook] invoice.paid: triggering generation for order {order_id} "
+                    f"(get pack sooner / subscription_update)"
+                )
+            else:
+                print(f"[Stripe webhook] invoice.paid: triggering generation for order {order_id} (subscription renewal)")
+            thread = threading.Thread(
+                target=_run_generation_and_deliver,
+                args=(order_id,),
+                kwargs={"force_redeliver": True},
+            )
             thread.daemon = False
             thread.start()
             return jsonify({"received": True}), 200

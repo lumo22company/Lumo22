@@ -61,6 +61,15 @@
               {% endif %}
       </div>
           </div>
+          {% if _pause_state.get('next_pack_due') %}
+          <div class="account-settings-row account-next-pack-due-row" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid rgba(0,0,0,0.06);">
+            <div>
+              <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Next pack due</div>
+              <div class="account-settings-desc">We bill and generate your next pack on this date (Stripe).<br>Turn on <strong>Update form reminders</strong> below if you want a nudge to refresh your form first.</div>
+            </div>
+            <div style="flex-shrink: 0; font-size: 0.95rem; font-weight: 600; color: #000;">{{ _pause_state.get('next_pack_due') }}</div>
+          </div>
+          {% endif %}
           {% if not _cancelled %}
           <div class="account-settings-row account-add-stories-row account-form-reminder-row">
             <div class="account-add-stories-text">
@@ -151,7 +160,7 @@
           <div class="account-settings-row account-remove-stories-row account-get-pack-sooner-row">
             <div class="account-remove-stories-text account-get-pack-sooner-text">
               <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Get your pack sooner</div>
-              <div class="account-settings-desc">Need your next pack before your renewal date? You'll be charged now and get it within minutes.<br>Your next billing date resets to 30 days from today.</div>
+              <div class="account-settings-desc">Need your next pack before your renewal date? Update your <strong>form</strong> and <strong>Change plan</strong> on this page first if needed — we generate from those. You'll confirm payment (often on Stripe) and your new billing date; your pack follows within minutes.</div>
             </div>
             {% set _gps_platforms = (o.get('platforms_count') or 1)|int %}
             {% set _gps_stories = o.get('include_stories') %}

@@ -6,6 +6,7 @@ mode=subscription and is detected in webhook so we create order and send intake 
 """
 import os
 import time
+import threading
 import hmac
 import hashlib
 import base64
@@ -1329,6 +1330,31 @@ def captions_intake_link_by_email():
     }), 200
 
 
+_SUB_PACK_DELIVERY_DEDUPE: dict[str, float] = {}
+_SUB_PACK_DELIVERY_DEDUPE_LOCK = threading.Lock()
+_SUB_PACK_DELIVERY_DEDUPE_TTL_SEC = 180.0
+
+
+def _subscription_pack_delivery_recent_duplicate(order_id: str) -> bool:
+    """Suppress a second subscription renewal / get-pack-sooner run within TTL (webhook + API race)."""
+    now = time.monotonic()
+    with _SUB_PACK_DELIVERY_DEDUPE_LOCK:
+        stale = [
+            k
+            for k, ts in _SUB_PACK_DELIVERY_DEDUPE.items()
+            if (now - ts) > _SUB_PACK_DELIVERY_DEDUPE_TTL_SEC * 2
+        ]
+        for k in stale:
+            _SUB_PACK_DELIVERY_DEDUPE.pop(k, None)
+        ts = _SUB_PACK_DELIVERY_DEDUPE.get(order_id)
+        return ts is not None and (now - ts) < _SUB_PACK_DELIVERY_DEDUPE_TTL_SEC
+
+
+def _subscription_pack_delivery_register(order_id: str) -> None:
+    with _SUB_PACK_DELIVERY_DEDUPE_LOCK:
+        _SUB_PACK_DELIVERY_DEDUPE[order_id] = time.monotonic()
+
+
 def _run_generation_and_deliver(
     order_id: str,
     *,
@@ -1395,6 +1421,11 @@ def _run_generation_and_deliver(
             print(f"[Captions] record_delivery_failure failed: {rec_err}")
         order_service.set_failed(order_id)
         return (False, "No customer_email for order")
+
+    if force_redeliver and (row.get("stripe_subscription_id") or "").strip():
+        if _subscription_pack_delivery_recent_duplicate(str(order_id)):
+            print(f"[Captions] Order {order_id} subscription delivery dedupe: skipped rapid duplicate")
+            return (True, None)
 
     # For subscriptions, pass previous pack themes so this month varies (avoid repetition)
     previous_pack_themes = None
@@ -1474,6 +1505,23 @@ def _run_generation_and_deliver(
         if business_name:
             subject = f"{subject} — {business_name}"
         has_sub = bool(row.get("stripe_subscription_id"))
+        next_billing_plain = ""
+        next_billing_display = None
+        if force_redeliver and has_sub:
+            try:
+                import stripe
+
+                stripe.api_key = Config.STRIPE_SECRET_KEY
+                sub_nb = stripe.Subscription.retrieve((row.get("stripe_subscription_id") or "").strip())
+                st = str(sub_nb.get("status") or "").strip().lower()
+                if st != "canceled" or sub_nb.get("cancel_at_period_end"):
+                    cpe = sub_nb.get("current_period_end")
+                    if cpe is not None:
+                        dt_nb = datetime.utcfromtimestamp(int(cpe))
+                        next_billing_display = dt_nb.strftime("%d %B %Y")
+                        next_billing_plain = f"Your next billing date is {next_billing_display}.\n\n"
+            except Exception:
+                pass
         base = (Config.BASE_URL or "").strip().rstrip("/")
         if not base.startswith("http"):
             base = "https://www.lumo22.com"
@@ -1486,12 +1534,16 @@ def _run_generation_and_deliver(
             backup_stories_url = None
         if extra_attachments:
             body = (
-                "Hi,\n\nYour 30 Days of Social Media Captions and 30 Days of Story Ideas are ready. "
+                "Hi,\n\n"
+                + next_billing_plain
+                + "Your 30 Days of Social Media Captions and 30 Days of Story Ideas are ready. "
                 "Both documents are attached.\n\nCopy each caption and story idea as you need them, or edit to fit.\n\n"
             )
         else:
             body = (
-                "Hi,\n\nYour 30 Days of Social Media Captions are ready. The document is attached.\n\n"
+                "Hi,\n\n"
+                + next_billing_plain
+                + "Your 30 Days of Social Media Captions are ready. The document is attached.\n\n"
                 "Copy each caption as you need it, or edit to fit.\n\n"
             )
             if stories_generation_failed:
@@ -1516,6 +1568,7 @@ def _run_generation_and_deliver(
             backup_stories_url=(backup_stories_url or ""),
             backup_link_expiry_hours=_public_download_expiry_hours(),
             business_name=business_name or None,
+            next_billing_display=next_billing_display,
         )
         # Save generated artifacts first so customer can still download even if email send fails.
         stories_pdf_bytes = extra_attachments[0]["content"] if extra_attachments else None
@@ -1548,6 +1601,8 @@ def _run_generation_and_deliver(
         if not ok:
             print(f"[Captions] Delivery email FAILED for order {order_id} to {customer_email}: {send_error}")
             return (True, send_error or "Delivery email not sent; backup links are available")
+        if force_redeliver and has_sub:
+            _subscription_pack_delivery_register(str(order_id))
         # For subscriptions, record this pack's day categories so next month can vary
         if row.get("stripe_subscription_id"):
             day_categories = extract_day_categories_from_captions_md(captions_md)
@@ -2608,6 +2663,7 @@ def _pause_info_from_subscription(sub) -> dict:
         "cancel_at_period_end": False,
         "cancelled_now": False,
         "ends_at": None,
+        "next_pack_due": None,
     }
     pc = sub.get("pause_collection")
     if pc and isinstance(pc, dict):
@@ -2637,6 +2693,14 @@ def _pause_info_from_subscription(sub) -> dict:
             try:
                 dt = datetime.utcfromtimestamp(ended_ts)
                 out["ends_at"] = dt.strftime("%d %b %Y")
+            except (TypeError, ValueError, OSError):
+                pass
+    if not out["cancelled_now"]:
+        cpe = sub.get("current_period_end")
+        if cpe is not None:
+            try:
+                dt_end = datetime.utcfromtimestamp(int(cpe))
+                out["next_pack_due"] = dt_end.strftime("%d %b %Y")
             except (TypeError, ValueError, OSError):
                 pass
     return out
@@ -2946,16 +3010,21 @@ def captions_reminder_preference():
         return jsonify({"ok": False, "error": str(e)}), 500
 
 
+GET_PACK_SOONER_META_KEY = "lumo_get_pack_sooner"
+
+
 @captions_bp.route("/captions/get-pack-sooner", methods=["POST"])
 def captions_get_pack_sooner():
     """
-    Reset subscription billing cycle to charge now and deliver pack immediately.
+    Reset subscription billing cycle to charge now and deliver pack.
     Requires login. Order must belong to customer, have active subscription, and not be paused.
-    Modifies Stripe subscription with billing_cycle_anchor='now', then triggers generation.
+    Uses Stripe Subscription.modify(billing_cycle_anchor='now', proration). If the invoice needs
+    customer confirmation (3DS, new card), returns stripe_invoice_url for Stripe's hosted invoice page.
+    Otherwise charges the saved card, clears the pack-sooner flag, and triggers generation here.
+    Paid-via-hosted-invoice completions are handled by invoice.paid (subscription_update + metadata flag).
     """
     from api.auth_routes import get_current_customer
     from api.stripe_utils import is_valid_stripe_subscription_id
-    import threading
 
     customer = get_current_customer()
     if not customer:
@@ -3018,16 +3087,103 @@ def captions_get_pack_sooner():
             return jsonify({"ok": False, "error": "Your subscription is paused. Resume it first to get your pack sooner."}), 400
 
         import stripe
+
         stripe.api_key = Config.STRIPE_SECRET_KEY
-        stripe.Subscription.modify(
-            sub_id,
-            billing_cycle_anchor="now",
-            proration_behavior="create_prorations",
+        sub_cur = stripe.Subscription.retrieve(sub_id)
+        meta = dict(sub_cur.get("metadata") or {})
+        meta[GET_PACK_SOONER_META_KEY] = "1"
+        try:
+            sub = stripe.Subscription.modify(
+                sub_id,
+                billing_cycle_anchor="now",
+                proration_behavior="create_prorations",
+                payment_behavior="pending_if_incomplete",
+                metadata=meta,
+                expand=["latest_invoice"],
+            )
+        except stripe.error.InvalidRequestError as ire:
+            # Older API configs may reject payment_behavior on update; fall back to legacy charge path.
+            print(f"[get-pack-sooner] pending_if_incomplete not applied ({ire!r}); falling back")
+            stripe.Subscription.modify(
+                sub_id,
+                billing_cycle_anchor="now",
+                proration_behavior="create_prorations",
+            )
+            thread = threading.Thread(
+                target=_run_generation_and_deliver,
+                args=(order_id,),
+                kwargs={"force_redeliver": True},
+            )
+            thread.daemon = False
+            thread.start()
+            return jsonify({
+                "ok": True,
+                "message": "Your pack will be generated and emailed to you within a few minutes.",
+            }), 200
+
+        inv = sub.get("latest_invoice")
+        if isinstance(inv, str):
+            inv = stripe.Invoice.retrieve(inv, expand=["payment_intent"])
+        inv = inv if isinstance(inv, dict) else {}
+        status = (inv.get("status") or "").strip()
+        hosted = (inv.get("hosted_invoice_url") or "").strip()
+        try:
+            amount_due = int(inv.get("amount_due") or 0)
+        except (TypeError, ValueError):
+            amount_due = 0
+
+        if status == "paid":
+            try:
+                stripe.Subscription.modify(sub_id, metadata={GET_PACK_SOONER_META_KEY: ""})
+            except Exception as meta_err:
+                print(f"[get-pack-sooner] could not clear metadata: {meta_err}")
+            thread = threading.Thread(
+                target=_run_generation_and_deliver,
+                args=(order_id,),
+                kwargs={"force_redeliver": True},
+            )
+            thread.daemon = False
+            thread.start()
+            payload = {
+                "ok": True,
+                "message": "Your pack will be generated and emailed to you within a few minutes.",
+            }
+            # When Stripe provides a hosted invoice URL, send the customer there so billing
+            # (amount + period) is confirmed on Stripe even if the charge already succeeded.
+            if hosted:
+                payload["stripe_invoice_url"] = hosted
+                payload["message"] = (
+                    "Your payment went through. On Stripe you can view your invoice and updated billing period. "
+                    "Your pack will be emailed within a few minutes."
+                )
+            return jsonify(payload), 200
+
+        if hosted and amount_due > 0 and status in ("open", "draft"):
+            return jsonify({
+                "ok": True,
+                "stripe_invoice_url": hosted,
+                "message": "Complete payment on the next screen to confirm. Your pack will be emailed within a few minutes after payment succeeds.",
+            }), 200
+
+        # No hosted URL but invoice still open — surface Stripe message if any
+        if status in ("open", "draft") and hosted:
+            return jsonify({
+                "ok": True,
+                "stripe_invoice_url": hosted,
+                "message": "Confirm payment on Stripe to finish.",
+            }), 200
+
+        thread = threading.Thread(
+            target=_run_generation_and_deliver,
+            args=(order_id,),
+            kwargs={"force_redeliver": True},
         )
-        # Stripe creates and pays invoice. On success, trigger generation.
-        thread = threading.Thread(target=_run_generation_and_deliver, args=(order_id,))
         thread.daemon = False
         thread.start()
+        try:
+            stripe.Subscription.modify(sub_id, metadata={GET_PACK_SOONER_META_KEY: ""})
+        except Exception:
+            pass
         return jsonify({
             "ok": True,
             "message": "Your pack will be generated and emailed to you within a few minutes.",

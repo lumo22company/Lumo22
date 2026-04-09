@@ -120,8 +120,11 @@ def _captions_delivery_email_html(
     backup_stories_url: str = "",
     backup_link_expiry_hours: int = 24,
     business_name: Optional[str] = None,
+    next_billing_display: Optional[str] = None,
 ) -> str:
     """Build explicit HTML for the 30 Days captions delivery email so the body always shows."""
+    import html as html_mod
+
     business_line = ""
     safe_business = _sanitize_email_value(business_name or "")
     if safe_business:
@@ -135,6 +138,10 @@ def _captions_delivery_email_html(
 <p style="margin:0 0 16px;">Your 30 Days of Social Media Captions are ready. The document is attached.</p>
 <p style="margin:0 0 16px;">Copy each caption as you need it, or edit to fit.</p>"""
     content = content.replace("</p>", "</p>", 1) + business_line
+    if (next_billing_display or "").strip():
+        safe_nb = html_mod.escape((next_billing_display or "").strip(), quote=True)
+        content += f"""
+<p style="margin:0 0 16px; font-size:15px; color:{BRAND_TEXT};"><strong>Next billing date:</strong> {safe_nb}</p>"""
     if has_subscription:
         content += """
 <p style="margin:0 0 16px; font-size:14px; color:#666;">Deleting this email or the PDF does not cancel your subscription. To cancel, go to your account → Manage subscription.</p>"""
