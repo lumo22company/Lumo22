@@ -3736,6 +3736,12 @@
   accent-color: #fff200;
 }
 
+/* Platform pickers: when max selections reached, unchecked rows show prohibited cursor */
+.account-page-wrap label.platform-choice-blocked,
+.account-page-wrap label.platform-choice-blocked input[type="checkbox"] {
+  cursor: not-allowed !important;
+}
+
 /* Upgrade subscription button: swipe left-to-right yellow fill on hover, dark text */
 .account-upgrade-subscription-btn {
   position: relative;
@@ -3797,10 +3803,6 @@
 #get-pack-sooner-confirm-modal .account-delete-modal-buttons .account-delete-modal-btn.account-delete-modal-keep:hover {
   background: rgba(255, 255, 255, 0.12);
   border-color: rgba(255, 255, 255, 0.5);
-}
-#get-pack-sooner-update-link.account-delete-modal-btn {
-  border-color: transparent !important;
-  box-shadow: 0 0.2rem 0.7rem rgba(0, 0, 0, 0.35);
 }
 .product-page-dfd .lumo-nav-links a,
 .product-page-captions .lumo-nav-links a,

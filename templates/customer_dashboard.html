@@ -289,7 +289,8 @@
           {% set pps_cb = [] %}
         {% endif %}
         {% set pps_change_plan = url_for('account_page', section='subscription', order_token=pps.token, scroll_to='change_plan') %}
-        <p class="account-section-desc">For <strong>{{ pps.label }}</strong>: adjust platforms and Story Ideas below—the <strong>monthly price</strong> updates as you go. <strong>Continue to checkout</strong> saves your plan if anything changed, then takes you to <strong>checkout</strong> to confirm payment and your new billing date (that checkout step runs every time, even when your monthly price stays the same). Or open <strong>Edit form</strong> first to update your brief—you’ll return here.</p>
+        <p class="account-section-desc"><strong>Business: {{ pps.label }}</strong></p>
+        <p class="account-section-desc" style="margin-top: 0.5rem;">Adjust platforms and Story Ideas below—the monthly price updates as you go. Continue to edit your form if you need to, or go straight to checkout to confirm payment and your new billing date.</p>
         <div class="account-upgrade-form" style="max-width: 480px;">
           <div style="margin-bottom: 1.25rem;">
             <label class="account-settings-label" style="display: block; font-size: 0.95rem; font-weight: 600; color: #fff; margin-bottom: 0.5rem;">Your subscription</label>
@@ -306,7 +307,7 @@
           </div>
           <div style="margin-bottom: 1.25rem;" id="pps-which-wrap">
             <label class="account-settings-label" style="display: block; font-size: 0.95rem; font-weight: 600; color: #fff; margin-bottom: 0.5rem;">Which platforms?</label>
-            <div class="account-upgrade-checkboxes" style="display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem;">
+            <div class="account-upgrade-checkboxes platform-choices-wrap" style="display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem;">
               <label class="account-upgrade-cb-label" style="display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.95rem; color: #fff;"><input type="checkbox" name="pps_platform" value="Instagram & Facebook" class="pps-which-cb" {% if 'Instagram & Facebook' in pps_cb %}checked{% endif %}> Instagram &amp; Facebook</label>
               <label class="account-upgrade-cb-label" style="display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.95rem; color: #fff;"><input type="checkbox" name="pps_platform" value="LinkedIn" class="pps-which-cb" {% if 'LinkedIn' in pps_cb %}checked{% endif %}> LinkedIn</label>
               <label class="account-upgrade-cb-label" style="display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.95rem; color: #fff;"><input type="checkbox" name="pps_platform" value="TikTok" class="pps-which-cb" {% if 'TikTok' in pps_cb %}checked{% endif %}> TikTok</label>
@@ -387,6 +388,20 @@
             var editParams = 't=' + encodeURIComponent(token) + '&return_url=' + encodeURIComponent(returnHub) + '&edit=1&upgrade_stories=' + upgradeStories + '&platforms=' + encodeURIComponent(String(n)) + '&currency=' + encodeURIComponent(currency);
             if (selected) editParams += '&selected=' + encodeURIComponent(selected);
             if (editFormFirstLink) editFormFirstLink.href = '/captions-intake?' + editParams;
+            syncPpsPlatformAtMax();
+          }
+          function syncPpsPlatformAtMax() {
+            var wrap = document.querySelector('#pps-which-wrap .platform-choices-wrap');
+            if (!wrap || !platformsSelect) return;
+            var n = Math.max(1, Math.min(4, parseInt(platformsSelect.value, 10) || 1));
+            var cbs = wrap.querySelectorAll('.pps-which-cb');
+            var count = wrap.querySelectorAll('.pps-which-cb:checked').length;
+            var atMax = count >= n;
+            wrap.classList.toggle('platform-choices-at-max', atMax);
+            cbs.forEach(function(cb) {
+              var lab = cb.closest('label');
+              if (lab) lab.classList.toggle('platform-choice-blocked', atMax && !cb.checked);
+            });
           }
           function validatePps() {
             if (!platformsSelect) return true;
@@ -522,7 +537,7 @@
           </div>
           <div style="margin-bottom: 1.25rem;" id="upgrade-which-wrap">
             <label class="account-settings-label" style="display: block; font-size: 0.95rem; font-weight: 600; color: #fff; margin-bottom: 0.5rem;">Which platforms?</label>
-            <div class="account-upgrade-checkboxes" style="display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem;">
+            <div class="account-upgrade-checkboxes platform-choices-wrap" style="display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem;">
               <label class="account-upgrade-cb-label" style="display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.95rem; color: #fff;"><input type="checkbox" name="upgrade_platform" value="Instagram & Facebook" class="upgrade-which-cb"> Instagram &amp; Facebook</label>
               <label class="account-upgrade-cb-label" style="display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.95rem; color: #fff;"><input type="checkbox" name="upgrade_platform" value="LinkedIn" class="upgrade-which-cb"> LinkedIn</label>
               <label class="account-upgrade-cb-label" style="display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.95rem; color: #fff;"><input type="checkbox" name="upgrade_platform" value="TikTok" class="upgrade-which-cb"> TikTok</label>
@@ -705,6 +720,20 @@
               ? 'You\'ll be charged at checkout and we\'ll send your first pack right away. Your next billing date will be 30 days from today.'
               : 'Your first subscription pack will be delivered 30 days after your one-off pack—continuous content, no overlap.';
           }
+          syncUpgradePlatformAtMax();
+        }
+        function syncUpgradePlatformAtMax() {
+          var wrap = document.querySelector('#upgrade-which-wrap .platform-choices-wrap');
+          if (!wrap || !platformsSelect) return;
+          var n = Math.max(1, Math.min(4, parseInt(platformsSelect.value, 10) || 1));
+          var cbs = wrap.querySelectorAll('.upgrade-which-cb');
+          var count = wrap.querySelectorAll('.upgrade-which-cb:checked').length;
+          var atMax = count >= n;
+          wrap.classList.toggle('platform-choices-at-max', atMax);
+          cbs.forEach(function(cb) {
+            var lab = cb.closest('label');
+            if (lab) lab.classList.toggle('platform-choice-blocked', atMax && !cb.checked);
+          });
         }
         function validate() {
           if (!prefillSelect || !(prefillSelect.value || '').trim()) return false;
@@ -798,7 +827,7 @@
         {% endif %}
         <div id="get-pack-sooner-confirm-panel" class="account-info-panel" data-order-token="{{ get_pack_order_token }}" data-amount="{{ _gps_symbol }}{{ _gps_total }}" style="margin-bottom: 1.25rem; background: rgba(201,162,39,0.12); border: 1px solid rgba(201,162,39,0.35);">
           <h3 style="font-size: 1.1rem; margin: 0 0 0.75rem; color: #1a1a1a;">Form updated. Ready to get your pack sooner?</h3>
-          <p style="margin: 0 0 0.75rem; color: #333;">Your subscription is about <strong id="get-pack-sooner-amount">{{ _gps_symbol }}{{ _gps_total }}</strong>/month before this change—checkout will show the exact amount for this pack-sooner payment. You'll be taken to <strong>checkout</strong> every time to confirm payment and your new billing date, even when your monthly price stays the same. Your next billing date resets from today. If you still need to change platforms or Story Ideas, use <strong>Change plan</strong> above or <strong>Get my pack sooner</strong> → <strong>Plan &amp; checkout</strong> (Update preferences). For your brief only, use <strong>Edit form</strong> in the menu.</p>
+          <p style="margin: 0 0 0.75rem; color: #333;">Your subscription is about <strong id="get-pack-sooner-amount">{{ _gps_symbol }}{{ _gps_total }}</strong>/month before this change—checkout will show the exact amount for this pack-sooner payment. You'll be taken to <strong>checkout</strong> every time to confirm payment and your new billing date, even when your monthly price stays the same. Your next billing date resets from today. If you still need to change platforms or Story Ideas, use <strong>Change plan</strong> above or <strong>Get my pack sooner</strong> → <strong>Update preferences</strong>. For your brief only, use <strong>Edit form</strong> in the menu.</p>
           <p style="margin: 0 0 1rem; font-size: 0.9rem; color: #555;">By confirming you agree to continue to checkout; you'll see your total and updated billing period there before you pay.</p>
           <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
             <button type="button" id="get-pack-sooner-confirm-btn" class="lumo-btn-primary account-btn-swipe-dark" data-order-token="{{ get_pack_order_token }}" data-order-id="{{ _gps_order.get('id', '') if _gps_order else '' }}">Confirm and get my pack</button>
@@ -879,12 +908,12 @@
       <div class="account-delete-modal-backdrop" onclick="closeGetPackSoonerModal()"></div>
       <div class="account-delete-modal-box remove-stories-modal-box" style="max-width: 520px;">
         <h2 id="get-pack-sooner-modal-title" class="account-delete-modal-title">Get your pack sooner</h2>
-        <p class="account-delete-modal-text">We use your <strong>plan</strong> (platforms, Story Ideas) and <strong>form brief</strong> (voice, topics, key dates) for this pack. You'll be taken to <strong>checkout</strong> to confirm payment and your new billing date—every time, even if your monthly price doesn't change.</p>
-        <p class="account-delete-modal-text" style="font-size: 0.88rem; margin-top: 0.65rem; color: rgba(255,255,255,0.88); line-height: 1.55;"><strong>Plan &amp; checkout</strong> opens <strong>Update preferences</strong>: change platforms and Story Ideas (price updates as you go), save any plan changes, then continue to checkout in one flow. <strong>Edit form only</strong> updates your brief and brings you back here. <strong>Continue with current details</strong> goes straight to checkout using today's plan and form.</p>
+        <p class="account-delete-modal-text">We use your <strong>saved plan</strong> (platforms, Story Ideas) and <strong>form</strong> (voice, topics, key dates) for this pack. You can update these preferences if you need to.</p>
+        <p class="account-delete-modal-text" style="margin-top: 0.65rem;">You'll be taken to <strong>checkout</strong> to confirm payment and your new billing date.</p>
+        <p class="account-delete-modal-text" style="font-size: 0.88rem; margin-top: 0.65rem; color: rgba(255,255,255,0.88); line-height: 1.55;"><strong>Continue with current details</strong> goes straight to checkout using your current plan and prefilled form.</p>
         <div class="account-delete-modal-buttons" style="flex-wrap: wrap; justify-content: flex-end; gap: 0.5rem;">
           <button type="button" class="account-delete-modal-btn account-delete-modal-keep" onclick="closeGetPackSoonerModal()">Cancel</button>
-          <button type="button" class="account-delete-modal-btn account-add-stories-confirm" id="get-pack-sooner-prepare-btn">Plan &amp; checkout</button>
-          <a href="#" id="get-pack-sooner-update-link" class="account-delete-modal-btn account-add-stories-confirm" style="text-decoration: none; text-align: center;">Edit form only</a>
+          <button type="button" class="account-delete-modal-btn account-add-stories-confirm" id="get-pack-sooner-prepare-btn">Update preferences</button>
           <button type="button" class="account-delete-modal-btn account-add-stories-confirm" id="get-pack-sooner-use-current-btn">Continue with current details</button>
         </div>
       </div>
@@ -966,7 +995,7 @@
         <div class="account-delete-modal-text" style="margin-bottom: 0.75rem;">
           <span style="display:block; font-weight:600; margin-bottom:0.25rem; color:#fff;">Platforms</span>
           <p style="font-size:0.82rem; margin:0 0 0.5rem; opacity:0.9; line-height:1.4; color:rgba(255,255,255,0.9);">Select 1–4. Pricing is based on how many you choose.</p>
-          <div id="change-plan-platform-list" role="group" aria-label="Platforms" style="display:flex; flex-direction:column; gap:0.45rem;">
+          <div id="change-plan-platform-list" class="platform-choices-wrap" role="group" aria-label="Platforms" style="display:flex; flex-direction:column; gap:0.45rem;">
             <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; font-size:0.95rem; color:#fff;">
               <input type="checkbox" class="change-plan-platform-cb" value="Instagram & Facebook" style="width:auto;">
               <span>Instagram &amp; Facebook</span>
@@ -1615,6 +1644,22 @@
           line += ' After discount ends, price will be <strong>' + sym + fmt(nextStandard) + '/month</strong>.';
         }
         priceEl.innerHTML = line;
+        syncChangePlanPlatformAtMax();
+      }
+
+      function syncChangePlanPlatformAtMax() {
+        var wrap = document.getElementById('change-plan-platform-list');
+        if (!wrap) return;
+        var cbs = wrap.querySelectorAll('.change-plan-platform-cb');
+        var count = 0;
+        for (var i = 0; i < cbs.length; i++) if (cbs[i].checked) count++;
+        var atMax = count >= 4;
+        wrap.classList.toggle('platform-choices-at-max', atMax);
+        for (var j = 0; j < cbs.length; j++) {
+          var cb = cbs[j];
+          var lab = cb.closest('label');
+          if (lab) lab.classList.toggle('platform-choice-blocked', atMax && !cb.checked);
+        }
       }
 
       window.showChangePlanModal = function(btn) {
@@ -2082,11 +2127,7 @@
         if (!token) return;
         getPackSoonerPending = { token: token, orderId: orderId, amount: amount };
         var modal = document.getElementById('get-pack-sooner-modal');
-        var link = document.getElementById('get-pack-sooner-update-link');
-        if (modal && link) {
-          var base = window.location.origin + '/captions-intake';
-          var returnUrl = window.location.origin + '/account/subscription?get_pack_sooner=1&order_token=' + encodeURIComponent(token);
-          link.href = base + '?t=' + encodeURIComponent(token) + '&return_url=' + encodeURIComponent(returnUrl);
+        if (modal) {
           modal.removeAttribute('hidden');
           modal.classList.add('account-delete-modal--open');
         }
