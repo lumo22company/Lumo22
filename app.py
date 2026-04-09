@@ -1341,6 +1341,7 @@ def _history_pack_entries_for_order(o: dict, *, include_current: bool) -> list:
                 "archive_index": i,
                 "delivered_at": (a.get("delivered_at") or "").strip(),
                 "include_stories": archive_entry_includes_stories(a),
+                "business_name": ((a.get("business_name") or "").strip() or None),
             }
         )
     if include_current:
@@ -1351,6 +1352,7 @@ def _history_pack_entries_for_order(o: dict, *, include_current: bool) -> list:
                 "archive_index": None,
                 "delivered_at": (o.get("delivered_at") or "").strip(),
                 "include_stories": order_includes_stories_addon(o),
+                "business_name": None,
             }
         )
     return packs

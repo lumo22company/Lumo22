@@ -526,6 +526,89 @@ def _handle_captions_payment(session):
         print(f"[Stripe webhook] Referrer credit increment failed (non-fatal): {e}")
 
 
+def _handle_pack_sooner_checkout_completed(session: dict) -> None:
+    """
+    checkout.session.completed for fixed-price Get pack sooner (mode=payment).
+    Resets subscription billing anchor without proration, then triggers pack generation.
+    """
+    import stripe
+    from services.caption_order_service import CaptionOrderService
+    from api.captions_routes import (
+        GET_PACK_SOONER_META_KEY,
+        _run_generation_and_deliver,
+        _subscription_pack_delivery_recent_duplicate,
+        _subscription_pack_delivery_register,
+    )
+
+    session_id = (session.get("id") or "").strip()
+    if not session_id:
+        print("[Stripe webhook] pack sooner: missing session id")
+        return
+    meta = _checkout_session_metadata(session)
+    if meta.get("product") != "captions_pack_sooner":
+        return
+    payment_status = (session.get("payment_status") or "").strip().lower()
+    if payment_status != "paid":
+        print(f"[Stripe webhook] pack sooner: payment_status={payment_status!r}; skipping")
+        return
+    order_id = (meta.get("order_id") or "").strip()
+    sub_id = (meta.get("stripe_subscription_id") or "").strip()
+    if not order_id or not sub_id:
+        print("[Stripe webhook] pack sooner: missing order_id or stripe_subscription_id in metadata")
+        return
+
+    order_service = CaptionOrderService()
+    order = order_service.get_by_id(order_id)
+    if not order:
+        print(f"[Stripe webhook] pack sooner: order {order_id} not found")
+        return
+    if (order.get("stripe_subscription_id") or "").strip() != sub_id:
+        print("[Stripe webhook] pack sooner: subscription id does not match order")
+        return
+    email_sess = (_get_customer_email_from_session(session) or "").strip().lower()
+    if (order.get("customer_email") or "").strip().lower() != email_sess:
+        print("[Stripe webhook] pack sooner: email does not match order")
+        return
+    if _subscription_pack_delivery_recent_duplicate(order_id):
+        print(f"[Stripe webhook] pack sooner: delivery dedupe for order {order_id}; skipping")
+        return
+
+    if not (getattr(Config, "STRIPE_SECRET_KEY", None) or "").strip():
+        print("[Stripe webhook] pack sooner: STRIPE_SECRET_KEY missing")
+        return
+    stripe.api_key = Config.STRIPE_SECRET_KEY.strip()
+    try:
+        sub = stripe.Subscription.retrieve(sub_id)
+        md = dict(sub.get("metadata") or {})
+        md.pop(GET_PACK_SOONER_META_KEY, None)
+        stripe.Subscription.modify(
+            sub_id,
+            billing_cycle_anchor="now",
+            proration_behavior="none",
+            metadata=md,
+        )
+        try:
+            from app import invalidate_account_stripe_subscription_cache
+
+            invalidate_account_stripe_subscription_cache(sub_id)
+        except Exception:
+            pass
+    except Exception as e:
+        print(f"[Stripe webhook] pack sooner: Subscription.modify failed (non-fatal): {e!r}")
+
+    import threading
+
+    _subscription_pack_delivery_register(order_id)
+    thread = threading.Thread(
+        target=_run_generation_and_deliver,
+        args=(order_id,),
+        kwargs={"force_redeliver": True},
+    )
+    thread.daemon = False
+    thread.start()
+    print(f"[Stripe webhook] pack sooner: generation started for order {order_id}")
+
+
 def _is_subscription_cancelled_at_column_missing(exc: Exception) -> bool:
     """PostgREST when caption_orders.subscription_cancelled_at was never migrated."""
     s = str(exc)
@@ -1089,6 +1172,18 @@ def stripe_webhook():
                     print(f"[Stripe webhook] Session.retrieve failed; using webhook payload only: {re_err!r}")
             amount = session.get("amount_total")
             meta = _checkout_session_metadata(session)
+            if meta.get("product") == "captions_pack_sooner":
+                try:
+                    _handle_pack_sooner_checkout_completed(session)
+                except Exception as e:
+                    import traceback
+
+                    print(f"[Stripe webhook] pack sooner handler failed: {e}")
+                    traceback.print_exc()
+                    detail = (str(e) or repr(e))[:400]
+                    detail = "".join(c for c in detail if ord(c) < 128)
+                    return jsonify({"error": "Handler failed", "detail": detail or "Unknown error"}), 500
+                return jsonify({"received": True}), 200
             is_captions = _is_captions_payment(session)
             is_captions_sub = _is_captions_subscription_payment(session)
             print(

@@ -167,7 +167,7 @@
         <div class="account-history-list">
           {% for item in delivered_entries %}
           {% set o = item.order %}
-          {% set biz = (o.get('intake') or {}).get('business_name', '')|trim %}
+          {% set biz = (item.business_name or (o.get('intake') or {}).get('business_name', ''))|trim %}
           {% set is_sub = (o.get('stripe_subscription_id') or '')|trim %}
           {% set label = (biz|title) if biz else ('Subscription' if is_sub else 'One-off') %}
           {% set pack_date_src = item.delivered_at %}
@@ -493,6 +493,7 @@
             if (!continueErr) return;
             continueErr.textContent = msg || '';
             continueErr.style.display = msg ? 'block' : 'none';
+            continueErr.style.color = '#ffb4b4';
           }
           function runPrepareCheckout() {
             refreshPpsHubFromStorage();
@@ -555,7 +556,19 @@
                 throw new Error((data && data.error) || 'Could not start checkout.');
               }
               clearPpsHubState();
-              var payUrl = data.stripe_invoice_url || data.stripeInvoiceUrl;
+              if (data.payment_already_complete) {
+                if (continueErr) {
+                  continueErr.textContent = data.message || 'Payment complete.';
+                  continueErr.style.display = 'block';
+                  continueErr.style.color = '#c8f5c8';
+                }
+                if (continueBtn) {
+                  continueBtn.disabled = false;
+                  continueBtn.textContent = 'Continue to checkout';
+                }
+                return;
+              }
+              var payUrl = data.stripe_checkout_url || data.stripeCheckoutUrl || data.stripe_invoice_url || data.stripeInvoiceUrl;
               if (payUrl) {
                 window.location.href = payUrl;
                 return;
@@ -2265,7 +2278,10 @@
           if (errEl) { errEl.textContent = 'Missing order.'; errEl.style.display = 'block'; }
           return;
         }
-        if (errEl) errEl.style.display = 'none';
+        if (errEl) {
+          errEl.style.display = 'none';
+          errEl.style.color = '';
+        }
         target.disabled = true;
         target.textContent = 'Processing…';
         fetch('/api/captions/get-pack-sooner', {
@@ -2287,12 +2303,22 @@
             target.textContent = 'Confirm and get my pack';
             return;
           }
-          var payUrl = data.stripe_invoice_url || data.stripeInvoiceUrl;
+          if (data.payment_already_complete) {
+            if (errEl) {
+              errEl.textContent = data.message || 'Payment complete.';
+              errEl.style.display = 'block';
+              errEl.style.color = '#c8f5c8';
+            }
+            target.disabled = false;
+            target.textContent = 'Confirm and get my pack';
+            return;
+          }
+          var payUrl = data.stripe_checkout_url || data.stripeCheckoutUrl || data.stripe_invoice_url || data.stripeInvoiceUrl;
           if (payUrl) {
             window.location.href = payUrl;
             return;
           }
-          if (errEl) { errEl.textContent = 'Could not open Stripe checkout. Please try again.'; errEl.style.display = 'block'; }
+          if (errEl) { errEl.textContent = 'Could not open Stripe checkout. Please try again.'; errEl.style.display = 'block'; errEl.style.color = ''; }
           target.disabled = false;
           target.textContent = 'Confirm and get my pack';
         })

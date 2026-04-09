@@ -509,12 +509,13 @@ class CaptionOrderService:
         # usually "generating" while the row still holds the previous pack — archive must still run.
         st = (row.get("status") or "").strip().lower()
         status_allows_archive = st in ("delivered", "generating")
+        # Always snapshot the previous pack into delivery_archive before overwriting the row — do not
+        # require prev_md != new_md (identical regeneration would skip archive and collapse History).
         if (
             sub_id
             and prev_delivered
             and prev_md
             and new_md
-            and prev_md != new_md
             and status_allows_archive
         ):
             entry: Dict[str, Any] = {
@@ -522,6 +523,10 @@ class CaptionOrderService:
                 "captions_md": prev_md,
                 "include_stories": order_includes_stories_addon(row),
             }
+            intake_prev = row.get("intake") if isinstance(row.get("intake"), dict) else {}
+            bn_snap = (intake_prev.get("business_name") or "").strip()
+            if bn_snap:
+                entry["business_name"] = bn_snap[:200]
             cap_b64 = (row.get("captions_pdf_base64") or "").strip()
             st_b64 = (row.get("stories_pdf_base64") or "").strip()
             if cap_b64:

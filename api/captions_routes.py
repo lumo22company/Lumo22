@@ -3047,161 +3047,18 @@ def _stripe_obj_get(obj: Any, key: str, default=None):
     return default if v is None else v
 
 
-def _resolve_pack_sooner_invoice_hosted_url(inv_raw) -> tuple:
-    """
-    Return (hosted_invoice_url, invoice_dict) for Subscription.modify latest_invoice.
-    Expanded objects sometimes omit hosted_invoice_url; draft invoices need finalize_invoice
-    before Stripe exposes a hosted URL. Stripe returns StripeObject, not dict — never coerce to {}.
-    """
-    import stripe
-
-    inv_id = None
-    if isinstance(inv_raw, str):
-        inv_id = inv_raw.strip() or None
-    elif inv_raw is not None:
-        inv_id = (_stripe_obj_get(inv_raw, "id") or "").strip() or None
-        # Expanded Invoice from Subscription.modify may already be open/finalized with a hosted URL.
-        if inv_id:
-            st0 = (_stripe_obj_get(inv_raw, "status") or "").strip()
-            inv_try = inv_raw
-            if st0 == "draft":
-                try:
-                    inv_try = stripe.Invoice.finalize_invoice(inv_id)
-                except Exception as e:
-                    print(f"[get-pack-sooner] finalize_invoice (expanded) ({inv_id}): {e}")
-            hosted0 = (_stripe_obj_get(inv_try, "hosted_invoice_url") or "").strip()
-            if hosted0:
-                try:
-                    ad0 = int(_stripe_obj_get(inv_try, "amount_due", 0) or 0)
-                except (TypeError, ValueError):
-                    ad0 = 0
-                return hosted0, {
-                    "id": inv_id,
-                    "status": (_stripe_obj_get(inv_try, "status") or "").strip(),
-                    "amount_due": ad0,
-                }
-    if not inv_id:
-        return "", {}
-    try:
-        inv = stripe.Invoice.retrieve(inv_id, expand=["payment_intent"])
-    except Exception as e:
-        print(f"[get-pack-sooner] Invoice.retrieve failed ({inv_id}): {e}")
-        return "", {}
-
-    status = (_stripe_obj_get(inv, "status") or "").strip()
-    if status == "draft":
-        try:
-            inv = stripe.Invoice.finalize_invoice(inv_id)
-        except Exception as e:
-            print(f"[get-pack-sooner] finalize_invoice ({inv_id}): {e}")
-        status = (_stripe_obj_get(inv, "status") or "").strip()
-
-    hosted = (_stripe_obj_get(inv, "hosted_invoice_url") or "").strip()
-    if not hosted:
-        try:
-            inv = stripe.Invoice.retrieve(inv_id)
-            hosted = (_stripe_obj_get(inv, "hosted_invoice_url") or "").strip()
-        except Exception as e:
-            print(f"[get-pack-sooner] second Invoice.retrieve ({inv_id}): {e}")
-
-    inv_dict = {
-        "id": inv_id,
-        "status": status,
-        "amount_due": _stripe_obj_get(inv, "amount_due", 0) or 0,
-    }
-    return hosted, inv_dict
-
-
-def _fallback_subscription_invoice_hosted_url(subscription_id: str) -> str:
-    """Most recent subscription invoice that exposes a hosted Stripe URL (view/pay)."""
-    import stripe
-
-    try:
-        invs = stripe.Invoice.list(subscription=subscription_id, limit=10)
-        for inv in getattr(invs, "data", []) or []:
-            u = (_stripe_obj_get(inv, "hosted_invoice_url") or "").strip()
-            if u:
-                return u
-    except Exception as e:
-        print(f"[get-pack-sooner] Invoice.list fallback: {e}")
-    return ""
-
-
-def _pack_sooner_collect_hosted_invoice_url(sub_id: str, latest_inv_raw) -> tuple:
-    """
-    Resolve Stripe hosted invoice URL after billing_cycle_anchor=now (confirm proration / $0 / 3DS).
-    Retries: resolve latest_invoice → refresh Subscription → list fallbacks → finalize draft invoices.
-    """
-    import stripe
-
-    hosted, inv = _resolve_pack_sooner_invoice_hosted_url(latest_inv_raw)
-    if hosted:
-        return hosted, inv
-    try:
-        sub = stripe.Subscription.retrieve(sub_id, expand=["latest_invoice"])
-        li = _stripe_obj_get(sub, "latest_invoice")
-        hosted, inv = _resolve_pack_sooner_invoice_hosted_url(li)
-    except Exception as e:
-        print(f"[get-pack-sooner] Subscription.retrieve refresh for invoice URL: {e}")
-    if hosted:
-        return hosted, inv
-    hosted = _fallback_subscription_invoice_hosted_url(sub_id)
-    if hosted:
-        return hosted, inv or {"status": "open", "amount_due": 0}
-    try:
-        invs = stripe.Invoice.list(subscription=sub_id, limit=8, status="draft")
-        for inv in getattr(invs, "data", []) or []:
-            iid = (_stripe_obj_get(inv, "id") or "").strip()
-            if not iid:
-                continue
-            try:
-                fin = stripe.Invoice.finalize_invoice(iid)
-                u = (_stripe_obj_get(fin, "hosted_invoice_url") or "").strip()
-                if u:
-                    try:
-                        ad = int(_stripe_obj_get(fin, "amount_due", 0) or 0)
-                    except (TypeError, ValueError):
-                        ad = 0
-                    return u, {
-                        "id": iid,
-                        "status": (_stripe_obj_get(fin, "status") or "").strip(),
-                        "amount_due": ad,
-                    }
-            except Exception as ex:
-                print(f"[get-pack-sooner] finalize draft {iid}: {ex}")
-    except Exception as e:
-        print(f"[get-pack-sooner] Invoice.list(draft) last resort: {e}")
-    try:
-        invs2 = stripe.Invoice.list(subscription=sub_id, limit=8)
-        for inv in getattr(invs2, "data", []) or []:
-            u = (_stripe_obj_get(inv, "hosted_invoice_url") or "").strip()
-            if u:
-                iid = (_stripe_obj_get(inv, "id") or "").strip()
-                st = (_stripe_obj_get(inv, "status") or "").strip()
-                try:
-                    ad = int(_stripe_obj_get(inv, "amount_due", 0) or 0)
-                except (TypeError, ValueError):
-                    ad = 0
-                return u, {"id": iid, "status": st, "amount_due": ad}
-    except Exception as e:
-        print(f"[get-pack-sooner] Invoice.list last resort: {e}")
-    return "", {}
-
-
 GET_PACK_SOONER_META_KEY = "lumo_get_pack_sooner"
 
 
 @captions_bp.route("/captions/get-pack-sooner", methods=["POST"])
 def captions_get_pack_sooner():
     """
-    Reset subscription billing cycle to charge now and deliver pack.
-    Requires login. Order must belong to customer, have active subscription, and not be paused.
-    Uses Stripe Subscription.modify(billing_cycle_anchor='now', proration). If the invoice needs
-    customer confirmation (3DS, new card), returns stripe_invoice_url for Stripe's hosted invoice page.
-    Otherwise charges the saved card, clears the pack-sooner flag, and triggers generation here.
-    Paid-via-hosted-invoice completions are handled by invoice.paid (subscription_update + metadata flag).
+    Fixed monthly pack price (no proration): creates a Stripe Checkout Session (mode=payment) like
+    first-time caption purchase. After successful payment, webhook resets subscription billing anchor
+    to now with proration_behavior=none and triggers delivery.
     """
     from api.auth_routes import get_current_customer
+    from api.billing_routes import _subscription_monthly_price
     from api.stripe_utils import is_valid_stripe_subscription_id
 
     customer = get_current_customer()
@@ -3268,112 +3125,73 @@ def captions_get_pack_sooner():
 
         stripe.api_key = Config.STRIPE_SECRET_KEY
 
-        def _invalidate_account_subscription_cache():
-            try:
-                from app import invalidate_account_stripe_subscription_cache
-
-                invalidate_account_stripe_subscription_cache(sub_id)
-            except Exception:
-                pass
-
-        sub_cur = stripe.Subscription.retrieve(sub_id)
-        meta = dict(sub_cur.get("metadata") or {})
-        meta[GET_PACK_SOONER_META_KEY] = "1"
+        currency = (order.get("currency") or "gbp").strip().lower()
+        if currency not in ("gbp", "usd", "eur"):
+            currency = "gbp"
+        platforms = max(1, int(order.get("platforms_count") or 1))
+        include_stories = bool(order.get("include_stories"))
+        _, amt_whole = _subscription_monthly_price(currency, platforms, include_stories)
         try:
-            sub = stripe.Subscription.modify(
-                sub_id,
-                billing_cycle_anchor="now",
-                proration_behavior="create_prorations",
-                payment_behavior="pending_if_incomplete",
-                metadata=meta,
-                expand=["latest_invoice"],
-            )
-            _invalidate_account_subscription_cache()
-        except stripe.error.InvalidRequestError as ire:
-            # Older API stacks may reject payment_behavior on Subscription.modify; still anchor billing
-            # now and resolve a hosted invoice URL so the customer can confirm on Stripe.
-            print(f"[get-pack-sooner] pending_if_incomplete not applied ({ire!r}); modify without payment_behavior")
-            sub = stripe.Subscription.modify(
-                sub_id,
-                billing_cycle_anchor="now",
-                proration_behavior="create_prorations",
-                metadata=meta,
-                expand=["latest_invoice"],
-            )
-            _invalidate_account_subscription_cache()
-
-        latest_inv = _stripe_obj_get(sub, "latest_invoice")
-        hosted, inv = _pack_sooner_collect_hosted_invoice_url(sub_id, latest_inv)
-        status = (inv.get("status") or "").strip() if inv else ""
-        try:
-            amount_due = int(inv.get("amount_due") or 0) if inv else 0
+            unit_amount = int(amt_whole) * 100
         except (TypeError, ValueError):
-            amount_due = 0
+            return jsonify({"ok": False, "error": "Could not compute pack price."}), 500
+        if unit_amount <= 0:
+            return jsonify({"ok": False, "error": "Invalid pack amount."}), 400
 
-        # Prefer Stripe hosted invoice for every pack-sooner flow (confirm billing date / $0 / 3DS).
-        if hosted:
-            if status in ("open", "draft"):
-                if amount_due > 0:
-                    pay_msg = (
-                        "Complete payment on the next screen to confirm. Your pack will be emailed within a few minutes after payment succeeds."
-                    )
-                else:
-                    pay_msg = (
-                        "Confirm on Stripe to update your billing date and complete this step (including when there is no charge today)."
-                    )
-                return jsonify({
-                    "ok": True,
-                    "stripe_invoice_url": hosted,
-                    "message": pay_msg,
-                }), 200
-            if status == "paid":
-                try:
-                    stripe.Subscription.modify(sub_id, metadata={GET_PACK_SOONER_META_KEY: ""})
-                    _invalidate_account_subscription_cache()
-                except Exception as meta_err:
-                    print(f"[get-pack-sooner] could not clear metadata: {meta_err}")
-                thread = threading.Thread(
-                    target=_run_generation_and_deliver,
-                    args=(order_id,),
-                    kwargs={"force_redeliver": True},
-                )
-                thread.daemon = False
-                thread.start()
-                return jsonify({
-                    "ok": True,
-                    "stripe_invoice_url": hosted,
-                    "message": (
-                        "Open Stripe to view your invoice and updated billing period. "
-                        "Your pack will be emailed within a few minutes."
-                    ),
-                }), 200
-            return jsonify({
-                "ok": True,
-                "stripe_invoice_url": hosted,
-                "message": "Open Stripe to review your invoice and billing details.",
-            }), 200
+        base = _base_url_for_redirect()
+        if not base:
+            return jsonify({"ok": False, "error": "Server URL not configured (BASE_URL)."}), 503
+        success_url = f"{base}/account?section=subscription&pack_sooner=1"
+        cancel_url = f"{base}/account?section=subscription"
 
-        if status in ("open", "draft") and not hosted and inv:
-            try:
-                ad = int(inv.get("amount_due") or 0)
-            except (TypeError, ValueError):
-                ad = 0
-            if ad > 0:
-                return jsonify({
-                    "ok": False,
-                    "error": "Could not open Stripe checkout. Please try again or use Manage subscription.",
-                }), 503
+        ot = (order.get("token") or "").strip()
+        metadata = {
+            "product": "captions_pack_sooner",
+            "order_id": str(order_id),
+            "order_token": ot[:200] if ot else "",
+            "stripe_subscription_id": sub_id,
+        }
+        line_items = [
+            {
+                "price_data": {
+                    "currency": currency,
+                    "unit_amount": unit_amount,
+                    "product_data": {
+                        "name": "Get your pack sooner — 30 Days Captions",
+                        "description": (
+                            "Fixed monthly pack price. Resets your billing date from today after payment."
+                        ),
+                    },
+                },
+                "quantity": 1,
+            }
+        ]
+        create_params = {
+            "mode": "payment",
+            "line_items": line_items,
+            "success_url": success_url,
+            "cancel_url": cancel_url,
+            "metadata": metadata,
+            "client_reference_id": str(order_id)[:200],
+            "allow_promotion_codes": False,
+        }
+        stripe_customer_id = (order.get("stripe_customer_id") or "").strip()
+        if stripe_customer_id:
+            create_params["customer"] = stripe_customer_id
+        else:
+            create_params["customer_email"] = email
 
-        # Do not start generation without a hosted invoice URL — user must confirm on Stripe.
+        session = stripe.checkout.Session.create(**create_params)
+        url = (getattr(session, "url", None) or "").strip()
+        if not url:
+            return jsonify({"ok": False, "error": "Could not start checkout."}), 503
+
         return jsonify({
-            "ok": False,
-            "error": (
-                "We could not open Stripe to confirm your payment and billing date. "
-                "Please try again in a few seconds, or use Manage subscription → Get my pack sooner."
-            ),
-        }), 503
-    except stripe.error.CardError as e:
-        return jsonify({"ok": False, "error": e.user_message or "Your card was declined. Please try a different payment method."}), 400
+            "ok": True,
+            "stripe_checkout_url": url,
+            "stripe_invoice_url": url,
+            "message": "Complete payment on Stripe Checkout. Your pack will be emailed shortly after payment succeeds.",
+        }), 200
     except stripe.error.StripeError as e:
         return jsonify({"ok": False, "error": str(e)[:200]}), 400
     except Exception as e:

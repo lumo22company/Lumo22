@@ -50,6 +50,45 @@ def test_set_delivered_archives_prior_pack_when_status_is_generating():
     assert arch[0]["delivered_at"] == "2026-01-15T12:00:00Z"
 
 
+def test_set_delivered_archives_even_when_new_md_equals_previous():
+    """Regression: History must not collapse to one row if model output matches prior pack."""
+    svc = CaptionOrderService.__new__(CaptionOrderService)
+    captured = {}
+
+    def fake_get_by_id(oid):
+        return {
+            "id": oid,
+            "stripe_subscription_id": "sub_test123",
+            "status": "generating",
+            "delivered_at": "2026-01-15T12:00:00Z",
+            "captions_md": "SAME_CONTENT",
+            "delivery_archive": [],
+            "captions_pdf_base64": "",
+            "stories_pdf_base64": "",
+            "include_stories": False,
+            "intake": {},
+        }
+
+    def fake_update(oid, updates):
+        captured["updates"] = updates
+        return True
+
+    svc.get_by_id = fake_get_by_id
+    svc.update = fake_update
+
+    ok = CaptionOrderService.set_delivered(
+        svc,
+        "order-uuid-eq",
+        "SAME_CONTENT",
+        stories_pdf_bytes=None,
+        captions_pdf_bytes=None,
+    )
+    assert ok is True
+    assert "delivery_archive" in captured["updates"]
+    assert len(captured["updates"]["delivery_archive"]) == 1
+    assert captured["updates"]["delivery_archive"][0]["captions_md"] == "SAME_CONTENT"
+
+
 def test_set_delivered_does_not_archive_first_pack_under_generating():
     """No prior delivery — nothing to archive."""
     svc = CaptionOrderService.__new__(CaptionOrderService)
