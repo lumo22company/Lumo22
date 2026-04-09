@@ -272,7 +272,7 @@ def _pack_sooner_checkout_line_items(currency: str, platforms: int, include_stor
                 "currency": cur,
                 "unit_amount": int(prices["sub"]) * 100,
                 "product_data": {
-                    "name": "30 Days Captions (1 platform)",
+                    "name": "30 Days Captions (1 platform included)",
                     "description": "Monthly subscription pack — one-time charge for get pack sooner; your billing date resets after payment.",
                 },
             },
