@@ -3693,6 +3693,31 @@
   background-color: var(--lum-gold, #fff200);
 }
 
+/* Update preferences (prepare-pack-sooner): both CTAs — gold text, gold border, swipe fill (match upgrade Edit form link) */
+.account-upgrade-section .pps-prepare-actions .account-billing-portal-link.account-btn-swipe-light,
+.account-upgrade-section .pps-prepare-actions button.account-btn-swipe-light {
+  color: var(--lum-gold, #fff200) !important;
+  border: 2px solid var(--lum-gold, #fff200) !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1.25rem !important;
+  text-align: center;
+  box-sizing: border-box;
+}
+.account-upgrade-section .pps-prepare-actions .account-billing-portal-link.account-btn-swipe-light:hover,
+.account-upgrade-section .pps-prepare-actions button.account-btn-swipe-light:hover:not(:disabled) {
+  color: #000 !important;
+  border-color: var(--lum-gold, #fff200) !important;
+}
+.account-upgrade-section .pps-prepare-actions .account-btn-swipe-light::before {
+  background-color: var(--lum-gold, #fff200);
+}
+.account-upgrade-section .pps-prepare-actions button.account-btn-swipe-light:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 /* Captions page dropdown: same arrow as other selects, 1rem inset */
 .product-page-captions #captions-platforms {
   padding: 0.6rem 2.5rem 0.6rem 0.75rem !important;

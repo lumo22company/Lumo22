@@ -289,7 +289,7 @@
           {% set pps_cb = [] %}
         {% endif %}
         {% set pps_change_plan = url_for('account_page', section='subscription', order_token=pps.token, scroll_to='change_plan') %}
-        <p class="account-section-desc">For <strong>{{ pps.label }}</strong>: adjust platforms and Story Ideas below—the <strong>monthly price</strong> updates as you go. <strong>Continue to checkout</strong> saves your plan to Stripe (if anything changed), then opens Stripe to confirm payment and your new billing date. Or open <strong>Edit form</strong> first to update your brief—you’ll return here.</p>
+        <p class="account-section-desc">For <strong>{{ pps.label }}</strong>: adjust platforms and Story Ideas below—the <strong>monthly price</strong> updates as you go. <strong>Continue to checkout</strong> saves your plan if anything changed, then takes you to <strong>checkout</strong> to confirm payment and your new billing date (that checkout step runs every time, even when your monthly price stays the same). Or open <strong>Edit form</strong> first to update your brief—you’ll return here.</p>
         <div class="account-upgrade-form" style="max-width: 480px;">
           <div style="margin-bottom: 1.25rem;">
             <label class="account-settings-label" style="display: block; font-size: 0.95rem; font-weight: 600; color: #fff; margin-bottom: 0.5rem;">Your subscription</label>
@@ -322,8 +322,8 @@
           <p id="pps-currency-note" style="font-size: 0.85rem; color: rgba(255,255,255,0.78); margin: 0 0 1.25rem; line-height: 1.45;">Estimated subscription total from your selections above (your subscription currency).</p>
           <p id="pps-continue-error" style="display: none; margin: 0 0 0.75rem; font-size: 0.9rem; color: #ffb4b4; line-height: 1.45;"></p>
           <div class="pps-prepare-actions" style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: stretch; margin-bottom: 1.25rem;">
-            <a href="#" id="pps-edit-form-first-link" class="account-billing-portal-link account-btn-swipe-light pps-prepare-action-btn" style="flex: 1 1 200px; text-align: center; display: inline-flex; align-items: center; justify-content: center; min-height: 2.75rem; font-size: 0.95rem; font-weight: 600;">Edit form</a>
-            <button type="button" class="lumo-btn-primary account-btn-swipe-dark pps-prepare-action-btn" id="pps-continue-btn" style="flex: 1 1 200px; text-align: center; display: inline-flex; align-items: center; justify-content: center; min-height: 2.75rem; border: none; cursor: pointer; font-family: inherit; font-size: 1rem; font-weight: 600;">Continue to checkout</button>
+            <a href="#" id="pps-edit-form-first-link" class="account-billing-portal-link account-btn-swipe-light pps-prepare-action-btn" style="flex: 1 1 200px; min-height: 2.75rem;">Edit form</a>
+            <button type="button" class="account-billing-portal-link account-btn-swipe-light pps-prepare-action-btn" id="pps-continue-btn" style="flex: 1 1 200px; min-height: 2.75rem;">Continue to checkout</button>
           </div>
           <p style="font-size: 0.82rem; color: rgba(255,255,255,0.7); margin: 0; line-height: 1.5;">You can still adjust your plan manually from <a href="{{ pps_change_plan }}" style="color: #e8d48b; font-weight: 600;">Change plan</a> on Manage subscription if needed. <a href="{{ url_for('account_page', section='subscription') }}" style="color: rgba(255,255,255,0.85); font-weight: 500;">Back to Manage subscription</a></p>
         </div>
@@ -542,7 +542,7 @@
           </div>
           <div id="upgrade-edit-form-first-wrap" style="margin-bottom: 1.25rem; padding: 0.75rem 1rem; background: rgba(255,255,255,0.06); border-radius: 8px; border: 1px solid rgba(255,255,255,0.15);">
             <p style="font-size: 0.95rem; font-weight: 600; color: #fff; margin: 0 0 0.35rem;">Do you need to update your form?</p>
-            <p style="font-size: 0.9rem; color: rgba(255,255,255,0.9); margin: 0 0 0.5rem;">Update your details or tell us about an event coming up—we'll use this for your first pack. After you submit the form, you'll go to your <strong>order summary</strong> to accept the terms, then continue to Stripe to pay.</p>
+            <p style="font-size: 0.9rem; color: rgba(255,255,255,0.9); margin: 0 0 0.5rem;">Update your details or tell us about an event coming up—we'll use this for your first pack. After you submit the form, you'll go to your <strong>order summary</strong> to accept the terms, then continue to <strong>checkout</strong> to pay.</p>
             <a href="#" id="upgrade-edit-form-first-link" class="account-billing-portal-link account-btn-swipe-light" style="font-size: 0.85rem;">Edit form</a>
           </div>
           <div style="margin-bottom: 1.25rem;">
@@ -798,8 +798,8 @@
         {% endif %}
         <div id="get-pack-sooner-confirm-panel" class="account-info-panel" data-order-token="{{ get_pack_order_token }}" data-amount="{{ _gps_symbol }}{{ _gps_total }}" style="margin-bottom: 1.25rem; background: rgba(201,162,39,0.12); border: 1px solid rgba(201,162,39,0.35);">
           <h3 style="font-size: 1.1rem; margin: 0 0 0.75rem; color: #1a1a1a;">Form updated. Ready to get your pack sooner?</h3>
-          <p style="margin: 0 0 0.75rem; color: #333;">You'll be charged <strong id="get-pack-sooner-amount">{{ _gps_symbol }}{{ _gps_total }}</strong> now (or on Stripe if required). Your next billing date resets from today. Use <strong>Change plan</strong> above for platforms or Story Ideas; use <strong>Edit form</strong> in the menu for voice, topics, and key dates — before you confirm.</p>
-          <p style="margin: 0 0 1rem; font-size: 0.9rem; color: #555;">By confirming you agree to pay now; Stripe may show your invoice and new billing period.</p>
+          <p style="margin: 0 0 0.75rem; color: #333;">Your subscription is about <strong id="get-pack-sooner-amount">{{ _gps_symbol }}{{ _gps_total }}</strong>/month before this change—checkout will show the exact amount for this pack-sooner payment. You'll be taken to <strong>checkout</strong> every time to confirm payment and your new billing date, even when your monthly price stays the same. Your next billing date resets from today. If you still need to change platforms or Story Ideas, use <strong>Change plan</strong> above or <strong>Get my pack sooner</strong> → <strong>Plan &amp; checkout</strong> (Update preferences). For your brief only, use <strong>Edit form</strong> in the menu.</p>
+          <p style="margin: 0 0 1rem; font-size: 0.9rem; color: #555;">By confirming you agree to continue to checkout; you'll see your total and updated billing period there before you pay.</p>
           <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
             <button type="button" id="get-pack-sooner-confirm-btn" class="lumo-btn-primary account-btn-swipe-dark" data-order-token="{{ get_pack_order_token }}" data-order-id="{{ _gps_order.get('id', '') if _gps_order else '' }}">Confirm and get my pack</button>
             <a href="/account/subscription" class="account-billing-portal-link account-btn-swipe-light">Cancel</a>
@@ -879,12 +879,13 @@
       <div class="account-delete-modal-backdrop" onclick="closeGetPackSoonerModal()"></div>
       <div class="account-delete-modal-box remove-stories-modal-box" style="max-width: 520px;">
         <h2 id="get-pack-sooner-modal-title" class="account-delete-modal-title">Get your pack sooner</h2>
-        <p class="account-delete-modal-text">We use your <strong>plan</strong> (platforms, Story Ideas) and <strong>form brief</strong> (voice, topics, key dates) for this pack. You may be sent to Stripe to confirm payment and your new billing date.</p>
+        <p class="account-delete-modal-text">We use your <strong>plan</strong> (platforms, Story Ideas) and <strong>form brief</strong> (voice, topics, key dates) for this pack. You'll be taken to <strong>checkout</strong> to confirm payment and your new billing date—every time, even if your monthly price doesn't change.</p>
+        <p class="account-delete-modal-text" style="font-size: 0.88rem; margin-top: 0.65rem; color: rgba(255,255,255,0.88); line-height: 1.55;"><strong>Plan &amp; checkout</strong> opens <strong>Update preferences</strong>: change platforms and Story Ideas (price updates as you go), save any plan changes, then continue to checkout in one flow. <strong>Edit form only</strong> updates your brief and brings you back here. <strong>Continue with current details</strong> goes straight to checkout using today's plan and form.</p>
         <div class="account-delete-modal-buttons" style="flex-wrap: wrap; justify-content: flex-end; gap: 0.5rem;">
           <button type="button" class="account-delete-modal-btn account-delete-modal-keep" onclick="closeGetPackSoonerModal()">Cancel</button>
-          <button type="button" class="account-delete-modal-btn account-add-stories-confirm" id="get-pack-sooner-prepare-btn">Update preferences first</button>
-          <a href="#" id="get-pack-sooner-update-link" class="account-delete-modal-btn account-add-stories-confirm" style="text-decoration: none; text-align: center;">Update my form only</a>
-          <button type="button" class="account-delete-modal-btn account-add-stories-confirm" id="get-pack-sooner-use-current-btn">Use current details</button>
+          <button type="button" class="account-delete-modal-btn account-add-stories-confirm" id="get-pack-sooner-prepare-btn">Plan &amp; checkout</button>
+          <a href="#" id="get-pack-sooner-update-link" class="account-delete-modal-btn account-add-stories-confirm" style="text-decoration: none; text-align: center;">Edit form only</a>
+          <button type="button" class="account-delete-modal-btn account-add-stories-confirm" id="get-pack-sooner-use-current-btn">Continue with current details</button>
         </div>
       </div>
     </div>

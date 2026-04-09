@@ -3153,7 +3153,7 @@ def captions_get_pack_sooner():
             if hosted:
                 payload["stripe_invoice_url"] = hosted
                 payload["message"] = (
-                    "Your payment went through. On Stripe you can view your invoice and updated billing period. "
+                    "Your payment went through. On the checkout page you can view your invoice and updated billing period. "
                     "Your pack will be emailed within a few minutes."
                 )
             return jsonify(payload), 200
@@ -3170,7 +3170,7 @@ def captions_get_pack_sooner():
             return jsonify({
                 "ok": True,
                 "stripe_invoice_url": hosted,
-                "message": "Confirm payment on Stripe to finish.",
+                "message": "Confirm payment on checkout to finish.",
             }), 200
 
         thread = threading.Thread(
