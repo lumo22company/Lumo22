@@ -173,7 +173,7 @@
     .intake-page .form-section textarea:has(+ .field-helper) {
       margin-bottom: 0.4rem;
     }
-    .intake-page .form-section input + .field-helper:not(.intake-stories-disclaimer),
+    .intake-page .form-section input + .field-helper,
     .intake-page .form-section select + .field-helper,
     .intake-page .form-section textarea + .field-helper {
       margin-top: 0;
@@ -463,10 +463,9 @@
             <span>{% if stories_paid %}{% if is_upgrade_flow %}30 Stories included{% elif is_prepare_pack_sooner_return|default(false) %}30 Stories included (confirm on Update preferences checkout){% else %}30 Stories included (already paid){% endif %}{% else %}Add 30 Stories prompts <span class="intake-price-parenthetical">({{ intake_add_stories_text|default('+£29 one-off / +£17 monthly') }})</span>{% endif %}</span>
           </label>
           <p class="field-helper" style="margin: 0.5rem 0 0;">One-line prompts for Instagram/Facebook Stories each day. Check the box below to align each Story to that day's caption—or leave unchecked so Stories and captions are different on the same day.</p>
-          <p class="field-helper intake-stories-disclaimer" style="margin: 0.5rem 0 0; font-size: 0.85rem; color: var(--lum-text-muted);">If you add Story Ideas later (e.g. from Manage subscription in your account), they’ll be delivered with your <strong>next</strong> pack, not instantly.</p>
           <label class="intake-checkbox-label" style="margin-top: 0.75rem;">
             <input type="checkbox" id="align_stories" name="align_stories" {% if stories_paid and existing_intake.get('align_stories_to_captions') %}checked{% endif %} style="width: auto;">
-            <span>Align each Story to that day’s caption (same theme)</span>
+            <span><strong>Align each Story to that day’s caption (same theme)</strong></span>
           </label>
           <p class="field-helper" style="margin: 0.25rem 0 0;">Check to align each Story to that day's caption (same theme). Leave unchecked so Stories and captions are different on the same day.</p>
         </div>
