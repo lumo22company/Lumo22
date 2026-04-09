@@ -2339,7 +2339,7 @@ def captions_download():
             return jsonify({"error": "Stories PDF not available for this pack"}), 404
         filename = f"{name_label}_Stories_{date_str}.pdf"
         disp = "inline" if inline else "attachment"
-    return Response(
+        return Response(
             pdf_bytes,
             mimetype="application/pdf",
             headers={"Content-Disposition": "{}; filename={}".format(disp, filename)},

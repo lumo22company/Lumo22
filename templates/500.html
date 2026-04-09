@@ -52,6 +52,12 @@
       margin-left: auto;
       margin-right: auto;
     }
+    body.lumo-landing--error-500 button.lumo-btn-primary {
+      cursor: pointer;
+      font: inherit;
+      appearance: none;
+      -webkit-appearance: none;
+    }
     body.lumo-landing--error-500 .lumo-error-500-links {
       margin: 2rem 0 0;
     }
@@ -75,5 +81,18 @@
   {% include '_footer.html' %}
 
   <script src="{{ url_for('static', filename='js/landing.js') }}?v={{ asset_version }}"></script>
+  <script>
+    (function () {
+      var btn = document.getElementById('lumo-error-500-back');
+      if (!btn) return;
+      btn.addEventListener('click', function () {
+        if (window.history.length > 1) {
+          window.history.back();
+        } else {
+          window.location.href = '/';
+        }
+      });
+    })();
+  </script>
 </body>
 </html>
