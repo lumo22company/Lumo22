@@ -114,3 +114,44 @@ def test_set_delivered_does_not_archive_first_pack_under_generating():
     ok = CaptionOrderService.set_delivered(svc, "order-uuid-2", "FIRST_PACK", stories_pdf_bytes=None, captions_pdf_bytes=None)
     assert ok is True
     assert "delivery_archive" not in captured.get("updates", {})
+
+
+def test_set_delivered_archives_one_off_redelivery():
+    """One-off orders: second delivery archives the first so History can show both."""
+    svc = CaptionOrderService.__new__(CaptionOrderService)
+    captured = {}
+
+    def fake_get_by_id(oid):
+        return {
+            "id": oid,
+            "stripe_subscription_id": "",
+            "status": "delivered",
+            "delivered_at": "2026-02-01T12:00:00Z",
+            "captions_md": "ONE_OFF_V1",
+            "delivery_archive": [],
+            "captions_pdf_base64": "YWFh",
+            "stories_pdf_base64": "",
+            "include_stories": False,
+            "intake": {"business_name": "Test Co"},
+        }
+
+    def fake_update(oid, updates):
+        captured["updates"] = updates
+        return True
+
+    svc.get_by_id = fake_get_by_id
+    svc.update = fake_update
+
+    ok = CaptionOrderService.set_delivered(
+        svc,
+        "order-oneoff-1",
+        "ONE_OFF_V2",
+        stories_pdf_bytes=None,
+        captions_pdf_bytes=None,
+    )
+    assert ok is True
+    assert "delivery_archive" in captured["updates"]
+    arch = captured["updates"]["delivery_archive"]
+    assert len(arch) == 1
+    assert arch[0]["captions_md"] == "ONE_OFF_V1"
+    assert arch[0]["delivered_at"] == "2026-02-01T12:00:00Z"

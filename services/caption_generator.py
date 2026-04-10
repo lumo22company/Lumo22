@@ -457,6 +457,21 @@ def _build_same_post_day_as_event_block(pack_start_date: str) -> str:
     )
 
 
+def _build_explicit_weekday_dom_month_block() -> str:
+    """
+    Require that phrases like 'Saturday 11 April' match the real calendar (weekday + date + month).
+    Prevents off-by-one day numbers (e.g. 'Saturday 12 April' when that date is Sunday).
+    """
+    return (
+        "EXPLICIT_WEEKDAY_DATE (CRITICAL — **Caption:**): If you write a **weekday name** together with a "
+        "**day-of-month** and **month** (e.g. “Saturday 11 April”, “Sun 12 Apr”), that combination must be a **real** "
+        "calendar date: the named weekday must match that exact calendar day (use **DATE_CONTEXT** to verify). "
+        "Do **not** shift the day number by one or pair a weekday with the wrong calendar date. "
+        "If you are unsure of the exact date, use **DATE_CONTEXT** for Day N or neutral wording (**today**, **tomorrow**, "
+        "**opening day**, **this weekend** only when it matches **DATE_CONTEXT**)."
+    )
+
+
 def _build_stories_posting_day_alignment_block(pack_start_date: str) -> str:
     """
     Story Ideas are printed beside DATE_CONTEXT dates; Suggested wording must read correctly on that calendar day.
@@ -881,6 +896,7 @@ def _build_user_prompt(
         deadline_block = _build_deadline_alignment_block(start_str)
         weekday_hook_block = _build_weekday_hook_alignment_block()
         same_day_event_block = _build_same_post_day_as_event_block(start_str)
+        explicit_dom_block = _build_explicit_weekday_dom_month_block()
         parts.extend([
             "",
             "DATE_CONTEXT (the client's 30 days start on a specific date; use when it adds value):",
@@ -894,10 +910,13 @@ def _build_user_prompt(
             "",
             same_day_event_block,
             "",
+            explicit_dom_block,
+            "",
             "When KEY_DATE_EVENTS is also set, prioritize event timing from KEY_DATE_EVENTS over casual weekday mentions. "
             "When only DATE_CONTEXT applies (no KEY_DATE_EVENTS), you may reference weekday/weekend lightly only where it matches **DATE_CONTEXT** "
             "and **WEEKDAY_IN_HOOK_ALIGNMENT** — do not force a calendar date into every caption, but **never** name the wrong weekday in a scene-setting hook. "
-            "**DATE_ALIGNMENT**, **DEADLINE_AND_REGISTRATION_ALIGNMENT**, **WEEKDAY_IN_HOOK_ALIGNMENT**, and **SAME_POST_DAY_AS_EVENT** above still apply.",
+            "**DATE_ALIGNMENT**, **DEADLINE_AND_REGISTRATION_ALIGNMENT**, **WEEKDAY_IN_HOOK_ALIGNMENT**, **SAME_POST_DAY_AS_EVENT**, "
+            "and **EXPLICIT_WEEKDAY_DATE** above still apply.",
 
             "",
             _build_month_narrative_alignment_block(for_stories=False),
@@ -1097,6 +1116,120 @@ _WEEKDAY_NAMES = (
     "saturday",
     "sunday",
 )
+
+# For parsing "Saturday 12 April" phrases (weekday + day-of-month + month name)
+_WD_WORD_TO_INDEX = {
+    "monday": 0,
+    "mon": 0,
+    "tuesday": 1,
+    "tue": 1,
+    "tues": 1,
+    "wednesday": 2,
+    "wed": 2,
+    "thursday": 3,
+    "thu": 3,
+    "thur": 3,
+    "thurs": 3,
+    "friday": 4,
+    "fri": 4,
+    "saturday": 5,
+    "sat": 5,
+    "sunday": 6,
+    "sun": 6,
+}
+
+_MONTH_TOKEN_TO_NUM = {
+    "january": 1,
+    "jan": 1,
+    "february": 2,
+    "feb": 2,
+    "march": 3,
+    "mar": 3,
+    "april": 4,
+    "apr": 4,
+    "may": 5,
+    "june": 6,
+    "jun": 6,
+    "july": 7,
+    "jul": 7,
+    "august": 8,
+    "aug": 8,
+    "september": 9,
+    "sep": 9,
+    "sept": 9,
+    "october": 10,
+    "oct": 10,
+    "november": 11,
+    "nov": 11,
+    "december": 12,
+    "dec": 12,
+}
+
+# Weekday + "12 April" / "12 April 2026" — must match real calendar (fixes "Saturday 12 Apr" when that date is Sunday)
+_WEEKDAY_DOM_MONTH_RE = re.compile(
+    r"(?is)\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)"
+    r"\s+(\d{1,2})(?:st|nd|rd|th)?\s+"
+    r"(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec)"
+    r"(?:\s+(\d{4}))?"
+)
+
+
+def _invalid_weekday_dom_month_phrase(caption: str, default_year: int) -> Optional[str]:
+    """
+    If caption contains 'Saturday 12 April' (weekday + day-of-month + month), the weekday must match
+    that calendar date. Catches off-by-one day numbers and impossible combinations (e.g. 'Saturday 12 April 2026'
+    when 12 Apr 2026 is a Sunday).
+    """
+    if not caption or not default_year:
+        return None
+    for m in _WEEKDAY_DOM_MONTH_RE.finditer(caption):
+        wd_raw = (m.group(1) or "").lower().strip()
+        dom_s = m.group(2)
+        mo_raw = (m.group(3) or "").lower().strip()
+        yr_s = m.group(4)
+        try:
+            dom = int(dom_s)
+        except (TypeError, ValueError):
+            continue
+        month_num = _MONTH_TOKEN_TO_NUM.get(mo_raw)
+        if not month_num or dom < 1 or dom > 31:
+            continue
+        year = int(yr_s) if yr_s and yr_s.strip().isdigit() else default_year
+        try:
+            d = date(year, month_num, dom)
+        except ValueError:
+            continue
+        actual_wd = d.weekday()  # Mon=0 ... Sun=6
+        stated_idx = _WD_WORD_TO_INDEX.get(wd_raw)
+        if stated_idx is None:
+            continue
+        if stated_idx != actual_wd:
+            snippet = m.group(0).strip()
+            return (
+                f"invalid calendar phrase {snippet!r} — {d.strftime('%a %d %b %Y')} is a "
+                f"{_WEEKDAY_NAMES[actual_wd].title()}, not {_WEEKDAY_NAMES[stated_idx].title()}"
+            )
+    return None
+
+
+def _explicit_weekday_dom_month_consistency_error(captions_md: str, pack_start_date: str) -> Optional[str]:
+    """Fail validation when any caption pairs a weekday name with a calendar date that does not match."""
+    if not captions_md or not pack_start_date:
+        return None
+    try:
+        start = datetime.strptime(pack_start_date.strip()[:10], "%Y-%m-%d").date()
+    except ValueError:
+        return None
+    for day_num, _platform, caption in _iter_day_platform_captions(captions_md):
+        post_date = start + timedelta(days=day_num - 1)
+        err = _invalid_weekday_dom_month_phrase(caption, post_date.year)
+        if err:
+            return (
+                f"Day {day_num} ({post_date.strftime('%a %d %b %Y')}) {err} — fix or remove the explicit date; "
+                "the PDF header date for this day must match any **Weekday + date + month** you write in **Caption:** "
+                "(use **DATE_CONTEXT** for Day N, or neutral wording like **tomorrow** / **opening day**)."
+            )
+    return None
 
 
 def _extract_caption_from_platform_block_body(block_body: str) -> str:
@@ -2026,6 +2159,8 @@ class CaptionGenerator:
             if not full_err:
                 full_err = _caption_month_calendar_alignment_error(captions_only, start_str)
             if not full_err:
+                full_err = _explicit_weekday_dom_month_consistency_error(captions_only, start_str)
+            if not full_err:
                 break
             if full_attempt >= 1:
                 raise RuntimeError(
@@ -2040,6 +2175,8 @@ class CaptionGenerator:
                 "**This Friday morning** (etc.) on a Friday post. "
                 "If the error is about **month** vs **DATE_CONTEXT**: each Day N’s **Caption:** must match the **calendar month** "
                 "of that day’s line in DATE_CONTEXT — do not write “close out April” on a day that is already in May. "
+                "If the error is about **EXPLICIT_WEEKDAY_DATE**: any phrase like **Saturday 11 April** must be a real calendar "
+                "match (weekday + day number + month); cross-check **DATE_CONTEXT** — do not use an off-by-one day number. "
                 "Engagement days must use different hooks across the month; do not duplicate origin-story question patterns."
             )
 

@@ -1,8 +1,0 @@
----
-description: Points to canonical Git + Railway rule (alwaysApply)
-alwaysApply: true
----
-
-# Git + Railway
-
-**Canonical rule:** **`.cursor/rules/railway-deploy.mdc`** — same policy (Git commit + push; Railway deploy). Read that file for full instructions.

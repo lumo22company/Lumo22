@@ -1437,6 +1437,7 @@ def _run_generation_and_deliver(
     from services.caption_generator import CaptionGenerator, extract_day_categories_from_captions_md
     from services.notifications import (
         NotificationService,
+        _account_history_notice_delivery_plain,
         _captions_delivery_email_html,
         _pack_sooner_receipt_plain_html,
         captions_delivery_review_tip_plain,
@@ -1623,6 +1624,7 @@ def _run_generation_and_deliver(
                 + next_billing_plain
                 + "Your 30 Days of Social Media Captions and 30 Days of Story Ideas are ready. "
                 "Both documents are attached.\n\nCopy each caption and story idea as you need them, or edit to fit.\n\n"
+                + _account_history_notice_delivery_plain()
             )
         else:
             body = (
@@ -1631,6 +1633,7 @@ def _run_generation_and_deliver(
                 + next_billing_plain
                 + "Your 30 Days of Social Media Captions are ready. The document is attached.\n\n"
                 "Copy each caption as you need it, or edit to fit.\n\n"
+                + _account_history_notice_delivery_plain()
             )
             if stories_generation_failed:
                 body += (
@@ -2642,6 +2645,7 @@ def captions_resend_delivery():
     from services.caption_order_service import CaptionOrderService, order_includes_stories_addon
     from services.notifications import (
         NotificationService,
+        _account_history_notice_delivery_plain,
         _captions_delivery_email_html,
         captions_delivery_review_tip_plain,
     )
@@ -2725,14 +2729,16 @@ def captions_resend_delivery():
         if extra_attachments:
             body = (
                 "Hi,\n\nYour 30 Days of Social Media Captions and 30 Days of Story Ideas are attached.\n\n"
-                "If attachments don't appear in your inbox, use your backup download link(s):\n"
+                + _account_history_notice_delivery_plain()
+                + "If attachments don't appear in your inbox, use your backup download link(s):\n"
                 f"For your security, these backup links expire within {_public_download_expiry_hours()} hour(s).\n"
                 f"{backup_captions_url}\n{backup_stories_url}\n\n"
             )
         else:
             body = (
                 "Hi,\n\nYour 30 Days of Social Media Captions are attached.\n\n"
-                "If attachments don't appear in your inbox, use your backup download link:\n"
+                + _account_history_notice_delivery_plain()
+                + "If attachments don't appear in your inbox, use your backup download link:\n"
                 f"For your security, this backup link expires within {_public_download_expiry_hours()} hour(s).\n"
                 f"{backup_captions_url}\n\n"
             )

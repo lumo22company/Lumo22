@@ -13,13 +13,12 @@ This project **uses Git** for version control. Ignore any stale instruction that
 These use **`alwaysApply: true`**:
 
 - **`.cursor/rules/railway-deploy.mdc`** — **canonical** (commit + push + Railway; full detail)
-- **`.cursor/rules/git-and-railway-deploy.mdc`** — pointer to the canonical file
 
 **Root `.cursorrules`** states the same policy for tools that read it.
 
 Remove or disable any **other** Cursor **Project Rule** or **User Rule** that says “no Git” or “Railway CLI only” without Git — that contradicts this project.
 
-**`.gitignore`** ignores **`.cursor/`** except those two rule files (and the rules directory entry), so they can be committed with normal **`git add`** (no `-f` needed for those paths).
+**`.gitignore`** ignores **`.cursor/`** except **`railway-deploy.mdc`** (and the rules directory entry), so the rule file can be committed with normal **`git add`** (no `-f` needed for that path).
 
 ---
 

@@ -12,7 +12,11 @@ from typing import List, Dict, Any
 from urllib.parse import urlencode, quote
 from config import Config
 from services.caption_order_service import CaptionOrderService
-from services.notifications import NotificationService
+from services.notifications import (
+    NotificationService,
+    _account_history_notice_upcoming_plain,
+    _captions_intake_reminder_email_html,
+)
 
 # Days before period end to send reminder
 REMINDER_DAYS_BEFORE = 5
@@ -293,9 +297,8 @@ Or copy and paste this link into your browser:
 
 This takes about 5–10 minutes. Once it's done, we'll generate your captions and email your pack.
 
-Lumo 22
 """
-            from services.notifications import _captions_intake_reminder_email_html
+            body = body.rstrip() + "\n\n" + _account_history_notice_upcoming_plain().strip() + "\n\nLumo 22\n"
             html_body = _captions_intake_reminder_email_html(intake_url, business_name=business_name or None)
             ok = notif.send_email(email, subject, body, html_body=html_body)
             if ok:

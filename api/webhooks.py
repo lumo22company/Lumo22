@@ -146,6 +146,21 @@ def _checkout_session_customer_details(session) -> Dict[str, Any]:
     return {}
 
 
+def _checkout_session_stripe_customer_id(session: dict | None) -> str:
+    """Stripe Checkout Session.customer: id string, or expanded dict/object with id."""
+    if not isinstance(session, dict):
+        return ""
+    c = session.get("customer")
+    if not c:
+        return ""
+    if isinstance(c, str):
+        return c.strip()
+    if isinstance(c, dict):
+        return (c.get("id") or "").strip()
+    cid = getattr(c, "id", None)
+    return str(cid).strip() if cid else ""
+
+
 def _line_item_price_id(item: Any) -> Optional[str]:
     """Line item price may be expanded dict, or a string price_ id."""
     if not isinstance(item, dict):
@@ -211,8 +226,12 @@ def _is_captions_payment(session) -> bool:
 
 
 def _get_customer_email_from_session(session):
-    """Get customer email from Stripe Checkout Session. Never use session.customer (it's null for Checkout)."""
-    # #4 Fix: Email is in customer_details.email, NOT customer_email (which is null for Checkout)
+    """Get customer email from Stripe Checkout Session.
+
+    Prefer customer_details.email. For Checkout with an existing Stripe Customer (`customer=cus_...`),
+    Stripe often omits email from customer_details; use the Customer object's email in that case.
+    """
+    # #4 Fix: Email is usually in customer_details.email, NOT top-level customer_email (often null for Checkout)
     details = _checkout_session_customer_details(session) if isinstance(session, dict) else None
     if details:
         email = details.get("email") or details.get("customer_email")
@@ -234,13 +253,34 @@ def _get_customer_email_from_session(session):
     email = session.get("customer_email") if hasattr(session, "get") else getattr(session, "customer_email", None)
     if email and isinstance(email, str):
         return email.strip()
-    # If still missing, fetch the session from Stripe API
+    # Existing-customer checkout: email may only exist on the Customer object
+    cust_raw = session.get("customer") if isinstance(session, dict) else None
+    if cust_raw is not None:
+        if isinstance(cust_raw, dict):
+            em = cust_raw.get("email")
+            if em and isinstance(em, str) and em.strip():
+                return em.strip()
+        elif isinstance(cust_raw, str) and cust_raw.startswith("cus_"):
+            try:
+                import stripe
+
+                if Config.STRIPE_SECRET_KEY:
+                    stripe.api_key = Config.STRIPE_SECRET_KEY
+                    cobj = stripe.Customer.retrieve(cust_raw)
+                    em = getattr(cobj, "email", None)
+                    if em is None and isinstance(cobj, dict):
+                        em = cobj.get("email")
+                    if em and isinstance(em, str) and em.strip():
+                        return em.strip()
+            except Exception as e:
+                print(f"[Stripe webhook] Customer.retrieve for checkout email failed: {e}")
+    # If still missing, fetch the session from Stripe API (expand customer for same reason as above)
     try:
         import stripe
         sid = session.get("id") if hasattr(session, "get") else getattr(session, "id", None)
         if Config.STRIPE_SECRET_KEY and sid:
             stripe.api_key = Config.STRIPE_SECRET_KEY
-            full = stripe.checkout.Session.retrieve(sid, expand=["customer_details"])
+            full = stripe.checkout.Session.retrieve(sid, expand=["customer_details", "customer"])
             details = full.get("customer_details") or {}
             if isinstance(details, dict):
                 email = details.get("email") or details.get("customer_email")
@@ -251,6 +291,21 @@ def _get_customer_email_from_session(session):
             email = full.get("customer_email")
             if email:
                 return str(email).strip()
+            fc = full.get("customer")
+            if isinstance(fc, dict):
+                em = fc.get("email")
+                if em and isinstance(em, str) and em.strip():
+                    return em.strip()
+            elif isinstance(fc, str) and fc.startswith("cus_"):
+                try:
+                    cobj = stripe.Customer.retrieve(fc)
+                    em = getattr(cobj, "email", None)
+                    if em is None and isinstance(cobj, dict):
+                        em = cobj.get("email")
+                    if em and isinstance(em, str) and em.strip():
+                        return em.strip()
+                except Exception as e2:
+                    print(f"[Stripe webhook] Customer.retrieve after Session.retrieve failed: {e2}")
     except Exception as e:
         print(f"[Stripe webhook] Could not retrieve session for email: {e}")
     return None
@@ -565,9 +620,24 @@ def _handle_pack_sooner_checkout_completed(session: dict) -> None:
     if (order.get("stripe_subscription_id") or "").strip() != sub_id:
         print("[Stripe webhook] pack sooner: subscription id does not match order")
         return
+    order_email = (order.get("customer_email") or "").strip().lower()
     email_sess = (_get_customer_email_from_session(session) or "").strip().lower()
-    if (order.get("customer_email") or "").strip().lower() != email_sess:
-        print("[Stripe webhook] pack sooner: email does not match order")
+    cust_sess = _checkout_session_stripe_customer_id(session)
+    cust_order = (order.get("stripe_customer_id") or "").strip()
+    email_ok = bool(order_email and email_sess and order_email == email_sess)
+    if not email_ok and cust_sess and cust_order and cust_sess == cust_order:
+        # Checkout can show a prefilled email while webhook/API omit or differ on customer_details;
+        # metadata + matching Stripe customer id is sufficient to bind this payment to the order.
+        print(
+            "[Stripe webhook] pack sooner: session vs order email mismatch or missing session email, "
+            f"but Stripe customer matches order ({cust_sess[:12]}...); proceeding"
+        )
+        email_ok = True
+    if not email_ok:
+        print(
+            "[Stripe webhook] pack sooner: email does not match order and Stripe customer id mismatch "
+            f"(session_email={'set' if email_sess else 'empty'}, order_has_customer={bool(cust_order)})"
+        )
         return
     if _subscription_pack_delivery_recent_duplicate(order_id):
         print(f"[Stripe webhook] pack sooner: delivery dedupe for order {order_id}; skipping")
@@ -1187,7 +1257,7 @@ def stripe_webhook():
                     stripe.api_key = Config.STRIPE_SECRET_KEY.strip()
                     full = stripe.checkout.Session.retrieve(
                         sid,
-                        expand=["line_items", "customer_details"],
+                        expand=["line_items", "customer_details", "customer"],
                     )
                     session = full.to_dict() if hasattr(full, "to_dict") else dict(full)
                 except Exception as re_err:

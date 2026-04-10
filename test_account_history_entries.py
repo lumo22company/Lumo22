@@ -27,8 +27,8 @@ def test_one_subscription_row_archives_plus_current():
     assert currents[0]["token"] == "tok-a"
 
 
-def test_duplicate_stripe_subscription_rows_merge_archives_one_current():
-    """Two caption_orders rows with same sub id: all archives from both; one current (newest row)."""
+def test_duplicate_stripe_subscription_rows_all_packs_including_stale_current():
+    """Two caption_orders rows with same sub id: all archives from both + each row's last delivered pack."""
     orders = [
         {
             "id": "old",
@@ -60,12 +60,47 @@ def test_duplicate_stripe_subscription_rows_merge_archives_one_current():
     ]
     entries = _history_delivered_entries(orders)
     currents = [e for e in entries if e.get("archive_index") is None]
-    assert len(currents) == 1
-    assert currents[0]["token"] == "tok-new"
+    assert len(currents) == 2
+    by_tok = {e["token"]: e for e in currents}
+    assert by_tok["tok-old"]["delivered_at"].startswith("2026-03-01")
+    assert by_tok["tok-new"]["delivered_at"].startswith("2026-06-01")
     archived = [e for e in entries if e.get("archive_index") is not None]
     assert len(archived) == 3
     tokens_arch = {e["token"] for e in archived}
     assert tokens_arch == {"tok-old", "tok-new"}
+    assert len(entries) == 5
+
+
+def test_duplicate_subscription_rows_identical_current_deduped():
+    """Two rows same sub + same delivery snapshot: one line."""
+    md = "same-pack"
+    ts = "2026-06-01T12:00:00Z"
+    orders = [
+        {
+            "id": "old",
+            "token": "tok-old",
+            "status": "delivered",
+            "stripe_subscription_id": "sub_x",
+            "captions_md": md,
+            "delivered_at": ts,
+            "updated_at": "2026-06-01T11:00:00Z",
+            "delivery_archive": [],
+        },
+        {
+            "id": "new",
+            "token": "tok-new",
+            "status": "delivered",
+            "stripe_subscription_id": "sub_x",
+            "captions_md": md,
+            "delivered_at": ts,
+            "updated_at": "2026-06-01T12:00:00Z",
+            "delivery_archive": [],
+        },
+    ]
+    entries = _history_delivered_entries(orders)
+    currents = [e for e in entries if e.get("archive_index") is None]
+    assert len(currents) == 1
+    assert currents[0]["token"] == "tok-new"
 
 
 def test_one_off_orders_each_get_current():

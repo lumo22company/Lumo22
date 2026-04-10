@@ -1358,6 +1358,46 @@ def _history_pack_entries_for_order(o: dict, *, include_current: bool) -> list:
     return packs
 
 
+def _dedupe_duplicate_subscription_current_lines(entries: list) -> list:
+    """
+    When two caption_orders rows share stripe_subscription_id and represent the same delivery
+    (same delivered_at + same captions snapshot), keep one line — typically the row with the latest
+    updated_at. Distinct delivery dates (e.g. March on a stale row + June on the active row) are kept.
+    """
+    from collections import defaultdict
+
+    buckets: dict = defaultdict(list)
+    for i, e in enumerate(entries):
+        if e.get("archive_index") is not None:
+            continue
+        o = e.get("order") or {}
+        sid = (o.get("stripe_subscription_id") or "").strip()
+        if not sid:
+            continue
+        da = (e.get("delivered_at") or "").strip()[:19]
+        if not da:
+            continue
+        md = (o.get("captions_md") or "").strip()
+        md_head = md[:400] if md else ""
+        buckets[(sid, da, md_head)].append(i)
+    drop: set = set()
+    for _key, idxs in buckets.items():
+        if len(idxs) <= 1:
+            continue
+        # Keep single best row per duplicate snapshot (newest activity wins)
+        def _row_sort_key(ii: int) -> tuple:
+            o = entries[ii].get("order") or {}
+            ts = (o.get("updated_at") or o.get("created_at") or "").strip()
+            oid = str(o.get("id") or "")
+            return (ts, oid)
+
+        idxs_sorted = sorted(idxs, key=_row_sort_key, reverse=True)
+        drop.update(idxs_sorted[1:])
+    if not drop:
+        return entries
+    return [e for i, e in enumerate(entries) if i not in drop]
+
+
 def _history_delivered_entries(caption_orders: list) -> list:
     """
     Account → History: one row per delivered pack with downloadable PDFs.
@@ -1365,11 +1405,9 @@ def _history_delivered_entries(caption_orders: list) -> list:
     List every archive entry plus the current row — no cap from pack_history. Newest first.
 
     If multiple caption_orders rows share the same stripe_subscription_id (duplicates / migrations),
-    archives from *every* row are listed; only the most recently active row gets a “current pack” line so
-    stale duplicate currents do not hide older months.
+    list archives from every row and include each row's current pack so prior months are not lost.
+    Dedupe only when two rows expose the same subscription delivery snapshot (same time + same content).
     """
-    from services.caption_order_service import coerce_json_list
-
     rows = _history_delivered_orders(caption_orders)
     by_sub: dict = {}
     no_sub: list = []
@@ -1389,19 +1427,10 @@ def _history_delivered_entries(caption_orders: list) -> list:
             out.extend(_history_pack_entries_for_order(group[0], include_current=True))
             continue
         group = sorted(group, key=_history_order_activity_ts, reverse=True)
-        newest = group[0]
-        newest_id = str(newest.get("id") or "")
         for o in group:
-            oid = str(o.get("id") or "")
-            if newest_id:
-                include_current = oid == newest_id
-            else:
-                include_current = o is newest
-            # If we skip this row's "current" as duplicate of the newest row, but this row has no
-            # delivery_archive and only live captions_md, still expose one download line (stale row).
-            if not include_current and not coerce_json_list(o.get("delivery_archive")) and (o.get("captions_md") or "").strip():
-                include_current = True
-            out.extend(_history_pack_entries_for_order(o, include_current=include_current))
+            out.extend(_history_pack_entries_for_order(o, include_current=True))
+
+    out = _dedupe_duplicate_subscription_current_lines(out)
 
     def _history_entry_sort_key(entry: dict) -> str:
         d = (entry.get("delivered_at") or "").strip()

@@ -496,28 +496,23 @@ class CaptionOrderService:
         captions_pdf_bytes: Optional[bytes] = None,
     ) -> bool:
         """Mark order delivered; optionally store PDF artifacts as base64 for reliable re-download/resend.
-        For subscriptions, archives the previous pack (md + PDFs) into delivery_archive before overwriting."""
+        For any order that already had a delivered pack, archives the previous snapshot (md + PDFs) into
+        delivery_archive before overwriting — subscriptions and one-offs — so Account → History can list
+        past deliveries until the user removes the order from History."""
         row = self.get_by_id(order_id) or {}
         now_iso = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
         delivery_archive = coerce_json_list(row.get("delivery_archive"))
-        sub_id = (row.get("stripe_subscription_id") or "").strip()
         prev_delivered = (row.get("delivered_at") or "").strip()
         prev_md = (row.get("captions_md") or "").strip()
         new_md = (captions_md or "").strip()
         did_archive_prior_pack = False
-        # Subscription renewals call set_generating() before AI; when set_delivered runs, status is
-        # usually "generating" while the row still holds the previous pack — archive must still run.
+        # Renewals / redeliveries call set_generating() before AI; when set_delivered runs, status is
+        # often "generating" while the row still holds the previous pack — archive must still run.
         st = (row.get("status") or "").strip().lower()
         status_allows_archive = st in ("delivered", "generating")
         # Always snapshot the previous pack into delivery_archive before overwriting the row — do not
         # require prev_md != new_md (identical regeneration would skip archive and collapse History).
-        if (
-            sub_id
-            and prev_delivered
-            and prev_md
-            and new_md
-            and status_allows_archive
-        ):
+        if prev_delivered and prev_md and new_md and status_allows_archive:
             entry: Dict[str, Any] = {
                 "delivered_at": prev_delivered,
                 "captions_md": prev_md,
@@ -534,8 +529,10 @@ class CaptionOrderService:
             if st_b64:
                 entry["stories_pdf_base64"] = st_b64
             delivery_archive.append(entry)
-            if len(delivery_archive) > 48:
-                delivery_archive = delivery_archive[-48:]
+            # Keep last N entries so History does not grow without bound (rare: many redeliveries)
+            _ARCHIVE_MAX = 200
+            if len(delivery_archive) > _ARCHIVE_MAX:
+                delivery_archive = delivery_archive[-_ARCHIVE_MAX:]
             did_archive_prior_pack = True
         updates: Dict[str, Any] = {
             "status": "delivered",

@@ -22,6 +22,54 @@ BRAND_TEXT_ON_LIGHT_GREY_PANEL = "#000000"
 BRAND_TEXT_ON_DARK = "#F5F5F2"
 BRAND_FONT = "Century Gothic, CenturyGothic, Apple Gothic, sans-serif"
 
+
+def _account_history_url() -> str:
+    base = (Config.BASE_URL or "").strip().rstrip("/")
+    if not base or not base.startswith("http"):
+        base = "https://www.lumo22.com"
+    return f"{base}/account?section=history"
+
+
+def _account_history_notice_delivery_html() -> str:
+    """Delivery email: PDFs just sent — also available under History until removed."""
+    import html as html_mod
+
+    safe = html_mod.escape(_account_history_url(), quote=True)
+    return (
+        f'<p style="margin:0 0 16px; font-size:14px; color:{BRAND_MUTED};">'
+        f"You can also view and download these PDFs in your account under "
+        f'<a href="{safe}" style="color:{BRAND_BLACK}; text-decoration:none; border-bottom:1px solid {BRAND_BLACK};">History</a> '
+        f"until you remove a pack from the list.</p>"
+    )
+
+
+def _account_history_notice_delivery_plain() -> str:
+    return (
+        "You can also view and download these PDFs in your account under History "
+        f"({_account_history_url()}) until you remove a pack from the list.\n\n"
+    )
+
+
+def _account_history_notice_upcoming_html() -> str:
+    """Order / intake emails: after delivery, PDFs live in History too."""
+    import html as html_mod
+
+    safe = html_mod.escape(_account_history_url(), quote=True)
+    return (
+        f'<p style="margin:0 0 16px; font-size:14px; color:{BRAND_MUTED};">'
+        f"When your pack is ready, we'll email it to you. You can also view and download your PDFs in your account under "
+        f'<a href="{safe}" style="color:{BRAND_BLACK}; text-decoration:none; border-bottom:1px solid {BRAND_BLACK};">History</a> '
+        f"until you remove a pack from the list.</p>"
+    )
+
+
+def _account_history_notice_upcoming_plain() -> str:
+    return (
+        "When your pack is ready, we'll email it to you. You can also view and download your PDFs in your account "
+        f"under History ({_account_history_url()}) until you remove a pack from the list.\n\n"
+    )
+
+
 # Display / composition prices for captions checkout — keep in sync with app.CAPTIONS_DISPLAY_PRICES
 _CAPTIONS_DISPLAY_PRICES: Dict[str, Dict[str, Any]] = {
     "gbp": {
@@ -117,9 +165,8 @@ def _captions_delivery_review_tip_html(has_stories: bool) -> str:
     """Short tip: review/edit for the month (captions only vs captions + Story Ideas)."""
     if has_stories:
         return (
-            f'<p style="margin:0 0 16px; font-size:14px; color:#555;">Tip: read through this month\'s captions and '
-            f"Story Ideas before you post. Edit anything so it fits your voice, your brand, and any rules that apply "
-            f"to you.</p>"
+            f'<p style="margin:0 0 16px; font-size:14px; color:#555;">We recommend you read through all of this '
+            f"month's captions and Story Ideas before you post.</p>"
         )
     return (
         f'<p style="margin:0 0 16px; font-size:14px; color:#555;">Tip: read through this month\'s captions before you '
@@ -131,8 +178,7 @@ def captions_delivery_review_tip_plain(has_stories: bool) -> str:
     """Plain-text review tip for pack delivery email (kept in sync with _captions_delivery_review_tip_html)."""
     if has_stories:
         return (
-            "Tip: read through this month's captions and Story Ideas before you post. Edit anything so it fits your "
-            "voice, your brand, and any rules that apply to you.\n\n"
+            "We recommend you read through all of this month's captions and Story Ideas before you post.\n\n"
         )
     return (
         "Tip: read through this month's captions before you post. Edit anything so it fits your voice, your brand, and "
@@ -232,7 +278,7 @@ def _captions_delivery_email_html(
     else:
         main = """<p style="margin:0 0 16px;">Your 30 Days of Social Media Captions are ready. The document is attached.</p>
 <p style="margin:0 0 16px;">Copy each caption as you need it, or edit to fit.</p>"""
-    content = intro + main + _captions_delivery_review_tip_html(has_stories)
+    content = intro + main + _account_history_notice_delivery_html() + _captions_delivery_review_tip_html(has_stories)
     if (next_billing_display or "").strip():
         safe_nb = html_mod.escape((next_billing_display or "").strip(), quote=True)
         content += f"""
@@ -897,7 +943,7 @@ def _order_receipt_email_html(
 {business_line}
 <p style="margin:0 0 16px;">Thanks for your order. We've received your payment for 30 Days of Social Media Captions.</p>
 {receipt_block}<p style="margin:0 0 16px;">Complete your short intake form (about 2 minutes) when you're ready. Once you submit, we'll generate your captions and send them to you by email within a few minutes.</p>
-<p style="margin:0 0 16px;">If you need the form link again, check your inbox for your order confirmation or reply to this email.</p>
+{_account_history_notice_upcoming_html()}<p style="margin:0 0 16px;">If you need the form link again, check your inbox for your order confirmation or reply to this email.</p>
 <p style="margin:0;">— Lumo 22</p>"""
     return _email_wrapper(content)
 
@@ -920,29 +966,46 @@ def _get_signup_url() -> str:
 
 def _subscription_welcome_monthly_review_line_html(include_stories: bool) -> str:
     """Expectation-setting: skim/edit each month's pack (captions vs captions + Story Ideas)."""
+    import html as html_mod
+
+    safe_h = html_mod.escape(_account_history_url(), quote=True)
+    hist = (
+        f'<p style="margin:0 0 12px; font-size:14px; color:#555;">You can also open your PDFs from your account under '
+        f'<a href="{safe_h}" '
+        f'style="color:{BRAND_BLACK}; text-decoration:none; border-bottom:1px solid {BRAND_BLACK};">History</a> '
+        f"until you remove a pack from the list.</p>"
+    )
     if include_stories:
         return (
             f'<p style="margin:0 0 16px; font-size:14px; color:#555;">Each month when your pack arrives by email, '
             f"read through your captions and Story Ideas and edit anything so it fits your brand, your voice, and any "
             f"rules that apply to you before you post.</p>"
+            + hist
         )
     return (
         f'<p style="margin:0 0 16px; font-size:14px; color:#555;">Each month when your pack arrives by email, '
         f"read through your captions and edit anything so it fits your brand, your voice, and any rules that apply to "
         f"you before you post.</p>"
+        + hist
     )
 
 
 def _subscription_welcome_monthly_review_line_plain(include_stories: bool) -> str:
     """Plain-text version of _subscription_welcome_monthly_review_line_html."""
+    hist = (
+        "\nYou can also open your PDFs from your account under History "
+        f"({_account_history_url()}) until you remove a pack from the list.\n"
+    )
     if include_stories:
         return (
             "\nEach month when your pack arrives by email, read through your captions and Story Ideas and edit "
-            "anything so it fits your brand, your voice, and any rules that apply to you before you post.\n"
+            "anything so it fits your brand, your voice, and any rules that apply to you before you post."
+            + hist
         )
     return (
         "\nEach month when your pack arrives by email, read through your captions and edit anything so it fits your "
-        "brand, your voice, and any rules that apply to you before you post.\n"
+        "brand, your voice, and any rules that apply to you before you post."
+        + hist
     )
 
 
@@ -1066,7 +1129,7 @@ def _intake_link_email_html(
 <p style="margin:0 0 8px; font-size:14px; color:{BRAND_MUTED};">Or copy and paste this link into your browser:</p>
 <p style="margin:0 0 24px; font-size:13px; word-break:break-all; color:#333;">{safe_url}</p>
 <p style="margin:0 0 16px;">Once you submit, we'll generate your 30 captions and send them to you by email within a few minutes.</p>
-<p style="margin:0 0 16px;">{html.escape(account_line)}</p>
+{_account_history_notice_upcoming_html()}<p style="margin:0 0 16px;">{html.escape(account_line)}</p>
 <p style="margin:0 0 16px;">Thanks for choosing us.</p>
 <p style="margin:0;">— Lumo 22</p>"""
     return _email_wrapper(content)
@@ -1092,7 +1155,7 @@ def _captions_intake_reminder_email_html(intake_url: str, business_name: Optiona
 <p style="margin:0 0 8px; font-size:14px; color:{BRAND_MUTED};">Or copy and paste this link into your browser:</p>
 <p style="margin:0 0 24px; font-size:13px; word-break:break-all; color:#333;">{safe_url}</p>
 <p style="margin:0 0 16px;">This takes about 5–10 minutes. Once it's done, we'll generate your captions and email your pack.</p>
-<p style="margin:0;">— Lumo 22</p>"""
+{_account_history_notice_upcoming_html()}<p style="margin:0;">— Lumo 22</p>"""
     return _email_wrapper(content)
 
 
@@ -1572,6 +1635,10 @@ If you didn't request this, you can ignore this email. Your email address will s
             "Complete your short intake form (about 2 minutes) when you're ready. "
             "Once you submit, we'll generate your captions and send them to you by email within a few minutes.",
             "",
+        ])
+        body_lines.append(_account_history_notice_upcoming_plain().strip())
+        body_lines.extend([
+            "",
             "If you need the form link again, check your inbox for your order confirmation or reply to this email.",
             "",
             "— Lumo 22",
@@ -1632,7 +1699,12 @@ If you didn't request this, you can ignore this email. Your email address will s
         body += intake_url
         is_sub = bool(order and (order.get("stripe_subscription_id") or "").strip())
         account_line = "On the form you can also create an account to access your captions and manage your subscription in one place." if is_sub else "On the form you can also create an account to access your captions in one place."
-        body += "\n\nOnce you submit, we'll generate your 30 captions and send them to you by email within a few minutes.\n\n" + account_line + "\n\nThanks for choosing us.\n\nLumo 22"
+        body += (
+            "\n\nOnce you submit, we'll generate your 30 captions and send them to you by email within a few minutes.\n\n"
+            + _account_history_notice_upcoming_plain()
+            + account_line
+            + "\n\nThanks for choosing us.\n\nLumo 22"
+        )
         html_body = _intake_link_email_html(
             intake_url,
             order_summary=None,
