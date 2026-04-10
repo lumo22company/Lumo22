@@ -157,13 +157,25 @@
         <p class="account-section-desc" style="font-size: 0.9rem; color: rgba(255,255,255,0.8); margin-bottom: 0.5rem;">Showing orders for: <strong>{{ customer.email if customer and customer.email else '' }}</strong></p>
         {% set delivered_entries = history_delivered_entries|default([]) %}
         {% if delivered_entries %}
-        <p class="account-section-desc">View or download your delivered packs. Each month is listed separately for subscriptions. Each pack is available as a PDF; if you added Story Ideas, you get a separate Stories PDF. Only delivered packs appear here — for current orders use <strong>Edit form</strong> or Manage subscription.</p>
+        <p class="account-section-desc">View or download your delivered packs. Each delivery is listed as its own row (each month for subscriptions). Each pack is available as a PDF; if you added Story Ideas, you get a separate Stories PDF. Only delivered packs appear here — for current orders use <strong>Edit form</strong> or Manage subscription.</p>
+        <p class="account-section-desc" style="font-size: 0.88rem; line-height: 1.55; color: rgba(255,255,255,0.82); margin-top: 0.35rem; padding: 0.75rem 1rem; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; max-width: 52rem;">We keep up to <strong>{{ history_delivery_archive_max|default(200) }}</strong> stored past deliveries per order (plus your latest pack on the account). If you already have that many and a new pack arrives, the <strong>oldest</strong> stored delivery is removed automatically to make room — or you can delete older rows yourself first. Nothing is removed silently without that rule.</p>
+        {% if history_near_archive_limit|default(false) %}
+        <p class="account-section-desc" style="font-size: 0.88rem; line-height: 1.5; color: #f0e6a8; margin-top: 0.5rem;">You’re approaching that storage limit for at least one order. Download or remove older packs you no longer need if you want to keep specific months.</p>
+        {% endif %}
         <div class="account-history-filters" id="account-history-filters">
           <label for="account-history-business-filter">Business</label>
           <select id="account-history-business-filter" style="padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: #ffffff; color: #1a1a1a; font-size: 0.95rem;">
             <option value="">All packs</option>
           </select>
             </div>
+        <div class="account-history-bulk-toolbar" id="account-history-bulk-toolbar">
+          <label class="account-history-bulk-select-all-label">
+            <input type="checkbox" id="account-history-select-all" class="account-history-select-all" aria-label="Select all" />
+            <span>Select all</span>
+          </label>
+          <button type="button" class="account-history-delete-selected" id="account-history-delete-selected" disabled>Delete selected</button>
+          <span class="account-history-selected-hint" id="account-history-selected-hint" aria-live="polite"></span>
+        </div>
         <div class="account-history-list">
           {% for item in delivered_entries %}
           {% set o = item.order %}
@@ -177,6 +189,11 @@
             {% set archive_q = '' %}
           {% endif %}
           <div class="account-history-item" data-history-token="{{ o.token }}" data-business="{{ biz }}">
+            <div class="account-history-item-cols">
+              <label class="account-history-check-label">
+                <input type="checkbox" class="account-history-select" data-token="{{ o.token }}" data-is-subscription="{{ '1' if is_sub else '0' }}" data-archive-index="{% if item.archive_index is not none %}{{ item.archive_index }}{% endif %}" aria-label="Select {{ label }} pack {{ pack_date_src[:10] if pack_date_src else '' }}" />
+              </label>
+              <div class="account-history-item-body">
             <div class="account-history-item-title-row">
               <span>{{ label }} — Pack {{ pack_date_src[:10] if pack_date_src else '—' }}</span>
               <span class="account-history-type account-history-type--{{ 'subscription' if is_sub else 'oneoff' }}">{{ 'Subscription' if is_sub else 'One-off' }}</span>
@@ -192,9 +209,9 @@
                 <a href="/api/captions-download?t={{ o.token }}{{ archive_q }}&type=stories" class="account-btn-link account-btn-link--secondary">Download stories</a>
               </span>
             {% endif %}
-              {% if item.archive_index is none %}
-              <button type="button" class="account-btn-link account-history-delete" data-token="{{ o.token }}" data-is-subscription="{{ '1' if is_sub else '0' }}" onclick="showDeletePackModal(this)" aria-label="Delete pack from history">Delete</button>
-              {% endif %}
+              <button type="button" class="account-btn-link account-history-delete" data-token="{{ o.token }}" data-is-subscription="{{ '1' if is_sub else '0' }}" data-archive-index="{% if item.archive_index is not none %}{{ item.archive_index }}{% endif %}" onclick="showDeletePackModal(this)" aria-label="Delete pack from history">Delete</button>
+            </div>
+              </div>
             </div>
           </div>
           {% endfor %}
@@ -1161,11 +1178,23 @@
       <div class="account-delete-modal-backdrop" onclick="closeDeletePackModal()"></div>
       <div class="account-delete-modal-box">
         <h2 id="delete-pack-modal-title" class="account-delete-modal-title">Remove pack from history?</h2>
-        <p class="account-delete-modal-text">Are you sure you want to remove this pack from your history? Once removed, it cannot be undone.</p>
+        <p id="delete-pack-modal-body" class="account-delete-modal-text">Are you sure you want to remove this pack from your history? Once removed, it cannot be undone.</p>
         <p id="delete-pack-sub-note" class="account-delete-modal-text" style="display: none; font-size: 0.9rem; margin-top: 0.75rem; padding: 0.75rem 1rem; background: rgba(180, 40, 40, 0.5); border: 1px solid rgba(200, 60, 60, 0.95); border-radius: 8px; color: #fff;">Removing a pack from history does not cancel any active subscription. To cancel billing, go to Manage subscription.</p>
         <div class="account-delete-modal-buttons">
           <button type="button" class="account-delete-modal-btn account-delete-modal-keep" onclick="closeDeletePackModal()">Cancel</button>
           <button type="button" class="account-delete-modal-btn account-delete-modal-confirm" id="delete-pack-confirm-btn">Remove from history</button>
+        </div>
+      </div>
+    </div>
+    <div id="delete-packs-bulk-modal" class="account-delete-modal" role="dialog" aria-labelledby="delete-packs-bulk-modal-title" aria-modal="true" hidden>
+      <div class="account-delete-modal-backdrop" onclick="closeDeletePacksBulkModal()"></div>
+      <div class="account-delete-modal-box">
+        <h2 id="delete-packs-bulk-modal-title" class="account-delete-modal-title">Remove selected packs?</h2>
+        <p id="delete-packs-bulk-modal-body" class="account-delete-modal-text">The selected packs will be removed from your history. This cannot be undone.</p>
+        <p id="delete-packs-bulk-sub-note" class="account-delete-modal-text" style="display: none; font-size: 0.9rem; margin-top: 0.75rem; padding: 0.75rem 1rem; background: rgba(180, 40, 40, 0.5); border: 1px solid rgba(200, 60, 60, 0.95); border-radius: 8px; color: #fff;">Removing packs from history does not cancel any active subscription. To cancel billing, go to Manage subscription.</p>
+        <div class="account-delete-modal-buttons">
+          <button type="button" class="account-delete-modal-btn account-delete-modal-keep" onclick="closeDeletePacksBulkModal()">Cancel</button>
+          <button type="button" class="account-delete-modal-btn account-delete-modal-confirm" id="delete-packs-bulk-confirm-btn">Remove selected</button>
         </div>
       </div>
     </div>
@@ -1963,9 +1992,22 @@
         deletePackPendingBtn = btn;
         var modal = document.getElementById('delete-pack-modal');
         var subNote = document.getElementById('delete-pack-sub-note');
+        var titleEl = document.getElementById('delete-pack-modal-title');
+        var bodyEl = document.getElementById('delete-pack-modal-body');
+        var archRaw = btn.getAttribute('data-archive-index');
+        var isArchive = archRaw !== null && archRaw !== undefined && String(archRaw).trim() !== '';
+        if (titleEl && bodyEl) {
+          if (isArchive) {
+            titleEl.textContent = 'Remove this past pack?';
+            bodyEl.textContent = 'This removes only this delivery from your history list. It does not cancel a subscription or remove your current month’s pack.';
+          } else {
+            titleEl.textContent = 'Remove pack from history?';
+            bodyEl.textContent = 'Are you sure you want to remove this pack from your history? Once removed, it cannot be undone.';
+          }
+        }
         if (modal && subNote) {
           var isSub = btn.getAttribute('data-is-subscription') === '1';
-          subNote.style.display = isSub ? 'block' : 'none';
+          subNote.style.display = (!isArchive && isSub) ? 'block' : 'none';
           modal.removeAttribute('hidden');
           modal.classList.add('account-delete-modal--open');
         }
@@ -1986,15 +2028,25 @@
         closeDeletePackModal();
         btn.disabled = true;
         btn.textContent = 'Deleting…';
+        var archRaw = btn.getAttribute('data-archive-index');
+        var payload = { token: token };
+        if (archRaw !== null && archRaw !== undefined && String(archRaw).trim() !== '') {
+          var n = parseInt(archRaw, 10);
+          if (!isNaN(n)) payload.archive_index = n;
+        }
         fetch('/api/captions/hide-pack', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token: token }),
+          body: JSON.stringify(payload),
           credentials: 'same-origin'
         })
         .then(function(r) { return r.json(); })
         .then(function(data) {
           if (data.ok) {
+            if (payload.archive_index !== undefined) {
+              window.location.reload();
+              return;
+            }
             var item = btn.closest('.account-history-item');
             if (item) item.remove();
             else window.location.reload();
@@ -2019,6 +2071,122 @@
       })();
       window.showDeletePackModal = showDeletePackModal;
       window.closeDeletePackModal = closeDeletePackModal;
+
+      function getVisibleHistoryItems() {
+        var list = document.querySelector('.account-history-list');
+        if (!list) return [];
+        return Array.prototype.slice.call(list.querySelectorAll('.account-history-item')).filter(function(el) {
+          return el.style.display !== 'none';
+        });
+      }
+
+      function updateHistoryBulkToolbarState() {
+        var hint = document.getElementById('account-history-selected-hint');
+        var delBtn = document.getElementById('account-history-delete-selected');
+        var selectAll = document.getElementById('account-history-select-all');
+        var all = Array.prototype.slice.call(document.querySelectorAll('.account-history-select'));
+        var checked = all.filter(function(cb) { return cb.checked; });
+        var n = checked.length;
+        if (hint) hint.textContent = n ? (n === 1 ? '1 pack selected' : n + ' packs selected') : '';
+        if (delBtn) delBtn.disabled = n === 0;
+        if (selectAll) {
+          var vis = getVisibleHistoryItems();
+          var visChecks = vis.map(function(row) { return row.querySelector('.account-history-select'); }).filter(Boolean);
+          var visChecked = visChecks.filter(function(cb) { return cb.checked; }).length;
+          selectAll.checked = visChecks.length > 0 && visChecked === visChecks.length;
+          selectAll.indeterminate = visChecked > 0 && visChecked < visChecks.length;
+        }
+      }
+
+      function closeDeletePacksBulkModal() {
+        var modal = document.getElementById('delete-packs-bulk-modal');
+        if (modal) {
+          modal.setAttribute('hidden', '');
+          modal.classList.remove('account-delete-modal--open');
+        }
+      }
+
+      function showDeletePacksBulkModal() {
+        var all = Array.prototype.slice.call(document.querySelectorAll('.account-history-select'));
+        var checked = all.filter(function(cb) { return cb.checked; });
+        if (!checked.length) return;
+        var bodyEl = document.getElementById('delete-packs-bulk-modal-body');
+        var subNote = document.getElementById('delete-packs-bulk-sub-note');
+        var n = checked.length;
+        if (bodyEl) {
+          bodyEl.textContent = n === 1
+            ? 'Remove 1 pack from your history? This cannot be undone.'
+            : 'Remove ' + n + ' packs from your history? This cannot be undone.';
+        }
+        if (subNote) {
+          var showSub = checked.some(function(cb) {
+            var isSub = cb.getAttribute('data-is-subscription') === '1';
+            var arch = cb.getAttribute('data-archive-index');
+            var isCurrent = !arch || String(arch).trim() === '';
+            return isSub && isCurrent;
+          });
+          subNote.style.display = showSub ? 'block' : 'none';
+        }
+        var modal = document.getElementById('delete-packs-bulk-modal');
+        if (modal) {
+          modal.removeAttribute('hidden');
+          modal.classList.add('account-delete-modal--open');
+        }
+      }
+
+      function confirmDeletePacksBulk() {
+        var all = Array.prototype.slice.call(document.querySelectorAll('.account-history-select'));
+        var checked = all.filter(function(cb) { return cb.checked; });
+        if (!checked.length) {
+          closeDeletePacksBulkModal();
+          return;
+        }
+        var items = checked.map(function(cb) {
+          var token = cb.getAttribute('data-token');
+          var arch = cb.getAttribute('data-archive-index');
+          var row = { token: token };
+          if (arch !== null && arch !== undefined && String(arch).trim() !== '') {
+            var ai = parseInt(arch, 10);
+            if (!isNaN(ai)) row.archive_index = ai;
+          }
+          return row;
+        });
+        var confirmBtn = document.getElementById('delete-packs-bulk-confirm-btn');
+        if (confirmBtn) {
+          confirmBtn.disabled = true;
+          confirmBtn.textContent = 'Removing…';
+        }
+        closeDeletePacksBulkModal();
+        fetch('/api/captions/hide-packs-bulk', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items: items }),
+          credentials: 'same-origin'
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.ok) {
+            if (data.errors && data.errors.length) {
+              alert('Removed ' + (data.processed || 0) + ' pack(s). Some selections could not be removed.');
+            }
+            window.location.reload();
+            return;
+          }
+          alert(data.error || 'Could not remove packs');
+        })
+        .catch(function() {
+          alert('Something went wrong — try again.');
+        })
+        .finally(function() {
+          if (confirmBtn) {
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = 'Remove selected';
+          }
+        });
+      }
+
+      window.closeDeletePacksBulkModal = closeDeletePacksBulkModal;
+      window.showDeletePacksBulkModal = showDeletePacksBulkModal;
 
       (function initHistoryFilters() {
         var list = document.querySelector('.account-history-list');
@@ -2049,9 +2217,47 @@
               var show = !val || biz === val;
               item.style.display = show ? '' : 'none';
             });
+            updateHistoryBulkToolbarState();
           });
         }
         // All delivered packs are listed (newest first from server); no client-side cap.
+      })();
+
+      (function initHistoryBulkToolbar() {
+        var list = document.querySelector('.account-history-list');
+        if (!list) return;
+        var selectAll = document.getElementById('account-history-select-all');
+        var delBtn = document.getElementById('account-history-delete-selected');
+        if (!selectAll || !delBtn) return;
+
+        list.addEventListener('change', function(ev) {
+          if (ev.target && ev.target.classList && ev.target.classList.contains('account-history-select')) {
+            updateHistoryBulkToolbarState();
+          }
+        });
+
+        selectAll.addEventListener('change', function() {
+          var on = selectAll.checked;
+          getVisibleHistoryItems().forEach(function(row) {
+            var cb = row.querySelector('.account-history-select');
+            if (cb) cb.checked = on;
+          });
+          updateHistoryBulkToolbarState();
+        });
+
+        delBtn.addEventListener('click', function() {
+          showDeletePacksBulkModal();
+        });
+
+        (function wireBulkModal() {
+          var modal = document.getElementById('delete-packs-bulk-modal');
+          var confirmBtn = document.getElementById('delete-packs-bulk-confirm-btn');
+          var backdrop = modal ? modal.querySelector('.account-delete-modal-backdrop') : null;
+          if (backdrop) backdrop.addEventListener('click', closeDeletePacksBulkModal);
+          if (confirmBtn) confirmBtn.addEventListener('click', confirmDeletePacksBulk);
+        })();
+
+        updateHistoryBulkToolbarState();
       })();
 
       var addStoriesPendingBtn = null;
