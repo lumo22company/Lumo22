@@ -930,26 +930,16 @@
         {% if get_pack_sooner and get_pack_order_token %}
         {% set _gps_order = none %}{% for so in (sub_orders or []) %}{% if not _gps_order and (so.get('token') or '') == get_pack_order_token %}{% set _gps_order = so %}{% endif %}{% endfor %}
         {% if _gps_order %}
-        {% set _gps_platforms = (_gps_order.get('platforms_count') or 1)|int %}
-        {% set _gps_stories = _gps_order.get('include_stories') %}
-        {% set _gps_currency = (_gps_order.get('currency') or 'gbp')|lower %}
-        {% set _gps_prices = captions_prices.get(_gps_currency, captions_prices['gbp']) %}
-        {% set _gps_total = _gps_prices.get('sub', 79) + (_gps_platforms - 1) * _gps_prices.get('extra_sub', 19) + (_gps_prices.get('stories_sub', 17) if _gps_stories else 0) %}
-        {% set _gps_symbol = _gps_prices.get('symbol', '£') %}
-        {% else %}
-        {% set _gps_total = 79 %}
-        {% set _gps_symbol = '£' %}
-        {% endif %}
-        <div id="get-pack-sooner-confirm-panel" class="account-info-panel" data-order-token="{{ get_pack_order_token }}" data-amount="{{ _gps_symbol }}{{ _gps_total }}" style="margin-bottom: 1.25rem; background: rgba(201,162,39,0.12); border: 1px solid rgba(201,162,39,0.35);">
+        <div id="get-pack-sooner-confirm-panel" class="account-info-panel" data-order-token="{{ get_pack_order_token }}" style="margin-bottom: 1.25rem; background: rgba(201,162,39,0.12); border: 1px solid rgba(201,162,39,0.35);">
           <h3 style="font-size: 1.1rem; margin: 0 0 0.75rem; color: #1a1a1a;">Form updated. Ready to get your pack sooner?</h3>
-          <p style="margin: 0 0 0.75rem; color: #333;">Your subscription is about <strong id="get-pack-sooner-amount">{{ _gps_symbol }}{{ _gps_total }}</strong>/month before this change—checkout will show the exact amount for this pack-sooner payment. You'll be taken to <strong>checkout</strong> every time to confirm payment and your new billing date, even when your monthly price stays the same. Your next billing date resets from today. If you still need to change platforms or Story Ideas, use <strong>Change plan</strong> above or <strong>Get my pack sooner</strong> → <strong>Update preferences</strong>. For your brief only, use <strong>Edit form</strong> in the menu.</p>
-          <p style="margin: 0 0 1rem; font-size: 0.9rem; color: #555;">By confirming you agree to continue to checkout; you'll see your total and updated billing period there before you pay.</p>
+          <p style="margin: 0 0 0.75rem; color: #333;">You'll go to <strong>checkout</strong> to confirm payment and your new billing date. If you still need to change platforms or Story Ideas, use <strong>Change plan</strong> above or <strong>Get my pack sooner</strong> → <strong>Update preferences</strong>. For your brief only, use <strong>Edit form</strong> in the menu.</p>
           <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
             <button type="button" id="get-pack-sooner-confirm-btn" class="lumo-btn-primary account-btn-swipe-dark" data-order-token="{{ get_pack_order_token }}" data-order-id="{{ _gps_order.get('id', '') if _gps_order else '' }}">Continue to checkout</button>
             <a href="/account/subscription" class="account-billing-portal-link account-btn-swipe-light">Cancel</a>
           </div>
           <p id="get-pack-sooner-error" style="display: none; margin: 0.75rem 0 0; color: #c00; font-size: 0.9rem;"></p>
         </div>
+        {% endif %}
         {% endif %}
         {% if sub_orders %}
         <ul class="account-section-desc" style="margin: 0 0 1.25rem; padding-left: 1.25rem; line-height: 1.7; color: #ffffff;">
@@ -1037,7 +1027,7 @@
       <div class="account-delete-modal-backdrop" onclick="closeGetPackSoonerConfirmModal()"></div>
       <div class="account-delete-modal-box remove-stories-modal-box" style="max-width: 520px;">
         <h2 id="get-pack-sooner-confirm-title" class="account-delete-modal-title">Continue to checkout</h2>
-        <p class="account-delete-modal-text change-plan-price-line">You'll open <strong>secure checkout</strong> to complete payment.</p>
+        <p class="account-delete-modal-text">You'll open secure checkout to complete payment.</p>
         <p class="account-delete-modal-text">After you complete payment, your next billing date will be 30 days from then, and we'll email your pack within a few minutes.</p>
         <div class="account-delete-modal-buttons">
           <button type="button" class="account-delete-modal-btn account-delete-modal-keep" onclick="closeGetPackSoonerConfirmModal()">Cancel</button>
