@@ -113,6 +113,98 @@ def _email_wrapper(content: str) -> str:
 </html>"""
 
 
+def _captions_delivery_review_tip_html(has_stories: bool) -> str:
+    """Short tip: review/edit for the month (captions only vs captions + Story Ideas)."""
+    if has_stories:
+        return (
+            f'<p style="margin:0 0 16px; font-size:14px; color:#555;">Tip: read through this month\'s captions and '
+            f"Story Ideas before you post. Edit anything so it fits your voice, your brand, and any rules that apply "
+            f"to you.</p>"
+        )
+    return (
+        f'<p style="margin:0 0 16px; font-size:14px; color:#555;">Tip: read through this month\'s captions before you '
+        f"post. Edit anything so it fits your voice, your brand, and any rules that apply to you.</p>"
+    )
+
+
+def captions_delivery_review_tip_plain(has_stories: bool) -> str:
+    """Plain-text review tip for pack delivery email (kept in sync with _captions_delivery_review_tip_html)."""
+    if has_stories:
+        return (
+            "Tip: read through this month's captions and Story Ideas before you post. Edit anything so it fits your "
+            "voice, your brand, and any rules that apply to you.\n\n"
+        )
+    return (
+        "Tip: read through this month's captions before you post. Edit anything so it fits your voice, your brand, and "
+        "any rules that apply to you.\n\n"
+    )
+
+
+def _pack_sooner_receipt_plain_html(
+    order: Dict[str, Any],
+    *,
+    amount_paid_display: str,
+    ongoing_monthly_display: str,
+    next_billing_display: Optional[str],
+) -> Tuple[str, str]:
+    """
+    Plain + HTML fragment for get-pack-sooner: one-time charge, current plan (from order — includes
+    Update preferences before checkout), ongoing monthly rate, next billing date. Prepended to the
+    delivery email so payment confirmation and PDF arrive in one message.
+    """
+    import html as html_module
+
+    platforms_n = max(1, min(4, int(order.get("platforms_count") or 1)))
+    selected = (order.get("selected_platforms") or "").strip()
+    if selected:
+        platforms_line = selected
+    else:
+        platforms_line = "1 platform" if platforms_n == 1 else f"{platforms_n} platforms"
+    stories_on = bool(order.get("include_stories"))
+    stories_line = "30 Days Story Ideas: included" if stories_on else "30 Days Story Ideas: not included"
+
+    nb = (next_billing_display or "").strip()
+    safe_amount = html_module.escape((amount_paid_display or "").strip())
+    safe_ongoing = html_module.escape((ongoing_monthly_display or "").strip())
+    safe_plat = html_module.escape(platforms_line)
+    safe_nb = html_module.escape(nb) if nb else ""
+
+    plain = (
+        "Get pack sooner — payment received\n"
+        f"Amount charged (one-time): {amount_paid_display or '—'}\n\n"
+        "Your plan (this pack and going forward)\n"
+        f"- Product: 30 Days of Social Media Captions (subscription)\n"
+        f"- Platforms: {platforms_line}\n"
+        f"- {stories_line}\n"
+        f"- Ongoing subscription: {ongoing_monthly_display or '—'}\n"
+    )
+    if nb:
+        plain += f"- Next billing date: {nb}\n"
+    plain += "\n"
+
+    rows = (
+        f'<p style="margin:0 0 8px;"><strong>Amount charged (one-time):</strong> {safe_amount}</p>'
+        f'<p style="margin:0 0 6px; font-size:13px; color:#333;"><strong>Your plan</strong> (this pack and going forward)</p>'
+        f'<ul style="margin:0 0 10px; padding-left:18px; font-size:14px; color:#333;">'
+        f'<li>30 Days of Social Media Captions (subscription)</li>'
+        f'<li>Platforms: {safe_plat}</li>'
+        f'<li>{html_module.escape(stories_line)}</li>'
+        f'<li>Ongoing subscription: {safe_ongoing}</li>'
+        f"{f'<li><strong>Next billing date:</strong> {safe_nb}</li>' if nb else ''}"
+        f"</ul>"
+    )
+
+    inner = (
+        f'<p style="margin:0 0 10px; font-size:15px; color:{BRAND_TEXT}; font-weight:600;">'
+        f"Get pack sooner — payment received</p>{rows}"
+    )
+    html_block = (
+        f'<div style="margin:0 0 20px; font-size:14px; color:{BRAND_TEXT_ON_LIGHT_GREY_PANEL}; '
+        f'border:1px solid rgba(0,0,0,0.08); border-radius:8px; padding:16px; background:#fafafa;">{inner}</div>'
+    )
+    return plain, html_block
+
+
 def _captions_delivery_email_html(
     has_stories: bool,
     has_subscription: bool = False,
@@ -121,6 +213,7 @@ def _captions_delivery_email_html(
     backup_link_expiry_hours: int = 24,
     business_name: Optional[str] = None,
     next_billing_display: Optional[str] = None,
+    pack_sooner_receipt_html: Optional[str] = None,
 ) -> str:
     """Build explicit HTML for the 30 Days captions delivery email so the body always shows."""
     import html as html_mod
@@ -129,15 +222,17 @@ def _captions_delivery_email_html(
     safe_business = _sanitize_email_value(business_name or "")
     if safe_business:
         business_line = f"<p style=\"margin:0 0 16px;\"><strong>Business:</strong> {safe_business}</p>"
+    receipt_block = ""
+    if (pack_sooner_receipt_html or "").strip():
+        receipt_block = (pack_sooner_receipt_html or "").strip()
+    intro = '<p style="margin:0 0 16px;">Hi,</p>' + business_line + receipt_block
     if has_stories:
-        content = """<p style="margin:0 0 16px;">Hi,</p>
-<p style="margin:0 0 16px;">Your 30 Days of Social Media Captions and 30 Days of Story Ideas are ready. Both documents are attached.</p>
+        main = """<p style="margin:0 0 16px;">Your 30 Days of Social Media Captions and 30 Days of Story Ideas are ready. Both documents are attached.</p>
 <p style="margin:0 0 16px;">Copy each caption and story idea as you need them, or edit to fit.</p>"""
     else:
-        content = """<p style="margin:0 0 16px;">Hi,</p>
-<p style="margin:0 0 16px;">Your 30 Days of Social Media Captions are ready. The document is attached.</p>
+        main = """<p style="margin:0 0 16px;">Your 30 Days of Social Media Captions are ready. The document is attached.</p>
 <p style="margin:0 0 16px;">Copy each caption as you need it, or edit to fit.</p>"""
-    content = content.replace("</p>", "</p>", 1) + business_line
+    content = intro + main + _captions_delivery_review_tip_html(has_stories)
     if (next_billing_display or "").strip():
         safe_nb = html_mod.escape((next_billing_display or "").strip(), quote=True)
         content += f"""
@@ -823,8 +918,40 @@ def _get_signup_url() -> str:
     return f"{base}/signup"
 
 
+def _subscription_welcome_monthly_review_line_html(include_stories: bool) -> str:
+    """Expectation-setting: skim/edit each month's pack (captions vs captions + Story Ideas)."""
+    if include_stories:
+        return (
+            f'<p style="margin:0 0 16px; font-size:14px; color:#555;">Each month when your pack arrives by email, '
+            f"read through your captions and Story Ideas and edit anything so it fits your brand, your voice, and any "
+            f"rules that apply to you before you post.</p>"
+        )
+    return (
+        f'<p style="margin:0 0 16px; font-size:14px; color:#555;">Each month when your pack arrives by email, '
+        f"read through your captions and edit anything so it fits your brand, your voice, and any rules that apply to "
+        f"you before you post.</p>"
+    )
+
+
+def _subscription_welcome_monthly_review_line_plain(include_stories: bool) -> str:
+    """Plain-text version of _subscription_welcome_monthly_review_line_html."""
+    if include_stories:
+        return (
+            "\nEach month when your pack arrives by email, read through your captions and Story Ideas and edit "
+            "anything so it fits your brand, your voice, and any rules that apply to you before you post.\n"
+        )
+    return (
+        "\nEach month when your pack arrives by email, read through your captions and edit anything so it fits your "
+        "brand, your voice, and any rules that apply to you before you post.\n"
+    )
+
+
 def _subscription_welcome_prefilled_email_html(
-    login_url: str, intake_url: str, pricing_summary_html: Optional[str] = None, business_name: Optional[str] = None
+    login_url: str,
+    intake_url: str,
+    pricing_summary_html: Optional[str] = None,
+    business_name: Optional[str] = None,
+    include_stories: bool = False,
 ) -> str:
     """Branded HTML for subscription welcome when upgraded from one-off. They already have an account; log in to access prefilled form."""
     import html
@@ -837,9 +964,11 @@ def _subscription_welcome_prefilled_email_html(
     safe_business = _sanitize_email_value(business_name or "")
     if safe_business:
         business_line = f"<p style=\"margin:0 0 16px;\"><strong>Business:</strong> {safe_business}</p>"
+    review_line = _subscription_welcome_monthly_review_line_html(include_stories)
     content = f"""<p style="margin:0 0 16px;">Hi,</p>
 {business_line}
 <p style="margin:0 0 16px;">You're subscribed to 30 Days of Social Media Captions. Your form is already filled from your one-off pack—log in to your account to review or edit it whenever you like.</p>
+{review_line}
 {summary_block}
 <p style="margin:0 0 24px;"><a href="{safe_login}" style="display:inline-block; padding:14px 28px; background:{BRAND_GOLD}; color:{BRAND_BLACK}; text-decoration:none; border-radius:10px; font-weight:600;">Log in to your account</a></p>
 <p style="margin:0 0 12px;">Open your form (prefilled); you can edit it anytime in your account:</p>
@@ -850,7 +979,12 @@ def _subscription_welcome_prefilled_email_html(
 
 
 def _subscription_upgrade_confirmation_email_html(
-    login_url: str, intake_url: str, first_charge_date: Optional[str] = None, pricing_summary_html: Optional[str] = None, business_name: Optional[str] = None
+    login_url: str,
+    intake_url: str,
+    first_charge_date: Optional[str] = None,
+    pricing_summary_html: Optional[str] = None,
+    business_name: Optional[str] = None,
+    include_stories: bool = False,
 ) -> str:
     """Branded HTML for upgrade confirmation when trial (no charge today). Charge when first pack is ready."""
     import html
@@ -880,9 +1014,11 @@ def _subscription_upgrade_confirmation_email_html(
     safe_business = _sanitize_email_value(business_name or "")
     if safe_business:
         business_line = f"<p style=\"margin:0 0 16px;\"><strong>Business:</strong> {safe_business}</p>"
+    review_line = _subscription_welcome_monthly_review_line_html(include_stories)
     content = f"""<p style="margin:0 0 16px;">Hi,</p>
 {business_line}
 <p style="margin:0 0 16px;">You're set up for your 30 Days Captions subscription. Your form is already filled from your one-off pack—log in to your account to review or edit it whenever you like.</p>
+{review_line}
 {summary_block}
 {charge_p}
 <p style="margin:0 0 24px;"><a href="{safe_login}" style="display:inline-block; padding:14px 28px; background:{BRAND_GOLD}; color:{BRAND_BLACK}; text-decoration:none; border-radius:10px; font-weight:600;">Log in to your account</a></p>
@@ -1513,14 +1649,16 @@ If you didn't request this, you can ignore this email. Your email address will s
         if not to_email or "@" not in str(to_email):
             return False
         business_name = _extract_business_name(order) if order else None
+        include_stories = bool(order and order.get("include_stories"))
         subject = _subject_with_business("You're subscribed — 30 Days Captions", business_name)
         login_url = _get_login_url()
         pricing_text, pricing_html = _build_subscription_upgrade_pricing_summary(order, charged_today=amount_paid)
         pricing_block = ("\n\n" + pricing_text + "\n") if pricing_text else ""
+        review_plain = _subscription_welcome_monthly_review_line_plain(include_stories)
         body = """Hi,
 
 You're subscribed to 30 Days of Social Media Captions. Your form is already filled from your one-off pack—log in to your account to review or edit it whenever you like.
-""" + pricing_block + """
+""" + review_plain + pricing_block + """
 Log in to your account: """ + login_url + """
 
 Open your form (prefilled); you can edit it anytime in your account: """ + (intake_url or "") + """
@@ -1536,6 +1674,7 @@ If you have any questions, just reply to this email.
             intake_url,
             pricing_summary_html=pricing_html,
             business_name=business_name,
+            include_stories=include_stories,
         )
         return self.send_email(to_email, subject, body, html_body=html_body)
 
@@ -1546,10 +1685,12 @@ If you have any questions, just reply to this email.
         if not to_email or "@" not in str(to_email):
             return False
         business_name = _extract_business_name(order) if order else None
+        include_stories = bool(order and order.get("include_stories"))
         subject = _subject_with_business("You're set up — 30 Days Captions subscription", business_name)
         login_url = _get_login_url()
         pricing_text, pricing_html = _build_subscription_upgrade_pricing_summary(order)
         pricing_block = ("\n\n" + pricing_text) if pricing_text else ""
+        review_plain = _subscription_welcome_monthly_review_line_plain(include_stories)
         sooner_line = (
             "\nIf you want your subscription pack sooner, you can do this in your account.\n"
         )
@@ -1570,7 +1711,7 @@ If you have any questions, just reply to this email.
         body = """Hi,
 
 You're set up for your 30 Days Captions subscription. Your form is already filled from your one-off pack—log in to your account to review or edit it whenever you like.
-""" + pricing_block + """
+""" + review_plain + pricing_block + """
 """ + charge_line + """
 Log in to your account: """ + login_url + """
 
@@ -1588,6 +1729,7 @@ If you have any questions, just reply to this email.
             first_charge_date,
             pricing_summary_html=pricing_html,
             business_name=business_name,
+            include_stories=include_stories,
         )
         return self.send_email(to_email, subject, body, html_body=html_body)
 

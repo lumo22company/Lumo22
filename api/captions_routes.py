@@ -1422,16 +1422,25 @@ def _run_generation_and_deliver(
     *,
     force_redeliver: bool = False,
     force_captions_only: bool = False,
+    pack_sooner_receipt: Optional[dict] = None,
 ):
     """Background: generate captions, save, email client. Runs outside request context.
     force_redeliver: when True, regenerate and email even if status is 'delivered', and retry even if
     status is 'generating' (support redeliver). Otherwise stale generating (>25m) still retries like recovery cron.
-    force_captions_only: when True, skip stories generation and deliver captions only."""
+    force_captions_only: when True, skip stories generation and deliver captions only.
+    pack_sooner_receipt: optional dict from get-pack-sooner webhook with amount_paid_display, ongoing_monthly_display;
+    prepends payment + plan summary to the delivery email (single combined message)."""
     import traceback
     from datetime import datetime
+
     from services.caption_order_service import CaptionOrderService
     from services.caption_generator import CaptionGenerator, extract_day_categories_from_captions_md
-    from services.notifications import NotificationService, _captions_delivery_email_html
+    from services.notifications import (
+        NotificationService,
+        _captions_delivery_email_html,
+        _pack_sooner_receipt_plain_html,
+        captions_delivery_review_tip_plain,
+    )
 
     print(f"[Captions] Starting generation for order {order_id} (force_redeliver={force_redeliver})")
     order_service = CaptionOrderService()
@@ -1484,10 +1493,9 @@ def _run_generation_and_deliver(
         order_service.set_failed(order_id)
         return (False, "No customer_email for order")
 
-    if force_redeliver and (row.get("stripe_subscription_id") or "").strip():
-        if _subscription_pack_delivery_recent_duplicate(str(order_id)):
-            print(f"[Captions] Order {order_id} subscription delivery dedupe: skipped rapid duplicate")
-            return (True, None)
+    # Do not dedupe here when force_redeliver=True: get-pack-sooner registers the order in the webhook
+    # before starting this thread so duplicate Stripe webhook deliveries are skipped; an inner duplicate
+    # check would treat that same registration as a "second" run and skip generation entirely (no PDF email).
 
     # For subscriptions, pass previous pack themes so this month varies (avoid repetition)
     previous_pack_themes = None
@@ -1564,6 +1572,8 @@ def _run_generation_and_deliver(
                 })
         business_name = (intake.get("business_name") or "").strip()
         subject = "Your 30 Days of Social Media Captions"
+        if pack_sooner_receipt and isinstance(pack_sooner_receipt, dict):
+            subject = "Your 30 Days captions — payment & pack ready"
         if business_name:
             subject = f"{subject} — {business_name}"
         has_sub = bool(row.get("stripe_subscription_id"))
@@ -1584,6 +1594,18 @@ def _run_generation_and_deliver(
                         next_billing_plain = f"Your next billing date is {next_billing_display}.\n\n"
             except Exception:
                 pass
+        pps_plain_prefix = ""
+        pps_html = None
+        if pack_sooner_receipt and isinstance(pack_sooner_receipt, dict):
+            ap = (pack_sooner_receipt.get("amount_paid_display") or "").strip()
+            og = (pack_sooner_receipt.get("ongoing_monthly_display") or "").strip()
+            pps_plain_prefix, pps_html = _pack_sooner_receipt_plain_html(
+                row,
+                amount_paid_display=ap or "—",
+                ongoing_monthly_display=og or "—",
+                next_billing_display=next_billing_display,
+            )
+            next_billing_plain = ""
         base = (Config.BASE_URL or "").strip().rstrip("/")
         if not base.startswith("http"):
             base = "https://www.lumo22.com"
@@ -1597,6 +1619,7 @@ def _run_generation_and_deliver(
         if extra_attachments:
             body = (
                 "Hi,\n\n"
+                + pps_plain_prefix
                 + next_billing_plain
                 + "Your 30 Days of Social Media Captions and 30 Days of Story Ideas are ready. "
                 "Both documents are attached.\n\nCopy each caption and story idea as you need them, or edit to fit.\n\n"
@@ -1604,6 +1627,7 @@ def _run_generation_and_deliver(
         else:
             body = (
                 "Hi,\n\n"
+                + pps_plain_prefix
                 + next_billing_plain
                 + "Your 30 Days of Social Media Captions are ready. The document is attached.\n\n"
                 "Copy each caption as you need it, or edit to fit.\n\n"
@@ -1613,6 +1637,7 @@ def _run_generation_and_deliver(
                     "Note: your Story Ideas add-on was not generated successfully in this run. "
                     "We've delivered your captions now so you can start posting.\n\n"
                 )
+        body += captions_delivery_review_tip_plain(bool(extra_attachments))
         if has_sub:
             body += "Deleting this email or the PDF does not cancel your subscription. To cancel, go to your account → Manage subscription.\n\n"
         body += "If attachments don't appear in your inbox, use your backup download link(s):\n"
@@ -1630,7 +1655,8 @@ def _run_generation_and_deliver(
             backup_stories_url=(backup_stories_url or ""),
             backup_link_expiry_hours=_public_download_expiry_hours(),
             business_name=business_name or None,
-            next_billing_display=next_billing_display,
+            next_billing_display=None if pps_html else next_billing_display,
+            pack_sooner_receipt_html=pps_html,
         )
         # Save generated artifacts first so customer can still download even if email send fails.
         stories_pdf_bytes = extra_attachments[0]["content"] if extra_attachments else None
@@ -2614,7 +2640,11 @@ def captions_resend_delivery():
     """
     from api.auth_routes import get_current_customer
     from services.caption_order_service import CaptionOrderService, order_includes_stories_addon
-    from services.notifications import NotificationService, _captions_delivery_email_html
+    from services.notifications import (
+        NotificationService,
+        _captions_delivery_email_html,
+        captions_delivery_review_tip_plain,
+    )
     import base64
 
     customer = get_current_customer()

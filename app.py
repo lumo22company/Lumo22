@@ -1232,7 +1232,7 @@ def _referral_share_mailto_href(base_url: str, code: str) -> str:
         "The discount: 10% off your first purchase — applied only when you enter the code below on the Stripe payment page under “Add promotion code”. Visiting a link does not apply the discount by itself.\n"
         "Our site (optional):\n"
         f"{link_home}\n\n"
-        f"Your code (enter at Stripe checkout): {c}\n\n"
+        f"Your code (enter at checkout): {c}\n\n"
         "—"
     )
     return "mailto:?subject=" + quote(subject, safe="") + "&body=" + quote(body, safe="")
@@ -1248,7 +1248,7 @@ def _referral_share_sms_href(base_url: str, code: str) -> str:
         return ""
     link_home = f"{b}/"
     text = (
-        "Hi — Lumo 22: 30 days of social captions. 10% off first purchase — enter this code at Stripe checkout under Add promotion code: "
+        "Hi — Lumo 22: 30 days of social captions. 10% off first purchase — enter this code at checkout under Add promotion code: "
         f"{c} "
         f"(Opening a link alone doesn’t apply the discount.) {link_home}"
     )

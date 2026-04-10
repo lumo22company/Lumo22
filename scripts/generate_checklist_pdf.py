@@ -146,7 +146,7 @@ def build_pdf():
             "☐ Get your pack sooner opens first modal",
             "☐ Use current details → confirm modal with amount → Cancel (no charge)",
             "☐ Update my form → intake (pre-filled) → submit → yellow Form updated panel on return",
-            "☐ On yellow panel, Confirm and get my pack → success message; pack email later",
+            "☐ On yellow panel, Continue to checkout → success message; pack email later",
             "☐ Cancel on panel goes back to Manage subscription",
         ]),
         ("10. Legal &amp; old products", [

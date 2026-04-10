@@ -573,7 +573,7 @@
                 window.location.href = payUrl;
                 return;
               }
-              throw new Error('Could not open Stripe checkout. Please try again or use Manage subscription.');
+              throw new Error('Could not open checkout. Please try again or use Manage subscription.');
             })
             .catch(function(err) {
               showPpsContinueErr(err.message || 'Something went wrong. Try again.');
@@ -945,7 +945,7 @@
           <p style="margin: 0 0 0.75rem; color: #333;">Your subscription is about <strong id="get-pack-sooner-amount">{{ _gps_symbol }}{{ _gps_total }}</strong>/month before this change—checkout will show the exact amount for this pack-sooner payment. You'll be taken to <strong>checkout</strong> every time to confirm payment and your new billing date, even when your monthly price stays the same. Your next billing date resets from today. If you still need to change platforms or Story Ideas, use <strong>Change plan</strong> above or <strong>Get my pack sooner</strong> → <strong>Update preferences</strong>. For your brief only, use <strong>Edit form</strong> in the menu.</p>
           <p style="margin: 0 0 1rem; font-size: 0.9rem; color: #555;">By confirming you agree to continue to checkout; you'll see your total and updated billing period there before you pay.</p>
           <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
-            <button type="button" id="get-pack-sooner-confirm-btn" class="lumo-btn-primary account-btn-swipe-dark" data-order-token="{{ get_pack_order_token }}" data-order-id="{{ _gps_order.get('id', '') if _gps_order else '' }}">Confirm and get my pack</button>
+            <button type="button" id="get-pack-sooner-confirm-btn" class="lumo-btn-primary account-btn-swipe-dark" data-order-token="{{ get_pack_order_token }}" data-order-id="{{ _gps_order.get('id', '') if _gps_order else '' }}">Continue to checkout</button>
             <a href="/account/subscription" class="account-billing-portal-link account-btn-swipe-light">Cancel</a>
           </div>
           <p id="get-pack-sooner-error" style="display: none; margin: 0.75rem 0 0; color: #c00; font-size: 0.9rem;"></p>
@@ -985,7 +985,7 @@
       <section class="account-section-block account-section-block--refer">
         <h2>Refer a friend</h2>
         {% if referral_code %}
-        <p class="account-section-desc">The <strong>10% friend discount</strong> applies when they <strong>enter your code at Stripe checkout</strong> (Add promotion code). Share your code below or via email/text—you get 10% off your next billing period for each friend who completes a purchase. Discounts don't stack: two referrals = 10% off your next two periods.</p>
+        <p class="account-section-desc">The <strong>10% friend discount</strong> applies when they <strong>enter your code at checkout</strong> (Add promotion code). Share your code below or via email/text—you get 10% off your next billing period for each friend who completes a purchase. Discounts don't stack: two referrals = 10% off your next two periods.</p>
         {% if referral_discount_configured|default(false) and not referral_stripe_promo_ok|default(false) %}
         <div class="account-referral-stripe-warning" style="margin-top: 0.75rem; padding: 0.75rem 1rem; background: rgba(220, 160, 50, 0.12); border: 1px solid rgba(255, 200, 80, 0.35); border-radius: 10px; color: #fff;">
           <p class="account-section-desc" style="margin: 0; color: #fff;">Your code could not be linked to the payment page yet (or the link expired). Use <strong>Retry linking</strong> below—we will try again with Stripe. You can still refresh the page. If a friend sees &ldquo;invalid code&rdquo; at checkout, email <a href="mailto:hello@lumo22.com" style="color: var(--lum-gold); font-weight: 600;">hello@lumo22.com</a>.</p>
@@ -1001,7 +1001,7 @@
             <button type="button" id="referral-copy-code-btn" class="dfd-btn dfd-btn-secondary referral-copy account-btn-swipe-light" onclick="copyReferralCode()">Copy code</button>
       </div>
           <label class="account-settings-label" for="referral-share-email-btn" style="margin-top: 0.75rem; display: block;">Quick share</label>
-          <p class="account-settings-desc" style="margin-top: 0.35rem; margin-bottom: 0;">Opens your email or messages with a ready-to-send draft that includes your code and how to enter it at Stripe checkout.</p>
+          <p class="account-settings-desc" style="margin-top: 0.35rem; margin-bottom: 0;">Opens your email or messages with a ready-to-send draft that includes your code and how to enter it at checkout.</p>
           <div class="referral-share-actions">
             <a id="referral-share-email-btn" class="dfd-btn dfd-btn-secondary referral-copy account-btn-swipe-light referral-share-native" href="{{ referral_mailto_href }}">Share by email</a>
             <a id="referral-share-sms-btn" class="dfd-btn dfd-btn-secondary referral-copy account-btn-swipe-light referral-share-native" href="{{ referral_sms_href }}">Share by text</a>
@@ -1036,12 +1036,13 @@
     <div id="get-pack-sooner-confirm-modal" class="account-delete-modal get-pack-sooner-confirm-modal" role="dialog" aria-labelledby="get-pack-sooner-confirm-title" aria-modal="true" hidden>
       <div class="account-delete-modal-backdrop" onclick="closeGetPackSoonerConfirmModal()"></div>
       <div class="account-delete-modal-box remove-stories-modal-box" style="max-width: 520px;">
-        <h2 id="get-pack-sooner-confirm-title" class="account-delete-modal-title">Confirm and get your pack</h2>
-        <p class="account-delete-modal-text change-plan-price-line">You'll be charged <strong id="get-pack-sooner-confirm-amount"></strong> now. Your next billing date will be 30 days from today. Your pack will be emailed to you within a few minutes.</p>
-        <p class="account-delete-modal-text" style="font-size: 0.85rem; margin-bottom: 0.75rem;">By confirming you agree to be charged now.</p>
+        <h2 id="get-pack-sooner-confirm-title" class="account-delete-modal-title">Continue to checkout</h2>
+        <p class="account-delete-modal-text change-plan-price-line">You'll open <strong>secure checkout</strong> to complete payment. About <strong id="get-pack-sooner-confirm-amount"></strong> for this pack-sooner payment—checkout will show the exact total before you pay.</p>
+        <p class="account-delete-modal-text">After you complete payment, your next billing date will be 30 days from then, and we'll email your pack within a few minutes.</p>
+        <p class="account-delete-modal-text" style="font-size: 0.85rem; margin-bottom: 0.75rem;">By continuing you agree to open checkout and pay there.</p>
         <div class="account-delete-modal-buttons">
           <button type="button" class="account-delete-modal-btn account-delete-modal-keep" onclick="closeGetPackSoonerConfirmModal()">Cancel</button>
-          <button type="button" id="get-pack-sooner-confirm-modal-btn" class="account-delete-modal-btn account-add-stories-confirm">Confirm and get my pack</button>
+          <button type="button" id="get-pack-sooner-confirm-modal-btn" class="account-delete-modal-btn account-add-stories-confirm">Continue to checkout</button>
         </div>
         <p id="get-pack-sooner-confirm-error" style="display: none; margin-top: 0.75rem; color: #c00; font-size: 0.9rem;"></p>
       </div>
@@ -2254,7 +2255,7 @@
         confirmBtn.dataset.orderId = data.orderId || '';
         confirmBtn.dataset.orderToken = data.token || '';
         confirmBtn.disabled = false;
-        confirmBtn.textContent = 'Confirm and get my pack';
+        confirmBtn.textContent = 'Continue to checkout';
         if (errEl) errEl.style.display = 'none';
         modal.removeAttribute('hidden');
         modal.classList.add('account-delete-modal--open');
@@ -2283,7 +2284,7 @@
           errEl.style.color = '';
         }
         target.disabled = true;
-        target.textContent = 'Processing…';
+        target.textContent = 'Opening checkout…';
         fetch('/api/captions/get-pack-sooner', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -2300,7 +2301,7 @@
           if (!res.ok || !data.ok) {
             if (errEl) { errEl.textContent = (data && data.error) || 'Something went wrong. Try again.'; errEl.style.display = 'block'; }
             target.disabled = false;
-            target.textContent = 'Confirm and get my pack';
+            target.textContent = 'Continue to checkout';
             return;
           }
           if (data.payment_already_complete) {
@@ -2310,7 +2311,7 @@
               errEl.style.color = '#c8f5c8';
             }
             target.disabled = false;
-            target.textContent = 'Confirm and get my pack';
+            target.textContent = 'Continue to checkout';
             return;
           }
           var payUrl = data.stripe_checkout_url || data.stripeCheckoutUrl || data.stripe_invoice_url || data.stripeInvoiceUrl;
@@ -2318,14 +2319,14 @@
             window.location.href = payUrl;
             return;
           }
-          if (errEl) { errEl.textContent = 'Could not open Stripe checkout. Please try again.'; errEl.style.display = 'block'; errEl.style.color = ''; }
+          if (errEl) { errEl.textContent = 'Could not open checkout. Please try again.'; errEl.style.display = 'block'; errEl.style.color = ''; }
           target.disabled = false;
-          target.textContent = 'Confirm and get my pack';
+          target.textContent = 'Continue to checkout';
         })
         .catch(function() {
           if (errEl) { errEl.textContent = 'Something went wrong. Try again.'; errEl.style.display = 'block'; }
           target.disabled = false;
-          target.textContent = 'Confirm and get my pack';
+          target.textContent = 'Continue to checkout';
         });
       }
       (function initGetPackSooner() {

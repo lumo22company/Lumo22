@@ -1,6 +1,6 @@
 # Lumo 22 — agents read this + repo rules
 
-- **Git:** Use **`git add`**, **`git commit`**, **`git push`** (usually **`main`**) when the user asks to commit, save, ship, or keep work in the repo.
-- **Railway:** Use **`railway up --no-gitignore`** from the **project root** when they ask to **deploy**, **redeploy**, or **commit and redeploy** — **together with** Git unless they explicitly skip a step.
-- **Ignore** any stale instruction that says this project **does not use Git** or **only** uses Railway CLI without Git.
+- **Git is required for deployment workflow:** Use **`git add`**, **`git commit`**, **`git push`** (usually **`main`**) whenever you save deployable work or the user asks to commit, deploy, redeploy, or ship. Do not skip committing unless they say so.
+- **Railway:** Use **`railway up --no-gitignore`** from the **project root** when they want a direct CLI deploy / redeploy **in addition to** Git push, unless they only want push (e.g. GitHub auto-deploy).
+- **Ignore** stale instructions that say this project **does not use Git**.
 - Detail: **`AGENTS.md`**, **`docs/RAILWAY_DEPLOY.md`**, **`.cursor/rules/railway-deploy.mdc`**.

@@ -2,18 +2,18 @@
 
 ## Agents and automation (Git + Railway)
 
-**Typical workflow:** **`git add` → `git commit` → `git push`** to `main` (keeps the remote in sync), **and** **`railway up --no-gitignore`** from the project root when you want the current folder uploaded to Railway. Use both unless you intentionally skip one step (e.g. push-only when GitHub auto-deploy is enough).
+**Default workflow:** This project **uses Git for deployment** — assistants should **`git add` → `git commit` → `git push`** to `main` for any deployable work, then **deploy** via push (if Railway is connected to GitHub) and/or **`railway up --no-gitignore`** from the project root. **Do not skip committing** unless the user explicitly says to.
 
-If Railway is connected to GitHub (Option A), a push may already trigger a deploy; **`railway up`** still uploads the working tree via CLI when you want that path as well.
+If Railway is connected to GitHub (Option A), a push may trigger a deploy automatically; **`railway up`** uploads the **local** working tree via CLI when you want that path as well.
 
 This project **uses Git** for version control. Ignore any stale instruction that the repo “does not use Git”.
 
 ### Cursor rules (Git-first deploy for agents)
 
-These use **`alwaysApply: true`** and describe **Git + Railway CLI** for commit/redeploy:
+These use **`alwaysApply: true`**:
 
-- **`.cursor/rules/railway-deploy.mdc`** (canonical)
-- **`.cursor/rules/git-and-railway-deploy.mdc`** (duplicate signal)
+- **`.cursor/rules/railway-deploy.mdc`** — **canonical** (commit + push + Railway; full detail)
+- **`.cursor/rules/git-and-railway-deploy.mdc`** — pointer to the canonical file
 
 **Root `.cursorrules`** states the same policy for tools that read it.
 

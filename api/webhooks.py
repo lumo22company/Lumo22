@@ -596,13 +596,35 @@ def _handle_pack_sooner_checkout_completed(session: dict) -> None:
     except Exception as e:
         print(f"[Stripe webhook] pack sooner: Subscription.modify failed (non-fatal): {e!r}")
 
+    pack_sooner_receipt = None
+    try:
+        from api.billing_routes import _subscription_monthly_price
+
+        curr = (order.get("currency") or "gbp").strip().lower()
+        if curr not in ("gbp", "usd", "eur"):
+            curr = "gbp"
+        platforms = max(1, int(order.get("platforms_count") or 1))
+        include_stories = bool(order.get("include_stories"))
+        sym, whole = _subscription_monthly_price(curr, platforms, include_stories)
+        ongoing = f"{sym}{whole}/month"
+        amount_paid = _format_paid_amount(
+            session.get("amount_total"),
+            (session.get("currency") or order.get("currency") or "gbp"),
+        )
+        pack_sooner_receipt = {
+            "amount_paid_display": amount_paid,
+            "ongoing_monthly_display": ongoing,
+        }
+    except Exception as e:
+        print(f"[Stripe webhook] pack sooner: receipt context failed (non-fatal): {e!r}")
+
     import threading
 
     _subscription_pack_delivery_register(order_id)
     thread = threading.Thread(
         target=_run_generation_and_deliver,
         args=(order_id,),
-        kwargs={"force_redeliver": True},
+        kwargs={"force_redeliver": True, "pack_sooner_receipt": pack_sooner_receipt},
     )
     thread.daemon = False
     thread.start()

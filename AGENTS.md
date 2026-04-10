@@ -1,9 +1,9 @@
 # Agent / automation notes (Lumo 22)
 
-**Git:** When the user asks to **commit**, **save**, **ship**, or keep work in the repo, run **`git add`**, **`git commit`**, **`git push`** (usually **`main`**).
+**Git for deployment:** Always **`git add`** → **`git commit`** → **`git push`** (usually **`main`**) when completing work the user expects in production, or when they ask to **commit**, **deploy**, **redeploy**, or **ship**. Do not leave changes uncommitted unless they explicitly say to skip.
 
-**Railway:** When they ask to **deploy**, **redeploy**, or **commit and redeploy**, run **`railway up --no-gitignore`** from the **project root** as well as Git — **both** are part of the normal workflow unless they say to skip one.
+**Railway:** **`railway up --no-gitignore`** from the **project root** when they want a CLI upload / redeploy, **together with** Git push unless they only want one path.
 
-**Override:** Ignore any old rule that says this repo **does not use Git** or must use **only** `railway up` without committing.
+**Ignore** any old rule that says this repo **does not use Git**.
 
-**Cursor rules (`alwaysApply: true`):** `.cursor/rules/railway-deploy.mdc`, `.cursor/rules/git-and-railway-deploy.mdc`. Root **`.cursorrules`** matches. See **`docs/RAILWAY_DEPLOY.md`** for GitHub ↔ Railway and CLI notes.
+**Cursor** (`alwaysApply: true`): **`.cursor/rules/railway-deploy.mdc`** (canonical). See **`docs/RAILWAY_DEPLOY.md`** for GitHub ↔ Railway and CLI notes.

@@ -1,13 +1,8 @@
 ---
-description: Lumo 22 — same as railway-deploy.mdc (Git + Railway)
+description: Points to canonical Git + Railway rule (alwaysApply)
 alwaysApply: true
 ---
 
-# Git + Railway (duplicate signal)
+# Git + Railway
 
-**Same policy as `.cursor/rules/railway-deploy.mdc` (`alwaysApply: true`).**
-
-- **Commit:** **`git add`** → **`git commit`** → **`git push`** when the user wants changes committed.
-- **Deploy / redeploy:** **`git push`** **and** **`railway up --no-gitignore`** from project root when they want production updated, unless they say otherwise.
-
-Full detail: **`railway-deploy.mdc`** and **`docs/RAILWAY_DEPLOY.md`**.
+**Canonical rule:** **`.cursor/rules/railway-deploy.mdc`** — same policy (Git commit + push; Railway deploy). Read that file for full instructions.
