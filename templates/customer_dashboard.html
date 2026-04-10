@@ -1037,9 +1037,8 @@
       <div class="account-delete-modal-backdrop" onclick="closeGetPackSoonerConfirmModal()"></div>
       <div class="account-delete-modal-box remove-stories-modal-box" style="max-width: 520px;">
         <h2 id="get-pack-sooner-confirm-title" class="account-delete-modal-title">Continue to checkout</h2>
-        <p class="account-delete-modal-text change-plan-price-line">You'll open <strong>secure checkout</strong> to complete payment. About <strong id="get-pack-sooner-confirm-amount"></strong> for this pack-sooner payment—checkout will show the exact total before you pay.</p>
+        <p class="account-delete-modal-text change-plan-price-line">You'll open <strong>secure checkout</strong> to complete payment.</p>
         <p class="account-delete-modal-text">After you complete payment, your next billing date will be 30 days from then, and we'll email your pack within a few minutes.</p>
-        <p class="account-delete-modal-text" style="font-size: 0.85rem; margin-bottom: 0.75rem;">By continuing you agree to open checkout and pay there.</p>
         <div class="account-delete-modal-buttons">
           <button type="button" class="account-delete-modal-btn account-delete-modal-keep" onclick="closeGetPackSoonerConfirmModal()">Cancel</button>
           <button type="button" id="get-pack-sooner-confirm-modal-btn" class="account-delete-modal-btn account-add-stories-confirm">Continue to checkout</button>
@@ -2247,11 +2246,9 @@
       function showGetPackSoonerConfirmModal(data) {
         if (!data) return;
         var modal = document.getElementById('get-pack-sooner-confirm-modal');
-        var amountEl = document.getElementById('get-pack-sooner-confirm-amount');
         var confirmBtn = document.getElementById('get-pack-sooner-confirm-modal-btn');
         var errEl = document.getElementById('get-pack-sooner-confirm-error');
-        if (!modal || !amountEl || !confirmBtn) return;
-        amountEl.textContent = data.amount || '£79';
+        if (!modal || !confirmBtn) return;
         confirmBtn.dataset.orderId = data.orderId || '';
         confirmBtn.dataset.orderToken = data.token || '';
         confirmBtn.disabled = false;
