@@ -1034,26 +1034,13 @@
       <div class="account-delete-modal-box remove-stories-modal-box" style="max-width: 520px;">
         <h2 id="get-pack-sooner-modal-title" class="account-delete-modal-title">Get your pack sooner</h2>
         <p class="account-delete-modal-text">We use your <strong>saved plan</strong> (platforms, Story Ideas) and <strong>form</strong> (voice, topics, key dates) for this pack. You can update these preferences if you need to.</p>
-        <p class="account-delete-modal-text" style="margin-top: 0.65rem;">You'll be taken to <strong>checkout</strong> to confirm payment and your new billing date.</p>
-        <p class="account-delete-modal-text" style="font-size: 0.88rem; margin-top: 0.65rem; color: rgba(255,255,255,0.88); line-height: 1.55;"><strong>Continue with current details</strong> goes straight to checkout using your current plan and prefilled form.</p>
+        <p class="account-delete-modal-text" style="font-size: 0.88rem; margin-top: 0.65rem; color: rgba(255,255,255,0.88); line-height: 1.55;"><strong>Continue with current details</strong> opens secure Stripe checkout to confirm payment and your new billing date. After payment, your next billing date is 30 days from then and we’ll email your pack within a few minutes.</p>
+        <p id="get-pack-sooner-modal-error" style="display: none; margin-top: 0.75rem; color: #c00; font-size: 0.9rem;"></p>
         <div class="account-delete-modal-buttons" style="flex-wrap: wrap; justify-content: flex-end; gap: 0.5rem;">
           <button type="button" class="account-delete-modal-btn account-delete-modal-keep" onclick="closeGetPackSoonerModal()">Cancel</button>
           <button type="button" class="account-delete-modal-btn account-add-stories-confirm" id="get-pack-sooner-prepare-btn">Update preferences</button>
           <button type="button" class="account-delete-modal-btn account-add-stories-confirm" id="get-pack-sooner-use-current-btn">Continue with current details</button>
         </div>
-      </div>
-    </div>
-    <div id="get-pack-sooner-confirm-modal" class="account-delete-modal get-pack-sooner-confirm-modal" role="dialog" aria-labelledby="get-pack-sooner-confirm-title" aria-modal="true" hidden>
-      <div class="account-delete-modal-backdrop" onclick="closeGetPackSoonerConfirmModal()"></div>
-      <div class="account-delete-modal-box remove-stories-modal-box" style="max-width: 520px;">
-        <h2 id="get-pack-sooner-confirm-title" class="account-delete-modal-title">Continue to checkout</h2>
-        <p class="account-delete-modal-text">You'll open secure checkout to complete payment.</p>
-        <p class="account-delete-modal-text">After you complete payment, your next billing date will be 30 days from then, and we'll email your pack within a few minutes.</p>
-        <div class="account-delete-modal-buttons">
-          <button type="button" class="account-delete-modal-btn account-delete-modal-keep" onclick="closeGetPackSoonerConfirmModal()">Cancel</button>
-          <button type="button" id="get-pack-sooner-confirm-modal-btn" class="account-delete-modal-btn account-add-stories-confirm">Continue to checkout</button>
-        </div>
-        <p id="get-pack-sooner-confirm-error" style="display: none; margin-top: 0.75rem; color: #c00; font-size: 0.9rem;"></p>
       </div>
     </div>
     <div id="pause-subscription-modal" class="account-delete-modal pause-subscription-modal" role="dialog" aria-labelledby="pause-subscription-modal-title" aria-modal="true" hidden>
@@ -2462,6 +2449,8 @@
         var amount = btn.getAttribute('data-amount') || '£79';
         if (!token) return;
         getPackSoonerPending = { token: token, orderId: orderId, amount: amount };
+        var modalErr = document.getElementById('get-pack-sooner-modal-error');
+        if (modalErr) { modalErr.style.display = 'none'; modalErr.textContent = ''; modalErr.style.color = ''; }
         var modal = document.getElementById('get-pack-sooner-modal');
         if (modal) {
           modal.removeAttribute('hidden');
@@ -2470,8 +2459,21 @@
         var useCurrentBtn = document.getElementById('get-pack-sooner-use-current-btn');
         if (useCurrentBtn) useCurrentBtn.onclick = function() {
           var data = getPackSoonerPending;
+          if (!data || !data.token) return;
+          var saved = { token: data.token, orderId: data.orderId || '', amount: data.amount || '' };
+          var errEl = document.getElementById('get-pack-sooner-modal-error');
           closeGetPackSoonerModal();
-          showGetPackSoonerConfirmModal(data);
+          runGetPackSoonerCheckout(saved.orderId, saved.token, errEl, null, {
+            resetLabel: 'Continue with current details',
+            reopenOnError: function() {
+              getPackSoonerPending = saved;
+              var m = document.getElementById('get-pack-sooner-modal');
+              if (m) {
+                m.removeAttribute('hidden');
+                m.classList.add('account-delete-modal--open');
+              }
+            }
+          });
         };
         var prepareBtn = document.getElementById('get-pack-sooner-prepare-btn');
         if (prepareBtn) prepareBtn.onclick = function() {
@@ -2488,35 +2490,10 @@
           modal.classList.remove('account-delete-modal--open');
         }
       }
-      function showGetPackSoonerConfirmModal(data) {
-        if (!data) return;
-        var modal = document.getElementById('get-pack-sooner-confirm-modal');
-        var confirmBtn = document.getElementById('get-pack-sooner-confirm-modal-btn');
-        var errEl = document.getElementById('get-pack-sooner-confirm-error');
-        if (!modal || !confirmBtn) return;
-        confirmBtn.dataset.orderId = data.orderId || '';
-        confirmBtn.dataset.orderToken = data.token || '';
-        confirmBtn.disabled = false;
-        confirmBtn.textContent = 'Continue to checkout';
-        if (errEl) errEl.style.display = 'none';
-        modal.removeAttribute('hidden');
-        modal.classList.add('account-delete-modal--open');
-      }
-      function closeGetPackSoonerConfirmModal() {
-        var modal = document.getElementById('get-pack-sooner-confirm-modal');
-        if (modal) {
-          modal.setAttribute('hidden', '');
-          modal.classList.remove('account-delete-modal--open');
-        }
-      }
-      function confirmGetPackSooner() {
-        var btn = document.getElementById('get-pack-sooner-confirm-modal-btn');
-        var panelBtn = document.getElementById('get-pack-sooner-confirm-btn');
-        var errEl = document.getElementById('get-pack-sooner-confirm-error') || document.getElementById('get-pack-sooner-error');
-        var target = btn || panelBtn;
-        if (!target) return;
-        var orderId = target.dataset.orderId || '';
-        var token = target.dataset.orderToken || '';
+      function runGetPackSoonerCheckout(orderId, token, errEl, targetBtn, options) {
+        options = options || {};
+        var reopenOnError = options.reopenOnError;
+        var resetLabel = options.resetLabel || 'Continue to checkout';
         if (!orderId && !token) {
           if (errEl) { errEl.textContent = 'Missing order.'; errEl.style.display = 'block'; }
           return;
@@ -2525,8 +2502,10 @@
           errEl.style.display = 'none';
           errEl.style.color = '';
         }
-        target.disabled = true;
-        target.textContent = 'Opening checkout…';
+        if (targetBtn) {
+          targetBtn.disabled = true;
+          targetBtn.textContent = 'Opening checkout…';
+        }
         fetch('/api/captions/get-pack-sooner', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -2542,8 +2521,8 @@
           var data = res.data || {};
           if (!res.ok || !data.ok) {
             if (errEl) { errEl.textContent = (data && data.error) || 'Something went wrong. Try again.'; errEl.style.display = 'block'; }
-            target.disabled = false;
-            target.textContent = 'Continue to checkout';
+            if (targetBtn) { targetBtn.disabled = false; targetBtn.textContent = resetLabel; }
+            if (reopenOnError) reopenOnError();
             return;
           }
           if (data.payment_already_complete) {
@@ -2552,8 +2531,8 @@
               errEl.style.display = 'block';
               errEl.style.color = '#c8f5c8';
             }
-            target.disabled = false;
-            target.textContent = 'Continue to checkout';
+            if (targetBtn) { targetBtn.disabled = false; targetBtn.textContent = resetLabel; }
+            if (reopenOnError) reopenOnError();
             return;
           }
           var payUrl = data.stripe_checkout_url || data.stripeCheckoutUrl || data.stripe_invoice_url || data.stripeInvoiceUrl;
@@ -2562,28 +2541,31 @@
             return;
           }
           if (errEl) { errEl.textContent = 'Could not open checkout. Please try again.'; errEl.style.display = 'block'; errEl.style.color = ''; }
-          target.disabled = false;
-          target.textContent = 'Continue to checkout';
+          if (targetBtn) { targetBtn.disabled = false; targetBtn.textContent = resetLabel; }
+          if (reopenOnError) reopenOnError();
         })
         .catch(function() {
           if (errEl) { errEl.textContent = 'Something went wrong. Try again.'; errEl.style.display = 'block'; }
-          target.disabled = false;
-          target.textContent = 'Continue to checkout';
+          if (targetBtn) { targetBtn.disabled = false; targetBtn.textContent = resetLabel; }
+          if (reopenOnError) reopenOnError();
         });
       }
+      function confirmGetPackSooner() {
+        var panelBtn = document.getElementById('get-pack-sooner-confirm-btn');
+        if (!panelBtn) return;
+        var errEl = document.getElementById('get-pack-sooner-error');
+        var orderId = panelBtn.dataset.orderId || '';
+        var token = panelBtn.dataset.orderToken || '';
+        runGetPackSoonerCheckout(orderId, token, errEl, panelBtn, { resetLabel: 'Continue to checkout' });
+      }
       (function initGetPackSooner() {
-        var confirmModalBtn = document.getElementById('get-pack-sooner-confirm-modal-btn');
         var confirmPanelBtn = document.getElementById('get-pack-sooner-confirm-btn');
-        if (confirmModalBtn) confirmModalBtn.addEventListener('click', confirmGetPackSooner);
         if (confirmPanelBtn) confirmPanelBtn.addEventListener('click', confirmGetPackSooner);
         var backdrop = document.querySelector('#get-pack-sooner-modal .account-delete-modal-backdrop');
         if (backdrop) backdrop.addEventListener('click', closeGetPackSoonerModal);
-        var confirmBackdrop = document.querySelector('#get-pack-sooner-confirm-modal .account-delete-modal-backdrop');
-        if (confirmBackdrop) confirmBackdrop.addEventListener('click', closeGetPackSoonerConfirmModal);
       })();
       window.showGetPackSoonerModal = showGetPackSoonerModal;
       window.closeGetPackSoonerModal = closeGetPackSoonerModal;
-      window.closeGetPackSoonerConfirmModal = closeGetPackSoonerConfirmModal;
 
       function toggleEmailChangeForm() {
         var form = document.getElementById('account-change-email-form');
