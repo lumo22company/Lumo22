@@ -2280,6 +2280,17 @@
   width: 100%;
   min-width: 0;
 }
+.account-history-item.account-history-item--collapsed {
+  display: none !important;
+}
+.account-history-show-more-wrap {
+  margin: 0.75rem 0 0;
+  width: 100%;
+}
+.account-history-show-more-btn {
+  font-size: 0.9rem;
+  padding: 0.5rem 1rem;
+}
 .account-history-bulk-toolbar {
   display: flex;
   flex-wrap: wrap;

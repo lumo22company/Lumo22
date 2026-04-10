@@ -35,6 +35,10 @@ def _token() -> str:
     return secrets.token_urlsafe(16)
 
 
+# Max snapshots stored in delivery_archive per order row; oldest is dropped when exceeded.
+DELIVERY_ARCHIVE_MAX = 200
+
+
 def coerce_json_list(val: Any) -> list:
     """Normalize JSONB list columns (PostgREST sometimes returns a JSON string)."""
     if val is None:
@@ -529,10 +533,8 @@ class CaptionOrderService:
             if st_b64:
                 entry["stories_pdf_base64"] = st_b64
             delivery_archive.append(entry)
-            # Keep last N entries so History does not grow without bound (rare: many redeliveries)
-            _ARCHIVE_MAX = 200
-            if len(delivery_archive) > _ARCHIVE_MAX:
-                delivery_archive = delivery_archive[-_ARCHIVE_MAX:]
+            if len(delivery_archive) > DELIVERY_ARCHIVE_MAX:
+                delivery_archive = delivery_archive[-DELIVERY_ARCHIVE_MAX:]
             did_archive_prior_pack = True
         updates: Dict[str, Any] = {
             "status": "delivered",
@@ -553,7 +555,24 @@ class CaptionOrderService:
                 updates["stories_pdf_base64"] = base64.b64encode(stories_pdf_bytes).decode("ascii")
             except Exception:
                 pass
-        return self.update(order_id, updates)
+        ok = self.update(order_id, updates)
+        if ok:
+            # New month always shows in History again (column may not exist until migration is applied).
+            self.update(order_id, {"history_hide_current": False})
+        return ok
+
+    def remove_delivery_archive_entry(self, order_id: str, archive_index: int) -> bool:
+        """Remove one past pack from delivery_archive by index (Account → History per-row delete)."""
+        if not order_id or archive_index < 0:
+            return False
+        row = self.get_by_id(order_id)
+        if not row:
+            return False
+        arch = coerce_json_list(row.get("delivery_archive"))
+        if archive_index >= len(arch):
+            return False
+        arch.pop(archive_index)
+        return self.update(order_id, {"delivery_archive": arch})
 
     def append_pack_history(self, order_id: str, month_str: str, day_categories: list) -> bool:
         """Append one pack's day categories to pack_history (for subscription variety). day_categories: list of 30 strings."""
@@ -590,6 +609,10 @@ class CaptionOrderService:
                 "delivery_last_attempt_at": now_iso,
             },
         )
+
+    def hide_current_from_history(self, order_id: str) -> bool:
+        """Hide only the live latest pack row on Account History; delivery_archive rows stay listed."""
+        return self.update(order_id, {"history_hide_current": True})
 
     def hide_from_history(self, order_id: str) -> bool:
         """Mark order as hidden so it no longer appears in account history (status -> hidden)."""

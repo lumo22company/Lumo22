@@ -3294,8 +3294,9 @@ def captions_get_pack_sooner():
 @captions_bp.route("/captions/hide-pack", methods=["POST"])
 def captions_hide_pack():
     """
-    Remove a pack from account history (hidden from list). Requires login.
-    Body: { "token": "..." }  (order intake token)
+    Remove a pack from account history. Requires login.
+    Body: { "token": "..." } — hide only the latest pack row; older archive rows stay listed.
+    Body: { "token": "...", "archive_index": 0 } — remove one past pack from delivery_archive only.
     """
     from api.auth_routes import get_current_customer
 
@@ -3310,6 +3311,15 @@ def captions_hide_pack():
         token = (data.get("token") or "").strip()
         if not token:
             return jsonify({"ok": False, "error": "token required"}), 400
+        archive_raw = data.get("archive_index")
+        archive_index = None
+        if archive_raw is not None and archive_raw != "":
+            try:
+                archive_index = int(archive_raw)
+            except (TypeError, ValueError):
+                return jsonify({"ok": False, "error": "Invalid archive_index"}), 400
+            if archive_index < 0:
+                return jsonify({"ok": False, "error": "Invalid archive_index"}), 400
         from services.caption_order_service import CaptionOrderService
         order_service = CaptionOrderService()
         order = order_service.get_by_token(token)
@@ -3323,9 +3333,141 @@ def captions_hide_pack():
             return jsonify({"ok": False, "error": "Invalid order"}), 400
         if order.get("status") != "delivered":
             return jsonify({"ok": False, "error": "Only delivered packs can be removed from history"}), 400
-        if order_service.hide_from_history(order_id):
+        if archive_index is not None:
+            if order_service.remove_delivery_archive_entry(order_id, archive_index):
+                return jsonify({"ok": True, "message": "Past pack removed from history"}), 200
+            return jsonify({"ok": False, "error": "Could not remove that pack"}), 400
+        if order_service.hide_current_from_history(order_id):
             return jsonify({"ok": True, "message": "Pack removed from history"}), 200
         return jsonify({"ok": False, "error": "Could not remove pack"}), 500
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@captions_bp.route("/captions/hide-packs-bulk", methods=["POST"])
+def captions_hide_packs_bulk():
+    """
+    Remove multiple packs from History in one request. Requires login.
+    Body: { "items": [ { "token": "..." }, { "token": "...", "archive_index": 0 }, ... ] }
+    Max 100 items. Same rules as /captions/hide-pack per row.
+    """
+    from api.auth_routes import get_current_customer
+
+    customer = get_current_customer()
+    if not customer:
+        return jsonify({"ok": False, "error": "Not logged in"}), 401
+    email = (customer.get("email") or "").strip().lower()
+    if not email or "@" not in email:
+        return jsonify({"ok": False, "error": "Invalid customer"}), 400
+    _BULK_MAX = 100
+    try:
+        data = request.get_json() or {}
+        raw_items = data.get("items")
+        if not isinstance(raw_items, list) or not raw_items:
+            return jsonify({"ok": False, "error": "items required"}), 400
+        if len(raw_items) > _BULK_MAX:
+            return jsonify({"ok": False, "error": f"At most {_BULK_MAX} packs at once"}), 400
+
+        normalized = []
+        for it in raw_items:
+            if not isinstance(it, dict):
+                continue
+            token = (it.get("token") or "").strip()
+            if not token:
+                continue
+            arch_raw = it.get("archive_index")
+            if arch_raw is not None and arch_raw != "":
+                try:
+                    ai = int(arch_raw)
+                except (TypeError, ValueError):
+                    continue
+                if ai < 0:
+                    continue
+                normalized.append((token, ai))
+            else:
+                normalized.append((token, None))
+
+        # Dedupe (token, archive) preserving first occurrence order
+        seen = set()
+        uniq = []
+        for token, arch in normalized:
+            key = (token, arch if arch is not None else -1)
+            if key in seen:
+                continue
+            seen.add(key)
+            uniq.append((token, arch))
+
+        if not uniq:
+            return jsonify({"ok": False, "error": "No valid items"}), 400
+
+        from services.caption_order_service import CaptionOrderService
+
+        order_service = CaptionOrderService()
+
+        def _belongs(o: dict) -> bool:
+            return (o.get("customer_email") or "").strip().lower() == email
+
+        # Group by token
+        by_token = {}
+        for token, arch in uniq:
+            by_token.setdefault(token, []).append(arch)
+
+        processed = 0
+        errors = []
+
+        for token, arches in by_token.items():
+            order = order_service.get_by_token(token)
+            if not order or not _belongs(order):
+                errors.append(token)
+                continue
+            order_id = order.get("id")
+            if not order_id:
+                errors.append(token)
+                continue
+            if (order.get("status") or "").strip().lower() != "delivered":
+                errors.append(token)
+                continue
+
+            has_full = any(a is None for a in arches)
+            archive_indices = sorted([a for a in arches if a is not None], reverse=True)
+
+            for ai in archive_indices:
+                order = order_service.get_by_token(token)
+                if not order or not _belongs(order):
+                    errors.append(f"{token}:{ai}")
+                    break
+                oid = order.get("id")
+                if (order.get("status") or "").strip().lower() != "delivered":
+                    errors.append(f"{token}:{ai}")
+                    break
+                if order_service.remove_delivery_archive_entry(oid, ai):
+                    processed += 1
+                else:
+                    errors.append(f"{token}:{ai}")
+
+            if has_full:
+                order = order_service.get_by_token(token)
+                if not order or not _belongs(order):
+                    errors.append(token)
+                    continue
+                oid = order.get("id")
+                if (order.get("status") or "").strip().lower() != "delivered":
+                    errors.append(token)
+                    continue
+                if order_service.hide_current_from_history(oid):
+                    processed += 1
+                else:
+                    errors.append(token)
+
+        if processed == 0 and errors:
+            return jsonify({"ok": False, "error": "Could not remove selected packs", "details": errors[:20]}), 400
+        return jsonify(
+            {
+                "ok": True,
+                "processed": processed,
+                "errors": errors[:20] if errors else [],
+            }
+        ), 200
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
 

@@ -1,9 +1,18 @@
 #!/usr/bin/env python3
 """Subscription renewals: previous pack must append to delivery_archive even when status is 'generating'."""
 
-from unittest.mock import MagicMock
-
 from services.caption_order_service import CaptionOrderService
+
+
+def _merge_update_stub(captured: dict):
+    """set_delivered may call update twice (main payload + history_hide_current clear)."""
+
+    def fake_update(oid, updates):
+        prev = captured.get("updates") or {}
+        captured["updates"] = {**prev, **updates}
+        return True
+
+    return fake_update
 
 
 def test_set_delivered_archives_prior_pack_when_status_is_generating():
@@ -28,12 +37,8 @@ def test_set_delivered_archives_prior_pack_when_status_is_generating():
             "intake": {},
         }
 
-    def fake_update(oid, updates):
-        captured["updates"] = updates
-        return True
-
     svc.get_by_id = fake_get_by_id
-    svc.update = fake_update
+    svc.update = _merge_update_stub(captured)
 
     ok = CaptionOrderService.set_delivered(
         svc,
@@ -69,12 +74,8 @@ def test_set_delivered_archives_even_when_new_md_equals_previous():
             "intake": {},
         }
 
-    def fake_update(oid, updates):
-        captured["updates"] = updates
-        return True
-
     svc.get_by_id = fake_get_by_id
-    svc.update = fake_update
+    svc.update = _merge_update_stub(captured)
 
     ok = CaptionOrderService.set_delivered(
         svc,
@@ -104,12 +105,8 @@ def test_set_delivered_does_not_archive_first_pack_under_generating():
             "delivery_archive": [],
         }
 
-    def fake_update(oid, updates):
-        captured["updates"] = updates
-        return True
-
     svc.get_by_id = fake_get_by_id
-    svc.update = fake_update
+    svc.update = _merge_update_stub(captured)
 
     ok = CaptionOrderService.set_delivered(svc, "order-uuid-2", "FIRST_PACK", stories_pdf_bytes=None, captions_pdf_bytes=None)
     assert ok is True
@@ -135,12 +132,8 @@ def test_set_delivered_archives_one_off_redelivery():
             "intake": {"business_name": "Test Co"},
         }
 
-    def fake_update(oid, updates):
-        captured["updates"] = updates
-        return True
-
     svc.get_by_id = fake_get_by_id
-    svc.update = fake_update
+    svc.update = _merge_update_stub(captured)
 
     ok = CaptionOrderService.set_delivered(
         svc,

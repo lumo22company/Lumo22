@@ -15,7 +15,7 @@ from concurrent.futures import ThreadPoolExecutor
 from functools import wraps
 from typing import Optional
 
-from services.caption_order_service import order_includes_stories_addon
+from services.caption_order_service import DELIVERY_ARCHIVE_MAX, order_includes_stories_addon
 
 # One-time login tokens: when session cookie does not persist (e.g. proxy), redirect to /account?login_token=X
 # so the account page can set session from the token and render (cookie is set in that response).
@@ -1287,6 +1287,16 @@ def _order_hidden_from_account(o: dict) -> bool:
     return (o.get("status") or "").strip().lower() == "hidden"
 
 
+def _history_hide_current_row(o: dict) -> bool:
+    """True if customer hid only the latest pack row; archives still listed."""
+    v = o.get("history_hide_current")
+    if v is True:
+        return True
+    if isinstance(v, str) and v.strip().lower() in ("true", "1", "t", "yes"):
+        return True
+    return False
+
+
 def _history_delivered_orders(caption_orders: list) -> list:
     """
     Account → History: rows with a delivered pack (PDFs / download links).
@@ -1344,7 +1354,7 @@ def _history_pack_entries_for_order(o: dict, *, include_current: bool) -> list:
                 "business_name": ((a.get("business_name") or "").strip() or None),
             }
         )
-    if include_current:
+    if include_current and not _history_hide_current_row(o):
         packs.append(
             {
                 "order": o,
@@ -1441,6 +1451,22 @@ def _history_delivered_entries(caption_orders: list) -> list:
     return out
 
 
+def _history_archive_storage_flags(caption_orders: list) -> dict:
+    """Template flags: max stored packs per order + whether any order is close to rotation."""
+    from services.caption_order_service import coerce_json_list
+
+    near_threshold = max(0, DELIVERY_ARCHIVE_MAX - 20)
+    any_near = False
+    for o in caption_orders or []:
+        if len(coerce_json_list(o.get("delivery_archive"))) >= near_threshold:
+            any_near = True
+            break
+    return {
+        "history_delivery_archive_max": DELIVERY_ARCHIVE_MAX,
+        "history_near_archive_limit": any_near,
+    }
+
+
 def _safe_int(val, default: int = 0) -> int:
     """Coerce to int without raising. DB JSON may have null or bad strings (e.g. platforms_count)."""
     try:
@@ -1497,6 +1523,8 @@ def _account_context_fallback(customer: dict, exc=None) -> dict:
         "edit_form_needs_deferred_billing": False,
         "history_delivered_orders": [],
         "history_delivered_entries": [],
+        "history_delivery_archive_max": DELIVERY_ARCHIVE_MAX,
+        "history_near_archive_limit": False,
     }
 
 
@@ -1770,6 +1798,7 @@ def _account_context_build(customer: dict, section: Optional[str] = None) -> dic
     )
     history_delivered_orders = _history_delivered_orders(caption_orders)
     history_delivered_entries = _history_delivered_entries(caption_orders)
+    history_storage = _history_archive_storage_flags(caption_orders)
     return {
         "customer": customer,
         "caption_orders": caption_orders,

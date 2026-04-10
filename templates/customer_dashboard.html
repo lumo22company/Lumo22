@@ -176,7 +176,7 @@
           <button type="button" class="account-history-delete-selected" id="account-history-delete-selected" disabled>Delete selected</button>
           <span class="account-history-selected-hint" id="account-history-selected-hint" aria-live="polite"></span>
         </div>
-        <div class="account-history-list">
+        <div class="account-history-list" id="account-history-list-region">
           {% for item in delivered_entries %}
           {% set o = item.order %}
           {% set biz = (item.business_name or (o.get('intake') or {}).get('business_name', ''))|trim %}
@@ -215,6 +215,9 @@
             </div>
           </div>
           {% endfor %}
+        </div>
+        <div class="account-history-show-more-wrap" id="account-history-show-more-wrap" style="display: none;">
+          <button type="button" class="account-btn-swipe-dark account-history-show-more-btn" id="account-history-show-more-btn" aria-controls="account-history-list-region">Show more</button>
         </div>
       {% else %}
         <p class="account-section-desc">No delivered packs yet. When your first pack is ready, it will appear here with view and download options.</p>
@@ -1179,7 +1182,7 @@
       <div class="account-delete-modal-box">
         <h2 id="delete-pack-modal-title" class="account-delete-modal-title">Remove pack from history?</h2>
         <p id="delete-pack-modal-body" class="account-delete-modal-text">Are you sure you want to remove this pack from your history? Once removed, it cannot be undone.</p>
-        <p id="delete-pack-sub-note" class="account-delete-modal-text" style="display: none; font-size: 0.9rem; margin-top: 0.75rem; padding: 0.75rem 1rem; background: rgba(180, 40, 40, 0.5); border: 1px solid rgba(200, 60, 60, 0.95); border-radius: 8px; color: #fff;">Removing a pack from history does not cancel any active subscription. To cancel billing, go to Manage subscription.</p>
+        <p id="delete-pack-sub-note" class="account-delete-modal-text" style="display: none; font-size: 0.9rem; margin-top: 0.75rem; padding: 0.75rem 1rem; background: rgba(180, 40, 40, 0.5); border: 1px solid rgba(200, 60, 60, 0.95); border-radius: 8px; color: #fff;">Removing a pack from history does <strong>not</strong> cancel an active subscription — you will continue to be charged until you cancel. To stop billing, go to <strong>Manage subscription</strong> and cancel or change your plan there.</p>
         <div class="account-delete-modal-buttons">
           <button type="button" class="account-delete-modal-btn account-delete-modal-keep" onclick="closeDeletePackModal()">Cancel</button>
           <button type="button" class="account-delete-modal-btn account-delete-modal-confirm" id="delete-pack-confirm-btn">Remove from history</button>
@@ -1191,7 +1194,7 @@
       <div class="account-delete-modal-box">
         <h2 id="delete-packs-bulk-modal-title" class="account-delete-modal-title">Remove selected packs?</h2>
         <p id="delete-packs-bulk-modal-body" class="account-delete-modal-text">The selected packs will be removed from your history. This cannot be undone.</p>
-        <p id="delete-packs-bulk-sub-note" class="account-delete-modal-text" style="display: none; font-size: 0.9rem; margin-top: 0.75rem; padding: 0.75rem 1rem; background: rgba(180, 40, 40, 0.5); border: 1px solid rgba(200, 60, 60, 0.95); border-radius: 8px; color: #fff;">Removing packs from history does not cancel any active subscription. To cancel billing, go to Manage subscription.</p>
+        <p id="delete-packs-bulk-sub-note" class="account-delete-modal-text" style="font-size: 0.9rem; margin-top: 0.75rem; padding: 0.75rem 1rem; background: rgba(180, 40, 40, 0.5); border: 1px solid rgba(200, 60, 60, 0.95); border-radius: 8px; color: #fff;">Removing packs from history does <strong>not</strong> cancel an active subscription — you will continue to be charged until you cancel. To stop billing, go to <strong>Manage subscription</strong> and cancel or change your plan there.</p>
         <div class="account-delete-modal-buttons">
           <button type="button" class="account-delete-modal-btn account-delete-modal-keep" onclick="closeDeletePacksBulkModal()">Cancel</button>
           <button type="button" class="account-delete-modal-btn account-delete-modal-confirm" id="delete-packs-bulk-confirm-btn">Remove selected</button>
@@ -2007,7 +2010,7 @@
         }
         if (modal && subNote) {
           var isSub = btn.getAttribute('data-is-subscription') === '1';
-          subNote.style.display = (!isArchive && isSub) ? 'block' : 'none';
+          subNote.style.display = isSub ? 'block' : 'none';
           modal.removeAttribute('hidden');
           modal.classList.add('account-delete-modal--open');
         }
@@ -2076,7 +2079,9 @@
         var list = document.querySelector('.account-history-list');
         if (!list) return [];
         return Array.prototype.slice.call(list.querySelectorAll('.account-history-item')).filter(function(el) {
-          return el.style.display !== 'none';
+          if (el.style.display === 'none') return false;
+          if (el.classList.contains('account-history-item--collapsed')) return false;
+          return true;
         });
       }
 
@@ -2120,10 +2125,7 @@
         }
         if (subNote) {
           var showSub = checked.some(function(cb) {
-            var isSub = cb.getAttribute('data-is-subscription') === '1';
-            var arch = cb.getAttribute('data-archive-index');
-            var isCurrent = !arch || String(arch).trim() === '';
-            return isSub && isCurrent;
+            return cb.getAttribute('data-is-subscription') === '1';
           });
           subNote.style.display = showSub ? 'block' : 'none';
         }
@@ -2188,20 +2190,64 @@
       window.closeDeletePacksBulkModal = closeDeletePacksBulkModal;
       window.showDeletePacksBulkModal = showDeletePacksBulkModal;
 
-      (function initHistoryFilters() {
+      (function initHistoryFiltersAndShowMore() {
         var list = document.querySelector('.account-history-list');
         if (!list) return;
         var items = Array.prototype.slice.call(list.querySelectorAll('.account-history-item'));
         if (!items.length) return;
 
-        // Business filter (only show if more than one named business)
+        var PAGE = 15;
+        var visibleLimit = PAGE;
+        var selectEl = document.getElementById('account-history-business-filter');
+        var wrap = document.getElementById('account-history-show-more-wrap');
+        var moreBtn = document.getElementById('account-history-show-more-btn');
+
+        function filterValue() {
+          return selectEl ? (selectEl.value || '').trim() : '';
+        }
+
+        function applyHistoryPagination() {
+          var fv = filterValue();
+          var filtered = [];
+          items.forEach(function(item) {
+            var biz = (item.getAttribute('data-business') || '').trim();
+            var match = !fv || biz === fv;
+            if (!match) {
+              item.style.display = 'none';
+              item.classList.remove('account-history-item--collapsed');
+            } else {
+              item.style.display = '';
+              filtered.push(item);
+            }
+          });
+          var total = filtered.length;
+          filtered.forEach(function(item, idx) {
+            if (idx < visibleLimit) {
+              item.classList.remove('account-history-item--collapsed');
+            } else {
+              item.classList.add('account-history-item--collapsed');
+            }
+          });
+          if (wrap && moreBtn) {
+            var remaining = Math.max(0, total - visibleLimit);
+            if (remaining > 0) {
+              wrap.style.display = 'block';
+              moreBtn.textContent = 'Show more (' + remaining + ' more)';
+              moreBtn.setAttribute('aria-label', 'Show ' + remaining + ' more packs');
+            } else {
+              wrap.style.display = 'none';
+            }
+          }
+          updateHistoryBulkToolbarState();
+        }
+
+        // Business filter (only show dropdown if more than one named business)
         var businesses = [];
         items.forEach(function(item) {
           var biz = (item.getAttribute('data-business') || '').trim();
           if (biz && businesses.indexOf(biz) === -1) businesses.push(biz);
         });
         var filtersEl = document.getElementById('account-history-filters');
-        var selectEl = document.getElementById('account-history-business-filter');
         if (filtersEl && selectEl && businesses.length > 1) {
           filtersEl.style.display = 'flex';
           businesses.sort().forEach(function(biz) {
@@ -2211,16 +2257,19 @@
             selectEl.appendChild(opt);
           });
           selectEl.addEventListener('change', function() {
-            var val = (selectEl.value || '').trim();
-            items.forEach(function(item) {
-              var biz = (item.getAttribute('data-business') || '').trim();
-              var show = !val || biz === val;
-              item.style.display = show ? '' : 'none';
-            });
-            updateHistoryBulkToolbarState();
+            visibleLimit = PAGE;
+            applyHistoryPagination();
           });
         }
-        // All delivered packs are listed (newest first from server); no client-side cap.
+
+        if (moreBtn) {
+          moreBtn.addEventListener('click', function() {
+            visibleLimit += PAGE;
+            applyHistoryPagination();
+          });
+        }
+
+        applyHistoryPagination();
       })();
 
       (function initHistoryBulkToolbar() {
