@@ -939,8 +939,26 @@
       {% set sub_orders = caption_orders|selectattr('stripe_subscription_id')|list if caption_orders else [] %}
       {% set get_pack_sooner = request.args.get('get_pack_sooner') == '1' %}
       {% set get_pack_order_token = request.args.get('order_token', '')|trim %}
+      {% set pack_sooner_checkout_done = request.args.get('pack_sooner') == '1' %}
       <section class="account-section-block">
         <h2>Manage subscription</h2>
+        {% if pack_sooner_checkout_done %}
+        <div class="account-info-panel pack-sooner-paid-banner" role="status" aria-live="polite" style="margin-bottom: 1.25rem; background: rgba(76, 175, 80, 0.18); border: 1px solid rgba(120, 200, 130, 0.45); border-radius: 8px; padding: 1rem 1.1rem;">
+          <p style="margin: 0; color: #ffffff; line-height: 1.55;"><strong>Payment received.</strong> We are processing your pack sooner request — you will get an email when your captions and stories are ready (usually within a few minutes). Your next billing date is now 30 days from this payment.</p>
+        </div>
+        <script>
+        (function() {
+          try {
+            var u = new URL(window.location.href);
+            if (u.searchParams.get('pack_sooner') === '1') {
+              u.searchParams.delete('pack_sooner');
+              var q = u.searchParams.toString();
+              window.history.replaceState({}, '', u.pathname + (q ? '?' + q : '') + (u.hash || ''));
+            }
+          } catch (e) {}
+        })();
+        </script>
+        {% endif %}
         {% if not sub_orders %}
         <p class="account-section-desc account-subscription-status" style="margin-top: 0.35rem; margin-bottom: {% if subscribe_options %}1rem{% else %}0{% endif %}; display: block; line-height: 1.5;">You don't have an active subscription.</p>
         {% if not subscribe_options %}
