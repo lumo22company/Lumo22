@@ -59,10 +59,45 @@ from api.passkey_routes import passkey_bp
 from api.billing_routes import billing_bp
 from api.oauth_routes import oauth_bp, init_customer_oauth, google_oauth_redirect_uri
 from services.login_guard import check_locked, record_failure, clear_failures
+from services.caption_delivery_recovery import CAPTIONS_MAX_AUTO_DELIVERY_FAILURES
+
+
+def _caption_pack_help_mailto(order: dict, customer_email: str) -> str:
+    """mailto: link with subject + body for customer support (exhausted delivery retries)."""
+    from urllib.parse import quote
+
+    oid = str((order or {}).get("id") or "").strip()
+    tok = str((order or {}).get("token") or "").strip()
+    sub = str((order or {}).get("stripe_subscription_id") or "").strip()
+    ce = (customer_email or "").strip()
+    dfc = (order or {}).get("delivery_failure_count")
+    if oid and len(oid) > 10:
+        subject = f"Lumo 22 — caption pack help (order {oid[:10]}…)"
+    elif oid:
+        subject = f"Lumo 22 — caption pack help (order {oid})"
+    else:
+        subject = "Lumo 22 — caption pack delivery help"
+    body = (
+        "Please help with my subscription captions pack — I have not received it.\n\n"
+        f"Account email: {ce or '(signed-in account)'}\n"
+        f"Order ID: {oid or '(unknown)'}\n"
+        f"Order token: {tok or '(unknown)'}\n"
+        f"Stripe subscription: {sub or '(none)'}\n"
+        f"Recorded delivery attempts: {dfc}\n"
+    )
+    return (
+        "mailto:hello@lumo22.com?subject="
+        + quote(subject, safe="")
+        + "&body="
+        + quote(body, safe="")
+    )
+
 
 app = Flask(__name__)
 app.config.from_object(Config)
 app.jinja_env.globals["order_includes_stories"] = order_includes_stories_addon
+app.jinja_env.globals["CAPTIONS_MAX_AUTO_DELIVERY_FAILURES"] = CAPTIONS_MAX_AUTO_DELIVERY_FAILURES
+app.jinja_env.globals["caption_pack_help_mailto"] = _caption_pack_help_mailto
 if Config.is_production():
     app.config['SESSION_COOKIE_SECURE'] = True
 
@@ -2154,7 +2189,6 @@ def account_retry_caption_delivery():
     try:
         from datetime import datetime, timezone, timedelta
 
-        from services.caption_delivery_recovery import CAPTIONS_MAX_AUTO_DELIVERY_FAILURES
         from services.caption_order_service import CaptionOrderService
         from api.captions_routes import _run_generation_and_deliver
 
@@ -2191,7 +2225,7 @@ def account_retry_caption_delivery():
                     {
                         "ok": False,
                         "error": "max_retries",
-                        "message": "Automatic retries are exhausted. Email hello@lumo22.com and we will help.",
+                        "message": "We couldn’t complete delivery automatically from here. Please email hello@lumo22.com — we’ll help.",
                     }
                 ), 400
         if st == "generating":

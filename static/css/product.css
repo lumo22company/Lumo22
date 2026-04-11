@@ -3833,6 +3833,28 @@
   cursor: not-allowed;
 }
 
+/* Exhausted retries: mailto CTA — same gold outline + swipe as retry button */
+.account-page-wrap .account-stuck-pack-banner a.account-stuck-pack-help-mailto.account-btn-swipe-light {
+  color: var(--lum-gold, #fff200) !important;
+  border: 2px solid var(--lum-gold, #fff200) !important;
+  border-radius: 10px;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1.25rem !important;
+  text-align: center;
+  box-sizing: border-box;
+  text-decoration: none !important;
+  margin: 0;
+}
+.account-page-wrap .account-stuck-pack-banner a.account-stuck-pack-help-mailto.account-btn-swipe-light:hover {
+  color: #000 !important;
+  border-color: var(--lum-gold, #fff200) !important;
+}
+.account-page-wrap .account-stuck-pack-banner a.account-stuck-pack-help-mailto.account-btn-swipe-light::before {
+  background-color: var(--lum-gold, #fff200);
+}
+
 /* Captions page dropdown: same arrow as other selects, 1rem inset */
 .product-page-captions #captions-platforms {
   padding: 0.6rem 2.5rem 0.6rem 0.75rem !important;

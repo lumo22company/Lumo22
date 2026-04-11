@@ -982,11 +982,23 @@
         {% if sub_orders %}
         {% for o in sub_orders %}
         {% set ost = (o.get('status') or '')|lower %}
+        {% set dfc = (o.get('delivery_failure_count') or 0)|int %}
+        {% set delivery_exhausted = ost == 'failed' and dfc >= CAPTIONS_MAX_AUTO_DELIVERY_FAILURES %}
         {% if ost in ('failed', 'generating') %}
         <div class="account-info-panel account-stuck-pack-banner" role="alert" style="margin-bottom: 1.25rem; background: rgba(120, 55, 40, 0.35); border: 1px solid rgba(255, 160, 120, 0.4); border-radius: 8px; padding: 1rem 1.1rem;">
-          <p style="margin: 0 0 0.75rem; color: #ffffff; line-height: 1.55;">{% if ost == 'failed' %}<strong>Your latest pack didn’t finish sending.</strong> You can safely try again — we’ll prepare your captions and email you.{% else %}<strong>Your pack is still being prepared.</strong> If this has been more than about 30 minutes with nothing in <strong>History</strong>, try again below.{% endif %}</p>
+          {% if delivery_exhausted %}
+          <p style="margin: 0 0 0.65rem; color: #ffffff; line-height: 1.55;"><strong>Your latest pack didn’t finish sending.</strong> We’re working to get your order to you as soon as we can — thank you for your patience.</p>
+          <p style="margin: 0 0 0.85rem; font-size: 0.9rem; color: rgba(255,255,255,0.88); line-height: 1.5;">If you’d like to reach us, use the button below — your order details will be included for our team.</p>
+          <a href="{{ caption_pack_help_mailto(o, customer.email if customer else '') }}" class="account-btn-swipe-light account-stuck-pack-help-mailto">Email Lumo 22</a>
+          {% elif ost == 'failed' %}
+          <p style="margin: 0 0 0.75rem; color: #ffffff; line-height: 1.55;"><strong>Your latest pack didn’t finish sending.</strong> You can try again below — we’ll prepare your captions and email you.</p>
           <button type="button" class="account-btn-swipe-light retry-caption-delivery-btn" data-order-token="{{ o.get('token', '') }}" style="margin: 0;">Try sending my pack again</button>
           <p class="retry-caption-delivery-msg" data-for-token="{{ o.get('token', '') }}" style="display: none; margin: 0.65rem 0 0; font-size: 0.88rem; color: rgba(255,255,255,0.9);"></p>
+          {% else %}
+          <p style="margin: 0 0 0.75rem; color: #ffffff; line-height: 1.55;"><strong>Your pack is still being prepared.</strong> If this has been more than about 30 minutes with nothing in <strong>History</strong>, try again below.</p>
+          <button type="button" class="account-btn-swipe-light retry-caption-delivery-btn" data-order-token="{{ o.get('token', '') }}" style="margin: 0;">Try sending my pack again</button>
+          <p class="retry-caption-delivery-msg" data-for-token="{{ o.get('token', '') }}" style="display: none; margin: 0.65rem 0 0; font-size: 0.88rem; color: rgba(255,255,255,0.9);"></p>
+          {% endif %}
         </div>
         {% endif %}
         {% endfor %}
