@@ -132,6 +132,7 @@ def check_live(base_url):
         ("/captions", 200),
         ("/terms", 200),
         ("/captions-thank-you", 200),
+        ("/captions-pack-sooner-thank-you", 200),
     ]
     print("Live site check (BASE_URL=" + base + "):")
     all_ok = True

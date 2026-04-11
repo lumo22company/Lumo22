@@ -5,6 +5,7 @@ Uses Lumo 22 brand (BRAND_STYLE_GUIDE): black, gold accent, Century Gothic.
 """
 import os
 import re
+import time
 from typing import Dict, Any, Optional, Tuple
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail, Email, Attachment, FileContent, FileName, FileType
@@ -21,6 +22,38 @@ BRAND_MUTED = "#9a9a96"
 BRAND_TEXT_ON_LIGHT_GREY_PANEL = "#000000"
 BRAND_TEXT_ON_DARK = "#F5F5F2"
 BRAND_FONT = "Century Gothic, CenturyGothic, Apple Gothic, sans-serif"
+
+
+def _sendgrid_http_status_retryable(status_code: int) -> bool:
+    """Transient HTTP statuses where retrying the same SendGrid request may succeed."""
+    if status_code in (408, 429):
+        return True
+    return 500 <= status_code <= 599
+
+
+def _sendgrid_exception_retryable(exc: BaseException) -> bool:
+    """Network / rate-limit style errors worth retrying once or twice."""
+    if isinstance(exc, (TimeoutError, ConnectionError, OSError)):
+        return True
+    name = type(exc).__name__.lower()
+    if "timeout" in name or "connection" in name:
+        return True
+    s = str(exc).lower()
+    return any(
+        x in s
+        for x in (
+            "timeout",
+            "timed out",
+            "connection reset",
+            "connection aborted",
+            "temporarily unavailable",
+            "rate limit",
+            "too many requests",
+            "503",
+            "502",
+            "504",
+        )
+    )
 
 
 def _account_history_url() -> str:
@@ -1970,15 +2003,50 @@ Unsubscribe from upgrade reminders: {unsubscribe_url}
             # SendGrid Mail.add_attachment prepends (insert index 0), so assigning [A, B] yields [B, A] in the API payload.
             # Reverse so logical order (primary first, then extra_attachments in order) is preserved in the sent email.
             message.attachment = list(reversed(attachment_list))
-            response = self.sendgrid_client.send(message)
-            ok = response.status_code in [200, 201, 202]
-            if ok:
-                print(f"[SendGrid] Email with attachment sent OK (status={response.status_code}): to={to_email} subject={subject!r}")
-                return (True, None)
-            body_preview = (getattr(response, "body", None) or b"").decode("utf-8", errors="replace")[:300]
-            msg = f"SendGrid rejected (status {response.status_code}): {body_preview}"
-            print(f"[SendGrid] Email with attachment rejected (status={response.status_code}): to={to_email} body={body_preview}")
-            return (False, msg)
+            last_fail_msg = "Send failed after retries"
+            for attempt in range(1, 4):
+                try:
+                    response = self.sendgrid_client.send(message)
+                    sc = int(getattr(response, "status_code", 0) or 0)
+                    ok = sc in (200, 201, 202)
+                    if ok:
+                        if attempt > 1:
+                            print(
+                                f"[SendGrid] Email with attachment sent OK on attempt {attempt} "
+                                f"(status={sc}): to={to_email} subject={subject!r}"
+                            )
+                        else:
+                            print(
+                                f"[SendGrid] Email with attachment sent OK (status={sc}): "
+                                f"to={to_email} subject={subject!r}"
+                            )
+                        return (True, None)
+                    body_preview = (getattr(response, "body", None) or b"").decode("utf-8", errors="replace")[:300]
+                    msg = f"SendGrid rejected (status {sc}): {body_preview}"
+                    last_fail_msg = msg
+                    if attempt < 3 and _sendgrid_http_status_retryable(sc):
+                        print(
+                            f"[SendGrid] Retrying attachment send (attempt {attempt}/3, status={sc}) "
+                            f"to={to_email}"
+                        )
+                        time.sleep(1.0 * (2 ** (attempt - 1)))
+                        continue
+                    print(
+                        f"[SendGrid] Email with attachment rejected (status={sc}): to={to_email} body={body_preview}"
+                    )
+                    return (False, msg)
+                except Exception as e:
+                    last_fail_msg = str(e) or repr(e)
+                    if attempt < 3 and _sendgrid_exception_retryable(e):
+                        print(
+                            f"[SendGrid] Retrying attachment send after error (attempt {attempt}/3) "
+                            f"to={to_email}: {e}"
+                        )
+                        time.sleep(1.0 * (2 ** (attempt - 1)))
+                        continue
+                    print(f"[SendGrid] Error sending email with attachment to {to_email}: {e}")
+                    return (False, last_fail_msg)
+            return (False, last_fail_msg)
         except Exception as e:
             msg = str(e) or repr(e)
             print(f"[SendGrid] Error sending email with attachment to {to_email}: {e}")

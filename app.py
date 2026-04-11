@@ -22,6 +22,11 @@ from services.caption_order_service import DELIVERY_ARCHIVE_MAX, order_includes_
 _login_tokens = {}  # token -> {"customer_id": str, "email": str, "expires": float}
 _LOGIN_TOKEN_TTL = 120  # seconds
 
+# Customer "retry pack delivery" — per order cooldown to limit duplicate AI runs
+_RETRY_CAPTION_LAST = {}
+_RETRY_CAPTION_LOCK = threading.Lock()
+_RETRY_CAPTION_COOLDOWN_SEC = 600.0
+
 
 def _create_login_token(customer_id: str, email: str) -> str:
     token = secrets.token_urlsafe(32)
@@ -661,6 +666,15 @@ def captions_intake_page():
 def captions_thank_you_page():
     """Thank-you page after Stripe payment (set as redirect URL in Stripe)"""
     return render_template('captions_thank_you.html')
+
+
+@app.route("/captions-pack-sooner-thank-you")
+def captions_pack_sooner_thank_you_page():
+    """Dedicated thank-you after Get my pack sooner Checkout (mode=payment)."""
+    r = make_response(render_template("captions_pack_sooner_thank_you.html"))
+    r.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    r.headers["Pragma"] = "no-cache"
+    return r
 
 
 @app.route('/captions-deliver-helper')
@@ -2117,6 +2131,131 @@ def referral_stripe_sync_api():
     except Exception as e:
         print(f"[referral-stripe-sync] {e!r}")
         return jsonify({"ok": False, "linked": False, "error": "server_error"}), 500
+
+
+@app.route("/api/account/retry-caption-delivery", methods=["POST"])
+@customer_login_required
+def account_retry_caption_delivery():
+    """
+    Logged-in: re-run caption generation + email for a subscription order stuck in
+    failed or generating, or delivered when confirm_regenerate=true (e.g. Get pack sooner
+    charged but no new email/History row — prior pack still marked delivered).
+    """
+    customer = get_current_customer()
+    if not customer:
+        return jsonify({"ok": False, "error": "sign_in_required"}), 401
+    data = request.get_json(silent=True) or {}
+    token = (data.get("order_token") or data.get("token") or "").strip()
+    if not token:
+        return jsonify({"ok": False, "error": "missing_token"}), 400
+    ce = (customer.get("email") or "").strip().lower()
+    if not ce:
+        return jsonify({"ok": False, "error": "invalid_session"}), 400
+    try:
+        from datetime import datetime, timezone, timedelta
+
+        from services.caption_delivery_recovery import CAPTIONS_MAX_AUTO_DELIVERY_FAILURES
+        from services.caption_order_service import CaptionOrderService
+        from api.captions_routes import _run_generation_and_deliver
+
+        order_service = CaptionOrderService()
+        order = order_service.get_by_token(token)
+        if not order:
+            return jsonify({"ok": False, "error": "not_found"}), 404
+        oe = (order.get("customer_email") or "").strip().lower()
+        if not oe or oe != ce:
+            return jsonify({"ok": False, "error": "forbidden"}), 403
+        if not (order.get("stripe_subscription_id") or "").strip():
+            return jsonify({"ok": False, "error": "not_subscription"}), 400
+        st = (order.get("status") or "").strip().lower()
+        confirm_regenerate = bool(data.get("confirm_regenerate"))
+        # Delivered + prior pack on file: common after Get pack sooner charged Stripe but email/generation failed.
+        if st == "delivered":
+            if not confirm_regenerate:
+                return jsonify(
+                    {
+                        "ok": False,
+                        "error": "confirm_required",
+                        "message": "Confirm in the form below to regenerate and email your subscription pack.",
+                    }
+                ), 400
+        elif st not in ("failed", "generating"):
+            return jsonify(
+                {
+                    "ok": False,
+                    "error": "not_stuck",
+                    "message": "This order is not waiting for a delivery retry.",
+                }
+            ), 400
+        if st == "failed":
+            n = int(order.get("delivery_failure_count") or 0)
+            if n >= CAPTIONS_MAX_AUTO_DELIVERY_FAILURES:
+                return jsonify(
+                    {
+                        "ok": False,
+                        "error": "max_retries",
+                        "message": "Automatic retries are exhausted. Email hello@lumo22.com and we will help.",
+                    }
+                ), 400
+        if st == "generating":
+            updated = order.get("updated_at") or order.get("created_at")
+            if updated:
+                try:
+                    now = datetime.now(timezone.utc)
+                    if isinstance(updated, str):
+                        udt = datetime.fromisoformat(updated.replace("Z", "+00:00"))
+                    else:
+                        udt = updated
+                    if udt.tzinfo is None:
+                        udt = udt.replace(tzinfo=timezone.utc)
+                    if udt > now - timedelta(minutes=10):
+                        return jsonify(
+                            {
+                                "ok": False,
+                                "error": "still_generating",
+                                "message": "Your pack is still being prepared. Wait a few minutes and refresh this page.",
+                            }
+                        ), 429
+                except Exception:
+                    pass
+        oid = str(order.get("id") or "").strip()
+        if not oid:
+            return jsonify({"ok": False, "error": "invalid_order"}), 400
+        now_m = time.monotonic()
+        with _RETRY_CAPTION_LOCK:
+            stale = [k for k, ts in _RETRY_CAPTION_LAST.items() if (now_m - ts) > _RETRY_CAPTION_COOLDOWN_SEC * 3]
+            for k in stale:
+                _RETRY_CAPTION_LAST.pop(k, None)
+            last = _RETRY_CAPTION_LAST.get(oid)
+            if last is not None and (now_m - last) < _RETRY_CAPTION_COOLDOWN_SEC:
+                wait = int(_RETRY_CAPTION_COOLDOWN_SEC - (now_m - last)) + 1
+                return jsonify(
+                    {
+                        "ok": False,
+                        "error": "rate_limited",
+                        "retry_after_seconds": max(1, wait),
+                        "message": f"You can try again in about {max(1, wait)} seconds.",
+                    }
+                ), 429
+            _RETRY_CAPTION_LAST[oid] = now_m
+        thread = threading.Thread(
+            target=_run_generation_and_deliver,
+            args=(oid,),
+            kwargs={"force_redeliver": True},
+        )
+        thread.daemon = False
+        thread.start()
+        print(f"[account] retry-caption-delivery started for order {oid}")
+        return jsonify(
+            {
+                "ok": True,
+                "message": "We are preparing your pack again. You will receive an email when it is ready (usually within a few minutes).",
+            }
+        ), 200
+    except Exception as e:
+        print(f"[account] retry-caption-delivery: {e!r}")
+        traceback.print_exc()
+        return jsonify({"ok": False, "error": "server_error"}), 500
 
 
 @app.route("/api/account/billing-data", methods=["GET"])

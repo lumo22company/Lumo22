@@ -1396,6 +1396,28 @@ _SUB_PACK_DELIVERY_DEDUPE: dict[str, float] = {}
 _SUB_PACK_DELIVERY_DEDUPE_LOCK = threading.Lock()
 _SUB_PACK_DELIVERY_DEDUPE_TTL_SEC = 180.0
 
+# One in-flight generation per order (duplicate Stripe webhooks / races on delivered → generating).
+_PACK_GEN_LOCKS: dict[str, threading.Lock] = {}
+_PACK_GEN_LOCKS_GUARD = threading.Lock()
+
+
+def _pack_generation_lock_acquire(order_id: str) -> bool:
+    with _PACK_GEN_LOCKS_GUARD:
+        if order_id not in _PACK_GEN_LOCKS:
+            _PACK_GEN_LOCKS[order_id] = threading.Lock()
+        lock = _PACK_GEN_LOCKS[order_id]
+    return lock.acquire(blocking=False)
+
+
+def _pack_generation_lock_release(order_id: str) -> None:
+    with _PACK_GEN_LOCKS_GUARD:
+        lock = _PACK_GEN_LOCKS.get(order_id)
+    if lock:
+        try:
+            lock.release()
+        except RuntimeError:
+            pass
+
 
 def _subscription_pack_delivery_recent_duplicate(order_id: str) -> bool:
     """Suppress a second subscription renewal / get-pack-sooner run within TTL (webhook + API race)."""
@@ -1478,6 +1500,29 @@ def _run_generation_and_deliver(
         if not allow_retry:
             print(f"[Captions] Order {order_id} already generating, skipping duplicate")
             return (True, None)
+        # Two concurrent webhooks (e.g. duplicate checkout.session.completed) both use force_redeliver;
+        # skip the second while the first run is still in "generating" with a fresh updated_at.
+        if force_redeliver:
+            from datetime import timedelta, timezone
+
+            updated = row.get("updated_at") or row.get("created_at")
+            if updated:
+                try:
+                    now = datetime.now(timezone.utc)
+                    if isinstance(updated, str):
+                        udt = datetime.fromisoformat(updated.replace("Z", "+00:00"))
+                    else:
+                        udt = updated
+                    if udt.tzinfo is None:
+                        udt = udt.replace(tzinfo=timezone.utc)
+                    if udt > now - timedelta(minutes=8):
+                        print(
+                            f"[Captions] Order {order_id} skip duplicate: generation in progress "
+                            f"(updated {int((now - udt).total_seconds())}s ago)"
+                        )
+                        return (True, None)
+                except Exception:
+                    pass
         if force_redeliver:
             print(f"[Captions] Order {order_id} force redeliver: retrying despite generating status")
         else:
@@ -1507,8 +1552,13 @@ def _run_generation_and_deliver(
             if previous_pack_themes:
                 print(f"[Captions] Subscription order {order_id}: varying from {len(previous_pack_themes)} previous pack(s)")
 
-    order_service.set_generating(order_id)
+    if not _pack_generation_lock_acquire(str(order_id)):
+        print(
+            f"[Captions] Order {order_id} skip duplicate: another generation thread is in progress (lock)"
+        )
+        return (True, None)
     try:
+        order_service.set_generating(order_id)
         pack_start_date = datetime.utcnow().strftime("%Y-%m-%d")
         gen = CaptionGenerator()
         print(f"[Captions] Calling AI (provider={Config.AI_PROVIDER}) for order {order_id} (Day 1 = {pack_start_date})")
@@ -1528,6 +1578,10 @@ def _run_generation_and_deliver(
                 )
             else:
                 captions_md = gen.generate(intake, previous_pack_themes=previous_pack_themes, pack_start_date=pack_start_date)
+            print(
+                f"[Captions] AI generation finished for order {order_id} "
+                f"({len((captions_md or ''))} chars)"
+            )
         except RuntimeError as e:
             msg = str(e)
             if intake.get("include_stories") and "Stories output invalid after retry" in msg:
@@ -1544,6 +1598,10 @@ def _run_generation_and_deliver(
                 )
                 stories_generation_failed = True
                 stories_generation_status = "failed"
+                print(
+                    f"[Captions] AI generation finished (captions-only fallback) for order {order_id} "
+                    f"({len((captions_md or ''))} chars)"
+                )
             else:
                 raise
         from services.caption_pdf import build_caption_pdf, build_stories_pdf, get_logo_path
@@ -1720,6 +1778,8 @@ def _run_generation_and_deliver(
         except Exception as set_err:
             print(f"[Captions] set_failed also failed: {set_err}")
         return (False, err_msg)
+    finally:
+        _pack_generation_lock_release(str(order_id))
 
 
 @captions_bp.route("/captions-delivery-status", methods=["GET"])
@@ -3247,7 +3307,8 @@ def captions_get_pack_sooner():
         base = _base_url_for_redirect()
         if not base:
             return jsonify({"ok": False, "error": "Server URL not configured (BASE_URL)."}), 503
-        success_url = f"{base}/account?section=subscription&pack_sooner=1"
+        # Stripe replaces {CHECKOUT_SESSION_ID} in the redirect URL (must appear literally in the string).
+        success_url = f"{base}/captions-pack-sooner-thank-you?session_id={{CHECKOUT_SESSION_ID}}"
         cancel_url = f"{base}/account?section=subscription"
 
         ot = (order.get("token") or "").strip()

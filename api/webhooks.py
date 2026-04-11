@@ -32,6 +32,29 @@ def _sanitize_for_email(text: str) -> str:
     return re.sub(r"[\x00-\x09\x0b-\x1f\x7f]", "", text)
 
 
+def _invoice_subscription_id(invoice: Optional[dict]) -> str:
+    """Stripe Invoice.subscription may be absent on newer APIs; subscription id can live under parent."""
+    if not invoice or not isinstance(invoice, dict):
+        return ""
+    raw = invoice.get("subscription")
+    if isinstance(raw, str) and raw.strip():
+        return raw.strip()
+    if isinstance(raw, dict):
+        rid = (raw.get("id") or "").strip()
+        if rid:
+            return rid
+    parent = invoice.get("parent")
+    if isinstance(parent, dict) and parent.get("type") == "subscription_details":
+        sd = parent.get("subscription_details") or {}
+        if isinstance(sd, dict):
+            sub = sd.get("subscription")
+            if isinstance(sub, str) and sub.strip():
+                return sub.strip()
+            if isinstance(sub, dict):
+                return (sub.get("id") or "").strip()
+    return ""
+
+
 def _format_paid_amount(amount_total, currency: str) -> str:
     """Format Stripe amount_total for customer-facing email copy."""
     if amount_total is None:
@@ -898,7 +921,7 @@ def stripe_webhook():
                 print("[Stripe webhook] invoice.paid: missing or invalid invoice; skipping.")
                 return jsonify({"received": True}), 200
             billing_reason = (invoice.get("billing_reason") or "").strip()
-            sub_id = (invoice.get("subscription") or "").strip()
+            sub_id = _invoice_subscription_id(invoice)
             if not sub_id:
                 print("[Stripe webhook] invoice.paid: no subscription on invoice; skipping.")
                 return jsonify({"received": True}), 200
@@ -1200,7 +1223,7 @@ def stripe_webhook():
             invoice = event.get("data", {}).get("object") if isinstance(event, dict) else None
             if not invoice or not isinstance(invoice, dict):
                 return jsonify({"received": True}), 200
-            sub_id = (invoice.get("subscription") or "").strip()
+            sub_id = _invoice_subscription_id(invoice)
             if not sub_id:
                 return jsonify({"received": True}), 200
             invoice_id = (invoice.get("id") or "").strip()

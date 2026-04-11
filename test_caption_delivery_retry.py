@@ -41,11 +41,42 @@ def test_delivered_with_empty_captions_still_false():
     assert row_needs_first_delivery_retry(row) is False
 
 
-def test_has_captions_md_never_retry():
+def test_has_captions_md_never_retry_without_subscription():
+    """One-off / first pack: existing md means delivered; do not auto-retry."""
     row = {
         "status": "failed",
         "captions_md": "## Day 1",
         "delivery_failure_count": 0,
+    }
+    assert row_needs_first_delivery_retry(row) is False
+
+
+def test_subscription_failed_with_captions_md_needs_retry():
+    row = {
+        "status": "failed",
+        "captions_md": "## Day 1",
+        "delivery_failure_count": 0,
+        "stripe_subscription_id": "sub_123",
+    }
+    assert row_needs_first_delivery_retry(row) is True
+
+
+def test_subscription_generating_stale_with_captions_md_needs_retry():
+    stale = datetime.now(timezone.utc) - timedelta(minutes=30)
+    row = {
+        "status": "generating",
+        "captions_md": "## Previous month",
+        "updated_at": _old(stale),
+        "stripe_subscription_id": "sub_123",
+    }
+    assert row_needs_first_delivery_retry(row) is True
+
+
+def test_subscription_delivered_with_md_no_retry():
+    row = {
+        "status": "delivered",
+        "captions_md": "## Day 1",
+        "stripe_subscription_id": "sub_123",
     }
     assert row_needs_first_delivery_retry(row) is False
 
