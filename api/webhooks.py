@@ -607,7 +607,7 @@ def _handle_captions_payment(session):
 def _handle_pack_sooner_checkout_completed(session: dict) -> None:
     """
     checkout.session.completed for fixed-price Get pack sooner (mode=payment).
-    Resets subscription billing anchor without proration, then triggers pack generation.
+    Resets subscription billing anchor (no mid-cycle adjustment line items), then triggers pack generation.
     """
     import stripe
     from services.caption_order_service import CaptionOrderService
@@ -947,7 +947,7 @@ def stripe_webhook():
             else:
                 print(f"[Stripe webhook] invoice.paid: billing_reason={billing_reason}; skipping.")
                 return jsonify({"received": True}), 200
-            # Accept any captions subscription line (base + add-ons; proration invoices may only list add-on prices)
+            # Accept any captions subscription line (base + add-ons; some invoices may only list add-on prices)
             valid_price_ids = [
                 p
                 for p in [

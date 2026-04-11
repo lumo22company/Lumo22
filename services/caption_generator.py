@@ -558,6 +558,22 @@ CATEGORY_COUNTS = {
 }
 
 
+def _caption_language_lock_block() -> str:
+    """
+    Reinforce single language across chunked caption generation (1–10 / 11–20 / 21–30).
+    Without this, chunks can drift (e.g. first chunks in English and later chunks in French when intake is French-only, or the reverse).
+    """
+    return (
+        "LANGUAGE_LOCK (CRITICAL): The caption language in INTAKE is the **only** language for **Caption:** and **Hashtags:** "
+        "body text on every day—including this chunk. Never mix languages partway through the pack: days 1–20 and days 21–30 "
+        "must all match INTAKE (if INTAKE is French, every chunk is French; if English, every chunk is English). "
+        "**DATE_CONTEXT** (weekdays, months, place names) is for **timing and accuracy only**—it must **not** make you switch "
+        "**away from** the intake caption language (e.g. month boundaries or “European” dates are not a reason to change language). "
+        "Keep structural markdown labels (**Platform:**, **Caption:**, **Hashtags:**) as shown; all prose and hashtags must follow "
+        "the intake caption language and the dialect rules in the system prompt.\n\n"
+    )
+
+
 LANGUAGE_INSTRUCTIONS = {
     "English (UK)": "Use British English (UK) throughout: spelling (e.g. colour, favour, organise, centre, recognised), punctuation (single quotes for quotations where appropriate), and vocabulary (e.g. whilst, amongst, towards). Do not use American spellings or conventions.",
     "English (US)": "Use American English (US) throughout: spelling (e.g. color, favor, organize, center, recognized), punctuation (double quotes for quotations where appropriate), and vocabulary (e.g. while, among, toward). Do not use British spellings or conventions.",
@@ -586,6 +602,18 @@ def _stories_language_user_block(lang: str) -> str:
     )
 
 
+def _build_stories_platform_interaction_block() -> str:
+    """IG/FB Stories use replies/DMs/stickers — not public comment threads (feeds/Reels differ)."""
+    return (
+        "STORY_PLATFORM_INTERACTION (CRITICAL — Instagram & Facebook **Stories**): "
+        "Stories do **not** have a public **comments** section like a **feed post** or many **Reels**. "
+        "People respond via **reply to story** (DM), **reactions**, or **interactive stickers** (poll, question, slider, quiz). "
+        "In **Suggested wording**, never tell viewers to \"leave a comment\", \"comment below\", or \"reply in the comments\" for a **Story** — that is inaccurate. "
+        "Prefer: **reply to this story**, **send us a DM**, **tap to vote** / **use the poll or question sticker**, or ask something they answer with a **story reply**. "
+        "Reserve \"comments\" language for **grid posts** or **Reels** only if you explicitly frame it as feed/Reels content — not for Story copy in this pack.\n\n"
+    )
+
+
 def _build_stories_system_prompt(intake: Dict[str, Any], *, aligned_with_captions: bool) -> str:
     """System prompt for story generation; mirrors caption language so stories are not written in another language."""
     lang = (intake.get("caption_language") or "English (UK)").strip()
@@ -598,6 +626,7 @@ def _build_stories_system_prompt(intake: Dict[str, Any], *, aligned_with_caption
     return (
         "You write concise Story prompts (Idea, Suggested wording, Story hashtags). "
         f"{aligned}"
+        f"{_build_stories_platform_interaction_block()}"
         "Calendar-day consistency: each Day N pairs with DATE_CONTEXT; never use “tomorrow” to mean the same calendar day as that row, "
         "and never treat a weekday named in the copy as still in the future when DATE_CONTEXT shows the post is already that day. "
         "**Calendar month:** **Idea** and **Suggested wording** must match the **calendar month** on that row of DATE_CONTEXT "
@@ -656,7 +685,7 @@ Quality bar: Every caption set must be as tailored and specific as a premium cop
 
 {lang_instruction}
 
-Tone: confident, editorial, modern, premium. When the client specifies "Voice / tone to use" or "Words / style to avoid" in the intake, match those preferences—they override the default. No emojis. No buzzwords or marketing clichés. Smart, human, intelligent. Avoid hype and generic AI language.
+{_caption_language_lock_block()}Tone: confident, editorial, modern, premium. When the client specifies "Voice / tone to use" or "Words / style to avoid" in the intake, match those preferences—they override the default. No emojis. No buzzwords or marketing clichés. Smart, human, intelligent. Avoid hype and generic AI language.
 
 Variety and anti-repetition: Every caption must feel fresh and distinct. Use a wide range of vocabulary—avoid reusing the same words, phrases, hooks, or openings across days. Vary sentence structures, transitions, and sign-offs. No two captions should start with the same opener (e.g. avoid "Here's the thing" or "Let's talk about" repeatedly). Rotate through different angles, examples, and approaches. If you've used a phrase in one caption, use different wording in the next.
 
@@ -747,7 +776,10 @@ def _build_user_prompt(
 
     range_note = ""
     if 1 <= day_start <= day_end <= 30 and (day_start != 1 or day_end != 30):
-        range_note = f"\n\nGenerate ONLY days {day_start} to {day_end} (inclusive). Output only those day sections (## Day N — ... through ## Day {day_end} — ...). No title, no intake summary — just the day blocks.\n"
+        range_note = (
+            f"\n\n{_caption_language_lock_block()}"
+            f"Generate ONLY days {day_start} to {day_end} (inclusive). Output only those day sections (## Day N — ... through ## Day {day_end} — ...). No title, no intake summary — just the day blocks.\n"
+        )
 
     # Normalize ALL CAPS intake so PDFs and captions use sentence/title case
     n = _normalize_intake_case
@@ -1050,6 +1082,10 @@ def _rough_sentence_count(text: str) -> int:
 
 def _platform_label_is_tiktok(label: str) -> bool:
     return (label or "").strip().lower() == "tiktok"
+
+
+def _platform_label_is_pinterest(label: str) -> bool:
+    return "pinterest" in (label or "").strip().lower()
 
 
 def _truthy_intake_flag(val: Any) -> bool:
@@ -1623,10 +1659,15 @@ def _chunk_structure_error(
             # Basic quality guardrails (platform-aware minimum length + substance).
             is_tiktok = _platform_label_is_tiktok(label)
             is_ig_fb = _platform_label_is_instagram_facebook(label)
+            is_pinterest = _platform_label_is_pinterest(label)
             if is_tiktok:
                 min_len = 30
             elif vary_ig_fb_caption_length and is_ig_fb:
                 min_len = 100
+            elif is_pinterest:
+                # Pinterest is not LinkedIn: pin descriptions are often a title + keyword-rich blurb;
+                # many real pins are well under 200 chars. Keep a floor to avoid empty AI fluff.
+                min_len = 120
             else:
                 min_len = 200
             if len(caption) < min_len:
@@ -1646,6 +1687,13 @@ def _chunk_structure_error(
                         return (
                             f"Day {day_num} ({label}) short Instagram & Facebook posts must still be substantive "
                             f"(min 125 characters when using a single sentence)"
+                        )
+                elif is_pinterest:
+                    # One solid keyword-rich sentence or short title + lines is normal; do not require LinkedIn-style pairs.
+                    if rs < 1:
+                        return (
+                            f"Day {day_num} ({label}) caption must have at least one complete sentence "
+                            f"with specifics (not a vague fragment)"
                         )
                 elif rs < 2:
                     return (
@@ -2029,6 +2077,9 @@ class CaptionGenerator:
 
     CHUNKS = [(1, 10), (11, 20), (21, 30)]
     MAX_TOKENS_PER_CHUNK = 6000
+    # 3+ platforms × 10 days often exceeds 6000 output tokens in any chunk; truncation drops
+    # the last day(s) or Platform: blocks (e.g. missing Day 20 in 11–20, incomplete Day 30 in 21–30).
+    MAX_TOKENS_MULTI_PLATFORM_CHUNK = 8192
 
     def __init__(self):
         provider = (Config.AI_PROVIDER or "openai").strip().lower()
@@ -2066,6 +2117,14 @@ class CaptionGenerator:
         for full_attempt in range(2):
             parts = [header]
             for day_start, day_end in self.CHUNKS:
+                multi_platform_chunk = expected_platform_count >= 3
+                chunk_max_tokens = (
+                    self.MAX_TOKENS_MULTI_PLATFORM_CHUNK
+                    if multi_platform_chunk
+                    else self.MAX_TOKENS_PER_CHUNK
+                )
+                # Extra attempts when chunks are long (multi-platform) — format failures are common if truncated.
+                max_chunk_attempts = 5 if multi_platform_chunk else 3
                 user = (
                     _build_user_prompt(
                         intake,
@@ -2080,15 +2139,15 @@ class CaptionGenerator:
                     system=system,
                     user=user,
                     temperature=0.6,
-                    max_tokens=self.MAX_TOKENS_PER_CHUNK,
+                    max_tokens=chunk_max_tokens,
                 )
                 if not content:
                     raise RuntimeError(f"AI returned empty content for days {day_start}-{day_end}")
-                # Retry up to 3 times if chunk has incomplete/invalid structure
+                # Retry if chunk has incomplete/invalid structure
                 # (empty blocks, missing day/platform, duplicates). This reduces
                 # transient provider-format failures that otherwise block delivery.
                 chunk_err = None
-                for attempt in range(3):
+                for attempt in range(max_chunk_attempts):
                     chunk_err = _chunk_structure_error(
                         content,
                         day_start,
@@ -2103,7 +2162,7 @@ class CaptionGenerator:
                     has_empty = _chunk_has_empty_blocks(content, include_hashtags)
                     if not has_empty and not chunk_err:
                         break
-                    if attempt >= 2:
+                    if attempt >= max_chunk_attempts - 1:
                         suffix = f" ({chunk_err})" if chunk_err else " (empty Caption or Hashtags)"
                         raise RuntimeError(
                             f"AI still returned incomplete content for days {day_start}-{day_end}{suffix}. Please try again."
@@ -2115,12 +2174,12 @@ class CaptionGenerator:
                             "each **Caption:** still standalone-clear (what they offer, who it is for). "
                             "Single-sentence IG/FB days must be at least ~125 characters with concrete detail; "
                             "two-or-more-sentence days at least ~100 characters total. "
-                            "For other platforms (LinkedIn, Pinterest, etc.), keep ~200+ characters and multiple sentences unless TikTok."
+                            "For **LinkedIn**: ~200+ characters and multiple sentences. For **Pinterest**: keyword-rich description, at least ~120 characters and at least one complete sentence (pins are often shorter than LinkedIn)."
                         )
                     else:
                         length_retry = (
-                            "For Instagram, Facebook, LinkedIn, Pinterest: each **Caption:** must be at least ~200 characters "
-                            "and at least two full sentences with concrete detail—no vague one-line fragments."
+                            "For Instagram & Facebook, LinkedIn: each **Caption:** must be at least ~200 characters and at least two full sentences with concrete detail. "
+                            "For **Pinterest**: at least ~120 characters, keyword-rich, at least one full sentence—no vague fragments."
                         )
                     retry_user = user + (
                         "\n\nIMPORTANT: Your previous response was invalid (" + reason + "). "
@@ -2130,12 +2189,14 @@ class CaptionGenerator:
                         "If hashtags are requested, each **Hashtags:** line must contain real hashtags starting with # "
                         f"and the count must be between {hashtag_min} and {hashtag_max}. "
                         + length_retry
+                        + "\n\nLANGUAGE_LOCK: Every **Caption:** and **Hashtags:** line must stay in the INTAKE caption language—"
+                        "same as days before this range. Do not switch to a different language because of DATE_CONTEXT or month boundaries."
                     )
                     content = chat_completion(
                         system=system,
                         user=retry_user,
                         temperature=0.35,
-                        max_tokens=self.MAX_TOKENS_PER_CHUNK,
+                        max_tokens=chunk_max_tokens,
                     )
                     if not content:
                         raise RuntimeError(f"AI returned empty content on retry for days {day_start}-{day_end}")
@@ -2364,7 +2425,7 @@ INTAKE:
 {variety_note}
 {brand_rule}
 
-For each day provide: (1) Idea — a short description of the Story concept (5–15 words). (2) Suggested wording: — one sentence or short suggestion for what to say or show (do not wrap in quotation marks). (3) Story hashtags: — 3–5 relevant hashtags. Mix types: behind-the-scenes, tips, questions, polls, product highlights, testimonials, process reveals, day-in-the-life. Variety is key.
+{_build_stories_platform_interaction_block()}For each day provide: (1) Idea — a short description of the Story concept (5–15 words). (2) Suggested wording: — one sentence or short suggestion for what to say or show (do not wrap in quotation marks). (3) Story hashtags: — 3–5 relevant hashtags. Mix types: behind-the-scenes, tips, questions, polls, product highlights, testimonials, process reveals, day-in-the-life. Variety is key.
 
 Output format — markdown only, one line per day with all three parts on that line:
 ---
@@ -2485,7 +2546,7 @@ Here is the theme or focus for each day's main caption:
 
 For each Day N, write a Story prompt that explicitly supports and reinforces that day's caption. Think of it as the visibility layer between posts: behind-the-scenes, polls, quick proof, or micro-examples that keep the message active.
 
-For each day provide: (1) Idea: — short description of the Story concept (5–15 words). (2) Suggested wording: — one sentence or short suggestion for what to say or show (do not wrap in quotation marks). (3) Story hashtags: — 3–5 relevant hashtags. Mix types; variety is key, but always tied to that day's caption theme.
+{_build_stories_platform_interaction_block()}For each day provide: (1) Idea: — short description of the Story concept (5–15 words). (2) Suggested wording: — one sentence or short suggestion for what to say or show (do not wrap in quotation marks). (3) Story hashtags: — 3–5 relevant hashtags. Mix types; variety is key, but always tied to that day's caption theme.
 
 Output format — markdown only, one line per day with all three parts on that line:
 ---

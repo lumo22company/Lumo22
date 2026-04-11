@@ -3139,8 +3139,9 @@ def captions_cancel_subscription():
         if (sub.get("status") or "").strip().lower() == "canceled":
             return jsonify({"ok": True, "message": "Subscription is already cancelled."}), 200
 
-        # Immediate cancellation (no end-of-period scheduling).
-        stripe.Subscription.delete(sub_id)
+        # Immediate cancellation (no end-of-period scheduling). prorate=False: no “unused time”
+        # credit lines on the final invoice (matches terms: no refund/credit for unused period).
+        stripe.Subscription.delete(sub_id, prorate=False)
         # Stop pre-pack reminders for this order.
         order_service.update(order_id, {"reminder_opt_out": True})
         return jsonify({"ok": True, "message": "Subscription cancelled immediately."}), 200
@@ -3211,9 +3212,9 @@ GET_PACK_SOONER_META_KEY = "lumo_get_pack_sooner"
 @captions_bp.route("/captions/get-pack-sooner", methods=["POST"])
 def captions_get_pack_sooner():
     """
-    Fixed monthly pack price (no proration): creates a Stripe Checkout Session (mode=payment) like
+    Fixed monthly pack price: creates a Stripe Checkout Session (mode=payment) like
     first-time caption purchase. After successful payment, webhook resets subscription billing anchor
-    to now with proration_behavior=none and triggers delivery.
+    to now (without mid-cycle line items) and triggers delivery.
     """
     from api.auth_routes import get_current_customer
     from api.billing_routes import _subscription_monthly_price

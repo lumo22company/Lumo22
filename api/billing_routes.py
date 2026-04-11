@@ -203,6 +203,30 @@ def subscription_platforms_and_stories_from_stripe(sub_obj: dict) -> tuple[int, 
 
 billing_bp = Blueprint("billing", __name__, url_prefix="/api/billing")
 
+# Stripe Customer Portal: hosted_confirmation.custom_message max 500 characters (subscription_cancel deep link).
+_PORTAL_CANCEL_CONFIRMATION_MESSAGE = (
+    "Your captions subscription is cancelled—you won't be charged again. "
+    "Delivered packs stay in your Lumo account under History. "
+    "To download past invoices, choose Manage billing from your account and open Stripe's invoice list."
+)
+
+
+def _caption_orders_for_portal_customer():
+    """Logged-in customer email → list of caption orders, or ([], None) on failure."""
+    customer = get_current_customer()
+    if not customer:
+        return None, None, []
+    email = (customer.get("email") or "").strip().lower()
+    if not email or "@" not in email:
+        return customer, email, []
+    try:
+        from services.caption_order_service import CaptionOrderService
+
+        co_svc = CaptionOrderService()
+        return customer, email, co_svc.get_by_customer_email(email)
+    except Exception:
+        return customer, email, []
+
 
 @billing_bp.route("/portal", methods=["GET"])
 def billing_portal():
@@ -212,20 +236,11 @@ def billing_portal():
     Optional ?order_token=xxx: open portal for that order's stripe_customer_id (helps when
     user has multiple billing accounts).
     """
-    customer = get_current_customer()
-    if not customer:
+    customer, email, orders = _caption_orders_for_portal_customer()
+    if customer is None:
         return redirect(url_for("customer_login_page") + "?next=" + request.url)
-
-    email = (customer.get("email") or "").strip().lower()
-    if not email or "@" not in email:
+    if not email:
         return jsonify({"ok": False, "error": "Invalid customer"}), 400
-
-    try:
-        from services.caption_order_service import CaptionOrderService
-        co_svc = CaptionOrderService()
-        orders = co_svc.get_by_customer_email(email)
-    except Exception as e:
-        return jsonify({"ok": False, "error": "Could not load orders"}), 500
 
     order_token = (request.args.get("order_token") or "").strip()
     stripe_customer_id = None
@@ -245,7 +260,6 @@ def billing_portal():
                 break
 
     if not stripe_customer_id:
-        from flask import url_for
         base = (request.url_root or "").strip().rstrip("/")
         return redirect(f"{base}/account?billing=no_sub", code=302)
 
@@ -268,13 +282,95 @@ def billing_portal():
         url = session.get("url")
         if url:
             return redirect(url, code=302)
-    except Exception as e:
-        from flask import url_for
+    except Exception:
         base = (request.url_root or "").strip().rstrip("/")
         return redirect(f"{base}/account?billing=error", code=302)
 
     base = (request.url_root or "").strip().rstrip("/")
     return redirect(f"{base}/account?billing=error", code=302)
+
+
+@billing_bp.route("/portal-cancel-subscription", methods=["GET"])
+def billing_portal_cancel_subscription():
+    """
+    Deep-link into Stripe Customer Portal's subscription-cancel flow, then show a Lumo
+    hosted_confirmation message (Stripe max 500 chars). Invoice history remains available
+    via the normal Manage billing portal session.
+    """
+    customer, email, orders = _caption_orders_for_portal_customer()
+    if customer is None:
+        return redirect(url_for("customer_login_page") + "?next=" + request.url)
+    if not email:
+        return jsonify({"ok": False, "error": "Invalid customer"}), 400
+
+    order_token = (request.args.get("order_token") or "").strip()
+    if not order_token:
+        base = (request.url_root or "").strip().rstrip("/")
+        return redirect(f"{base}/account/subscription?billing=no_token", code=302)
+
+    order = None
+    for o in orders:
+        if (o.get("token") or "").strip() == order_token:
+            order = o
+            break
+    if not order:
+        base = (request.url_root or "").strip().rstrip("/")
+        return redirect(f"{base}/account/subscription?billing=not_found", code=302)
+
+    order_email = (order.get("customer_email") or "").strip().lower()
+    if order_email != email:
+        base = (request.url_root or "").strip().rstrip("/")
+        return redirect(f"{base}/account/subscription?billing=forbidden", code=302)
+
+    stripe_customer_id = (order.get("stripe_customer_id") or "").strip()
+    subscription_id = (order.get("stripe_subscription_id") or "").strip()
+    if not stripe_customer_id or not subscription_id:
+        base = (request.url_root or "").strip().rstrip("/")
+        return redirect(f"{base}/account/subscription?billing=no_sub", code=302)
+
+    try:
+        import stripe
+        from api.stripe_utils import is_valid_stripe_subscription_id
+        from config import Config
+
+        if not Config.STRIPE_SECRET_KEY:
+            return jsonify({"ok": False, "error": "Billing not configured"}), 503
+        if not is_valid_stripe_subscription_id(subscription_id):
+            base = (request.url_root or "").strip().rstrip("/")
+            return redirect(f"{base}/account/subscription?billing=invalid_sub", code=302)
+        stripe.api_key = Config.STRIPE_SECRET_KEY
+
+        base = (Config.BASE_URL or request.url_root or "").strip().rstrip("/")
+        if base and not base.startswith("http"):
+            base = "https://" + base
+        return_url = f"{base}/account/subscription" if base else "/account/subscription"
+
+        msg = _PORTAL_CANCEL_CONFIRMATION_MESSAGE.strip()
+        if len(msg) > 500:
+            msg = msg[:497] + "..."
+
+        session = stripe.billing_portal.Session.create(
+            customer=stripe_customer_id,
+            return_url=return_url,
+            flow_data={
+                "type": "subscription_cancel",
+                "subscription_cancel": {"subscription": subscription_id},
+                "after_completion": {
+                    "type": "hosted_confirmation",
+                    "hosted_confirmation": {"custom_message": msg},
+                },
+            },
+        )
+        url = session.get("url")
+        if url:
+            return redirect(url, code=302)
+    except Exception as e:
+        print(f"[billing] portal-cancel-subscription: {e!r}")
+        base = (request.url_root or "").strip().rstrip("/")
+        return redirect(f"{base}/account/subscription?billing=cancel_flow_error", code=302)
+
+    base = (request.url_root or "").strip().rstrip("/")
+    return redirect(f"{base}/account/subscription?billing=error", code=302)
 
 
 @billing_bp.route("/subscription-payment-method", methods=["POST"])
@@ -340,7 +436,7 @@ def add_stories_to_subscription():
     """
     Add the Story Ideas add-on to the customer's existing caption subscription.
     Requires login; subscription must belong to the customer and not already include Stories.
-    Stripe will prorate and add the Stories price to the subscription.
+    Stripe adds the Stories price to the subscription (billing follows Stripe’s rules for item changes).
     """
     customer = get_current_customer()
     if not customer:

@@ -587,11 +587,11 @@ def _build_captions_order_pricing_detail(
         and abs(int(amount_total_minor) - computed_minor) > 2
     ):
         mismatch_note_plain = (
-            "\n\n(List prices above may differ from the charged amount if tax, discounts, or proration apply.)"
+            "\n\n(List prices above may differ from the charged amount if tax, discounts, or other billing adjustments apply.)"
         )
         mismatch_note_html = (
             f'<p style="margin:10px 0 0; font-size:12px; color:{BRAND_MUTED};">'
-            "List prices above may differ from the charged amount if tax, discounts, or proration apply."
+            "List prices above may differ from the charged amount if tax, discounts, or other billing adjustments apply."
             "</p>"
         )
 

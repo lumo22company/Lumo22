@@ -43,7 +43,7 @@
 
 ### Billing & Stripe
 - **Webhook** (`/webhooks/stripe`): `checkout.session.completed` and `invoice.paid` (subscription_cycle) for captions; referral on `invoice.created` where applicable.
-- **Add Stories:** Adds Stories price to existing subscription; proration; order `include_stories` updated.
+- **Add Stories:** Adds Stories price to existing subscription; order `include_stories` updated (billing per Stripe rules for item changes).
 - **Remove Stories:** Reduce-subscription removes Stories line item; order updated; new price from next invoice.
 
 ### Browsing & static

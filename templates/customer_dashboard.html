@@ -111,7 +111,7 @@
           <div class="account-info-row{% if request.args.get('billing') == 'no_sub' %} account-info-row--no-divider-below{% endif %}">
             <div>
               <span class="account-info-label">Manage Billing</span>
-              <div class="account-info-value">Edit payment method, view invoices, cancel subscription.</div>
+              <div class="account-info-value">Edit payment method, download invoices, cancel subscription.</div>
             </div>
             <div class="account-info-actions">
               {% if billing_accounts and billing_accounts|length > 1 %}
@@ -939,8 +939,40 @@
       {% set get_pack_sooner = request.args.get('get_pack_sooner') == '1' %}
       {% set get_pack_order_token = request.args.get('order_token', '')|trim %}
       {% set pack_sooner_checkout_done = request.args.get('pack_sooner') == '1' %}
+      {% set billing_alert = request.args.get('billing') %}
       <section class="account-section-block">
         <h2>Manage subscription</h2>
+        {% if billing_alert == 'error' or billing_alert == 'cancel_flow_error' %}
+        <div class="account-info-panel" style="margin-bottom: 1.25rem; background: rgba(200,80,80,0.12); border: 1px solid rgba(200,80,80,0.28); border-radius: 8px; padding: 1rem 1.1rem;">
+          <p style="margin: 0; color: #333; line-height: 1.55;">{% if billing_alert == 'cancel_flow_error' %}We couldn’t open Stripe’s cancel flow. Try again in a moment, use <strong>Manage billing</strong> below to cancel there, or email <a href="mailto:hello@lumo22.com" style="color: #1a5fb4; font-weight: 600;">hello@lumo22.com</a>.{% else %}Could not open billing. Please try again or email hello@lumo22.com.{% endif %}</p>
+        </div>
+        {% elif billing_alert == 'no_token' or billing_alert == 'not_found' or billing_alert == 'forbidden' %}
+        <div class="account-info-panel" style="margin-bottom: 1.25rem; background: rgba(200,80,80,0.12); border: 1px solid rgba(200,80,80,0.28); border-radius: 8px; padding: 1rem 1.1rem;">
+          <p style="margin: 0; color: #333; line-height: 1.55;">{% if billing_alert == 'forbidden' %}That subscription doesn’t match this account.{% elif billing_alert == 'not_found' %}We couldn’t find that order.{% else %}Something was missing from the link. Open cancel from <strong>Manage subscription</strong> on this page.{% endif %}</p>
+        </div>
+        {% elif billing_alert == 'no_sub' %}
+        <div class="account-info-panel" style="margin-bottom: 1.25rem; background: rgba(200,80,80,0.12); border: 1px solid rgba(200,80,80,0.28); border-radius: 8px; padding: 1rem 1.1rem;">
+          <p style="margin: 0; color: #333; line-height: 1.55;">No linked Stripe subscription for that order. If you pay monthly, check your order emails or use <strong>Manage billing</strong> when it appears below.</p>
+        </div>
+        {% elif billing_alert == 'invalid_sub' %}
+        <div class="account-info-panel" style="margin-bottom: 1.25rem; background: rgba(200,80,80,0.12); border: 1px solid rgba(200,80,80,0.28); border-radius: 8px; padding: 1rem 1.1rem;">
+          <p style="margin: 0; color: #333; line-height: 1.55;">That subscription ID isn’t valid. Email <a href="mailto:hello@lumo22.com" style="color: #1a5fb4; font-weight: 600;">hello@lumo22.com</a> and we’ll help.</p>
+        </div>
+        {% endif %}
+        {% if billing_alert %}
+        <script>
+        (function() {
+          try {
+            var u = new URL(window.location.href);
+            if (u.searchParams.get('billing')) {
+              u.searchParams.delete('billing');
+              var q = u.searchParams.toString();
+              window.history.replaceState({}, '', u.pathname + (q ? '?' + q : '') + (u.hash || ''));
+            }
+          } catch (e) {}
+        })();
+        </script>
+        {% endif %}
         {% if pack_sooner_checkout_done %}
         <div class="account-info-panel pack-sooner-paid-banner" role="status" aria-live="polite" style="margin-bottom: 1.25rem; background: rgba(76, 175, 80, 0.18); border: 1px solid rgba(120, 200, 130, 0.45); border-radius: 8px; padding: 1rem 1.1rem;">
           <p style="margin: 0; color: #ffffff; line-height: 1.55;"><strong>Payment received.</strong> We are processing your pack sooner request — you will get an email when your captions and stories are ready (usually within a few minutes). Check spam or promotions if nothing arrives. When the pack is ready, it also appears under <strong>History</strong> in your account with download links. Your next billing date is now 30 days from this payment. If you were charged but still don’t see a new pack after about 30 minutes, email <a href="mailto:hello@lumo22.com" style="color: var(--lum-gold, #c9a227); font-weight: 600;">hello@lumo22.com</a> — we’ll verify your payment and help.</p>
@@ -1007,7 +1039,7 @@
         {% endif %}
         {% endfor %}
         <ul class="account-section-desc" style="margin: 0 0 1.25rem; padding-left: 1.25rem; line-height: 1.7; color: #ffffff;">
-          <li>Cancel your subscription (effective immediately), update your billing info, or view invoices in Stripe’s secure portal.</li>
+          <li>Cancel your subscription (effective immediately), update your billing info, or download invoices in Stripe’s secure portal.</li>
           <li>Removing or deleting a PDF from your history does not cancel your subscription. Use Manage billing below to cancel immediately.</li>
           <li>Use a different card for each subscription—add or update cards via Manage billing, then choose which card to use for each.</li>
           <li>Pause billing for one month and manage update form reminders below.</li>

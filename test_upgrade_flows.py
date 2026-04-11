@@ -4,7 +4,7 @@ Test scenarios for one-off → subscription upgrade flows (charge on delivery vs
 Run: python3 test_upgrade_flows.py
 
 Covers:
-1. Deferred charge: subscription_data.billing_cycle_anchor + proration_behavior when copy_from and not get_pack_now (no “days free”)
+1. Deferred charge: subscription_data.billing_cycle_anchor when copy_from and not get_pack_now (no “days free”)
 2. No deferred charge when get_pack_now
 3. invoice.paid: copy intake from one-off when order has no intake (upgrader)
 4. No "trial" in user-facing copy
