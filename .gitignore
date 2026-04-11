@@ -68,3 +68,5 @@ htmlcov/
 
 # Large assets
 *.pdf
+# Operator reference PDF (regenerate: python3 scripts/generate_caption_delivery_troubleshoot_pdf.py)
+!docs/CAPTION_DELIVERY_TROUBLESHOOTING.pdf
