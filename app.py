@@ -2138,8 +2138,8 @@ def referral_stripe_sync_api():
 def account_retry_caption_delivery():
     """
     Logged-in: re-run caption generation + email for a subscription order stuck in
-    failed or generating, or delivered when confirm_regenerate=true (e.g. Get pack sooner
-    charged but no new email/History row — prior pack still marked delivered).
+    failed or generating. Delivered orders are not self-serve retried (abuse / unpaid
+    repeats); customers should email support for verified resends.
     """
     customer = get_current_customer()
     if not customer:
@@ -2168,18 +2168,15 @@ def account_retry_caption_delivery():
         if not (order.get("stripe_subscription_id") or "").strip():
             return jsonify({"ok": False, "error": "not_subscription"}), 400
         st = (order.get("status") or "").strip().lower()
-        confirm_regenerate = bool(data.get("confirm_regenerate"))
-        # Delivered + prior pack on file: common after Get pack sooner charged Stripe but email/generation failed.
         if st == "delivered":
-            if not confirm_regenerate:
-                return jsonify(
-                    {
-                        "ok": False,
-                        "error": "confirm_required",
-                        "message": "Confirm in the form below to regenerate and email your subscription pack.",
-                    }
-                ), 400
-        elif st not in ("failed", "generating"):
+            return jsonify(
+                {
+                    "ok": False,
+                    "error": "no_self_serve_regenerate",
+                    "message": "We can’t resend a completed pack from this page. If you were charged but didn’t receive your order, email hello@lumo22.com and we’ll verify your payment.",
+                }
+            ), 400
+        if st not in ("failed", "generating"):
             return jsonify(
                 {
                     "ok": False,
