@@ -10,7 +10,10 @@ You need the TOKEN from your intake form link (the email that says "Complete the
 The link looks like: https://yoursite.com/captions-intake?t=XXXXXXXX
                                                       copy this part ^^^^^^^^
 
-Usage (from project root, with .env set):
+Before retrying after a DB error: apply database_caption_orders_delivery_archive.sql in Supabase
+so caption_orders.delivery_archive exists.
+
+Usage (from project root, with .env matching production — SUPABASE_URL, SUPABASE_KEY, AI + SendGrid keys):
   python3 scripts/fix_and_retry_caption_delivery.py YOUR_TOKEN
 
 Example:
@@ -83,15 +86,15 @@ def main():
     else:
         print("Email already lowercase; account should show this order after refresh.")
 
-    # 2) Run generation and delivery (same as after form submit)
-    # Stuck "generating" rows used to no-op here; force_redeliver bypasses that guard.
-    force = status == "generating"
+    # 2) Run generation and delivery (same as /api/account/retry-caption-delivery).
+    # force_redeliver=True for failed or generating so we don't no-op (matches "Try sending my pack again").
+    force_redeliver = status in ("failed", "generating")
     print("Running caption generation and sending delivery email ...")
     try:
         from api.captions_routes import _run_generation_and_deliver
-        ok, err = _run_generation_and_deliver(str(order_id), force_redeliver=force)
+        ok, err = _run_generation_and_deliver(str(order_id), force_redeliver=force_redeliver)
         print()
-        if status == "delivered" and not force:
+        if status == "delivered" and not force_redeliver:
             print(
                 "This order is already marked delivered, so no new generation was started.\n"
                 "If the PDF never arrived, check spam; open your Lumo account for backup download links;\n"
