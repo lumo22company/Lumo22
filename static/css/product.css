@@ -3810,6 +3810,7 @@
 .account-page-wrap .account-stuck-pack-banner .retry-caption-delivery-btn.account-btn-swipe-light {
   color: var(--lum-gold, #fff200) !important;
   border: 2px solid var(--lum-gold, #fff200) !important;
+  border-radius: 10px;
   display: inline-flex !important;
   align-items: center;
   justify-content: center;
