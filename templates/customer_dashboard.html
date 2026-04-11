@@ -944,7 +944,7 @@
         <h2>Manage subscription</h2>
         {% if pack_sooner_checkout_done %}
         <div class="account-info-panel pack-sooner-paid-banner" role="status" aria-live="polite" style="margin-bottom: 1.25rem; background: rgba(76, 175, 80, 0.18); border: 1px solid rgba(120, 200, 130, 0.45); border-radius: 8px; padding: 1rem 1.1rem;">
-          <p style="margin: 0; color: #ffffff; line-height: 1.55;"><strong>Payment received.</strong> We are processing your pack sooner request — you will get an email when your captions and stories are ready (usually within a few minutes). Check spam or promotions if nothing arrives. When the pack is ready, it also appears under <strong>History</strong> in your account with download links. Your next billing date is now 30 days from this payment.</p>
+          <p style="margin: 0; color: #ffffff; line-height: 1.55;"><strong>Payment received.</strong> We are processing your pack sooner request — you will get an email when your captions and stories are ready (usually within a few minutes). Check spam or promotions if nothing arrives. When the pack is ready, it also appears under <strong>History</strong> in your account with download links. Your next billing date is now 30 days from this payment. If you were charged but still don’t see a new pack after about 30 minutes, email <a href="mailto:hello@lumo22.com" style="color: var(--lum-gold, #c9a227); font-weight: 600;">hello@lumo22.com</a> — we’ll verify your payment and help.</p>
         </div>
         <script>
         (function() {
@@ -982,22 +982,11 @@
         {% if sub_orders %}
         {% for o in sub_orders %}
         {% set ost = (o.get('status') or '')|lower %}
-        {% set _retry_idx = loop.index %}
         {% if ost in ('failed', 'generating') %}
         <div class="account-info-panel account-stuck-pack-banner" role="alert" style="margin-bottom: 1.25rem; background: rgba(120, 55, 40, 0.35); border: 1px solid rgba(255, 160, 120, 0.4); border-radius: 8px; padding: 1rem 1.1rem;">
           <p style="margin: 0 0 0.75rem; color: #ffffff; line-height: 1.55;">{% if ost == 'failed' %}<strong>Your latest pack didn’t finish sending.</strong> You can safely try again — we’ll prepare your captions and email you.{% else %}<strong>Your pack is still being prepared.</strong> If this has been more than about 30 minutes with nothing in <strong>History</strong>, try again below.{% endif %}</p>
-          <button type="button" class="account-btn-swipe-dark lumo-btn-primary retry-caption-delivery-btn" data-order-token="{{ o.get('token', '') }}" style="margin: 0;">Try sending my pack again</button>
+          <button type="button" class="account-btn-swipe-light retry-caption-delivery-btn" data-order-token="{{ o.get('token', '') }}" style="margin: 0;">Try sending my pack again</button>
           <p class="retry-caption-delivery-msg" data-for-token="{{ o.get('token', '') }}" style="display: none; margin: 0.65rem 0 0; font-size: 0.88rem; color: rgba(255,255,255,0.9);"></p>
-        </div>
-        {% elif ost == 'delivered' %}
-        <div class="account-info-panel account-stuck-pack-banner account-stuck-pack-banner--delivered" role="region" style="margin-bottom: 1.25rem; background: rgba(45, 65, 95, 0.4); border: 1px solid rgba(140, 170, 220, 0.45); border-radius: 8px; padding: 1rem 1.1rem;">
-          <p style="margin: 0 0 0.75rem; color: #ffffff; line-height: 1.55;"><strong>No new pack after Get my pack sooner?</strong> If you were charged but didn’t get an email or a new row in <strong>History</strong>, confirm below — we’ll generate and send your subscription pack again using your current form answers (your previous pack stays in History).</p>
-          <label style="display: flex; gap: 0.5rem; align-items: flex-start; cursor: pointer; margin: 0 0 0.75rem; font-size: 0.9rem; color: rgba(255,255,255,0.92); line-height: 1.45;">
-            <input type="checkbox" class="retry-caption-confirm-cb" aria-describedby="retry-delivered-help-{{ _retry_idx }}" style="margin-top: 0.2rem; flex-shrink: 0;" />
-            <span id="retry-delivered-help-{{ _retry_idx }}">I want to regenerate and email my subscription pack now.</span>
-          </label>
-          <button type="button" class="account-btn-swipe-dark lumo-btn-primary retry-caption-delivered-btn" data-order-token="{{ o.get('token', '') }}" disabled style="margin: 0;">Regenerate and email my pack</button>
-          <p class="retry-caption-delivery-msg retry-caption-delivery-msg--delivered" style="display: none; margin: 0.65rem 0 0; font-size: 0.88rem; color: rgba(255,255,255,0.9);"></p>
         </div>
         {% endif %}
         {% endfor %}
@@ -1564,48 +1553,6 @@
               credentials: 'same-origin',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ order_token: tok })
-            })
-              .then(function(r) { return r.json().then(function(j) { return { ok: r.ok, json: j }; }); })
-              .then(function(res) {
-                var j = res.json || {};
-                var text = j.message || j.error || (res.ok ? 'Started.' : 'Could not start.');
-                if (msg) {
-                  msg.textContent = text;
-                  msg.style.color = res.ok ? 'rgba(200, 255, 210, 0.95)' : 'rgba(255, 210, 180, 0.95)';
-                }
-                if (!res.ok) btn.disabled = false;
-              })
-              .catch(function() {
-                if (msg) {
-                  msg.textContent = 'Network error. Try again or email hello@lumo22.com.';
-                  msg.style.color = 'rgba(255, 210, 180, 0.95)';
-                }
-                btn.disabled = false;
-              });
-          });
-        });
-        document.querySelectorAll('.account-stuck-pack-banner--delivered').forEach(function(panel) {
-          var cb = panel.querySelector('.retry-caption-confirm-cb');
-          var btn = panel.querySelector('.retry-caption-delivered-btn');
-          var msg = panel.querySelector('.retry-caption-delivery-msg--delivered');
-          if (cb && btn) {
-            cb.addEventListener('change', function() { btn.disabled = !cb.checked; });
-          }
-          if (!btn) return;
-          btn.addEventListener('click', function() {
-            var tok = (btn.getAttribute('data-order-token') || '').trim();
-            if (!tok || (cb && !cb.checked)) return;
-            btn.disabled = true;
-            if (msg) {
-              msg.style.display = 'block';
-              msg.style.color = 'rgba(255,255,255,0.9)';
-              msg.textContent = 'Starting…';
-            }
-            fetch('/api/account/retry-caption-delivery', {
-              method: 'POST',
-              credentials: 'same-origin',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ order_token: tok, confirm_regenerate: true })
             })
               .then(function(r) { return r.json().then(function(j) { return { ok: r.ok, json: j }; }); })
               .then(function(res) {

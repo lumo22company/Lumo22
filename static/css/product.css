@@ -3806,6 +3806,32 @@
   cursor: not-allowed;
 }
 
+/* Stuck pack banner (failed / generating): retry CTA — gold outline + font, swipe hover (match prepare-pack-sooner) */
+.account-page-wrap .account-stuck-pack-banner .retry-caption-delivery-btn.account-btn-swipe-light {
+  color: var(--lum-gold, #fff200) !important;
+  border: 2px solid var(--lum-gold, #fff200) !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1.25rem !important;
+  text-align: center;
+  box-sizing: border-box;
+  cursor: pointer;
+  font: inherit;
+  margin: 0;
+}
+.account-page-wrap .account-stuck-pack-banner .retry-caption-delivery-btn.account-btn-swipe-light:hover:not(:disabled) {
+  color: #000 !important;
+  border-color: var(--lum-gold, #fff200) !important;
+}
+.account-page-wrap .account-stuck-pack-banner .retry-caption-delivery-btn.account-btn-swipe-light::before {
+  background-color: var(--lum-gold, #fff200);
+}
+.account-page-wrap .account-stuck-pack-banner .retry-caption-delivery-btn.account-btn-swipe-light:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 /* Captions page dropdown: same arrow as other selects, 1rem inset */
 .product-page-captions #captions-platforms {
   padding: 0.6rem 2.5rem 0.6rem 0.75rem !important;
