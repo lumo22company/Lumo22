@@ -63,7 +63,9 @@ class Config:
     # Use noreply@lumo22.com so SendGrid can verify; never use @example.com (undeliverable)
     FROM_EMAIL = _sanitize_header_value(os.getenv('FROM_EMAIL', '') or '') or 'noreply@lumo22.com'
     FROM_NAME = _sanitize_header_value(os.getenv('FROM_NAME', '') or '') or 'Lumo 22'
-    
+    # Ops alerts (e.g. caption auto-delivery retries exhausted). Override for a dedicated inbox.
+    INTERNAL_ALERT_EMAIL = _sanitize_header_value(os.getenv('INTERNAL_ALERT_EMAIL', '') or '') or 'hello@lumo22.com'
+
     # Twilio
     TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID')
     TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN')

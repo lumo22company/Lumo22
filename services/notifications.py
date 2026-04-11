@@ -1442,6 +1442,57 @@ This is an automated notification from your lead capture system.
         
         return self.send_email(admin_email, subject, body)
 
+    def send_caption_delivery_retries_exhausted_alert(
+        self,
+        *,
+        order_id: str,
+        customer_email: str,
+        order_token: str,
+        business_name: str,
+        stripe_subscription_id: str,
+        stripe_customer_id: str,
+        delivery_failure_count: int,
+        last_error: Optional[str],
+    ) -> bool:
+        """
+        Notify ops when caption delivery_failure_count reaches the auto-retry cap.
+        Manual fix may be needed (Supabase, SendGrid, Stripe).
+        """
+        to_email = _sanitize_email_value(Config.INTERNAL_ALERT_EMAIL or "") or "hello@lumo22.com"
+        oid = (order_id or "").strip() or "?"
+        subj = (
+            f"[Lumo 22] Caption delivery retries exhausted — {oid[:10]}…"
+            if len(oid) > 10
+            else f"[Lumo 22] Caption delivery retries exhausted — {oid}"
+        )
+        err_snip = (last_error or "").strip().replace("\n", " ")
+        if len(err_snip) > 800:
+            err_snip = err_snip[:797] + "..."
+        body = f"""Caption order has reached the maximum automatic delivery attempts.
+
+Order ID: {oid}
+Order token: {(order_token or '').strip() or '(none)'}
+Customer email: {(customer_email or '').strip() or '(none)'}
+Business name (if any): {(business_name or '').strip() or '(none)'}
+Stripe subscription: {(stripe_subscription_id or '').strip() or '(none)'}
+Stripe customer: {(stripe_customer_id or '').strip() or '(none)'}
+delivery_failure_count: {delivery_failure_count}
+
+Last error (truncated):
+{err_snip or '(none)'}
+
+The customer sees "Automatic retries are exhausted" on retry. The app will not auto-retry further until you adjust the order or fix the underlying issue (Supabase / SendGrid / generation).
+
+— Lumo 22 (automated)
+"""
+        ok = self.send_email(to_email, subj, body)
+        if not ok:
+            print(
+                f"[Captions] delivery retries exhausted alert NOT sent to {to_email}; "
+                f"check SendGrid and INTERNAL_ALERT_EMAIL. order_id={oid}"
+            )
+        return ok
+
     def send_password_reset_email(self, to_email: str, reset_url: str) -> bool:
         """Send password reset email with plain and HTML body; link is explicit in HTML so it always appears."""
         if not reset_url or not reset_url.startswith("http"):

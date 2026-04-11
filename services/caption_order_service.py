@@ -12,6 +12,7 @@ from datetime import datetime, timezone, timedelta
 import uuid
 import secrets
 from config import Config
+from services.caption_delivery_recovery import CAPTIONS_MAX_AUTO_DELIVERY_FAILURES
 
 
 def _is_checkout_claim_column_missing(exc: Exception) -> bool:
@@ -600,7 +601,7 @@ class CaptionOrderService:
         if len(err) > max_error_len:
             err = err[: max_error_len - 3] + "..."
         now_iso = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
-        return self.update(
+        ok = self.update(
             order_id,
             {
                 "status": "failed",
@@ -609,6 +610,33 @@ class CaptionOrderService:
                 "delivery_last_attempt_at": now_iso,
             },
         )
+        if ok and n == CAPTIONS_MAX_AUTO_DELIVERY_FAILURES:
+            self._notify_delivery_retries_exhausted(order_id, row, err, n)
+        return ok
+
+    def _notify_delivery_retries_exhausted(
+        self,
+        order_id: str,
+        row: Dict[str, Any],
+        last_error: str,
+        delivery_failure_count: int,
+    ) -> None:
+        """Email ops once when auto-retries are exhausted (see CAPTIONS_MAX_AUTO_DELIVERY_FAILURES)."""
+        try:
+            from services.notifications import NotificationService
+
+            NotificationService().send_caption_delivery_retries_exhausted_alert(
+                order_id=str(order_id),
+                customer_email=str(row.get("customer_email") or ""),
+                order_token=str(row.get("token") or ""),
+                business_name=str(row.get("business_name") or ""),
+                stripe_subscription_id=str(row.get("stripe_subscription_id") or ""),
+                stripe_customer_id=str(row.get("stripe_customer_id") or ""),
+                delivery_failure_count=int(delivery_failure_count),
+                last_error=last_error,
+            )
+        except Exception as e:
+            print(f"[Captions] _notify_delivery_retries_exhausted failed: {e!r}")
 
     def hide_current_from_history(self, order_id: str) -> bool:
         """Hide only the live latest pack row on Account History; delivery_archive rows stay listed."""
