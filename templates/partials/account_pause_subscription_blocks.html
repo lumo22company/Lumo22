@@ -181,7 +181,7 @@
           <div class="account-settings-row" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding: 1rem 0 0; border-bottom: none;">
             <div style="flex: 1; min-width: 0;">
               <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000;">Manage billing</div>
-              <div class="account-settings-desc">Opens Stripe’s secure billing page for your card and downloadable invoices. {% if not _cancelled %}You can cancel your subscription there (effective immediately): after you confirm in Stripe, you’ll see a short confirmation message, then you can return to Lumo; renewal stops immediately. {% endif %}Delivered packs stay in <strong>History</strong>—they aren’t deleted if you cancel.</div>
+              <div class="account-settings-desc">Opens Stripe’s secure billing page for your card and downloadable invoices. {% if not _cancelled %}You can cancel your subscription there (effective immediately). {% endif %}Delivered packs stay in <strong>History</strong>—they aren’t deleted if you cancel.</div>
             </div>
             <a href="/api/billing/portal?order_token={{ o.get('token', '') }}" class="account-billing-portal-link account-btn-swipe-light" style="flex-shrink: 0;">Manage billing</a>
           </div>
