@@ -1349,6 +1349,27 @@ def _order_is_former_subscription_row(o: dict) -> bool:
     return bool((o.get("upgraded_from_token") or "").strip())
 
 
+def _format_cancelled_on_display(raw) -> Optional[str]:
+    """Human-readable date for subscription_cancelled_at in account UI (e.g. '9 Mar 2026')."""
+    if raw is None:
+        return None
+    try:
+        from datetime import datetime, timezone
+
+        s = str(raw).strip()
+        if not s:
+            return None
+        if "T" in s:
+            dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
+        else:
+            dt = datetime.fromisoformat(s[:10])
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return f"{dt.day} {dt.strftime('%b %Y')}"
+    except Exception:
+        return None
+
+
 def _history_hide_current_row(o: dict) -> bool:
     """True if customer hid only the latest pack row; archives still listed."""
     v = o.get("history_hide_current")
@@ -1825,6 +1846,7 @@ def _account_context_build(customer: dict, section: Optional[str] = None) -> dic
                 "url": url,
                 "business_name": business_name,
                 "is_resubscribe": _order_is_former_subscription_row(o),
+                "cancelled_on_display": _format_cancelled_on_display(o.get("subscription_cancelled_at")),
             })
     # Split for Manage subscription UI: former subs (resubscribe) vs one-off → new subscription
     subscribe_options_resubscribe_only = [x for x in subscribe_options if x.get("is_resubscribe")]
