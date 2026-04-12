@@ -1350,15 +1350,26 @@ def _order_is_former_subscription_row(o: dict) -> bool:
 
 
 def _format_cancelled_on_display(raw) -> Optional[str]:
-    """Human-readable date for subscription_cancelled_at in account UI (e.g. '9 Mar 2026')."""
+    """Human-readable date for account UI (e.g. '9 Mar 2026'). Accepts ISO strings, datetimes, Postgres-style strings."""
     if raw is None:
         return None
     try:
-        from datetime import datetime, timezone
+        from datetime import date, datetime, timezone
+
+        if isinstance(raw, datetime):
+            dt = raw
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return f"{dt.day} {dt.strftime('%b %Y')}"
+        if isinstance(raw, date):
+            return f"{raw.day} {raw.strftime('%b %Y')}"
 
         s = str(raw).strip()
         if not s:
             return None
+        # Postgres: "2026-04-09 12:00:00+00" (space between date and time)
+        if "T" not in s and len(s) > 10 and s[10] == " ":
+            s = s[:10] + "T" + s[11:]
         if "T" in s:
             dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
         else:
@@ -1368,6 +1379,16 @@ def _format_cancelled_on_display(raw) -> Optional[str]:
         return f"{dt.day} {dt.strftime('%b %Y')}"
     except Exception:
         return None
+
+
+def _cancelled_on_display_for_order(o: dict) -> Optional[str]:
+    """Date line for cancelled / former-sub rows: DB column first, then updated_at if still no date."""
+    d = _format_cancelled_on_display(o.get("subscription_cancelled_at"))
+    if d:
+        return d
+    if not _order_is_former_subscription_row(o):
+        return None
+    return _format_cancelled_on_display(o.get("updated_at"))
 
 
 def _history_hide_current_row(o: dict) -> bool:
@@ -1846,7 +1867,7 @@ def _account_context_build(customer: dict, section: Optional[str] = None) -> dic
                 "url": url,
                 "business_name": business_name,
                 "is_resubscribe": _order_is_former_subscription_row(o),
-                "cancelled_on_display": _format_cancelled_on_display(o.get("subscription_cancelled_at")),
+                "cancelled_on_display": _cancelled_on_display_for_order(o),
             })
     # Split for Manage subscription UI: former subs (resubscribe) vs one-off → new subscription
     subscribe_options_resubscribe_only = [x for x in subscribe_options if x.get("is_resubscribe")]

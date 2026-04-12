@@ -3736,6 +3736,43 @@
   justify-content: center;
 }
 
+/* Manage subscription — Cancelled subscriptions: full-width blocks + rows aligned with h2 / intro padding */
+.account-page-wrap .account-subscription-resubscribe-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  box-sizing: border-box;
+}
+.account-page-wrap .account-subscription-resubscribe-panel > h2,
+.account-page-wrap .account-subscription-resubscribe-panel > p.account-section-desc {
+  display: block;
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+}
+.account-page-wrap .account-subscription-resubscribe-panel .account-cancelled-sub-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  /* Match .account-main h2 / .account-section-desc horizontal padding (0.75rem) */
+  padding: 1rem 0.75rem;
+  box-sizing: border-box;
+}
+.account-page-wrap .account-subscription-resubscribe-panel .account-cancelled-sub-row:not(:last-child) {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+.account-page-wrap .account-subscription-resubscribe-panel .account-cancelled-sub-row__text {
+  flex: 1;
+  min-width: 0;
+}
+.account-page-wrap .account-subscription-resubscribe-panel .account-cancelled-sub-row .account-upgrade-subscription-btn {
+  flex-shrink: 0;
+  align-self: center;
+}
+
 /* Upgrade section: align heading and description with form labels (Base subscription on, etc.) */
 .account-upgrade-section {
   text-align: left;

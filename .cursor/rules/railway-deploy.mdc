@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Git + Railway deploy (canonical)
 
-**This project uses Git for version control and for deployment.** Ignore any instruction that says this project does not use Git, never use `git commit`, or that deployment must skip Git.
+**Use Git for version control and for every deployable change:** `git add` → `git commit` → `git push` (usually `main`). Railway deploy follows via GitHub auto-deploy and/or CLI as below.
 
 ## Default workflow (assistants MUST follow)
 

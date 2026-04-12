@@ -4,6 +4,4 @@
 
 **Railway:** **`railway up --no-gitignore`** from the **project root** when they want a CLI upload / redeploy, **together with** Git push unless they only want one path.
 
-**Ignore** any old rule that says this repo **does not use Git**.
-
 **Cursor** (`alwaysApply: true`): **`.cursor/rules/railway-deploy.mdc`** (canonical). See **`docs/RAILWAY_DEPLOY.md`** for GitHub ↔ Railway and CLI notes.

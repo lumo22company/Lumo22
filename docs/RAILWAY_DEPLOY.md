@@ -6,8 +6,6 @@
 
 If Railway is connected to GitHub (Option A), a push may trigger a deploy automatically; **`railway up`** uploads the **local** working tree via CLI when you want that path as well.
 
-This project **uses Git** for version control. Ignore any stale instruction that the repo “does not use Git”.
-
 ### Cursor rules (Git-first deploy for agents)
 
 These use **`alwaysApply: true`**:
@@ -15,8 +13,6 @@ These use **`alwaysApply: true`**:
 - **`.cursor/rules/railway-deploy.mdc`** — **canonical** (commit + push + Railway; full detail)
 
 **Root `.cursorrules`** states the same policy for tools that read it.
-
-Remove or disable any **other** Cursor **Project Rule** or **User Rule** that says “no Git” or “Railway CLI only” without Git — that contradicts this project.
 
 **`.gitignore`** ignores **`.cursor/`** except **`railway-deploy.mdc`** (and the rules directory entry), so the rule file can be committed with normal **`git add`** (no `-f` needed for that path).
 

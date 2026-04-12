@@ -1070,10 +1070,10 @@
       {% if subscribe_options_resubscribe_only|default([])|length > 0 %}
       <div class="account-subscription-resubscribe-panel" role="region" aria-label="Cancelled subscriptions" style="margin-top: {% if sub_orders or (subscribe_options_upgrade_only|default([])|length > 0) %}2rem{% else %}1.25rem{% endif %}; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.18);">
         <h2 style="margin-top: 0;">Cancelled subscriptions</h2>
-        <p class="account-section-desc" style="margin-bottom: 0.75rem;">These monthly plans have ended. Resubscribe to get packs again—your choices will be prefilled at checkout.</p>
+        <p class="account-section-desc" style="margin-bottom: 0.75rem;">These monthly plans have ended. Resubscribe to get packs again—your choices will be prefilled, and you can edit them and your form before checkout if you need to.</p>
         {% for opt in subscribe_options_resubscribe_only %}
-        <div class="account-settings-row account-cancelled-sub-row" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding: 1rem 0;{% if not loop.last %} border-bottom: 1px solid rgba(255,255,255,0.12);{% endif %}">
-          <div style="flex: 1; min-width: 0;">
+        <div class="account-settings-row account-cancelled-sub-row">
+          <div class="account-cancelled-sub-row__text">
             <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #fff;">{% if opt.business_name %}{{ opt.business_name|title }}{% else %}Subscription{% endif %}</div>
             {% if opt.cancelled_on_display %}
             <div class="account-settings-desc" style="font-size: 0.88rem; color: rgba(255,255,255,0.78); margin-top: 0.25rem;">Cancelled on {{ opt.cancelled_on_display }}</div>
@@ -1081,7 +1081,7 @@
             <div class="account-settings-desc" style="font-size: 0.88rem; color: rgba(255,255,255,0.78); margin-top: 0.25rem;">Subscription ended</div>
             {% endif %}
           </div>
-          <a href="{{ opt.url }}" class="dfd-btn dfd-btn-secondary account-upgrade-subscription-btn" style="flex-shrink: 0;">Resubscribe</a>
+          <a href="{{ opt.url }}" class="dfd-btn dfd-btn-secondary account-upgrade-subscription-btn">Resubscribe</a>
         </div>
         {% endfor %}
       </div>
