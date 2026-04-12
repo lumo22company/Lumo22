@@ -1564,6 +1564,8 @@ def _account_context_fallback(customer: dict, exc=None) -> dict:
         "subscription_billing": {"payment_methods": [], "subscription_payment_methods": {}, "subscription_pricing": {}},
         "billing_accounts": [],
         "subscribe_options": [],
+        "subscribe_options_resubscribe_only": [],
+        "subscribe_options_upgrade_only": [],
         "subscribe_url": None,
         "subscribe_business_name": None,
         "one_off_orders": [],
@@ -1824,6 +1826,9 @@ def _account_context_build(customer: dict, section: Optional[str] = None) -> dic
                 "business_name": business_name,
                 "is_resubscribe": _order_is_former_subscription_row(o),
             })
+    # Split for Manage subscription UI: former subs (resubscribe) vs one-off → new subscription
+    subscribe_options_resubscribe_only = [x for x in subscribe_options if x.get("is_resubscribe")]
+    subscribe_options_upgrade_only = [x for x in subscribe_options if not x.get("is_resubscribe")]
     # Backward compatibility: single upgrade link (most recent one-off)
     subscribe_url = subscribe_options[0]["url"] if subscribe_options else None
     subscribe_business_name = subscribe_options[0]["business_name"] if subscribe_options else None
@@ -1850,10 +1855,12 @@ def _account_context_build(customer: dict, section: Optional[str] = None) -> dic
     ref_secret = (getattr(Config, "STRIPE_SECRET_KEY", None) or "").strip()
     referral_discount_configured = bool(ref_coupon and ref_secret)
     referral_stripe_promo_ok = bool(_safe_str(customer.get("stripe_referral_promotion_code_id")))
-    # True when every subscribe/upgrade link is for a pack that used to be on a subscription (Stripe sub deleted).
-    account_resubscribe_mode = bool(subscribe_options) and all(
-        (x.get("is_resubscribe") for x in subscribe_options)
-    )
+    # True when every subscribe option is resubscribe (truthy is_resubscribe). Matches template
+    # subscribe_options|selectattr('is_resubscribe')|length == subscribe_options|length — not raw all(.get)
+    # which treats missing key like False and could disagree with Jinja.
+    _n_sub_opts = len(subscribe_options)
+    _n_resub_opts = sum(1 for x in subscribe_options if x.get("is_resubscribe"))
+    account_resubscribe_mode = _n_sub_opts > 0 and _n_resub_opts == _n_sub_opts
     history_delivered_orders = _history_delivered_orders(caption_orders)
     history_delivered_entries = _history_delivered_entries(caption_orders)
     history_storage = _history_archive_storage_flags(caption_orders)
@@ -1866,6 +1873,8 @@ def _account_context_build(customer: dict, section: Optional[str] = None) -> dic
         "subscription_billing": subscription_billing,
         "billing_accounts": billing_accounts,
         "subscribe_options": subscribe_options,
+        "subscribe_options_resubscribe_only": subscribe_options_resubscribe_only,
+        "subscribe_options_upgrade_only": subscribe_options_upgrade_only,
         "subscribe_url": subscribe_url,
         "subscribe_business_name": subscribe_business_name,
         "one_off_orders": one_off_orders,

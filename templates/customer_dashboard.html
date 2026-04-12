@@ -13,6 +13,10 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/product.css') }}?v={{ asset_version }}">
 </head>
 <body class="lumo-landing account-page-wrap"{% if defer_stripe_billing|default(false) %} data-account-defer-stripe="1"{% endif %}>
+  {# Resubscribe detection: match subscribe_options|selectattr('is_resubscribe') (same as Manage subscription). account_resubscribe_mode alone can disagree when options differ. #}
+  {% set _subscribe_resub_list = (subscribe_options|default([]))|selectattr('is_resubscribe')|list %}
+  {% set _has_any_resubscribe = _subscribe_resub_list|length > 0 %}
+  {% set _has_all_resubscribe = (subscribe_options|default([]))|length > 0 and _subscribe_resub_list|length == (subscribe_options|default([]))|length %}
   {% include '_lumo_nav.html' %}
 
   <div class="account-layout" id="account-layout">
@@ -26,7 +30,7 @@
         <li><a href="/account/information" class="{% if current_section == 'information' %}active{% endif %}">Account Information</a></li>
         <li><a href="/account/subscription" class="{% if current_section == 'subscription' %}active{% endif %}">Manage subscription</a></li>
         <li><a href="/account/edit-form" class="{% if current_section == 'edit-form' %}active{% endif %}">Edit form</a></li>
-        {% if subscribe_options %}<li><a href="/account/upgrade" class="{% if current_section == 'upgrade' %}active{% endif %}">{% if account_resubscribe_mode|default(false) %}Resubscribe{% else %}Upgrade{% endif %}</a></li>{% endif %}
+        {% if subscribe_options %}<li><a href="/account/upgrade" class="{% if current_section == 'upgrade' %}active{% endif %}">{% if _has_any_resubscribe %}Resubscribe{% else %}Upgrade{% endif %}</a></li>{% endif %}
         <li><a href="/account/history" class="{% if current_section == 'history' %}active{% endif %}">History</a></li>
         <li><a href="/account/refer" class="{% if current_section == 'refer' %}active{% endif %}">Refer a friend</a></li>
       </ul>
@@ -288,7 +292,7 @@
         </ul>
         {% elif subscribe_options %}
         <p class="account-section-desc">{% if subscribe_options|selectattr('is_resubscribe')|list|length == subscribe_options|length %}We couldn’t find a form link for your order yet. Try the link in your order email, or resubscribe—your answers can be prefilled from your pack.{% else %}We couldn’t find a form link for your order yet. Try the link in your order email, or upgrade to a subscription—your answers can be prefilled from your one-off.{% endif %}</p>
-        <p><a href="/account/upgrade" class="dfd-btn dfd-btn-secondary account-upgrade-subscription-btn">{% if account_resubscribe_mode|default(false) %}Resubscribe{% else %}Upgrade to subscription{% endif %}</a></p>
+        <p><a href="/account/upgrade" class="dfd-btn dfd-btn-secondary account-upgrade-subscription-btn">{% if _has_any_resubscribe %}Resubscribe{% else %}Upgrade to subscription{% endif %}</a></p>
               {% else %}
         <p class="account-section-desc">No caption orders linked to this email yet. After you purchase with this address, your form will appear here (one-off and subscription).</p>
         <p class="account-section-desc" style="font-size: 0.9rem; color: rgba(255,255,255,0.75); margin-top: 0.5rem;">Orders are linked to the email you used at checkout. If a recent order is missing, check you're logged in with that same email.</p>
@@ -643,8 +647,8 @@
 
       {% if current_section == 'upgrade' and one_off_upgrade_options %}
       <section class="account-section-block account-upgrade-section">
-        <h2>{% if account_resubscribe_mode|default(false) %}Resubscribe{% else %}Upgrade to subscription{% endif %}</h2>
-        <p class="account-section-desc">{% if account_resubscribe_mode|default(false) %}Start your subscription again from a pack below—your form will be prefilled. You can edit anytime under <strong>Edit form</strong> after you subscribe.{% else %}Choose which one-off pack to base your subscription on (after you've completed that pack's intake). Adjust platforms and Story Ideas, then upgrade. Your form will be prefilled from your selected pack; you can edit it anytime under <strong>Edit form</strong> in your account after you subscribe.{% endif %}</p>
+        <h2>{% if _has_any_resubscribe %}Resubscribe{% else %}Upgrade to subscription{% endif %}</h2>
+        <p class="account-section-desc">{% if _has_all_resubscribe %}Start your subscription again from a pack below—your form will be prefilled. You can edit anytime under <strong>Edit form</strong> after you subscribe.{% elif _has_any_resubscribe %}Choose a pack below—a completed one-off you’re upgrading, or a former subscription you’re restarting. Adjust platforms and Story Ideas, then continue. Your form will be prefilled from your selected pack; you can edit anytime under <strong>Edit form</strong> after you subscribe.{% else %}Choose which one-off pack to base your subscription on (after you've completed that pack's intake). Adjust platforms and Story Ideas, then upgrade. Your form will be prefilled from your selected pack; you can edit it anytime under <strong>Edit form</strong> in your account after you subscribe.{% endif %}</p>
         <div id="account-upgrade-base-token" data-token="{{ upgrade_url_base_token|default('', true)|e }}" hidden></div>
         <div class="account-upgrade-form" style="max-width: 480px;">
           <div style="margin-bottom: 1.25rem;">
@@ -704,7 +708,7 @@
           </div>
           <p class="account-upgrade-price" style="font-size: 1.1rem; font-weight: 600; color: var(--lum-gold); margin-bottom: 1rem;"><span id="upgrade-price-display">£79</span> <span>/month</span></p>
           <p id="upgrade-first-pack-copy" style="font-size: 0.9rem; color: rgba(255,255,255,0.8); margin-bottom: 1rem;">Your first subscription pack will be delivered 30 days after your one-off pack—continuous content, no overlap.</p>
-          <a href="#" id="upgrade-checkout-btn" class="lumo-btn-primary btn-cta-account-style js-terms-checkout" data-checkout-url="">{% if account_resubscribe_mode|default(false) %}Resubscribe{% else %}Upgrade to subscription{% endif %}</a>
+          <a href="#" id="upgrade-checkout-btn" class="lumo-btn-primary btn-cta-account-style js-terms-checkout" data-checkout-url="">{% if _has_any_resubscribe %}Resubscribe{% else %}Upgrade to subscription{% endif %}</a>
         </div>
       </section>
       {% include '_terms_modal.html' %}
@@ -1056,12 +1060,21 @@
         {% include 'partials/account_pause_subscription_blocks.html' %}
         {% endif %}
         {% else %}
-        {% if subscribe_options %}
-        <p class="account-section-desc" style="margin-bottom: 0.75rem;">{% if subscribe_options|selectattr('is_resubscribe')|list|length == subscribe_options|length %}Your subscription has ended. Resubscribe to get monthly packs again—your choices will be prefilled at checkout.{% else %}Want a new pack every month? Upgrade to a subscription and the choices from a previous one-off pack will be prefilled on the checkout page. Your first subscription pack arrives 30 days after that one-off pack.{% endif %}{% if subscribe_options|length > 1 %} You have more than one pack — choose which one to base the subscription on below.{% endif %}</p>
-        {% for opt in subscribe_options %}
-        <p style="margin-bottom: 0.5rem;"><a href="{{ opt.url }}" class="dfd-btn dfd-btn-secondary account-upgrade-subscription-btn">{% if opt.is_resubscribe|default(false) %}Resubscribe{% else %}Upgrade to subscription{% endif %}{% if opt.business_name %} — {{ opt.business_name|title }}{% else %} — use this pack’s choices{% endif %}</a></p>
+        {% if subscribe_options_upgrade_only|default([])|length > 0 %}
+        <p class="account-section-desc" style="margin-bottom: 0.75rem;">Want a new pack every month? Upgrade to a subscription and the choices from a previous one-off pack will be prefilled on the checkout page. Your first subscription pack arrives 30 days after that one-off pack.{% if subscribe_options_upgrade_only|length > 1 %} You have more than one pack — choose which one to base the subscription on below.{% endif %}</p>
+        {% for opt in subscribe_options_upgrade_only %}
+        <p style="margin-bottom: 0.5rem;"><a href="{{ opt.url }}" class="dfd-btn dfd-btn-secondary account-upgrade-subscription-btn">Upgrade to subscription{% if opt.business_name %} — {{ opt.business_name|title }}{% else %} — use this pack’s choices{% endif %}</a></p>
         {% endfor %}
         {% endif %}
+      {% endif %}
+      {% if subscribe_options_resubscribe_only|default([])|length > 0 %}
+      <div class="account-subscription-resubscribe-panel" role="region" aria-label="Cancelled subscriptions" style="margin-top: {% if sub_orders or (subscribe_options_upgrade_only|default([])|length > 0) %}2rem{% else %}1.25rem{% endif %}; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.18);">
+        <h3 class="account-settings-label" style="font-size: 1.05rem; font-weight: 600; color: #fff; margin: 0 0 0.5rem;">Cancelled subscriptions</h3>
+        <p class="account-section-desc" style="margin-bottom: 0.75rem;">These monthly plans have ended. Resubscribe to get packs again—your choices will be prefilled at checkout.</p>
+        {% for opt in subscribe_options_resubscribe_only %}
+        <p style="margin-bottom: 0.5rem;"><a href="{{ opt.url }}" class="dfd-btn dfd-btn-secondary account-upgrade-subscription-btn">Resubscribe{% if opt.business_name %} — {{ opt.business_name|title }}{% else %} — use this pack’s choices{% endif %}</a></p>
+        {% endfor %}
+      </div>
       {% endif %}
     </section>
       {% endif %}
