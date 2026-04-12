@@ -1795,6 +1795,18 @@
 .account-main .account-section-block {
   margin-bottom: 2.5rem;
 }
+/* Stack heading + intro line (global h2 / .account-section-desc are inline-block and sit on one row) */
+.account-main .account-section-block--information {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+.account-main .account-section-block--information > h2,
+.account-main .account-section-block--information > p.account-section-desc:first-of-type {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+}
 .account-main .account-section-block > p:not(.account-section-desc) {
   color: #444;
   font-size: 0.95rem;
