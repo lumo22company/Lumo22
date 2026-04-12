@@ -1336,6 +1336,19 @@ def _order_hidden_from_account(o: dict) -> bool:
     return (o.get("status") or "").strip().lower() == "hidden"
 
 
+def _order_is_former_subscription_row(o: dict) -> bool:
+    """
+    Order row represents a subscription that has ended (resubscribe path), including when
+    subscription_cancelled_at was not set but Stripe sub was cleared on the upgrade row
+    (upgraded_from_token set — one-off→sub upgrade then cancel).
+    """
+    if bool(o.get("subscription_cancelled_at")):
+        return True
+    if (o.get("stripe_subscription_id") or "").strip():
+        return False
+    return bool((o.get("upgraded_from_token") or "").strip())
+
+
 def _history_hide_current_row(o: dict) -> bool:
     """True if customer hid only the latest pack row; archives still listed."""
     v = o.get("history_hide_current")
@@ -1772,16 +1785,12 @@ def _account_context_build(customer: dict, section: Optional[str] = None) -> dic
     # Omit one-offs removed from History (status hidden)—same as Edit form.
     subscribe_options = []
     one_off_orders = [o for o in caption_orders if not (o.get("stripe_subscription_id") or "").strip()]
-    # Suppress the base one-off pack from upgrade/resubscribe lists while a subscription row exists for it,
-    # or while the former subscription row (cancelled) still references it — avoids duplicate choices.
+    # Suppress the base one-off whenever any row points at it via upgraded_from_token (active sub,
+    # cancelled sub, or edge case where sub id + subscription_cancelled_at are missing but link remains).
     upgraded_from_tokens = {
         (o.get("upgraded_from_token") or "").strip()
         for o in caption_orders
         if (o.get("upgraded_from_token") or "").strip()
-        and (
-            (o.get("stripe_subscription_id") or "").strip()
-            or bool(o.get("subscription_cancelled_at"))
-        )
     }
     one_off_orders = [
         o for o in one_off_orders
@@ -1813,7 +1822,7 @@ def _account_context_build(customer: dict, section: Optional[str] = None) -> dic
             subscribe_options.append({
                 "url": url,
                 "business_name": business_name,
-                "is_resubscribe": bool(o.get("subscription_cancelled_at")),
+                "is_resubscribe": _order_is_former_subscription_row(o),
             })
     # Backward compatibility: single upgrade link (most recent one-off)
     subscribe_url = subscribe_options[0]["url"] if subscribe_options else None
