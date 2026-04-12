@@ -1039,11 +1039,10 @@
         {% endif %}
         {% endfor %}
         <ul class="account-section-desc" style="margin: 0 0 1.25rem; padding-left: 1.25rem; line-height: 1.7; color: #ffffff;">
-          <li>Cancel your subscription (effective immediately), update your billing info, or download invoices in Stripe’s secure portal.</li>
-          <li>Removing or deleting a PDF from your history does not cancel your subscription. Use Manage billing below to cancel immediately.</li>
           <li>Use a different card for each subscription—add or update cards via Manage billing, then choose which card to use for each.</li>
           <li>Pause billing for one month and manage update form reminders below.</li>
           <li><strong>Platforms (add, change, or reduce)</strong> and <strong>Story Ideas (add or remove)</strong> — use the buttons below, or Edit form to change platforms and remove Story Ideas.</li>
+          <li>Cancel your subscription (effective immediately), update your billing info, or download invoices in Stripe’s secure portal via <strong>Manage billing</strong> below—removing or deleting a PDF from your history does <strong>not</strong> cancel your subscription.</li>
         </ul>
         {% if defer_stripe_billing|default(false) %}
         <div id="account-pause-billing-deferred-root" data-account-billing-deferred="1" role="region" aria-live="polite" aria-label="Subscription billing">
