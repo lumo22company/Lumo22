@@ -2631,6 +2631,7 @@
   .account-edit-form-list .account-edit-form-actions {
     justify-self: start;
     width: 100%;
+    min-width: 0;
     justify-content: flex-start;
     flex-wrap: wrap;
   }
@@ -2646,16 +2647,16 @@
   gap: 0.5rem 0.65rem;
   min-width: 0;
   max-width: 100%;
+  overflow: hidden;
 }
 /* Plain label only — not a link, not button-styled */
-/* Short names: width follows text (no gap before pill). Long/truncated: cap floor ~10ch via min-content vs 10ch. */
-/* flex-grow 0 keeps Subscription/One-off pill next to name, not flush to buttons */
+/* min-width: 0 + meta overflow:hidden lets grid column 1 shrink for ellipsis without collapsing to 0 (avoid min(min-content,…) bugs in WebKit). */
 .account-edit-form-list .account-edit-form-biz {
   font-weight: 500;
   color: rgba(255, 255, 255, 0.92);
   font-size: 1rem;
   line-height: 1.4;
-  min-width: min(min-content, min(100%, 10ch));
+  min-width: 0;
   flex: 0 1 auto;
   max-width: 100%;
 }
@@ -2664,7 +2665,7 @@
   display: inline-flex;
   flex-wrap: nowrap;
   align-items: baseline;
-  min-width: min(min-content, min(100%, 10ch));
+  min-width: 0;
   max-width: 100%;
 }
 .account-edit-form-list .account-edit-form-biz--split .account-edit-form-biz-first {
@@ -2675,14 +2676,15 @@
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  /* nowrap collapses multiple spaces; pre preserves spacing from the business name */
+  white-space: pre;
 }
-/* Single token / one word: ellipsis; min-width comes from .account-edit-form-biz */
+/* Single token / one word: ellipsis */
 .account-edit-form-list .account-edit-form-biz--single {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: pre;
 }
 /* Same role as History panel type pills; tuned for dark account background */
 .account-edit-form-list .account-edit-form-type {
@@ -2718,7 +2720,8 @@
   justify-self: end;
   align-self: center;
   flex-shrink: 0;
-  min-width: 0;
+  /* intrinsic width so buttons never shrink/overlap the name column */
+  min-width: max-content;
 }
 /* Browsers without container queries: stack buttons when viewport is narrow */
 @supports not (container-type: inline-size) {
@@ -2729,6 +2732,7 @@
     .account-page-wrap .account-edit-form-list .account-edit-form-actions {
       justify-self: start;
       width: 100%;
+      min-width: 0;
       justify-content: flex-start;
       flex-wrap: wrap;
     }
@@ -3001,16 +3005,17 @@
   }
   .account-edit-form-list .account-edit-form-biz--single {
     flex: 0 1 auto;
-    min-width: min(min-content, min(100%, 10ch));
+    min-width: 0;
     max-width: 100%;
   }
   .account-edit-form-list .account-edit-form-biz--split {
     flex: 0 1 auto;
-    min-width: min(min-content, min(100%, 10ch));
+    min-width: 0;
     max-width: 100%;
   }
   .account-edit-form-list .account-edit-form-actions {
     width: 100%;
+    min-width: 0;
     margin-left: 0;
     justify-content: flex-start;
     flex-wrap: wrap;
@@ -3022,7 +3027,7 @@
   .account-edit-form-list .account-edit-form-biz--single {
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
+    white-space: pre;
   }
 }
 
@@ -3041,19 +3046,20 @@
   }
   .account-edit-form-list--stacked .account-edit-form-biz--single {
     flex: 0 1 auto;
-    min-width: min(min-content, min(100%, 10ch));
+    min-width: 0;
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
+    white-space: pre;
   }
   .account-edit-form-list--stacked .account-edit-form-biz--split {
     flex: 0 1 auto;
-    min-width: min(min-content, min(100%, 10ch));
+    min-width: 0;
     max-width: 100%;
   }
   .account-edit-form-list--stacked .account-edit-form-actions {
     width: 100%;
+    min-width: 0;
     margin-left: 0;
     justify-content: flex-start;
     flex-wrap: wrap;
