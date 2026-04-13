@@ -2632,14 +2632,14 @@
   max-width: 100%;
 }
 /* Plain label only — not a link, not button-styled */
-/* ~10 character floor (ch) until row stacks / wraps so label never collapses to dots only beside buttons */
+/* ~10 character floor (ch); flex-grow 0 so Subscription/One-off pill stays next to name, not flush to buttons */
 .account-edit-form-list .account-edit-form-biz {
   font-weight: 500;
   color: rgba(255, 255, 255, 0.92);
   font-size: 1rem;
   line-height: 1.4;
   min-width: min(100%, 10ch);
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   max-width: 100%;
 }
 /* Multi-word: first word always fully visible; remainder ellipsizes (resize / narrow columns) */
