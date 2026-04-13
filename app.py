@@ -1353,11 +1353,20 @@ def _order_hidden_from_account(o: dict) -> bool:
     return (o.get("status") or "").strip().lower() == "hidden"
 
 
+def _subscription_pause_cancelled_in_stripe(o: dict) -> bool:
+    """True when Stripe subscription status is canceled (set by _load_account_stripe_subscription_data)."""
+    return bool((o.get("subscription_pause") or {}).get("cancelled_now"))
+
+
 def _order_has_active_stripe_subscription(o: dict) -> bool:
     """True when the order row still represents a live subscription (Stripe id present and not cancelled in DB)."""
     if not (o.get("stripe_subscription_id") or "").strip():
         return False
-    return not bool(o.get("subscription_cancelled_at"))
+    if bool(o.get("subscription_cancelled_at")):
+        return False
+    if _subscription_pause_cancelled_in_stripe(o):
+        return False
+    return True
 
 
 def _order_is_former_subscription_row(o: dict) -> bool:
@@ -1833,10 +1842,24 @@ def _account_context_build(customer: dict, section: Optional[str] = None) -> dic
         if subscription_billing is None:
             subscription_billing = _load_account_stripe_subscription_data(caption_orders)
             referral_code = None
+
+    # Deferred HTML skips Stripe on first pass; load subscription pause/pricing when any row still has
+    # a Stripe subscription id so Cancelled subscriptions / active-sub detection match Stripe (webhook
+    # may not have cleared the id yet after cancel).
+    if (
+        defer
+        and caption_orders
+        and any((o.get("stripe_subscription_id") or "").strip() for o in caption_orders)
+    ):
+        try:
+            subscription_billing = _load_account_stripe_subscription_data(caption_orders)
+        except Exception as e:
+            print(f"[account] deferred Stripe subscription load: {e!r}")
+
     current_intake_order = None
     if caption_orders:
-        sub_orders = [o for o in caption_orders if (o.get("stripe_subscription_id") or "").strip()]
-        current_intake_order = sub_orders[0] if sub_orders else caption_orders[0]
+        _active_subs = [o for o in caption_orders if _order_has_active_stripe_subscription(o)]
+        current_intake_order = _active_subs[0] if _active_subs else caption_orders[0]
 
     if subscription_billing is None:
         subscription_billing = {
@@ -1870,11 +1893,13 @@ def _account_context_build(customer: dict, section: Optional[str] = None) -> dic
     # Omit one-offs already linked as upgraded_from_token on a subscription row (that upgrade path is done).
     # Omit one-offs removed from History (status hidden)—same as Edit form.
     subscribe_options = []
-    # Include ended subscriptions (cancelled in DB) even if stripe_subscription_id is not yet cleared by webhook.
+    # Include ended subscriptions: cancelled in DB, or Stripe reports canceled (id not cleared yet).
     one_off_orders = [
         o
         for o in caption_orders
-        if (not (o.get("stripe_subscription_id") or "").strip()) or bool(o.get("subscription_cancelled_at"))
+        if (not (o.get("stripe_subscription_id") or "").strip())
+        or bool(o.get("subscription_cancelled_at"))
+        or _subscription_pause_cancelled_in_stripe(o)
     ]
     # Suppress the base one-off whenever any row points at it via upgraded_from_token (active sub,
     # cancelled sub, or edge case where sub id + subscription_cancelled_at are missing but link remains).
@@ -1883,9 +1908,16 @@ def _account_context_build(customer: dict, section: Optional[str] = None) -> dic
         for o in caption_orders
         if (o.get("upgraded_from_token") or "").strip()
     }
+    # Hide one-off rows whose token was consumed as an upgrade base—but never hide former
+    # subscription rows: a newer order may set upgraded_from_token to a cancelled sub’s token,
+    # and that cancelled row must still appear under Cancelled subscriptions / resubscribe.
     one_off_orders = [
-        o for o in one_off_orders
-        if (o.get("token") or "").strip() not in upgraded_from_tokens
+        o
+        for o in one_off_orders
+        if (
+            (o.get("token") or "").strip() not in upgraded_from_tokens
+            or _order_is_former_subscription_row(o)
+        )
         and not _order_hidden_from_account(o)
     ]
     one_off_upgrade_options = [o for o in one_off_orders if _one_off_eligible_for_upgrade_base_dropdown(o)]

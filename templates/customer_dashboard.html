@@ -17,7 +17,8 @@
   {% set _subscribe_resub_list = (subscribe_options|default([]))|selectattr('is_resubscribe')|list %}
   {% set _has_any_resubscribe = _subscribe_resub_list|length > 0 %}
   {% set _has_all_resubscribe = (subscribe_options|default([]))|length > 0 and _subscribe_resub_list|length == (subscribe_options|default([]))|length %}
-  {% set _upgrade_flow_title = 'Upgrade to subscription' %}
+  {# Upgrade-only → short "Upgrade"; all former subs → "Resubscribe"; mixed → "Upgrade or resubscribe". #}
+  {% set _upgrade_flow_title = 'Upgrade' %}
   {% if _has_all_resubscribe %}
     {% set _upgrade_flow_title = 'Resubscribe' %}
   {% elif _has_any_resubscribe %}
@@ -287,7 +288,7 @@
               <a href="/captions-intake?t={{ o.token }}" class="account-billing-portal-link account-btn-swipe-light">Edit form</a>
               {% else %}
               <a href="/captions-intake?t={{ o.token }}&view=1" class="account-billing-portal-link account-btn-swipe-light">View form</a>
-              <a href="/account/upgrade?base={{ o.token }}" class="account-billing-portal-link account-btn-swipe-light">{% if is_former_sub %}Resubscribe{% else %}Upgrade to subscription{% endif %}</a>
+              <a href="/account/upgrade?base={{ o.token }}" class="account-billing-portal-link account-btn-swipe-light">{% if is_former_sub %}Resubscribe{% else %}Upgrade{% endif %}</a>
               {% endif %}
               {% if _edit_cancelled and not (defer_stripe_billing|default(false)) %}
               <span class="account-cancel-badge account-edit-form-cancel-badge">Cancelled{% if _edit_pause.get('ends_at') %} — {{ _edit_pause.get('ends_at') }}{% endif %}</span>
@@ -1070,7 +1071,7 @@
         {% if subscribe_options_upgrade_only|default([])|length > 0 %}
         <p class="account-section-desc" style="margin-bottom: 0.75rem;">Want a new pack every month? Upgrade to a subscription and the choices from a previous one-off pack will be prefilled on the checkout page. Your first subscription pack arrives 30 days after that one-off pack.{% if subscribe_options_upgrade_only|length > 1 %} You have more than one pack — choose which one to base the subscription on below.{% endif %}</p>
         {% for opt in subscribe_options_upgrade_only %}
-        <p style="margin-bottom: 0.5rem;"><a href="{{ opt.url }}" class="dfd-btn dfd-btn-secondary account-upgrade-subscription-btn">Upgrade to subscription{% if opt.business_name %} — {{ opt.business_name|title }}{% else %} — use this pack’s choices{% endif %}</a></p>
+        <p style="margin-bottom: 0.5rem;"><a href="{{ opt.url }}" class="dfd-btn dfd-btn-secondary account-upgrade-subscription-btn">Upgrade{% if opt.business_name %} — {{ opt.business_name|title }}{% else %} — use this pack’s choices{% endif %}</a></p>
         {% endfor %}
         {% endif %}
       {% endif %}

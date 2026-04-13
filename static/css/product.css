@@ -1663,7 +1663,7 @@
   z-index: 2; /* Above footer so sticky sidebar stays on top when overlapping */
 }
 .account-sidebar {
-  width: 260px;
+  width: 360px; /* Longest nav label (Upgrade or resubscribe) + nowrap on desktop */
   flex-shrink: 0;
   padding: 2rem 0 2rem 1.5rem;
   position: static;
@@ -1708,6 +1708,12 @@
   background: rgba(255,242,0,0.12);
   border: 2px solid var(--lum-gold);
   outline: none;
+}
+/* Desktop/tablet: keep multi-word nav labels on one line (mobile sidebar stacks / wraps instead). */
+@media (min-width: 769px) {
+  .account-sidebar-nav a {
+    white-space: nowrap;
+  }
 }
 .account-sidebar-logout {
   margin-top: 2rem;
