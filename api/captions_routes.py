@@ -2394,7 +2394,7 @@ def _captions_intake_submit_impl(data):
                     "error": (
                         "You’re on the link for your old one-off pack, which was already used to start your subscription. "
                         "We can’t save edits against that one-off order anymore. "
-                        "To change your brief for future packs: log in → Account → Edit form → open the row for your subscription (not the one-off)."
+                        "To change your form answers for future packs: log in → Account → Edit form → open the row for your subscription (not the one-off)."
                     ),
                     "oneoff_edit_blocked": True,
                     "upgraded_to_subscription": True,
@@ -2439,7 +2439,7 @@ def _captions_intake_submit_impl(data):
                 "error": (
                     "This page is the link for your one-off pack, which is already complete. "
                     "We can’t save new answers here—that link only applied to that single purchase. "
-                    "To move to a subscription and edit your brief for ongoing monthly packs: log in, go to Account → Upgrade, and finish subscription checkout. "
+                    "To move to a subscription and edit your intake for ongoing monthly packs: log in, go to Account → Upgrade, and finish subscription checkout. "
                     "After that, use Account → Edit form and choose your subscription row to update your details (not this one-off link). "
                     "Want another month without subscribing? Buy another one-off from the pricing page."
                 ),

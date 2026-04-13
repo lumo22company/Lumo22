@@ -237,7 +237,7 @@
         {% if edit_form_orders %}
         <p class="account-section-desc" style="margin: 0 0 1.25rem; line-height: 1.65; color: rgba(255,255,255,0.92);">
           {% if edit_form_has_subscriptions|default(false) %}
-          <strong>Subscriptions:</strong> use <strong>Edit form</strong> below to change your brief (voice, topics, etc.) for your <strong>next</strong> pack (not packs already delivered). Those content edits are free. Changing how many platforms you have or whether Story Ideas are on your plan may change what you pay—use <strong>Manage subscription</strong> → <strong>Change plan</strong> for that.
+          <strong>Subscriptions:</strong> use <strong>Edit form</strong> below to change your form answers (voice, topics, etc.) for your <strong>next</strong> pack (not packs already delivered). Those content edits are free. Changing how many platforms you have or whether Story Ideas are on your plan may change what you pay—use <strong>Manage subscription</strong> → <strong>Change plan</strong> for that.
           {% endif %}
           {% if edit_form_has_oneoffs|default(false) %}
           <span style="display: block; margin-top: {% if edit_form_has_subscriptions|default(false) %}0.65rem{% else %}0{% endif %};"><strong>One-off packs:</strong> use <strong>View form</strong> to read what we have on file. To <strong>change</strong> answers from your account, follow <strong>Upgrade to edit</strong> (subscription checkout—then you can edit anytime for each new pack). Want another 30 days without subscribing? <a href="/captions" style="color: var(--lum-gold, #fff200); font-weight: 600; text-decoration: none; border-bottom: 1px solid var(--lum-gold, #fff200);">Buy another one-off pack</a>.</span>
@@ -1005,7 +1005,7 @@
         {% if _gps_order %}
         <div id="get-pack-sooner-confirm-panel" class="account-info-panel" data-order-token="{{ get_pack_order_token }}" style="margin-bottom: 1.25rem; background: rgba(201,162,39,0.12); border: 1px solid rgba(201,162,39,0.35);">
           <h3 style="font-size: 1.1rem; margin: 0 0 0.75rem; color: #1a1a1a;">Form updated. Ready to get your pack sooner?</h3>
-          <p style="margin: 0 0 0.75rem; color: #333;">You'll go to <strong>checkout</strong> to confirm payment and your new billing date. If you still need to change platforms or Story Ideas, use <strong>Change plan</strong> above or <strong>Get my pack sooner</strong> → <strong>Update preferences</strong>. For your brief only, use <strong>Edit form</strong> in the menu.</p>
+          <p style="margin: 0 0 0.75rem; color: #333;">You'll go to <strong>checkout</strong> to confirm payment and your new billing date. If you still need to change platforms or Story Ideas, use <strong>Change plan</strong> above or <strong>Get my pack sooner</strong> → <strong>Update preferences</strong>. To edit voice, topics, and other form details only, use <strong>Edit form</strong> in the menu.</p>
           <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
             <button type="button" id="get-pack-sooner-confirm-btn" class="lumo-btn-primary account-btn-swipe-dark" data-order-token="{{ get_pack_order_token }}" data-order-id="{{ _gps_order.get('id', '') if _gps_order else '' }}">Continue to checkout</button>
             <a href="/account/subscription" class="account-billing-portal-link account-btn-swipe-light">Cancel</a>
@@ -1247,6 +1247,7 @@
             <span>Align each Story to that day's caption (same theme)</span>
           </label>
           <p style="font-size:0.8rem; margin:0.35rem 0 0 1.5rem; opacity:0.85; line-height:1.35; color:rgba(255,255,255,0.85);">Leave unchecked if you want Stories and captions to differ on the same day.</p>
+          <p style="font-size:0.8rem; margin:0.35rem 0 0 1.5rem; opacity:0.85; line-height:1.35; color:rgba(255,255,255,0.85);">Turning this on or off does not change your monthly price—only platforms and Story Ideas on your plan affect billing.</p>
         </div>
         <div id="change-plan-price" class="account-delete-modal-text change-plan-billed-line" style="margin-bottom:0.75rem;"></div>
         <p class="account-delete-modal-text change-plan-legal-note" style="margin-bottom:0;">By confirming you agree to the new price from your next pack.</p>
@@ -1265,7 +1266,7 @@
       <div class="account-delete-modal-backdrop" onclick="closeChangePlanSuccessModal(false)"></div>
       <div class="account-delete-modal-box account-glass-modal-box" style="max-width: 520px;">
         <h2 id="change-plan-success-title" class="account-delete-modal-title">Plan updated</h2>
-        <p class="account-delete-modal-text">Your choices are saved and will appear on your intake form. Open the form now to review your full brief and other details, or go back to your account.</p>
+        <p class="account-delete-modal-text">Your choices are saved and will appear on your intake form. Open the form now to check your voice, topics, key dates, and the rest—or go back to your account.</p>
         <div class="account-delete-modal-buttons" style="flex-direction: column; align-items: stretch; gap: 0.65rem;">
           <button type="button" id="change-plan-success-open-intake" class="account-delete-modal-btn account-add-stories-confirm">Edit intake form</button>
           <button type="button" class="account-delete-modal-btn account-delete-modal-keep" onclick="closeChangePlanSuccessModal(true)">Back to account</button>
