@@ -1932,6 +1932,10 @@
   background: rgba(0, 0, 0, 0.22);
   cursor: pointer;
 }
+/* Account page: unified translucent scrim behind all account dialogs */
+.account-page-wrap .account-delete-modal .account-delete-modal-backdrop {
+  background: rgba(0, 0, 0, 0.48);
+}
 .account-delete-modal-box {
   position: relative;
   background: rgba(0, 0, 0, 0.12);
@@ -2089,8 +2093,8 @@
   top: 0;
   bottom: 0;
   min-height: 100%;
-  /* Darker dim (default account backdrop 0.22 is too light for long forms). */
-  background: rgba(0, 0, 0, 0.62);
+  /* Match other account modals (translucent scrim). */
+  background: rgba(0, 0, 0, 0.48);
 }
 #change-plan-modal .change-plan-modal-scroll {
   position: relative;
@@ -3968,32 +3972,8 @@
   }
 }
 
-/* Get your pack sooner: darker dim behind the dialog (default account backdrop is 0.22) */
-#get-pack-sooner-modal .account-delete-modal-backdrop {
-  background: rgba(0, 0, 0, 0.58);
-}
-
-/* Darkened account modals: dim backdrop + translucent liquid-glass panels (blur + saturate) */
-#remove-stories-modal .account-delete-modal-backdrop {
-  background: rgba(0, 0, 0, 0.48);
-}
-#get-pack-sooner-modal .account-delete-modal-box.remove-stories-modal-box,
-#pause-subscription-modal .account-delete-modal-box.remove-stories-modal-box,
-#change-plan-modal .change-plan-modal-box.account-delete-modal-box {
-  background: rgba(8, 10, 18, 0.42);
-  -webkit-backdrop-filter: blur(34px) saturate(1.45);
-  backdrop-filter: blur(34px) saturate(1.45);
-  border-color: rgba(255, 255, 255, 0.16);
-  /* Rim + specular top edge + soft inner floor (liquid glass / reflective read) */
-  box-shadow:
-    0 14px 44px rgba(0, 0, 0, 0.45),
-    0 0 0 1px rgba(255, 255, 255, 0.07),
-    inset 0 1px 0 rgba(255, 255, 255, 0.28),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.14);
-}
-
-/* Remove Story Ideas only: liquid-glass panel — cool tint, squircle, rim light (ref. lens-like edge refraction via SVG map + backdrop-filter url) */
-#remove-stories-modal .account-delete-modal-box.remove-stories-modal-box {
+/* Account modals: liquid-glass panels — cool tint, squircle, rim light, SVG edge displacement (#lumoAccountModalGlassFilter in template) */
+.account-page-wrap .account-delete-modal .account-delete-modal-box.remove-stories-modal-box {
   border-radius: 22px;
   border: 1px solid rgba(155, 190, 255, 0.24);
   background:
@@ -4009,11 +3989,11 @@
   -webkit-backdrop-filter: blur(34px) saturate(1.45);
   backdrop-filter: blur(34px) saturate(1.45);
 }
-#remove-stories-modal .account-delete-modal-box.remove-stories-modal-box {
-  -webkit-backdrop-filter: url(#lumoRemoveStoriesGlassFilter) blur(18px) saturate(1.38);
-  backdrop-filter: url(#lumoRemoveStoriesGlassFilter) blur(18px) saturate(1.38);
+.account-page-wrap .account-delete-modal .account-delete-modal-box.remove-stories-modal-box {
+  -webkit-backdrop-filter: url(#lumoAccountModalGlassFilter) blur(18px) saturate(1.38);
+  backdrop-filter: url(#lumoAccountModalGlassFilter) blur(18px) saturate(1.38);
 }
-#remove-stories-modal .remove-stories-terms-body {
+.account-page-wrap .account-delete-modal .remove-stories-terms-body {
   background: rgba(255, 255, 255, 0.035);
   -webkit-backdrop-filter: blur(16px) saturate(1.25);
   backdrop-filter: blur(16px) saturate(1.25);
@@ -4026,10 +4006,7 @@
   color: #ffffff;
 }
 
-/* Pause subscription: darker overlay + panel; resume date line in brand gold */
-#pause-subscription-modal .account-delete-modal-backdrop {
-  background: rgba(0, 0, 0, 0.62);
-}
+/* Pause subscription: resume date line in brand gold */
 #pause-subscription-modal .pause-subscription-resume-line {
   color: var(--lum-gold, #fff200);
   font-weight: 600;
