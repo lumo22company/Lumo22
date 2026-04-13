@@ -4006,6 +4006,21 @@
   color: #ffffff;
   font-weight: 700;
 }
+/* Remove Story Ideas: price on its own line (slightly larger); follow-up copy in white */
+#remove-stories-modal .remove-stories-price-lead {
+  font-size: 1.1rem;
+  line-height: 1.45;
+  margin-bottom: 0.45rem;
+  color: rgba(255, 255, 255, 0.96);
+}
+#remove-stories-modal .remove-stories-price-lead strong {
+  color: var(--lum-gold, #fff200);
+  font-weight: 700;
+}
+#remove-stories-modal .remove-stories-intro-follow {
+  color: #ffffff;
+  margin-bottom: 1rem;
+}
 
 /* Pause subscription: resume date line in brand gold */
 #pause-subscription-modal .pause-subscription-resume-line {
