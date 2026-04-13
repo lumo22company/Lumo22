@@ -4011,10 +4011,11 @@
   font-size: 1.1rem;
   line-height: 1.45;
   margin-bottom: 0.45rem;
-  color: rgba(255, 255, 255, 0.96);
+  color: var(--lum-gold, #fff200);
+  font-weight: 600;
 }
 #remove-stories-modal .remove-stories-price-lead strong {
-  color: var(--lum-gold, #fff200);
+  color: inherit;
   font-weight: 700;
 }
 #remove-stories-modal .remove-stories-intro-follow {
