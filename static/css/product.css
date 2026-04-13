@@ -3972,8 +3972,8 @@
   }
 }
 
-/* Account modals: liquid-glass panels — cool tint, squircle, rim light, SVG edge displacement (#lumoAccountModalGlassFilter in template) */
-.account-page-wrap .account-delete-modal .account-delete-modal-box.remove-stories-modal-box {
+/* Account modals: liquid-glass panels (.account-glass-modal-box) — cool tint, squircle, rim light, SVG edge displacement (#lumoAccountModalGlassFilter in template) */
+.account-page-wrap .account-delete-modal .account-delete-modal-box.account-glass-modal-box {
   border-radius: 22px;
   border: 1px solid rgba(155, 190, 255, 0.24);
   background:
@@ -3989,7 +3989,7 @@
   -webkit-backdrop-filter: blur(34px) saturate(1.45);
   backdrop-filter: blur(34px) saturate(1.45);
 }
-.account-page-wrap .account-delete-modal .account-delete-modal-box.remove-stories-modal-box {
+.account-page-wrap .account-delete-modal .account-delete-modal-box.account-glass-modal-box {
   -webkit-backdrop-filter: url(#lumoAccountModalGlassFilter) blur(18px) saturate(1.38);
   backdrop-filter: url(#lumoAccountModalGlassFilter) blur(18px) saturate(1.38);
 }
