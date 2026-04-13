@@ -15,7 +15,11 @@ or run this script and confirm success):
   terms that do not refund or credit unused time on cancellation.
 
 - **No automatic card refund:** Cancelling does **not** refund the last charge by default. Refunds only
-  happen if you manually refund in Stripe. Proration credits are separate from manual refunds.
+  happen if you manually refund in Stripe.
+
+- **Plan changes (Lumo API):** `api/billing_routes.py` uses `proration_behavior="none"` on all
+  `Subscription.modify` calls (add/remove Story Ideas, change plan, reduce plan) so Stripe does not
+  create proration lines for those updates.
 
 - **Stripe’s cancel screen wording** is **fixed by Stripe** — we can’t edit it in our app. Clearer context
   is on the account page next to **Manage billing**.

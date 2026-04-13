@@ -1,6 +1,9 @@
 """
 Billing portal: redirect customers to Stripe's hosted billing portal.
 Requires customer login and a stripe_customer_id from a caption subscription.
+
+All `stripe.Subscription.modify` calls for plan/item changes use `proration_behavior="none"` so Stripe
+does not create proration invoice lines (no mid-cycle unused-time credits/debits for plan changes).
 """
 from typing import Optional
 
@@ -436,7 +439,7 @@ def add_stories_to_subscription():
     """
     Add the Story Ideas add-on to the customer's existing caption subscription.
     Requires login; subscription must belong to the customer and not already include Stories.
-    Stripe adds the Stories price to the subscription (billing follows Stripe’s rules for item changes).
+    Uses proration_behavior=none (no proration lines); updated recurring charges apply per Stripe’s next-invoice rules.
     """
     customer = get_current_customer()
     if not customer:
@@ -499,7 +502,7 @@ def add_stories_to_subscription():
         stripe.Subscription.modify(
             subscription_id,
             items=items,
-            proration_behavior="create_prorations",
+            proration_behavior="none",
         )
         try:
             from app import invalidate_account_stripe_subscription_cache
@@ -551,6 +554,7 @@ def reduce_subscription():
     Customer must accept new (lower) price. Modifies Stripe subscription and updates order.
     Body: { token, new_platforms (1–4), new_stories (bool) }.
     Requires login; order must belong to customer.
+    proration_behavior=none — no proration invoice lines for the change.
     """
     customer = get_current_customer()
     if not customer:
@@ -636,7 +640,7 @@ def reduce_subscription():
         stripe.Subscription.modify(
             subscription_id,
             items=item_updates,
-            proration_behavior="create_prorations",
+            proration_behavior="none",
         )
     except stripe.error.StripeError as e:
         msg = getattr(e, "user_message", None) or str(e) or "Stripe error"
@@ -718,6 +722,7 @@ def change_subscription_plan():
       align_stories_to_captions (optional bool; only when new_stories is true).
     - Stripe is updated only when platform count or Story Ideas billing changes.
     - Intake is always updated so the form can be prefilled.
+    - Subscription.modify uses proration_behavior=none (no proration lines).
     """
     customer = get_current_customer()
     if not customer:
@@ -817,7 +822,7 @@ def change_subscription_plan():
             stripe.Subscription.modify(
                 subscription_id,
                 items=item_updates,
-                proration_behavior="create_prorations",
+                proration_behavior="none",
             )
         except stripe.error.StripeError as e:
             msg = getattr(e, "user_message", None) or str(e) or "Stripe error"
