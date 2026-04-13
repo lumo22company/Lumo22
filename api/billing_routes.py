@@ -214,6 +214,45 @@ _PORTAL_CANCEL_CONFIRMATION_MESSAGE = (
 )
 
 
+def _sync_lumo_stripe_subscription_descriptions_for_portal(stripe_api_key: str, orders: list, stripe_customer_id: str) -> None:
+    """
+    Align Stripe subscription.description with Lumo intake business names so the Customer Portal
+    shows which business each subscription belongs to (subscriptions created before this feature may
+    lack a description until the customer opens Manage billing again).
+    """
+    if not stripe_api_key or not stripe_customer_id or not orders:
+        return
+    try:
+        import stripe
+        from api.stripe_utils import is_valid_stripe_subscription_id, lumo_stripe_subscription_portal_description
+
+        stripe.api_key = stripe_api_key
+        seen: set[str] = set()
+        for o in orders:
+            if (o.get("stripe_customer_id") or "").strip() != stripe_customer_id:
+                continue
+            sid = (o.get("stripe_subscription_id") or "").strip()
+            if not sid or not is_valid_stripe_subscription_id(sid) or sid in seen:
+                continue
+            seen.add(sid)
+            intake = o.get("intake") if isinstance(o.get("intake"), dict) else {}
+            bn = (intake.get("business_name") or "").strip()
+            desired = lumo_stripe_subscription_portal_description(bn if bn else None)
+            try:
+                sub = stripe.Subscription.retrieve(sid)
+                if isinstance(sub, dict):
+                    cur = (sub.get("description") or "").strip()
+                else:
+                    cur = (getattr(sub, "description", None) or "").strip()
+                if cur == desired:
+                    continue
+                stripe.Subscription.modify(sid, description=desired)
+            except Exception as e:
+                print(f"[billing] subscription description sync skipped for {sid[:14]}...: {e!r}")
+    except Exception as e:
+        print(f"[billing] subscription description sync: {e!r}")
+
+
 def _caption_orders_for_portal_customer():
     """Logged-in customer email → list of caption orders, or ([], None) on failure."""
     customer = get_current_customer()
@@ -297,8 +336,7 @@ def billing_portal():
 def billing_portal_cancel_subscription():
     """
     Deep-link into Stripe Customer Portal's subscription-cancel flow, then show a Lumo
-    hosted_confirmation message (Stripe max 500 chars). Invoice history remains available
-    via the normal Manage billing portal session.
+    hosted_confirmation message (Stripe max 500 chars).
     """
     customer, email, orders = _caption_orders_for_portal_customer()
     if customer is None:
@@ -351,6 +389,8 @@ def billing_portal_cancel_subscription():
         msg = _PORTAL_CANCEL_CONFIRMATION_MESSAGE.strip()
         if len(msg) > 500:
             msg = msg[:497] + "..."
+
+        _sync_lumo_stripe_subscription_descriptions_for_portal(Config.STRIPE_SECRET_KEY, orders, stripe_customer_id)
 
         session = stripe.billing_portal.Session.create(
             customer=stripe_customer_id,

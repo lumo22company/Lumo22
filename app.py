@@ -1322,6 +1322,8 @@ def _referral_share_sms_href(base_url: str, code: str) -> str:
 def _one_off_eligible_for_upgrade_base_dropdown(o: dict) -> bool:
     """Show in subscription upgrade 'base pack' UI only after one-off intake is submitted (prefill is real).
     Delivered is not required—intake_completed / generating / delivered / failed (post-intake) all qualify."""
+    if bool(o.get("subscription_cancelled_at")) and _order_is_former_subscription_row(o):
+        return True
     st = (o.get("status") or "").strip().lower()
     if not st or st == "awaiting_intake" or st == "hidden":
         return False
@@ -1349,6 +1351,13 @@ def _edit_form_row_sort_ts(o: dict) -> str:
 def _order_hidden_from_account(o: dict) -> bool:
     """True if customer removed this pack from History (hide-pack); exclude from Edit form list."""
     return (o.get("status") or "").strip().lower() == "hidden"
+
+
+def _order_has_active_stripe_subscription(o: dict) -> bool:
+    """True when the order row still represents a live subscription (Stripe id present and not cancelled in DB)."""
+    if not (o.get("stripe_subscription_id") or "").strip():
+        return False
+    return not bool(o.get("subscription_cancelled_at"))
 
 
 def _order_is_former_subscription_row(o: dict) -> bool:
@@ -1622,7 +1631,6 @@ def _account_context_fallback(customer: dict, exc=None) -> dict:
             "payment_methods": [],
             "subscription_payment_methods": {},
             "subscription_pricing": {},
-            "invoice_history": [],
         },
         "billing_accounts": [],
         "subscribe_options": [],
@@ -1707,12 +1715,26 @@ _ACCOUNT_SUB_PAUSE_FALLBACK = {
     "next_pack_due": None,
 }
 
+_ACCOUNT_SUB_PAUSE_CANCELLED_IN_DB = {
+    "paused": False,
+    "resumes_at": None,
+    "cancel_at_period_end": False,
+    "cancelled_now": True,
+    "ends_at": None,
+    "next_pack_due": None,
+}
+
 
 def _init_subscription_pause_placeholders(caption_orders: list) -> None:
     """Before Stripe runs: set neutral subscription_pause on each row (same shape as _load_account_stripe_subscription_data)."""
     for o in caption_orders or []:
         sid = (o.get("stripe_subscription_id") or "").strip()
-        o["subscription_pause"] = None if not sid else dict(_ACCOUNT_SUB_PAUSE_FALLBACK)
+        if not sid:
+            o["subscription_pause"] = None
+        elif bool(o.get("subscription_cancelled_at")):
+            o["subscription_pause"] = dict(_ACCOUNT_SUB_PAUSE_CANCELLED_IN_DB)
+        else:
+            o["subscription_pause"] = dict(_ACCOUNT_SUB_PAUSE_FALLBACK)
 
 
 def _account_merge_order_rows(caption_orders: list) -> None:
@@ -1791,7 +1813,6 @@ def _account_context_build(customer: dict, section: Optional[str] = None) -> dic
                 "payment_methods": [],
                 "subscription_payment_methods": {},
                 "subscription_pricing": {},
-                "invoice_history": [],
             }
         else:
             with ThreadPoolExecutor(max_workers=2) as pool:
@@ -1822,14 +1843,13 @@ def _account_context_build(customer: dict, section: Optional[str] = None) -> dic
             "payment_methods": [],
             "subscription_payment_methods": {},
             "subscription_pricing": {},
-            "invoice_history": [],
         }
 
     # Billing accounts: one per unique stripe_customer_id among subscription orders
     # Each has { stripe_customer_id, label, order_token } so Manage billing can be scoped
     billing_accounts = []
     seen_cids = set()
-    sub_orders = [o for o in caption_orders if (o.get("stripe_subscription_id") or "").strip()]
+    sub_orders = [o for o in caption_orders if _order_has_active_stripe_subscription(o)]
     for o in sub_orders:
         cid = (o.get("stripe_customer_id") or "").strip()
         if not cid or cid in seen_cids:
@@ -1850,7 +1870,12 @@ def _account_context_build(customer: dict, section: Optional[str] = None) -> dic
     # Omit one-offs already linked as upgraded_from_token on a subscription row (that upgrade path is done).
     # Omit one-offs removed from History (status hidden)—same as Edit form.
     subscribe_options = []
-    one_off_orders = [o for o in caption_orders if not (o.get("stripe_subscription_id") or "").strip()]
+    # Include ended subscriptions (cancelled in DB) even if stripe_subscription_id is not yet cleared by webhook.
+    one_off_orders = [
+        o
+        for o in caption_orders
+        if (not (o.get("stripe_subscription_id") or "").strip()) or bool(o.get("subscription_cancelled_at"))
+    ]
     # Suppress the base one-off whenever any row points at it via upgraded_from_token (active sub,
     # cancelled sub, or edge case where sub id + subscription_cancelled_at are missing but link remains).
     upgraded_from_tokens = {
@@ -1898,19 +1923,23 @@ def _account_context_build(customer: dict, section: Optional[str] = None) -> dic
     subscribe_url = subscribe_options[0]["url"] if subscribe_options else None
     subscribe_business_name = subscribe_options[0]["business_name"] if subscribe_options else None
 
-    # Edit form: subs + eligible one-offs; omit packs hidden from History; sort by last PDF time else created_at
+    # Edit form: active subs + eligible one-offs; omit packs hidden from History; sort by last PDF time else created_at
     edit_form_subs = [
-        o for o in caption_orders
-        if (o.get("stripe_subscription_id") or "").strip() and not _order_hidden_from_account(o)
+        o
+        for o in caption_orders
+        if _order_has_active_stripe_subscription(o) and not _order_hidden_from_account(o)
     ]
-    edit_form_orders = edit_form_subs + [o for o in one_off_orders if (o.get("token") or "").strip()]
+    _edit_tokens = {(o.get("token") or "").strip() for o in edit_form_subs if (o.get("token") or "").strip()}
+    edit_form_orders = edit_form_subs + [
+        o
+        for o in one_off_orders
+        if (o.get("token") or "").strip() and (o.get("token") or "").strip() not in _edit_tokens
+    ]
     edit_form_orders.sort(key=_edit_form_row_sort_ts, reverse=True)
-    edit_form_has_subscriptions = any((o.get("stripe_subscription_id") or "").strip() for o in edit_form_orders)
-    edit_form_has_oneoffs = any(not (o.get("stripe_subscription_id") or "").strip() for o in edit_form_orders)
+    edit_form_has_subscriptions = any(_order_has_active_stripe_subscription(o) for o in edit_form_orders)
+    edit_form_has_oneoffs = any(not _order_has_active_stripe_subscription(o) for o in edit_form_orders)
     # Deferred billing fetch is only needed for subscription rows (pause/cancel badges). Skip when Edit form is one-offs only.
-    edit_form_needs_deferred_billing = any(
-        (o.get("stripe_subscription_id") or "").strip() for o in edit_form_orders
-    )
+    edit_form_needs_deferred_billing = any(_order_has_active_stripe_subscription(o) for o in edit_form_orders)
 
     base = (Config.BASE_URL or request.url_root or "").strip().rstrip("/")
     if base and not base.startswith("http"):
@@ -2083,67 +2112,6 @@ def _subscription_pricing_from_stripe_sub(sub, sub_id, out: dict) -> None:
         out["subscription_pricing"][sub_id] = None
 
 
-def _format_stripe_minor_display(amount_minor: int, currency: str) -> str:
-    """Format Stripe amount in smallest currency unit for display (supports negative proration lines)."""
-    currency = (currency or "gbp").lower()
-    sym = {"gbp": "£", "usd": "$", "eur": "€"}.get(currency, "£")
-    raw = int(amount_minor or 0)
-    neg = raw < 0
-    v = abs(raw) / 100.0
-    s = f"{sym}{v:.2f}"
-    return f"-{s}" if neg else s
-
-
-def _stripe_invoice_history_for_customer(stripe_customer_id: str, limit: int = 24) -> list:
-    """
-    Pull recent paid/open invoices for the Stripe customer so the account page can show
-    each charge with line-by-line descriptions (Stripe's hosted portal often collapses to '+N more').
-    """
-    if not stripe_customer_id or not getattr(Config, "STRIPE_SECRET_KEY", None):
-        return []
-    try:
-        import stripe
-        from datetime import datetime, timezone
-
-        stripe.api_key = Config.STRIPE_SECRET_KEY
-        invs = stripe.Invoice.list(customer=stripe_customer_id, limit=limit)
-        rows = []
-        for inv in invs.data or []:
-            cur = (inv.get("currency") or "gbp").lower()
-            created = inv.get("created")
-            if not created:
-                continue
-            dt = datetime.fromtimestamp(int(created), tz=timezone.utc)
-            date_label = dt.strftime("%d %b %Y")
-            amt_paid = int(inv.get("amount_paid") or 0)
-            status = (inv.get("status") or "").strip()
-            line_rows = []
-            for li in (inv.get("lines") or {}).get("data") or []:
-                desc = (li.get("description") or "").strip()
-                if not desc:
-                    desc = "Line item"
-                lamt = int(li.get("amount") or 0)
-                line_rows.append(
-                    {
-                        "description": desc,
-                        "amount_display": _format_stripe_minor_display(lamt, cur),
-                    }
-                )
-            rows.append(
-                {
-                    "date_label": date_label,
-                    "amount_paid_display": _format_stripe_minor_display(amt_paid, cur),
-                    "status": status,
-                    "lines": line_rows,
-                    "invoice_pdf": (inv.get("invoice_pdf") or "").strip(),
-                    "hosted_invoice_url": (inv.get("hosted_invoice_url") or "").strip(),
-                }
-            )
-        return rows
-    except Exception:
-        return []
-
-
 def _load_account_stripe_subscription_data(caption_orders):
     """
     Build payment_methods list and per-subscription billing for account page.
@@ -2154,7 +2122,6 @@ def _load_account_stripe_subscription_data(caption_orders):
       "payment_methods": [{ id, brand, last4 }],
       "subscription_payment_methods": { sub_id: { id, brand, last4 } },
       "subscription_pricing": { sub_id: { ... } },
-      "invoice_history": [ { date_label, amount_paid_display, status, lines, invoice_pdf, hosted_invoice_url }, ... ],
     }.
     """
     from api.captions_routes import _pause_info_from_subscription
@@ -2164,12 +2131,16 @@ def _load_account_stripe_subscription_data(caption_orders):
         "payment_methods": [],
         "subscription_payment_methods": {},
         "subscription_pricing": {},
-        "invoice_history": [],
     }
     orders = caption_orders or []
     for o in orders:
         sid = (o.get("stripe_subscription_id") or "").strip()
-        o["subscription_pause"] = None if not sid else dict(_ACCOUNT_SUB_PAUSE_FALLBACK)
+        if not sid:
+            o["subscription_pause"] = None
+        elif bool(o.get("subscription_cancelled_at")):
+            o["subscription_pause"] = dict(_ACCOUNT_SUB_PAUSE_CANCELLED_IN_DB)
+        else:
+            o["subscription_pause"] = dict(_ACCOUNT_SUB_PAUSE_FALLBACK)
 
     if not orders or not getattr(Config, "STRIPE_SECRET_KEY", None):
         return out
@@ -2191,6 +2162,8 @@ def _load_account_stripe_subscription_data(caption_orders):
         for o in orders:
             sub_id = (o.get("stripe_subscription_id") or "").strip()
             if not sub_id or not is_valid_stripe_subscription_id(sub_id) or sub_id in seen:
+                continue
+            if bool(o.get("subscription_cancelled_at")):
                 continue
             seen.add(sub_id)
             unique_sub_ids.append(sub_id)
@@ -2248,6 +2221,9 @@ def _load_account_stripe_subscription_data(caption_orders):
             if not sub_id:
                 o["subscription_pause"] = None
                 continue
+            if bool(o.get("subscription_cancelled_at")):
+                o["subscription_pause"] = dict(_ACCOUNT_SUB_PAUSE_CANCELLED_IN_DB)
+                continue
             sub = subs_by_id.get(sub_id)
             if sub is not None:
                 o["subscription_pause"] = _pause_info_from_subscription(sub)
@@ -2266,11 +2242,6 @@ def _load_account_stripe_subscription_data(caption_orders):
                 out["subscription_payment_methods"][sub_id] = None
                 out["subscription_pricing"][sub_id] = None
 
-        if stripe_customer_id:
-            try:
-                out["invoice_history"] = _stripe_invoice_history_for_customer(stripe_customer_id)
-            except Exception:
-                out["invoice_history"] = []
     except Exception:
         pass
     return out
@@ -2457,7 +2428,7 @@ def account_billing_data_api():
     except Exception as e:
         print(f"[api/account/billing-data] {e!r}")
         return jsonify({"ok": False, "error": "server_error"}), 500
-    sub_orders = [o for o in caption_orders if (o.get("stripe_subscription_id") or "").strip()]
+    sub_orders = [o for o in caption_orders if _order_has_active_stripe_subscription(o)]
     pause_subscription_inner_html = ""
     if sub_orders:
         pause_subscription_inner_html = render_template(
@@ -2469,7 +2440,7 @@ def account_billing_data_api():
     edit_pause_by_token = {}
     for o in caption_orders:
         t = (o.get("token") or "").strip()
-        if t and (o.get("stripe_subscription_id") or "").strip():
+        if t and _order_has_active_stripe_subscription(o):
             sp = o.get("subscription_pause") or {}
             edit_pause_by_token[t] = {
                 "cancel_at_period_end": bool(sp.get("cancel_at_period_end")),

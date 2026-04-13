@@ -936,6 +936,19 @@ def captions_checkout_subscription():
                 "proration_behavior": "none",
             }
 
+    # Stripe Customer Portal shows subscription.description next to each subscription (identify by business).
+    from api.stripe_utils import lumo_stripe_subscription_portal_description
+
+    _portal_desc = lumo_stripe_subscription_portal_description(business_name_raw or None)
+    _sub_meta = {}
+    if (business_name_raw or "").strip():
+        _sub_meta["lumo_business_name"] = business_name_raw.strip()[:500]
+    if subscription_data is None:
+        subscription_data = {}
+    subscription_data["description"] = _portal_desc
+    if _sub_meta:
+        subscription_data["metadata"] = _sub_meta
+
     extra_sub_id = (getattr(Config, "STRIPE_CAPTIONS_EXTRA_PLATFORM_SUBSCRIPTION_PRICE_ID", None) or "").strip()
     stories_sub_id = (getattr(Config, "STRIPE_CAPTIONS_STORIES_SUBSCRIPTION_PRICE_ID", None) or "").strip()
     amounts = _CURRENCY_ADDON_AMOUNTS.get(currency, _CURRENCY_ADDON_AMOUNTS["gbp"])
@@ -3093,6 +3106,38 @@ def captions_restart_subscription():
         return jsonify({"ok": False, "error": str(e)}), 500
 
 
+def _persist_subscription_cancelled_order_row(order_service, order_id: str) -> None:
+    """
+    Match customer.subscription.deleted webhook: clear Stripe subscription id and set subscription_cancelled_at
+    so Manage subscription shows the row under Cancelled subscriptions without waiting for the webhook.
+    """
+    from datetime import datetime, timezone
+
+    from api.webhooks import _is_subscription_cancelled_at_column_missing
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    try:
+        order_service.update(
+            str(order_id),
+            {
+                "stripe_subscription_id": None,
+                "subscription_cancelled_at": now_iso,
+                "reminder_opt_out": True,
+            },
+        )
+    except Exception as e:
+        if _is_subscription_cancelled_at_column_missing(e):
+            try:
+                order_service.update(
+                    str(order_id),
+                    {"stripe_subscription_id": None, "reminder_opt_out": True},
+                )
+            except Exception as e2:
+                print(f"[cancel-subscription] DB clear (no cancelled_at column): {e2!r}")
+        else:
+            print(f"[cancel-subscription] DB update failed: {e!r}")
+
+
 @captions_bp.route("/captions/cancel-subscription", methods=["POST"])
 def captions_cancel_subscription():
     """
@@ -3137,18 +3182,19 @@ def captions_cancel_subscription():
         stripe.api_key = Config.STRIPE_SECRET_KEY
         sub = stripe.Subscription.retrieve(sub_id)
         if (sub.get("status") or "").strip().lower() == "canceled":
+            _persist_subscription_cancelled_order_row(order_service, order_id)
             return jsonify({"ok": True, "message": "Subscription is already cancelled."}), 200
 
         # Immediate cancellation (no end-of-period scheduling). prorate=False: no “unused time”
         # credit lines on the final invoice (matches terms: no refund/credit for unused period).
         stripe.Subscription.delete(sub_id, prorate=False)
-        # Stop pre-pack reminders for this order.
-        order_service.update(order_id, {"reminder_opt_out": True})
+        _persist_subscription_cancelled_order_row(order_service, order_id)
         return jsonify({"ok": True, "message": "Subscription cancelled immediately."}), 200
     except stripe.error.InvalidRequestError as e:
         msg = str(e).lower()
         if "no such" in msg or "deleted" in msg or "canceled" in msg or "cancel" in msg:
-            return jsonify({"ok": False, "error": "This subscription is no longer active."}), 400
+            _persist_subscription_cancelled_order_row(order_service, order_id)
+            return jsonify({"ok": True, "message": "Subscription is already cancelled."}), 200
         return jsonify({"ok": False, "error": (str(e) or "Could not cancel")[:200]}), 400
     except stripe.error.StripeError as e:
         return jsonify({"ok": False, "error": (str(e) or "Stripe error")[:200]}), 400
