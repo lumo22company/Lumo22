@@ -279,7 +279,15 @@
           {% set _edit_cancelled = _edit_pause.get('cancel_at_period_end') or _edit_pause.get('cancelled_now') %}
           <li class="account-edit-form-row" data-order-token="{{ o.get('token', '') }}">
             <div class="account-edit-form-meta">
-              <span class="account-edit-form-biz">{{ label }}</span>
+              {% set _biz_raw = (label or '')|trim %}
+              {% set _biz_parts = _biz_raw.split(' ', 1) %}
+              {% if _biz_parts|length > 1 %}
+              <span class="account-edit-form-biz account-edit-form-biz--split" title="{{ label|e }}">
+                <span class="account-edit-form-biz-first">{{ _biz_parts[0] }}</span><span class="account-edit-form-biz-rest">{{ ' ' ~ _biz_parts[1] }}</span>
+              </span>
+              {% else %}
+              <span class="account-edit-form-biz account-edit-form-biz--single" title="{{ label|e }}">{{ label }}</span>
+              {% endif %}
               <span class="account-edit-form-type account-edit-form-type--{{ 'subscription' if is_sub_row else ('former-sub' if is_former_sub else 'oneoff') }}">{{ 'Subscription' if is_sub_row else ('Former subscription' if is_former_sub else 'One-off') }}</span>
             </div>
             <div class="account-edit-form-actions">
