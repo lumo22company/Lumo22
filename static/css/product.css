@@ -4004,6 +4004,7 @@
 }
 #remove-stories-modal #remove-stories-scroll-hint.remove-stories-scroll-hint {
   color: #ffffff;
+  font-weight: 700;
 }
 
 /* Pause subscription: resume date line in brand gold */
