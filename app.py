@@ -1320,9 +1320,10 @@ def _referral_share_sms_href(base_url: str, code: str) -> str:
 
 
 def _one_off_eligible_for_upgrade_base_dropdown(o: dict) -> bool:
-    """Show in subscription upgrade 'base pack' UI only after one-off intake is submitted (prefill is real).
-    Delivered is not required—intake_completed / generating / delivered / failed (post-intake) all qualify."""
-    if bool(o.get("subscription_cancelled_at")) and _order_is_former_subscription_row(o):
+    """Show in subscription upgrade / resubscribe UI when prefill is meaningful.
+    Former subscription rows always qualify (incl. cancelled in Stripe before DB subscription_cancelled_at,
+    or awaiting_intake on the sub row). One-off rows need intake started (not awaiting-only / hidden)."""
+    if _order_is_former_subscription_row(o):
         return True
     st = (o.get("status") or "").strip().lower()
     if not st or st == "awaiting_intake" or st == "hidden":
@@ -1376,6 +1377,8 @@ def _order_is_former_subscription_row(o: dict) -> bool:
     (upgraded_from_token set — one-off→sub upgrade then cancel).
     """
     if bool(o.get("subscription_cancelled_at")):
+        return True
+    if _subscription_pause_cancelled_in_stripe(o):
         return True
     if (o.get("stripe_subscription_id") or "").strip():
         return False
@@ -1780,6 +1783,117 @@ def _account_merge_order_rows(caption_orders: list) -> None:
         o["has_delivered_pack"] = bool(delivered_self or delivered_base)
 
 
+def _account_order_created_sort_key(o: dict) -> float:
+    """Monotonic sort key for caption_orders.created_at (ISO / Postgres-style strings)."""
+    from datetime import datetime, timezone
+
+    s = (o.get("created_at") or "").strip()
+    if not s:
+        return 0.0
+    try:
+        if "T" not in s and len(s) > 10 and s[10] == " ":
+            s = s[:10] + "T" + s[11:]
+        dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.timestamp()
+    except Exception:
+        return 0.0
+
+
+def _normalize_intake_business_key(raw: str) -> str:
+    """Match business names across one-off vs subscription rows (& vs and, spacing)."""
+    t = _safe_str(raw).strip().lower()
+    if not t:
+        return ""
+    t = t.replace("&", " and ")
+    return " ".join(t.split())
+
+
+def _intake_business_key(o: dict) -> str:
+    return _normalize_intake_business_key(_safe_str((o.get("intake") or {}).get("business_name")))
+
+
+def _infer_consumed_oneoff_tokens(caption_orders: list, upgraded_from_tokens: set) -> set:
+    """
+    When upgraded_from_token was never stored on the subscription row, still treat the base one-off
+    as consumed so it does not appear in Edit form next to the subscription / cancelled-sub row.
+
+    Merge only copies intake onto the subscription row when upgraded_from_token is set; if that
+    column is missing, the sub row often has no intake.business_name while the one-off does — we
+    still pair them when names match, or when the sub has no name but this account has exactly
+    one pure one-off chronologically before that sub (unambiguous).
+
+    Otherwise: same normalized business_name, exactly one later subscription or former-sub row,
+    no upgraded_from_token on that row (or it already points at this one-off), and no other one-off
+    for that business between the two orders by created_at.
+    """
+    inferred: set = set()
+
+    def _pure_oneoff(row: dict) -> bool:
+        if (row.get("stripe_subscription_id") or "").strip():
+            return False
+        if bool(row.get("subscription_cancelled_at")):
+            return False
+        return True
+
+    def _sub_or_former(row: dict) -> bool:
+        return _order_has_active_stripe_subscription(row) or _order_is_former_subscription_row(row)
+
+    pure = [o for o in caption_orders if _pure_oneoff(o)]
+    subs_or_former = [o for o in caption_orders if _sub_or_former(o)]
+
+    def _pair_oneoff_with_sub(o: dict, b: dict, tok: str, bk: str, ko: float) -> bool:
+        """True if this subscription/former row b can be the upgrade from one-off o."""
+        if _account_order_created_sort_key(b) <= ko:
+            return False
+        uft = (b.get("upgraded_from_token") or "").strip()
+        if uft and uft != tok:
+            return False
+        bkb = _intake_business_key(b)
+        if bkb and bk and bkb != bk:
+            return False
+        if not bkb and not bk:
+            return False
+        # Sub row missing business_name in DB (merge never ran without upgraded_from_token).
+        if not bkb:
+            earlier_pure = [
+                p
+                for p in pure
+                if _account_order_created_sort_key(p) < _account_order_created_sort_key(b)
+            ]
+            if len(earlier_pure) != 1:
+                return False
+            return (earlier_pure[0].get("token") or "").strip() == tok
+        return bkb == bk
+
+    for o in pure:
+        tok = (o.get("token") or "").strip()
+        if not tok or tok in upgraded_from_tokens:
+            continue
+        bk = _intake_business_key(o)
+        if not bk:
+            continue
+        ko = _account_order_created_sort_key(o)
+        candidates = []
+        for b in subs_or_former:
+            if _pair_oneoff_with_sub(o, b, tok, bk, ko):
+                candidates.append(b)
+        if len(candidates) != 1:
+            continue
+        b = candidates[0]
+        kb = _account_order_created_sort_key(b)
+        between = [
+            x
+            for x in pure
+            if _intake_business_key(x) == bk and ko < _account_order_created_sort_key(x) < kb
+        ]
+        if between:
+            continue
+        inferred.add(tok)
+    return inferred
+
+
 def _account_fetch_merged_orders_and_stripe_billing(customer: dict):
     """Load orders, merge rows, run Stripe — used by /api/account/billing-data."""
     email = (customer.get("email") or "").strip()
@@ -1908,6 +2022,7 @@ def _account_context_build(customer: dict, section: Optional[str] = None) -> dic
         for o in caption_orders
         if (o.get("upgraded_from_token") or "").strip()
     }
+    upgraded_from_tokens |= _infer_consumed_oneoff_tokens(caption_orders, upgraded_from_tokens)
     # Hide one-off rows whose token was consumed as an upgrade base—but never hide former
     # subscription rows: a newer order may set upgraded_from_token to a cancelled sub’s token,
     # and that cancelled row must still appear under Cancelled subscriptions / resubscribe.
@@ -2260,7 +2375,9 @@ def _load_account_stripe_subscription_data(caption_orders):
             if sub is not None:
                 o["subscription_pause"] = _pause_info_from_subscription(sub)
             elif is_valid_stripe_subscription_id(sub_id):
-                o["subscription_pause"] = dict(_ACCOUNT_SUB_PAUSE_FALLBACK)
+                # Retrieve failed or subscription object gone (deleted in Stripe) — treat as ended
+                # so Cancelled subscriptions / resubscribe lists match reality when DB still has sub_ id.
+                o["subscription_pause"] = dict(_ACCOUNT_SUB_PAUSE_CANCELLED_IN_DB)
 
         for sub_id in unique_sub_ids:
             sub = subs_by_id.get(sub_id)

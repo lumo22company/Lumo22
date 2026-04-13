@@ -1,27 +1,26 @@
 ---
-description: Lumo 22 — always commit with Git; deploy with push and/or Railway CLI
+description: Always use Git commit for saved work; deploy via push and/or Railway CLI
 alwaysApply: true
 ---
 
-# Git + Railway deploy (canonical)
+# Git commit (required) + Railway deploy
 
-**Use Git for version control and for every deployable change:** `git add` → `git commit` → `git push` (usually `main`). Railway deploy follows via GitHub auto-deploy and/or CLI as below.
+**Always use Git for commits:** For any substantive change the user expects kept in the repo or deployed, use **`git add`** → **`git commit`** → **`git push`** when a remote exists (usually **`main`**). Do **not** skip committing in favor of only uploading via Railway unless the user explicitly says to skip Git.
 
-## Default workflow (assistants MUST follow)
+## Assistant workflow (MUST follow)
 
-1. **Commit with Git:** When you finish meaningful work or the user asks to **commit**, **save**, **ship**, **deploy**, **redeploy**, or **commit and deploy**, use **`git add`** → **`git commit`** → **`git push`** (usually **`main`**) so the remote repo matches what you intend to run in production.
-2. **Deploy / redeploy:** After the commit is pushed (or as part of the same request):
-   - If **Railway is connected to GitHub** on `main`, **`git push`** may deploy automatically — still **commit and push** first.
-   - **Also** run **`railway up --no-gitignore`** from the **project root** when the user wants a **CLI upload** to Railway or says **redeploy** / **commit and redeploy**, **unless** they explicitly say “push only” or “CLI only”.
-3. **Do not** deploy or claim deployment is done while leaving **uncommitted** changes that were part of the task, unless the user says to skip committing.
+1. **`git commit`:** After finishing work or when the user asks to **commit**, **save**, **ship**, **deploy**, **redeploy**, or **commit and deploy** — stage and **commit** with a clear message. Push if they expect the remote updated.
+2. **Deploy:** After committing (or in the same session):
+   - **`git push`** if Railway/GitHub auto-deploy applies.
+   - **`railway up --no-gitignore`** from **project root** when they want a **CLI** deploy / **redeploy**, **in addition to** Git unless they say **CLI only** or **skip commit**.
 
-## What not to do
+## Do not
 
-- Do **not** refuse **`git add` / `git commit` / `git push`** for this repository.
-- Do **not** treat **`railway up`** as a substitute for committing — use **both** unless the user opts out.
+- Refuse **`git add` / `git commit` / `git push`** for this repository.
+- Treat **`railway up`** alone as sufficient when the user asked to **commit** or expects changes in Git history.
 
 ## References
 
-- **`docs/RAILWAY_DEPLOY.md`** — GitHub ↔ Railway, optional Actions, CLI details.
+- **`docs/RAILWAY_DEPLOY.md`** — GitHub ↔ Railway, CLI.
 - **`AGENTS.md`** — short summary.
-- **`.github/workflows/deploy-railway.yml`** — optional Actions deploy when `RAILWAY_DEPLOY_VIA_ACTIONS=true`.
+- **`.github/workflows/deploy-railway.yml`** — optional Actions when `RAILWAY_DEPLOY_VIA_ACTIONS=true`.

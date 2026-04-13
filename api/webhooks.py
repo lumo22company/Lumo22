@@ -1074,6 +1074,12 @@ def stripe_webhook():
                     f"[Stripe webhook] subscription.deleted: cleared stripe_subscription_id for order "
                     f"{str(order_id)[:8]}..."
                 )
+                try:
+                    from app import invalidate_account_stripe_subscription_cache
+
+                    invalidate_account_stripe_subscription_cache(sub_id)
+                except Exception:
+                    pass
             return jsonify({"received": True}), 200
 
         if event_type == "customer.subscription.updated":

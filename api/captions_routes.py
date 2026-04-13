@@ -3115,6 +3115,9 @@ def _persist_subscription_cancelled_order_row(order_service, order_id: str) -> N
 
     from api.webhooks import _is_subscription_cancelled_at_column_missing
 
+    existing = order_service.get_by_id(order_id)
+    sub_id = (existing.get("stripe_subscription_id") or "").strip() if existing else ""
+
     now_iso = datetime.now(timezone.utc).isoformat()
     try:
         order_service.update(
@@ -3125,6 +3128,13 @@ def _persist_subscription_cancelled_order_row(order_service, order_id: str) -> N
                 "reminder_opt_out": True,
             },
         )
+        if sub_id:
+            try:
+                from app import invalidate_account_stripe_subscription_cache
+
+                invalidate_account_stripe_subscription_cache(sub_id)
+            except Exception:
+                pass
     except Exception as e:
         if _is_subscription_cancelled_at_column_missing(e):
             try:

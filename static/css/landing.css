@@ -1584,6 +1584,11 @@ a.lumo-nav-login:hover::before {
 .lumo-btn-secondary { display: inline-block; padding: 18px 36px; background: transparent; color: var(--lum-text); text-decoration: none; font-family: var(--font-body); font-weight: 600; font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; border-radius: 10px; border: 1px solid var(--lum-border); transition: border-color var(--duration-fast), background var(--duration-fast); }
 .lumo-btn-secondary:hover { border-color: var(--lum-text-muted); background: rgba(255,255,255,0.03); }
 .lumo-section { padding: var(--space-3xl) var(--space-xl); max-width: var(--max-width); margin: 0 auto; }
+@media (min-width: 769px) {
+  .lumo-section {
+    padding-right: 1.25rem;
+  }
+}
 .lumo-section-header { margin-bottom: var(--space-2xl); }
 .lumo-section-label { font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--lum-gold); margin-bottom: var(--space-sm); }
 .lumo-section-title { color: var(--lum-text); max-width: 600px; }

@@ -1663,9 +1663,11 @@
   z-index: 2; /* Above footer so sticky sidebar stays on top when overlapping */
 }
 .account-sidebar {
-  width: 300px; /* Narrow column; desktop nav uses slightly smaller Bebas + tighter tracking so each label stays one line */
+  /* As narrow as longest label allows; almost no padding-right on the column */
+  width: 230px;
   flex-shrink: 0;
-  padding: 2rem 0 2rem 1.25rem;
+  padding: 2rem 0 2rem 0.7rem;
+  box-sizing: border-box;
   position: static;
   background: #000;
 }
@@ -1709,13 +1711,16 @@
   border: 2px solid var(--lum-gold);
   outline: none;
 }
-/* Desktop/tablet: one line per nav row; slightly smaller type + tracking so column can stay narrow. */
+/* Desktop/tablet: one line per nav row; font size as before — column width / link padding stay tight on the right. */
 @media (min-width: 769px) {
   .account-sidebar-nav a {
     white-space: nowrap;
     font-size: 1.2rem;
     letter-spacing: 0.055em;
-    padding: 0.55rem 0.45rem;
+    padding: 0.55rem 0 0.55rem 0.35rem;
+  }
+  .account-sidebar-nav a.active {
+    padding: 0.55rem 0 0.55rem 0.3rem;
   }
 }
 .account-sidebar-logout {
@@ -1769,6 +1774,25 @@
 .account-main.account-main--wide {
   max-width: 1000px;
 }
+
+/* Desktop: trim right-edge page padding (main content sits closer to the viewport). */
+@media (min-width: 769px) {
+  .account-main {
+    padding: 2rem 1.5rem 4rem;
+    padding-right: 0.75rem;
+  }
+
+  .product-hero {
+    padding: 8rem 1.5rem 5rem;
+    padding-right: 1rem;
+  }
+
+  .dfd-hero {
+    padding: 6rem var(--space-xl) 5rem;
+    padding-right: 1.25rem;
+  }
+}
+
 .account-section-desc {
   color: #ffffff;
   background: #000;
@@ -2588,8 +2612,8 @@
 .account-edit-form-list .account-edit-form-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
+  justify-content: flex-start;
+  flex-wrap: nowrap;
   gap: 0.75rem 1rem;
   padding: 0.65rem 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -2599,12 +2623,11 @@
 }
 .account-edit-form-list .account-edit-form-meta {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: flex-start;
   gap: 0.5rem 0.65rem;
-  /* Stay only as wide as name + pill — do not grow (avoids pill floating toward buttons) */
-  flex: 0 1 auto;
+  flex: 1 1 auto;
   min-width: 0;
   max-width: 100%;
 }
@@ -2644,10 +2667,11 @@
 .account-edit-form-list .account-edit-form-actions {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 0.5rem;
   justify-content: flex-end;
-  flex: 0 1 auto;
+  flex: 0 0 auto;
+  margin-left: auto;
 }
 .account-edit-form-list .account-edit-form-cancel-badge {
   font-size: 0.75rem;
@@ -2924,8 +2948,18 @@
   }
   .account-edit-form-list .account-edit-form-actions {
     width: 100%;
+    margin-left: 0;
     justify-content: flex-start;
     flex-wrap: wrap;
+  }
+}
+
+/* Edit form: one row on wide screens — name + pill left, buttons flush right */
+@media (min-width: 769px) {
+  .account-edit-form-list .account-edit-form-biz {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 
@@ -2952,6 +2986,7 @@
   }
   .account-edit-form-list--stacked .account-edit-form-actions {
     width: 100%;
+    margin-left: 0;
     justify-content: flex-start;
     flex-wrap: wrap;
   }
