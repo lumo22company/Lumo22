@@ -1663,9 +1663,9 @@
   z-index: 2; /* Above footer so sticky sidebar stays on top when overlapping */
 }
 .account-sidebar {
-  width: 360px; /* Longest nav label (Upgrade or resubscribe) + nowrap on desktop */
+  width: 300px; /* Narrow column; desktop nav uses slightly smaller Bebas + tighter tracking so each label stays one line */
   flex-shrink: 0;
-  padding: 2rem 0 2rem 1.5rem;
+  padding: 2rem 0 2rem 1.25rem;
   position: static;
   background: #000;
 }
@@ -1709,10 +1709,13 @@
   border: 2px solid var(--lum-gold);
   outline: none;
 }
-/* Desktop/tablet: keep multi-word nav labels on one line (mobile sidebar stacks / wraps instead). */
+/* Desktop/tablet: one line per nav row; slightly smaller type + tracking so column can stay narrow. */
 @media (min-width: 769px) {
   .account-sidebar-nav a {
     white-space: nowrap;
+    font-size: 1.2rem;
+    letter-spacing: 0.055em;
+    padding: 0.55rem 0.45rem;
   }
 }
 .account-sidebar-logout {
