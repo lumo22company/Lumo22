@@ -1586,7 +1586,7 @@ a.lumo-nav-login:hover::before {
 .lumo-section { padding: var(--space-3xl) var(--space-xl); max-width: var(--max-width); margin: 0 auto; }
 @media (min-width: 769px) {
   .lumo-section {
-    padding-right: 1.25rem;
+    padding-right: 0.65rem;
   }
 }
 .lumo-section-header { margin-bottom: var(--space-2xl); }
