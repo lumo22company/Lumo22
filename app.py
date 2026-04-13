@@ -113,7 +113,7 @@ if Config.is_production():
 else:
     CORS(app)
 
-# Cache-bust static assets: include CSS mtime so updated files always get a new version after deploy
+# Cache-bust static assets: base token at startup (Railway deploy id, etc.)
 _css_mtime_for_version = None
 try:
     _landing_css = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'css', 'landing.css')
@@ -126,6 +126,20 @@ _asset_version = (
     or os.environ.get('ASSET_VERSION')
     or (str(int(time.time())) + '-' + str(_css_mtime_for_version))
 )
+
+
+def _main_css_mtime_token() -> str:
+    """Latest mtime among core CSS files so ?v= updates when landing.css or product.css change (no server restart)."""
+    try:
+        root = app.root_path
+        mt: list[int] = []
+        for fn in ("landing.css", "product.css"):
+            p = os.path.join(root, "static", "css", fn)
+            if os.path.isfile(p):
+                mt.append(int(os.path.getmtime(p)))
+        return str(max(mt)) if mt else "0"
+    except Exception:
+        return "0"
 
 # #region agent log
 _DEBUG_LOG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.cursor', 'debug.log')
@@ -181,7 +195,8 @@ def redirect_bare_domain_to_www():
 @app.context_processor
 def inject_asset_version():
     from datetime import datetime
-    out = {'asset_version': _asset_version}
+    _tok = _main_css_mtime_token()
+    out = {'asset_version': f"{_asset_version}-{_tok}" if _tok != "0" else _asset_version}
     out['today_str'] = datetime.utcnow().strftime('%d %B %Y')
     try:
         out['current_customer'] = get_template_current_customer()

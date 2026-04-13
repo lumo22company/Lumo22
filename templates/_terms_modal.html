@@ -1,6 +1,6 @@
 {# Reusable Terms & Conditions modal: scroll to bottom to enable "I agree", then redirect. Include on any page that has checkout. Call window.openTermsModal(redirectUrl) to open. #}
 <div id="terms-modal-overlay" class="terms-modal-overlay" aria-hidden="true">
-  <div class="terms-modal" role="dialog" aria-labelledby="terms-modal-title">
+  <div class="terms-modal terms-modal--jewel" role="dialog" aria-labelledby="terms-modal-title">
     <div class="terms-modal-header">
       <h2 id="terms-modal-title">Terms &amp; Conditions</h2>
       <button type="button" class="terms-modal-close" id="terms-modal-close" aria-label="Close">&times;</button>
@@ -33,6 +33,44 @@
   .terms-modal-footer .btn-agree:hover:not(:disabled) { opacity: 0.95; }
   .terms-modal-footer .btn-agree:disabled { opacity: 0.5; cursor: not-allowed; }
   .terms-modal-scroll-hint { font-size: 0.85rem; color: #fff; margin-top: 0.5rem; }
+
+  @keyframes terms-modal-glass-jewel-shine {
+    0%, 100% { background-position: 130% 40%; opacity: 0.4; }
+    48% { background-position: -30% 60%; opacity: 0.92; }
+    58% { opacity: 0.55; }
+  }
+  .terms-modal--jewel { position: relative; isolation: isolate; }
+  .terms-modal--jewel::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    z-index: 1;
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='96' height='96' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E"),
+      linear-gradient(124deg, rgba(255, 255, 255, 0.16) 0%, transparent 38%, transparent 58%, rgba(255, 255, 255, 0.07) 100%);
+    background-size: 96px 96px, 100% 100%;
+    opacity: 0.62;
+    mix-blend-mode: overlay;
+  }
+  .terms-modal--jewel::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    z-index: 1;
+    background: linear-gradient(118deg, transparent 0%, rgba(255, 255, 255, 0.06) 36%, rgba(255, 255, 255, 0.3) 50%, rgba(255, 255, 255, 0.1) 64%, transparent 100%);
+    background-size: 240% 240%;
+    background-position: 50% 50%;
+    animation: terms-modal-glass-jewel-shine 6.8s ease-in-out infinite;
+    mix-blend-mode: soft-light;
+  }
+  .terms-modal--jewel > * { position: relative; z-index: 2; }
+  @media (prefers-reduced-motion: reduce) {
+    .terms-modal--jewel::after { animation: none; opacity: 0; background-position: 50% 50%; }
+  }
 </style>
 <script>
 (function() {
