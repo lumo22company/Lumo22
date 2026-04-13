@@ -364,6 +364,49 @@ def test_subscription_prefill_when_db_only_has_business_name():
     assert order_b.get("intake", {}).get("goal") == "Build authority"
 
 
+def test_view_form_query_param_shows_readonly_not_subscribe_checkout():
+    """Account ?view=1 must show read-only snapshot, not one-off subscribe-checkout (review → Stripe)."""
+    from app import app
+    from unittest.mock import MagicMock, patch
+
+    mock_order = {
+        "id": "ord-1",
+        "token": "tok-oneoff-done",
+        "status": "completed",
+        "intake": {"business_name": "Acme Co", "business_type": "Coach / Mentor"},
+        "platforms_count": 1,
+        "selected_platforms": "Instagram & Facebook",
+        "include_stories": False,
+        "customer_email": "buyer@example.com",
+        "stripe_subscription_id": "",
+        "upgraded_from_token": "",
+    }
+    with app.test_client() as client:
+        with patch("services.caption_order_service.CaptionOrderService") as MockSvc:
+            mock_svc = MagicMock()
+            mock_svc.get_by_token.return_value = dict(mock_order)
+            mock_svc.has_subscription_upgraded_from_oneoff_token.return_value = False
+            MockSvc.return_value = mock_svc
+            with patch(
+                "api.captions_routes.enrich_order_intake_from_checkout_session",
+                lambda svc, o: o,
+            ):
+                r_view = client.get("/captions-intake?t=tok-oneoff-done&view=1")
+                r_checkout = client.get("/captions-intake?t=tok-oneoff-done")
+
+    assert r_view.status_code == 200
+    html_view = r_view.get_data(as_text=True)
+    assert "Read-only snapshot" in html_view
+    assert "moving from your one-off pack" not in html_view
+    assert 'data-oneoff-subscribe-checkout="false"' in html_view
+    assert 'data-auto-open-review="false"' in html_view
+
+    assert r_checkout.status_code == 200
+    html_co = r_checkout.get_data(as_text=True)
+    assert "moving from your one-off pack" in html_co
+    assert 'data-oneoff-subscribe-checkout="true"' in html_co
+
+
 if __name__ == "__main__":
     # Patch at module level - app imports CaptionOrderService in the route
     # We need to patch where it's used: in app.captions_intake_page it's "from services.caption_order_service import CaptionOrderService"
@@ -379,4 +422,5 @@ if __name__ == "__main__":
     test_oneoff_prefills_platform_when_order_has_no_selected_platforms()
     test_intake_substantive_brief_helper()
     test_subscription_prefill_when_db_only_has_business_name()
+    test_view_form_query_param_shows_readonly_not_subscribe_checkout()
     print("\nAll tests passed.")

@@ -654,7 +654,8 @@ def captions_intake_page():
     pending_oneoff_intake = bool(order and is_oneoff and order_status == "awaiting_intake")
     # e.g. Account → Upgrade → "Edit form": show full editable form + POST, then continue to checkout (not review-only → Stripe).
     edit_intake_before_subscribe = (request.args.get("edit") or "").strip().lower() in ("1", "true", "yes")
-    # Completed one-off (not yet subscribed): form is read-only; review step confirms → subscription checkout (no POST).
+    # Completed one-off (not yet subscribed): review step → subscription checkout — unless ?view=1 (account "View form"
+    # is read-only only; do not show Upgrade-to-subscription headline / confirm-to-Stripe flow).
     oneoff_subscribe_checkout_mode = bool(
         token
         and order
@@ -662,7 +663,7 @@ def captions_intake_page():
         and not oneoff_consumed_by_subscription
         and order_status
         and order_status != "awaiting_intake"
-    ) and not edit_intake_before_subscribe
+    ) and not edit_intake_before_subscribe and view_raw not in ("1", "true", "yes")
     intake_view_only = bool(
         (
             view_raw in ("1", "true", "yes")
