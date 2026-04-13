@@ -227,9 +227,9 @@ def _pack_sooner_receipt_plain_html(
     next_billing_display: Optional[str],
 ) -> Tuple[str, str]:
     """
-    Plain + HTML fragment for get-pack-sooner: one-time charge, current plan (from order — includes
-    Update preferences before checkout), ongoing monthly rate, next billing date. Prepended to the
-    delivery email so payment confirmation and PDF arrive in one message.
+    Plain + HTML fragment for get-pack-sooner: amount charged for this checkout, current plan (from
+    order — includes Update preferences before checkout), ongoing monthly rate, next billing date.
+    Prepended to the delivery email so payment confirmation and PDF arrive in one message.
     """
     import html as html_module
 
@@ -250,7 +250,7 @@ def _pack_sooner_receipt_plain_html(
 
     plain = (
         "Get pack sooner — payment received\n"
-        f"Amount charged (one-time): {amount_paid_display or '—'}\n\n"
+        f"Amount charged: {amount_paid_display or '—'}\n\n"
         "Your plan (this pack and going forward)\n"
         f"- Product: 30 Days of Social Media Captions (subscription)\n"
         f"- Platforms: {platforms_line}\n"
@@ -262,7 +262,7 @@ def _pack_sooner_receipt_plain_html(
     plain += "\n"
 
     rows = (
-        f'<p style="margin:0 0 8px;"><strong>Amount charged (one-time):</strong> {safe_amount}</p>'
+        f'<p style="margin:0 0 8px;"><strong>Amount charged:</strong> {safe_amount}</p>'
         f'<p style="margin:0 0 6px; font-size:13px; color:#333;"><strong>Your plan</strong> (this pack and going forward)</p>'
         f'<ul style="margin:0 0 10px; padding-left:18px; font-size:14px; color:#333;">'
         f'<li>30 Days of Social Media Captions (subscription)</li>'
