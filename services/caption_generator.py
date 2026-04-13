@@ -416,7 +416,8 @@ def _build_weekday_hook_alignment_block() -> str:
         "in **DATE_CONTEXT** for that N; the PDF prints that date beside the post):\n"
         "- For **Day N**, the weekday is **fixed** by DATE_CONTEXT (e.g. if Day 13 = Wed 15 Apr 2026, this post goes live on **Wednesday**).\n"
         "- In **Suggested hook** and **Caption:**, do **not** use scene-setting that names **another** weekday as if *this* post were that day "
-        "(e.g. do not write “Monday mornings at [Business]…” when Day N is **Wednesday**). If you name a weekday in a *scene* hook, it must match "
+        "(e.g. do not write “Monday mornings at [Business]…” when Day N is **Wednesday**; do not open with **“Saturday mornings…”** "
+        "when Day N is **Sunday** — the PDF prints the calendar date beside the post). If you name a weekday in a *scene* hook, it must match "
         "DATE_CONTEXT for **this** Day N.\n"
         "- Prefer **non-weekday** scene-setting when variety is needed: “Mornings at [Business]…”, “Midweek classes…”, “Here at [Business]…”, “Today's …”.\n"
         "- **Factual operating hours** may list multiple weekdays (e.g. “Open Mon–Thu 8–5, Fri–Sat mornings”, “closed Sunday”) on **any** Day N — "
@@ -1346,6 +1347,63 @@ def _calendar_weekday_alignment_error(captions_md: str, pack_start_date: str) ->
     return None
 
 
+def _strip_leading_asterisks_for_weekday_check(caption: str) -> str:
+    t = (caption or "").lstrip()
+    while t.startswith("*"):
+        t = t.lstrip("*").lstrip()
+    return t
+
+
+def _opening_weekday_daypart_wrong_calendar_day(caption: str, post_date: date) -> Optional[str]:
+    """
+    If the caption opens with 'Saturday mornings…' / 'Monday evening…' etc., that weekday must match
+    the calendar day for this post (DATE_CONTEXT). Returns the stated weekday word if mismatch, else None.
+    """
+    if not caption or not post_date:
+        return None
+    head = _strip_leading_asterisks_for_weekday_check(caption.strip())[:180].lower()
+    m = re.match(
+        r"^[\s\"'\u201c\u201d\u2018\u2019]*"
+        r"\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\s+"
+        r"(morning|mornings|afternoon|afternoons|evening|evenings)\b",
+        head,
+        re.DOTALL,
+    )
+    if not m:
+        return None
+    stated = m.group(1)
+    stated_idx = _WD_WORD_TO_INDEX.get(stated)
+    if stated_idx is None:
+        return None
+    if stated_idx == post_date.weekday():
+        return None
+    return stated
+
+
+def _opening_weekday_daypart_alignment_error(captions_md: str, pack_start_date: str) -> Optional[str]:
+    """
+    Fail when an opening scene uses 'Saturday mornings…' (etc.) but the post day in DATE_CONTEXT is another weekday.
+    """
+    if not captions_md or not pack_start_date:
+        return None
+    try:
+        start = datetime.strptime(pack_start_date.strip()[:10], "%Y-%m-%d").date()
+    except ValueError:
+        return None
+    for day_num, _platform, caption in _iter_day_platform_captions(captions_md):
+        post_date = start + timedelta(days=day_num - 1)
+        wrong = _opening_weekday_daypart_wrong_calendar_day(caption, post_date)
+        if wrong:
+            expect = _WEEKDAY_NAMES[post_date.weekday()].title()
+            return (
+                f"Day {day_num} ({post_date.strftime('%a %d %b %Y')}) opens with **{wrong.title()}** morning/afternoon/evening "
+                f"scene-setting, but this post is **{expect}** per DATE_CONTEXT — open with **{expect}** + daypart, "
+                "**this morning / today**, or neutral wording (see **WEEKDAY_IN_HOOK_ALIGNMENT**). "
+                "Do not anchor the hook to a different weekday than the calendar line beside the caption."
+            )
+    return None
+
+
 def _april_month_wrap_on_non_april_calendar_day(caption: str, post_date: date) -> bool:
     """
     True when copy frames April as the month being wrapped up while the post day is not in April.
@@ -2218,6 +2276,8 @@ class CaptionGenerator:
             if not full_err:
                 full_err = _calendar_weekday_alignment_error(captions_only, start_str)
             if not full_err:
+                full_err = _opening_weekday_daypart_alignment_error(captions_only, start_str)
+            if not full_err:
                 full_err = _caption_month_calendar_alignment_error(captions_only, start_str)
             if not full_err:
                 full_err = _explicit_weekday_dom_month_consistency_error(captions_only, start_str)
@@ -2238,6 +2298,9 @@ class CaptionGenerator:
                 "of that day’s line in DATE_CONTEXT — do not write “close out April” on a day that is already in May. "
                 "If the error is about **EXPLICIT_WEEKDAY_DATE**: any phrase like **Saturday 11 April** must be a real calendar "
                 "match (weekday + day number + month); cross-check **DATE_CONTEXT** — do not use an off-by-one day number. "
+                "If the error is about **opening weekday + morning/afternoon/evening**: the first line must not say e.g. "
+                "**Saturday mornings…** when DATE_CONTEXT for that day is **Sunday** — match the real weekday or use "
+                "**this morning / today / Mornings at [Business]…**. "
                 "Engagement days must use different hooks across the month; do not duplicate origin-story question patterns."
             )
 
