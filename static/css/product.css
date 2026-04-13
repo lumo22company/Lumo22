@@ -2648,13 +2648,14 @@
   max-width: 100%;
 }
 /* Plain label only — not a link, not button-styled */
-/* ~10 character floor (ch); flex-grow 0 so Subscription/One-off pill stays next to name, not flush to buttons */
+/* Short names: width follows text (no gap before pill). Long/truncated: cap floor ~10ch via min-content vs 10ch. */
+/* flex-grow 0 keeps Subscription/One-off pill next to name, not flush to buttons */
 .account-edit-form-list .account-edit-form-biz {
   font-weight: 500;
   color: rgba(255, 255, 255, 0.92);
   font-size: 1rem;
   line-height: 1.4;
-  min-width: min(100%, 10ch);
+  min-width: min(min-content, min(100%, 10ch));
   flex: 0 1 auto;
   max-width: 100%;
 }
@@ -2663,7 +2664,7 @@
   display: inline-flex;
   flex-wrap: nowrap;
   align-items: baseline;
-  min-width: min(100%, 10ch);
+  min-width: min(min-content, min(100%, 10ch));
   max-width: 100%;
 }
 .account-edit-form-list .account-edit-form-biz--split .account-edit-form-biz-first {
@@ -3000,12 +3001,12 @@
   }
   .account-edit-form-list .account-edit-form-biz--single {
     flex: 0 1 auto;
-    min-width: min(100%, 10ch);
+    min-width: min(min-content, min(100%, 10ch));
     max-width: 100%;
   }
   .account-edit-form-list .account-edit-form-biz--split {
     flex: 0 1 auto;
-    min-width: min(100%, 10ch);
+    min-width: min(min-content, min(100%, 10ch));
     max-width: 100%;
   }
   .account-edit-form-list .account-edit-form-actions {
@@ -3040,7 +3041,7 @@
   }
   .account-edit-form-list--stacked .account-edit-form-biz--single {
     flex: 0 1 auto;
-    min-width: min(100%, 10ch);
+    min-width: min(min-content, min(100%, 10ch));
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -3048,7 +3049,7 @@
   }
   .account-edit-form-list--stacked .account-edit-form-biz--split {
     flex: 0 1 auto;
-    min-width: min(100%, 10ch);
+    min-width: min(min-content, min(100%, 10ch));
     max-width: 100%;
   }
   .account-edit-form-list--stacked .account-edit-form-actions {
