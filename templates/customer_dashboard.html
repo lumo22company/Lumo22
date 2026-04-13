@@ -1909,7 +1909,7 @@
         var nextEffective = applyActiveDiscount(nextStandard);
         var sym = (p.symbol || '£');
         function fmt(v) { return (Math.round((v + Number.EPSILON) * 100) / 100).toFixed(2).replace(/\.00$/, ''); }
-        var line = 'Current billed: <strong>' + sym + fmt(currentEffective) + '/month</strong>. New billed: <strong>' + sym + fmt(nextEffective) + '/month</strong>.';
+        var line = 'Current billed: ' + sym + fmt(currentEffective) + '/month. <strong>New billed: ' + sym + fmt(nextEffective) + '/month</strong>.';
         if (changePlanState.discountType && changePlanState.discountDuration !== 'forever') {
           line += ' After discount ends, price will be <strong>' + sym + fmt(nextStandard) + '/month</strong>.';
         }

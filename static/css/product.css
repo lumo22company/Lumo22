@@ -1991,12 +1991,12 @@
   color: var(--lum-gold, #fff200);
   font-weight: 600;
 }
-/* Change plan modal: Current billed / New billed — gold, slightly larger than body copy */
+/* Change plan modal: Current billed regular weight; New billed alone in <strong> (700) */
 #change-plan-modal #change-plan-price.change-plan-billed-line {
   color: var(--lum-gold, #fff200);
   font-size: 1.08rem;
   line-height: 1.5;
-  font-weight: 600;
+  font-weight: 400;
 }
 #change-plan-modal #change-plan-price.change-plan-billed-line strong {
   color: var(--lum-gold, #fff200);
