@@ -2089,6 +2089,8 @@
   top: 0;
   bottom: 0;
   min-height: 100%;
+  /* Darker dim (default account backdrop 0.22 is too light for long forms). */
+  background: rgba(0, 0, 0, 0.62);
 }
 #change-plan-modal .change-plan-modal-scroll {
   position: relative;
@@ -2118,6 +2120,16 @@
 }
 .account-page-wrap #change-plan-modal .change-plan-modal-box {
   max-height: none;
+}
+/* Change plan dialog: opaque panel so platforms / pricing copy stays readable */
+#change-plan-modal .change-plan-modal-box.account-delete-modal-box {
+  background: rgba(12, 12, 12, 0.94);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 #change-plan-modal .account-delete-modal-title {
   flex-shrink: 0;
