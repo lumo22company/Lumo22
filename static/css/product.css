@@ -2121,16 +2121,6 @@
 .account-page-wrap #change-plan-modal .change-plan-modal-box {
   max-height: none;
 }
-/* Change plan dialog: opaque panel so platforms / pricing copy stays readable */
-#change-plan-modal .change-plan-modal-box.account-delete-modal-box {
-  background: rgba(12, 12, 12, 0.94);
-  -webkit-backdrop-filter: blur(20px);
-  backdrop-filter: blur(20px);
-  border-color: rgba(255, 255, 255, 0.12);
-  box-shadow:
-    0 16px 48px rgba(0, 0, 0, 0.55),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
-}
 #change-plan-modal .account-delete-modal-title {
   flex-shrink: 0;
 }
@@ -3983,22 +3973,33 @@
   background: rgba(0, 0, 0, 0.58);
 }
 
-/* Remove Story Ideas: darker overlay + opaque panel so body copy and terms stay readable */
+/* Darkened account modals: dim backdrop + translucent liquid-glass panels (blur + saturate) */
 #remove-stories-modal .account-delete-modal-backdrop {
   background: rgba(0, 0, 0, 0.62);
 }
-#remove-stories-modal .account-delete-modal-box.remove-stories-modal-box {
-  background: rgba(12, 12, 12, 0.94);
-  -webkit-backdrop-filter: blur(20px);
-  backdrop-filter: blur(20px);
-  border-color: rgba(255, 255, 255, 0.12);
+#get-pack-sooner-modal .account-delete-modal-box.remove-stories-modal-box,
+#remove-stories-modal .account-delete-modal-box.remove-stories-modal-box,
+#pause-subscription-modal .account-delete-modal-box.remove-stories-modal-box,
+#change-plan-modal .change-plan-modal-box.account-delete-modal-box {
+  background: rgba(8, 10, 18, 0.42);
+  -webkit-backdrop-filter: blur(34px) saturate(1.45);
+  backdrop-filter: blur(34px) saturate(1.45);
+  border-color: rgba(255, 255, 255, 0.16);
+  /* Rim + specular top edge + soft inner floor (liquid glass / reflective read) */
   box-shadow:
-    0 16px 48px rgba(0, 0, 0, 0.55),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    0 14px 44px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(255, 255, 255, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.14);
 }
 #remove-stories-modal .remove-stories-terms-body {
-  background: rgba(0, 0, 0, 0.45);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.07);
+  -webkit-backdrop-filter: blur(22px) saturate(1.25);
+  backdrop-filter: blur(22px) saturate(1.25);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
 }
 #remove-stories-modal #remove-stories-scroll-hint.remove-stories-scroll-hint {
   color: #ffffff;
@@ -4007,15 +4008,6 @@
 /* Pause subscription: darker overlay + panel; resume date line in brand gold */
 #pause-subscription-modal .account-delete-modal-backdrop {
   background: rgba(0, 0, 0, 0.62);
-}
-#pause-subscription-modal .account-delete-modal-box.remove-stories-modal-box {
-  background: rgba(12, 12, 12, 0.94);
-  -webkit-backdrop-filter: blur(20px);
-  backdrop-filter: blur(20px);
-  border-color: rgba(255, 255, 255, 0.12);
-  box-shadow:
-    0 16px 48px rgba(0, 0, 0, 0.55),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 #pause-subscription-modal .pause-subscription-resume-line {
   color: var(--lum-gold, #fff200);
