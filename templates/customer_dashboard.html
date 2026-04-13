@@ -1127,6 +1127,15 @@
   </div>
 
   {# Modals live outside .account-layout so fixed overlay z-index stacks above .lumo-nav (nav is a sibling; layout has z-index: 2). #}
+  {# SVG filter for Remove Story Ideas panel only: backdrop-filter url() + feDisplacementMap (see product.css). #}
+  <svg class="account-modal-svg-filters" xmlns="http://www.w3.org/2000/svg" width="0" height="0" aria-hidden="true" focusable="false" style="position: absolute; overflow: hidden; clip: rect(0, 0, 0, 0);">
+    <defs>
+      <filter id="lumoRemoveStoriesGlassFilter" x="-35%" y="-35%" width="170%" height="170%" color-interpolation-filters="sRGB">
+        <feTurbulence type="fractalNoise" baseFrequency="0.007" numOctaves="2" seed="7" stitchTiles="stitch" result="noise" />
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="5" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+    </defs>
+  </svg>
   <div id="get-pack-sooner-modal" class="account-delete-modal get-pack-sooner-modal" role="dialog" aria-labelledby="get-pack-sooner-modal-title" aria-modal="true" hidden>
       <div class="account-delete-modal-backdrop" onclick="closeGetPackSoonerModal()"></div>
       <div class="account-delete-modal-box remove-stories-modal-box" style="max-width: 520px;">

@@ -3978,7 +3978,6 @@
   background: rgba(0, 0, 0, 0.62);
 }
 #get-pack-sooner-modal .account-delete-modal-box.remove-stories-modal-box,
-#remove-stories-modal .account-delete-modal-box.remove-stories-modal-box,
 #pause-subscription-modal .account-delete-modal-box.remove-stories-modal-box,
 #change-plan-modal .change-plan-modal-box.account-delete-modal-box {
   background: rgba(8, 10, 18, 0.42);
@@ -3991,6 +3990,23 @@
     0 0 0 1px rgba(255, 255, 255, 0.07),
     inset 0 1px 0 rgba(255, 255, 255, 0.28),
     inset 0 -1px 0 rgba(0, 0, 0, 0.14);
+}
+
+/* Remove Story Ideas only: SVG displacement on backdrop (inspired by feDisplacementMap + backdrop-filter demos, e.g. codepen.io/9am/pen/eYbaQBw). Second block may be ignored if url() unsupported — first keeps blur. */
+#remove-stories-modal .account-delete-modal-box.remove-stories-modal-box {
+  background: rgba(8, 10, 18, 0.42);
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow:
+    0 14px 44px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(255, 255, 255, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.14);
+  -webkit-backdrop-filter: blur(34px) saturate(1.45);
+  backdrop-filter: blur(34px) saturate(1.45);
+}
+#remove-stories-modal .account-delete-modal-box.remove-stories-modal-box {
+  -webkit-backdrop-filter: url(#lumoRemoveStoriesGlassFilter) blur(26px) saturate(1.45);
+  backdrop-filter: url(#lumoRemoveStoriesGlassFilter) blur(26px) saturate(1.45);
 }
 #remove-stories-modal .remove-stories-terms-body {
   background: rgba(255, 255, 255, 0.07);
