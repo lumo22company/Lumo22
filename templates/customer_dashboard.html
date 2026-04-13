@@ -1248,7 +1248,7 @@
           </label>
           <p style="font-size:0.8rem; margin:0.35rem 0 0 1.5rem; opacity:0.85; line-height:1.35; color:rgba(255,255,255,0.85);">Leave unchecked if you want Stories and captions to differ on the same day.</p>
         </div>
-        <div id="change-plan-price" class="account-delete-modal-text change-plan-price-line change-plan-billed-line" style="margin-bottom:0.75rem;"></div>
+        <div id="change-plan-price" class="account-delete-modal-text change-plan-billed-line" style="margin-bottom:0.75rem;"></div>
         <p class="account-delete-modal-text change-plan-legal-note" style="margin-bottom:0;">By confirming you agree to the new price from your next pack.</p>
         </div>
         <div class="change-plan-modal-footer">
@@ -1909,11 +1909,13 @@
         var nextEffective = applyActiveDiscount(nextStandard);
         var sym = (p.symbol || '£');
         function fmt(v) { return (Math.round((v + Number.EPSILON) * 100) / 100).toFixed(2).replace(/\.00$/, ''); }
-        var line = 'Current billed: ' + sym + fmt(currentEffective) + '/month. <strong>New billed: ' + sym + fmt(nextEffective) + '/month</strong>.';
+        var parts = [];
+        parts.push('<div class="change-plan-billed-current">Current billed: ' + sym + fmt(currentEffective) + '/month.</div>');
+        parts.push('<div class="change-plan-billed-new"><strong>New billed: ' + sym + fmt(nextEffective) + '/month</strong>.</div>');
         if (changePlanState.discountType && changePlanState.discountDuration !== 'forever') {
-          line += ' After discount ends, price will be <strong>' + sym + fmt(nextStandard) + '/month</strong>.';
+          parts.push('<div class="change-plan-billed-after-discount">After discount ends, price will be <strong>' + sym + fmt(nextStandard) + '/month</strong>.</div>');
         }
-        priceEl.innerHTML = line;
+        priceEl.innerHTML = parts.join('');
         syncChangePlanPlatformAtMax();
       }
 
