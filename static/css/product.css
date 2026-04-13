@@ -3971,6 +3971,27 @@
   background: rgba(0, 0, 0, 0.58);
 }
 
+/* Remove Story Ideas: darker overlay + opaque panel so body copy and terms stay readable */
+#remove-stories-modal .account-delete-modal-backdrop {
+  background: rgba(0, 0, 0, 0.62);
+}
+#remove-stories-modal .account-delete-modal-box.remove-stories-modal-box {
+  background: rgba(12, 12, 12, 0.94);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+#remove-stories-modal .remove-stories-terms-body {
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+#remove-stories-modal #remove-stories-scroll-hint.remove-stories-scroll-hint {
+  color: #ffffff;
+}
+
 /* Get your pack sooner: yellow primary buttons (match Add Story Ideas), no black outline */
 #get-pack-sooner-modal .account-delete-modal-buttons .account-delete-modal-btn {
   background: var(--lum-gold, #fff200);
