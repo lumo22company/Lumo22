@@ -1,3 +1,32 @@
+        {% if subscription_billing and subscription_billing.get('invoice_history') and sub_orders %}
+        {% set _inv_portal_tok = (sub_orders[0].get('token') or '') %}
+        <div class="account-pause-block account-invoice-history-block" style="margin-bottom: 1rem;">
+          <div class="account-settings-label" style="font-size: 0.95rem; font-weight: 600; color: #000; margin-bottom: 0.35rem;">Invoice history</div>
+          <p class="account-settings-desc" style="margin: 0 0 0.75rem; font-size: 0.88rem; color: #555; line-height: 1.45;">Each entry is the total Stripe charged on that date, with every line item listed. (Stripe’s own “Manage billing” page sometimes groups these as one product “+ more”.){% if _inv_portal_tok %} <a href="/api/billing/portal?order_token={{ _inv_portal_tok|urlencode }}" class="account-billing-portal-link" style="font-weight: 600;">Manage billing</a> still opens Stripe for cards, cancellations, and PDF downloads.{% endif %}</p>
+          {% for inv in subscription_billing.invoice_history %}
+          <div class="account-invoice-history-item" style="border-bottom: 1px solid rgba(0,0,0,0.08); padding: 0.65rem 0;">
+            <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.35rem 1rem; align-items: baseline;">
+              <span style="font-weight: 600; color: #000;">{{ inv.date_label }}</span>
+              <span style="font-weight: 600; color: #000;">{{ inv.amount_paid_display }}{% if inv.status %} <span style="font-weight: 500; color: #555; font-size: 0.85rem;">({{ inv.status }})</span>{% endif %}</span>
+            </div>
+            {% if inv.lines %}
+            <ul style="margin: 0.45rem 0 0 1.1rem; padding: 0; font-size: 0.86rem; color: #444; line-height: 1.45; list-style: disc;">
+              {% for line in inv.lines %}
+              <li style="margin-bottom: 0.2rem;">{{ line.description }} — <strong>{{ line.amount_display }}</strong></li>
+              {% endfor %}
+            </ul>
+            {% endif %}
+            {% if inv.hosted_invoice_url or inv.invoice_pdf %}
+            <p style="margin: 0.45rem 0 0 0; font-size: 0.82rem;">
+              {% if inv.hosted_invoice_url %}<a href="{{ inv.hosted_invoice_url }}" target="_blank" rel="noopener noreferrer">View in Stripe</a>{% endif %}
+              {% if inv.hosted_invoice_url and inv.invoice_pdf %} · {% endif %}
+              {% if inv.invoice_pdf %}<a href="{{ inv.invoice_pdf }}" target="_blank" rel="noopener noreferrer">Download PDF</a>{% endif %}
+            </p>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
         <div class="account-pause-manage-billing" style="margin-bottom: 1.25rem;">
           {% if sub_orders and sub_orders|length > 1 %}
           <p class="account-settings-desc" style="margin: 0 0 0.5rem; font-size: 0.9rem; color: #fff;">You have more than one subscription. Select the one you want to manage:</p>

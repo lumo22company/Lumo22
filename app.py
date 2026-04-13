@@ -1618,7 +1618,12 @@ def _account_context_fallback(customer: dict, exc=None) -> dict:
         "customer": customer,
         "caption_orders": [],
         "current_intake_order": None,
-        "subscription_billing": {"payment_methods": [], "subscription_payment_methods": {}, "subscription_pricing": {}},
+        "subscription_billing": {
+            "payment_methods": [],
+            "subscription_payment_methods": {},
+            "subscription_pricing": {},
+            "invoice_history": [],
+        },
         "billing_accounts": [],
         "subscribe_options": [],
         "subscribe_options_resubscribe_only": [],
@@ -1786,6 +1791,7 @@ def _account_context_build(customer: dict, section: Optional[str] = None) -> dic
                 "payment_methods": [],
                 "subscription_payment_methods": {},
                 "subscription_pricing": {},
+                "invoice_history": [],
             }
         else:
             with ThreadPoolExecutor(max_workers=2) as pool:
@@ -1816,6 +1822,7 @@ def _account_context_build(customer: dict, section: Optional[str] = None) -> dic
             "payment_methods": [],
             "subscription_payment_methods": {},
             "subscription_pricing": {},
+            "invoice_history": [],
         }
 
     # Billing accounts: one per unique stripe_customer_id among subscription orders
@@ -2076,6 +2083,67 @@ def _subscription_pricing_from_stripe_sub(sub, sub_id, out: dict) -> None:
         out["subscription_pricing"][sub_id] = None
 
 
+def _format_stripe_minor_display(amount_minor: int, currency: str) -> str:
+    """Format Stripe amount in smallest currency unit for display (supports negative proration lines)."""
+    currency = (currency or "gbp").lower()
+    sym = {"gbp": "£", "usd": "$", "eur": "€"}.get(currency, "£")
+    raw = int(amount_minor or 0)
+    neg = raw < 0
+    v = abs(raw) / 100.0
+    s = f"{sym}{v:.2f}"
+    return f"-{s}" if neg else s
+
+
+def _stripe_invoice_history_for_customer(stripe_customer_id: str, limit: int = 24) -> list:
+    """
+    Pull recent paid/open invoices for the Stripe customer so the account page can show
+    each charge with line-by-line descriptions (Stripe's hosted portal often collapses to '+N more').
+    """
+    if not stripe_customer_id or not getattr(Config, "STRIPE_SECRET_KEY", None):
+        return []
+    try:
+        import stripe
+        from datetime import datetime, timezone
+
+        stripe.api_key = Config.STRIPE_SECRET_KEY
+        invs = stripe.Invoice.list(customer=stripe_customer_id, limit=limit)
+        rows = []
+        for inv in invs.data or []:
+            cur = (inv.get("currency") or "gbp").lower()
+            created = inv.get("created")
+            if not created:
+                continue
+            dt = datetime.fromtimestamp(int(created), tz=timezone.utc)
+            date_label = dt.strftime("%d %b %Y")
+            amt_paid = int(inv.get("amount_paid") or 0)
+            status = (inv.get("status") or "").strip()
+            line_rows = []
+            for li in (inv.get("lines") or {}).get("data") or []:
+                desc = (li.get("description") or "").strip()
+                if not desc:
+                    desc = "Line item"
+                lamt = int(li.get("amount") or 0)
+                line_rows.append(
+                    {
+                        "description": desc,
+                        "amount_display": _format_stripe_minor_display(lamt, cur),
+                    }
+                )
+            rows.append(
+                {
+                    "date_label": date_label,
+                    "amount_paid_display": _format_stripe_minor_display(amt_paid, cur),
+                    "status": status,
+                    "lines": line_rows,
+                    "invoice_pdf": (inv.get("invoice_pdf") or "").strip(),
+                    "hosted_invoice_url": (inv.get("hosted_invoice_url") or "").strip(),
+                }
+            )
+        return rows
+    except Exception:
+        return []
+
+
 def _load_account_stripe_subscription_data(caption_orders):
     """
     Build payment_methods list and per-subscription billing for account page.
@@ -2086,12 +2154,18 @@ def _load_account_stripe_subscription_data(caption_orders):
       "payment_methods": [{ id, brand, last4 }],
       "subscription_payment_methods": { sub_id: { id, brand, last4 } },
       "subscription_pricing": { sub_id: { ... } },
+      "invoice_history": [ { date_label, amount_paid_display, status, lines, invoice_pdf, hosted_invoice_url }, ... ],
     }.
     """
     from api.captions_routes import _pause_info_from_subscription
     from api.stripe_utils import is_valid_stripe_subscription_id
 
-    out = {"payment_methods": [], "subscription_payment_methods": {}, "subscription_pricing": {}}
+    out = {
+        "payment_methods": [],
+        "subscription_payment_methods": {},
+        "subscription_pricing": {},
+        "invoice_history": [],
+    }
     orders = caption_orders or []
     for o in orders:
         sid = (o.get("stripe_subscription_id") or "").strip()
@@ -2191,6 +2265,12 @@ def _load_account_stripe_subscription_data(caption_orders):
             except Exception:
                 out["subscription_payment_methods"][sub_id] = None
                 out["subscription_pricing"][sub_id] = None
+
+        if stripe_customer_id:
+            try:
+                out["invoice_history"] = _stripe_invoice_history_for_customer(stripe_customer_id)
+            except Exception:
+                out["invoice_history"] = []
     except Exception:
         pass
     return out
