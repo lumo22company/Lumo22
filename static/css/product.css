@@ -1777,12 +1777,9 @@
 
 /* Desktop: trim right-edge page padding (main content sits closer to the viewport). */
 @media (min-width: 769px) {
-  /* Centre the capped-width main column in the space beside the sidebar (even L/R gap). */
   .account-main {
     padding: 2rem 1.5rem 4rem;
     padding-right: 0.4rem;
-    margin-left: auto;
-    margin-right: auto;
   }
 
   .product-hero {
@@ -2993,11 +2990,7 @@
   }
   .account-sidebar-nav a { padding: 0.4rem 0.6rem; font-size: 1.15rem; }
   .account-sidebar-logout { margin-top: 0; padding-top: 0; border-top: none; margin-left: auto; }
-  .account-main {
-    padding: 1.5rem 1rem 3rem;
-    margin-left: 0;
-    margin-right: 0;
-  }
+  .account-main { padding: 1.5rem 1rem 3rem; }
   /* Edit form rows: name + Subscription/One-off pill on one line; buttons full width below */
   .account-edit-form-list .account-edit-form-row {
     grid-template-columns: 1fr;
