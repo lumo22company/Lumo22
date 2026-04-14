@@ -1468,6 +1468,42 @@ This is an automated notification from your lead capture system.
             print(f"[Lumo 22 ops alert] delivered OK recipients={recipients}")
         return all_ok
 
+    def _caption_ops_subject(self, event_title: str, order_id: Optional[str]) -> str:
+        """Shared subject prefix so inbox search/glue-in-one-place works: [Lumo 22 Ops · Captions] …"""
+        oid = (order_id or "").strip() or "(no order id)"
+        short = f"{oid[:10]}…" if len(oid) > 10 else oid
+        return f"[Lumo 22 Ops · Captions] {event_title} — {short}"
+
+    def _caption_ops_order_block(
+        self,
+        *,
+        order_id: str,
+        order_token: str = "",
+        customer_email: str = "",
+        business_name: str = "",
+        stripe_subscription_id: str = "",
+        stripe_customer_id: str = "",
+    ) -> str:
+        return f"""ORDER (Supabase caption_orders)
+—
+Order ID: {(order_id or '').strip() or '(none)'}
+Order token: {(order_token or '').strip() or '(none)'}
+Customer email: {(customer_email or '').strip() or '(none)'}
+Business name (intake): {(business_name or '').strip() or '(none)'}
+Stripe subscription: {(stripe_subscription_id or '').strip() or '(none)'}
+Stripe customer: {(stripe_customer_id or '').strip() or '(none)'}
+"""
+
+    def _caption_ops_mail_footer(self) -> str:
+        return """— — —
+WHERE TO LOOK (same for all Captions ops alerts)
+• Railway logs: [Captions], [Captions recovery], DELIVERY_FAILED, [Stripe webhook] pack sooner
+• Supabase: caption_orders — use Order ID above
+• Repo: scripts/generate_caption_delivery_troubleshoot_pdf.py — operator reference PDF
+
+— Lumo 22 (automated)
+"""
+
     def send_caption_delivery_retries_exhausted_alert(
         self,
         *,
@@ -1485,33 +1521,34 @@ This is an automated notification from your lead capture system.
         Manual fix may be needed (Supabase, SendGrid, Stripe).
         """
         oid = (order_id or "").strip() or "?"
-        subj = (
-            f"[Lumo 22] Caption delivery retries exhausted — {oid[:10]}…"
-            if len(oid) > 10
-            else f"[Lumo 22] Caption delivery retries exhausted — {oid}"
-        )
+        subj = self._caption_ops_subject("Delivery retries exhausted", oid)
         err_snip = (last_error or "").strip().replace("\n", " ")
         if len(err_snip) > 800:
             err_snip = err_snip[:797] + "..."
-        body = f"""Caption order has reached the maximum automatic delivery attempts.
+        order_blk = self._caption_ops_order_block(
+            order_id=oid,
+            order_token=order_token,
+            customer_email=customer_email,
+            business_name=business_name,
+            stripe_subscription_id=stripe_subscription_id,
+            stripe_customer_id=stripe_customer_id,
+        )
+        body = f"""WHAT HAPPENED
+—
+Automatic caption pack delivery hit the retry cap ({delivery_failure_count} attempts). Earlier failures did not send separate ops emails; Railway logs still show each attempt.
 
-Order ID: {oid}
-Order token: {(order_token or '').strip() or '(none)'}
-Customer email: {(customer_email or '').strip() or '(none)'}
-Business name (if any): {(business_name or '').strip() or '(none)'}
-Stripe subscription: {(stripe_subscription_id or '').strip() or '(none)'}
-Stripe customer: {(stripe_customer_id or '').strip() or '(none)'}
+{order_blk}
+DELIVERY / GENERATION
+—
 delivery_failure_count: {delivery_failure_count}
-
 Last error (truncated):
 {err_snip or '(none)'}
 
-Earlier failures on this order did not send separate ops emails; the app retried automatically until this cap.
+CUSTOMER / NEXT STEPS
+—
+The customer may see the exhausted “our team has been notified” message on the account page. The app will not auto-retry until the underlying issue is fixed (Supabase / SendGrid / generation) and a successful delivery runs or the row is corrected.
 
-The customer may see the exhausted “our team has been notified” message on the account page. The app will not auto-retry further until you fix the underlying issue (Supabase / SendGrid / generation) and run a successful delivery or adjust the row.
-
-— Lumo 22 (automated)
-"""
+{self._caption_ops_mail_footer()}"""
         return self._send_ops_alert_email(subj, body)
 
     def send_caption_stale_generating_recovery_alert(
@@ -1529,21 +1566,27 @@ The customer may see the exhausted “our team has been notified” message on t
         (e.g. dead worker thread) and starts a new delivery thread.
         """
         oid = (order_id or "").strip() or "?"
-        subj = f"[Lumo 22] Stuck generating — recovery started — {oid[:12]}"
-        body = f"""Caption recovery found a subscription order stuck in "generating" (likely no active thread).
-A new generation thread was started automatically.
+        subj = self._caption_ops_subject("Stuck generating — recovery started", oid)
+        order_blk = self._caption_ops_order_block(
+            order_id=oid,
+            order_token=order_token,
+            customer_email=customer_email,
+            business_name=business_name,
+            stripe_subscription_id=stripe_subscription_id,
+            stripe_customer_id="",
+        )
+        body = f"""WHAT HAPPENED
+—
+Recovery found this subscription order stuck in status "generating" (likely no active worker thread). A new generation/delivery thread was started automatically.
 
-Order ID: {oid}
-Order token: {(order_token or '').strip() or '(none)'}
-Customer email: {(customer_email or '').strip() or '(none)'}
-Business name: {(business_name or '').strip() or '(none)'}
-Stripe subscription: {(stripe_subscription_id or '').strip() or '(none)'}
-delivery_last_attempt_at (generation start): {(delivery_last_attempt_at or '').strip() or '(none)'}
+{order_blk}
+TIMING
+—
+delivery_last_attempt_at (generation start reference): {(delivery_last_attempt_at or '').strip() or '(none)'}
 
-If this repeats, check Railway logs for [Captions] and AI timeouts.
+If this repeats for the same order, check Railway for [Captions] and AI timeouts.
 
-— Lumo 22 (automated)
-"""
+{self._caption_ops_mail_footer()}"""
         return self._send_ops_alert_email(subj, body)
 
     def send_caption_pack_sooner_webhook_blocked_alert(
@@ -1559,22 +1602,32 @@ If this repeats, check Railway logs for [Captions] and AI timeouts.
         Notify ops when Get pack sooner checkout.session.completed was paid but delivery was not started
         (email mismatch, dedupe skip, missing metadata, etc.).
         """
-        subj = f"[Lumo 22] Get pack sooner — webhook did not start delivery — {reason[:40]}"
-        body = f"""Stripe checkout.session.completed for Get pack sooner did not start pack generation.
+        oid = (order_id or "").strip()
+        subj = self._caption_ops_subject(f"Get pack sooner — {reason.strip()[:36]}", oid or None)
+        order_blk = self._caption_ops_order_block(
+            order_id=oid or "(see metadata / Stripe)",
+            order_token="",
+            customer_email=customer_email_order,
+            business_name="",
+            stripe_subscription_id="",
+            stripe_customer_id="",
+        )
+        body = f"""WHAT HAPPENED
+—
+Paid Get pack sooner (Stripe checkout.session.completed) did not start caption pack generation.
 
-Reason: {reason.strip()}
-
+{order_blk}
+STRIPE / WEBHOOK
+—
+Reason code: {reason.strip()}
 Stripe Checkout Session ID: {(session_id or '').strip() or '(none)'}
-Order ID (metadata): {(order_id or '').strip() or '(none)'}
-Order customer_email: {(customer_email_order or '').strip() or '(none)'}
 
 Detail:
 {(detail or '').strip()[:2000] or '(none)'}
 
-Search Stripe Dashboard for the session id, then Railway logs for [Stripe webhook] pack sooner.
+Search Stripe Dashboard for the session id, then Railway for [Stripe webhook] pack sooner.
 
-— Lumo 22 (automated)
-"""
+{self._caption_ops_mail_footer()}"""
         return self._send_ops_alert_email(subj, body)
 
     def send_password_reset_email(self, to_email: str, reset_url: str) -> bool:

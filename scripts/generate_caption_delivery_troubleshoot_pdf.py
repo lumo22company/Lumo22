@@ -123,9 +123,10 @@ def build_pdf() -> None:
         Spacer(1, 6),
         _p("7) Internal alert email (delivery_failure_count cap)", h2),
         _p(
-            "When automatic retries are exhausted, <b>one</b> email is sent to <b>INTERNAL_ALERT_EMAIL</b> (default hello@lumo22.com). "
-            "Intermediate delivery failures do not email ops (Railway logs still show each attempt). "
-            "Requires working SendGrid. The exhausted account banner uses standard “team notified” copy; treat the internal alert as best-effort if SendGrid fails.",
+            "Caption ops alerts (delivery exhausted, stuck-generating recovery, Get pack sooner webhook blocked) share the same subject prefix "
+            "<b>[Lumo 22 Ops · Captions]</b> and the same body sections (WHAT HAPPENED, ORDER, …, WHERE TO LOOK) so you can search one string in the inbox. "
+            "When automatic retries are exhausted, <b>one</b> email is sent; intermediate delivery failures do not email ops (Railway logs still show each attempt). "
+            "Requires working SendGrid; treat the internal alert as best-effort if SendGrid fails.",
             body,
         ),
         Spacer(1, 6),
