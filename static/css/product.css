@@ -1767,8 +1767,8 @@
 .account-main {
   flex: 1;
   min-width: 0;
-  /* Fill space beside sidebar; extra breathing room on the right */
-  padding: 2rem 2rem 4rem 1rem;
+  /* Fill space beside sidebar; generous right gutter from viewport edge */
+  padding: 2rem 5rem 4rem 1rem;
   max-width: none;
 }
 /* History: same full-width main — wide tables use horizontal scroll if needed */
@@ -1779,7 +1779,7 @@
 /* Desktop: consistent gutters next to nav + viewport edge */
 @media (min-width: 769px) {
   .account-main {
-    padding: 2rem 2.25rem 4rem 1rem;
+    padding: 2rem 6rem 4rem 1rem;
   }
 
   .product-hero {
@@ -3137,7 +3137,7 @@
     align-items: flex-start;
   }
   .account-main .account-section-block {
-    padding: 1.25rem 1.35rem 1.75rem 1rem;
+    padding: 1.25rem 2.5rem 1.75rem 1rem;
   }
 
   /* Account page: sidebar as collapsible menu, single column, full-width actions */
@@ -3194,12 +3194,12 @@
     display: block;
   }
   .account-page-wrap .account-main {
-    padding: 1.25rem 1.5rem 2.5rem 1rem;
+    padding: 1.25rem 3rem 2.5rem 1rem;
     max-width: none;
   }
   .account-page-wrap .account-main .account-section-block {
     margin-bottom: 1.5rem;
-    padding: 1rem 1.1rem 1.25rem 1rem;
+    padding: 1rem 2.25rem 1.25rem 1rem;
   }
   .account-page-wrap .account-info-row {
     flex-direction: column;
