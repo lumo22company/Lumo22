@@ -1442,6 +1442,31 @@ This is an automated notification from your lead capture system.
         
         return self.send_email(admin_email, subject, body)
 
+    def _send_ops_alert_email(self, subject: str, body: str) -> bool:
+        """
+        Send plain-text internal ops alerts. Uses INTERNAL_ALERT_EMAIL and optional INTERNAL_ALERT_EMAIL_CC.
+        Logs clearly; on failure hints SendGrid trial / verified-recipient rules.
+        """
+        primary = _sanitize_email_value(Config.INTERNAL_ALERT_EMAIL or "") or "hello@lumo22.com"
+        cc_raw = _sanitize_email_value(getattr(Config, "INTERNAL_ALERT_EMAIL_CC", "") or "").strip()
+        recipients = [primary]
+        if cc_raw and "@" in cc_raw and cc_raw.lower() != primary.lower():
+            recipients.append(cc_raw)
+        print(f"[Lumo 22 ops alert] dispatching subject={subject!r} recipients={recipients}")
+        all_ok = True
+        for addr in recipients:
+            if not self.send_email(addr, subject, body):
+                all_ok = False
+                print(
+                    f"[Lumo 22 ops alert] SEND FAILED to={addr!r} subject={subject!r}. "
+                    "Check SendGrid Activity + API key. SendGrid trial accounts may only deliver to "
+                    "verified/authorized recipient addresses—add that address in SendGrid or set "
+                    "INTERNAL_ALERT_EMAIL to a verified inbox."
+                )
+        if all_ok:
+            print(f"[Lumo 22 ops alert] delivered OK recipients={recipients}")
+        return all_ok
+
     def send_caption_delivery_retries_exhausted_alert(
         self,
         *,
@@ -1458,7 +1483,6 @@ This is an automated notification from your lead capture system.
         Notify ops when caption delivery_failure_count reaches the auto-retry cap.
         Manual fix may be needed (Supabase, SendGrid, Stripe).
         """
-        to_email = _sanitize_email_value(Config.INTERNAL_ALERT_EMAIL or "") or "hello@lumo22.com"
         oid = (order_id or "").strip() or "?"
         subj = (
             f"[Lumo 22] Caption delivery retries exhausted — {oid[:10]}…"
@@ -1485,13 +1509,7 @@ The customer sees "Automatic retries are exhausted" on retry. The app will not a
 
 — Lumo 22 (automated)
 """
-        ok = self.send_email(to_email, subj, body)
-        if not ok:
-            print(
-                f"[Captions] delivery retries exhausted alert NOT sent to {to_email}; "
-                f"check SendGrid and INTERNAL_ALERT_EMAIL. order_id={oid}"
-            )
-        return ok
+        return self._send_ops_alert_email(subj, body)
 
     def send_caption_delivery_failed_attempt_alert(
         self,
@@ -1509,7 +1527,6 @@ The customer sees "Automatic retries are exhausted" on retry. The app will not a
         Notify ops on each failed caption delivery attempt before the auto-retry cap
         (so you see the first failure, not only when retries are exhausted).
         """
-        to_email = _sanitize_email_value(Config.INTERNAL_ALERT_EMAIL or "") or "hello@lumo22.com"
         oid = (order_id or "").strip() or "?"
         subj = f"[Lumo 22] Caption delivery failed (attempt {attempt_number}/{max_attempts}) — {oid[:12]}"
         err_snip = (last_error or "").strip().replace("\n", " ")
@@ -1531,13 +1548,7 @@ Check Railway logs for [Captions] DELIVERY_FAILED and SendGrid / AI keys.
 
 — Lumo 22 (automated)
 """
-        ok = self.send_email(to_email, subj, body)
-        if not ok:
-            print(
-                f"[Captions] delivery failed attempt alert NOT sent to {to_email}; "
-                f"order_id={oid} attempt={attempt_number}"
-            )
-        return ok
+        return self._send_ops_alert_email(subj, body)
 
     def send_caption_stale_generating_recovery_alert(
         self,
@@ -1553,7 +1564,6 @@ Check Railway logs for [Captions] DELIVERY_FAILED and SendGrid / AI keys.
         Notify ops when recovery cron picks up a subscription order stuck in status=generating
         (e.g. dead worker thread) and starts a new delivery thread.
         """
-        to_email = _sanitize_email_value(Config.INTERNAL_ALERT_EMAIL or "") or "hello@lumo22.com"
         oid = (order_id or "").strip() or "?"
         subj = f"[Lumo 22] Stuck generating — recovery started — {oid[:12]}"
         body = f"""Caption recovery found a subscription order stuck in "generating" (likely no active thread).
@@ -1570,12 +1580,7 @@ If this repeats, check Railway logs for [Captions] and AI timeouts.
 
 — Lumo 22 (automated)
 """
-        ok = self.send_email(to_email, subj, body)
-        if not ok:
-            print(
-                f"[Captions] stale generating alert NOT sent to {to_email}; order_id={oid}"
-            )
-        return ok
+        return self._send_ops_alert_email(subj, body)
 
     def send_caption_pack_sooner_webhook_blocked_alert(
         self,
@@ -1590,7 +1595,6 @@ If this repeats, check Railway logs for [Captions] and AI timeouts.
         Notify ops when Get pack sooner checkout.session.completed was paid but delivery was not started
         (email mismatch, dedupe skip, missing metadata, etc.).
         """
-        to_email = _sanitize_email_value(Config.INTERNAL_ALERT_EMAIL or "") or "hello@lumo22.com"
         subj = f"[Lumo 22] Get pack sooner — webhook did not start delivery — {reason[:40]}"
         body = f"""Stripe checkout.session.completed for Get pack sooner did not start pack generation.
 
@@ -1607,10 +1611,7 @@ Search Stripe Dashboard for the session id, then Railway logs for [Stripe webhoo
 
 — Lumo 22 (automated)
 """
-        ok = self.send_email(to_email, subj, body)
-        if not ok:
-            print(f"[Captions] pack sooner blocked alert NOT sent to {to_email}; reason={reason!r}")
-        return ok
+        return self._send_ops_alert_email(subj, body)
 
     def send_password_reset_email(self, to_email: str, reset_url: str) -> bool:
         """Send password reset email with plain and HTML body; link is explicit in HTML so it always appears."""

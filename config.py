@@ -65,6 +65,9 @@ class Config:
     FROM_NAME = _sanitize_header_value(os.getenv('FROM_NAME', '') or '') or 'Lumo 22'
     # Ops alerts (e.g. caption auto-delivery retries exhausted). Override for a dedicated inbox.
     INTERNAL_ALERT_EMAIL = _sanitize_header_value(os.getenv('INTERNAL_ALERT_EMAIL', '') or '') or 'hello@lumo22.com'
+    # Optional duplicate recipient for the same ops emails (e.g. personal inbox if primary is role-based).
+    _ial_cc = _sanitize_header_value(os.getenv("INTERNAL_ALERT_EMAIL_CC", "") or "").strip()
+    INTERNAL_ALERT_EMAIL_CC = _ial_cc if _ial_cc and "@" in _ial_cc else ""
 
     # Twilio
     TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID')
