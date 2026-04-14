@@ -583,6 +583,17 @@
       if (!el || !el.scrollIntoView) return;
       try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) { el.scrollIntoView(true); }
     };
+    window.lumoIntakeScrollToPageTop = function() {
+      function go() {
+        try { window.scrollTo({ top: 0, left: 0, behavior: 'auto' }); } catch (e) { try { window.scrollTo(0, 0); } catch (e2) {} }
+        if (document.documentElement) document.documentElement.scrollTop = 0;
+        if (document.body) document.body.scrollTop = 0;
+      }
+      requestAnimationFrame(function() {
+        go();
+        requestAnimationFrame(go);
+      });
+    };
     window.lumoIntakeSetError = function(msg, planKind, meta) {
       meta = meta || {};
       var wrap = document.getElementById('intake-error');
@@ -969,6 +980,9 @@
               if (caCreateState) caCreateState.style.display = 'block';
               if (caSignupWrap && custEmail) { caSignupWrap.style.display = 'block'; }
             }
+            setTimeout(function() {
+              if (typeof window.lumoIntakeScrollToPageTop === 'function') window.lumoIntakeScrollToPageTop();
+            }, 0);
           } else {
             var ctaEl = document.getElementById('intake-upgrade-cta');
             if (typeof lumoIntakeSetErrorFromApiResult === 'function') lumoIntakeSetErrorFromApiResult(result);
@@ -1018,6 +1032,9 @@
                               if (formEl) formEl.style.display = 'none';
                               var msgEl = document.getElementById('intake-success-msg');
                               if (msgEl) msgEl.textContent = r2.json.message || 'Your form has been updated.';
+                              setTimeout(function() {
+                                if (typeof window.lumoIntakeScrollToPageTop === 'function') window.lumoIntakeScrollToPageTop();
+                              }, 0);
                             } else {
                               if (typeof lumoIntakeSetError === 'function') lumoIntakeSetError(r2.json.error || 'Could not save.', null);
                               dbtn.disabled = false;
@@ -1445,6 +1462,9 @@
             if (formEl) formEl.style.display = 'none';
             var custEmail = (result.json.customer_email || '').trim();
             document.getElementById('ca-email').value = custEmail;
+            setTimeout(function() {
+              if (typeof window.lumoIntakeScrollToPageTop === 'function') window.lumoIntakeScrollToPageTop();
+            }, 0);
           } else {
             var launchHint = document.getElementById('launch-date-hint');
             var ctaEl = document.getElementById('intake-upgrade-cta');
