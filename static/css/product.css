@@ -2359,9 +2359,40 @@
   margin: 0.75rem 0 0;
   width: 100%;
 }
-.account-history-show-more-btn {
-  font-size: 0.9rem;
-  padding: 0.5rem 1rem;
+.account-page-wrap .account-history-show-more-btn {
+  appearance: none;
+  cursor: pointer;
+  box-sizing: border-box;
+  font: inherit;
+  font-family: var(--font-body, 'Century Gothic', sans-serif);
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: 0.04em;
+  color: #1a1a1a;
+  background: var(--lum-gold, #fff200);
+  border: none;
+  border-radius: var(--dfd-radius-btn);
+  padding: 0.6rem 1.15rem;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
+}
+.account-page-wrap .account-history-show-more-btn::before {
+  display: none;
+}
+.account-page-wrap .account-history-show-more-btn:hover {
+  background: #e6db00;
+  color: #1a1a1a;
+}
+.account-page-wrap .account-history-show-more-btn:focus-visible {
+  outline: 2px solid #1a1a1a;
+  outline-offset: 2px;
+}
+.account-page-wrap .account-history-show-more-btn:active {
+  transform: translateY(1px);
 }
 .account-history-bulk-toolbar {
   display: flex;
