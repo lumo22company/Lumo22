@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 
 from services.caption_delivery_recovery import (
     CAPTIONS_MAX_AUTO_DELIVERY_FAILURES,
+    order_generating_attempt_reference,
     row_needs_first_delivery_retry,
 )
 
@@ -128,5 +129,43 @@ def test_generating_recent_no_retry():
         "status": "generating",
         "captions_md": "",
         "updated_at": _old(recent),
+    }
+    assert row_needs_first_delivery_retry(row) is False
+
+
+def test_order_generating_attempt_reference_prefers_delivery_last_attempt_at():
+    stale = datetime.now(timezone.utc) - timedelta(minutes=30)
+    fresh = datetime.now(timezone.utc) - timedelta(seconds=30)
+    row = {
+        "delivery_last_attempt_at": _old(stale),
+        "updated_at": _old(fresh),
+        "created_at": _old(fresh),
+    }
+    assert order_generating_attempt_reference(row) == _old(stale)
+
+
+def test_subscription_generating_stale_attempt_despite_recent_intake_save():
+    """Intake-only save bumps updated_at; recovery should still see stale generation."""
+    stale = datetime.now(timezone.utc) - timedelta(minutes=30)
+    fresh_save = datetime.now(timezone.utc) - timedelta(minutes=1)
+    row = {
+        "status": "generating",
+        "captions_md": "## Previous month",
+        "delivery_last_attempt_at": _old(stale),
+        "updated_at": _old(fresh_save),
+        "stripe_subscription_id": "sub_123",
+    }
+    assert row_needs_first_delivery_retry(row) is True
+
+
+def test_subscription_generating_fresh_attempt_no_retry_even_if_updated_at_is_new():
+    recent_attempt = datetime.now(timezone.utc) - timedelta(minutes=3)
+    fresh_save = datetime.now(timezone.utc) - timedelta(seconds=10)
+    row = {
+        "status": "generating",
+        "captions_md": "## Previous month",
+        "delivery_last_attempt_at": _old(recent_attempt),
+        "updated_at": _old(fresh_save),
+        "stripe_subscription_id": "sub_123",
     }
     assert row_needs_first_delivery_retry(row) is False

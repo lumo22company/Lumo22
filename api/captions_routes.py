@@ -1469,6 +1469,7 @@ def _run_generation_and_deliver(
     from datetime import datetime
 
     from services.caption_order_service import CaptionOrderService
+    from services.caption_delivery_recovery import order_generating_attempt_reference
     from services.caption_generator import CaptionGenerator, extract_day_categories_from_captions_md
     from services.notifications import (
         NotificationService,
@@ -1495,14 +1496,14 @@ def _run_generation_and_deliver(
         if not allow_retry:
             from datetime import timedelta, timezone
 
-            updated = row.get("updated_at") or row.get("created_at")
-            if updated:
+            ref = order_generating_attempt_reference(row)
+            if ref:
                 try:
                     now = datetime.now(timezone.utc)
-                    if isinstance(updated, str):
-                        udt = datetime.fromisoformat(updated.replace("Z", "+00:00"))
+                    if isinstance(ref, str):
+                        udt = datetime.fromisoformat(ref.replace("Z", "+00:00"))
                     else:
-                        udt = updated
+                        udt = ref
                     if udt.tzinfo is None:
                         udt = udt.replace(tzinfo=timezone.utc)
                     allow_retry = udt < now - timedelta(minutes=25)
@@ -1514,24 +1515,24 @@ def _run_generation_and_deliver(
             print(f"[Captions] Order {order_id} already generating, skipping duplicate")
             return (True, None)
         # Two concurrent webhooks (e.g. duplicate checkout.session.completed) both use force_redeliver;
-        # skip the second while the first run is still in "generating" with a fresh updated_at.
+        # skip the second while the first run is still in "generating" (use attempt time, not intake bumps).
         if force_redeliver:
             from datetime import timedelta, timezone
 
-            updated = row.get("updated_at") or row.get("created_at")
-            if updated:
+            ref = order_generating_attempt_reference(row)
+            if ref:
                 try:
                     now = datetime.now(timezone.utc)
-                    if isinstance(updated, str):
-                        udt = datetime.fromisoformat(updated.replace("Z", "+00:00"))
+                    if isinstance(ref, str):
+                        udt = datetime.fromisoformat(ref.replace("Z", "+00:00"))
                     else:
-                        udt = updated
+                        udt = ref
                     if udt.tzinfo is None:
                         udt = udt.replace(tzinfo=timezone.utc)
                     if udt > now - timedelta(minutes=8):
                         print(
                             f"[Captions] Order {order_id} skip duplicate: generation in progress "
-                            f"(updated {int((now - udt).total_seconds())}s ago)"
+                            f"(attempt_started {int((now - udt).total_seconds())}s ago)"
                         )
                         return (True, None)
                 except Exception:

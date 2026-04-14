@@ -14,6 +14,20 @@ from typing import Any, Dict
 CAPTIONS_MAX_AUTO_DELIVERY_FAILURES = 3
 
 
+def order_generating_attempt_reference(order: Dict[str, Any]) -> Any:
+    """
+    Timestamp for 'when did this generation run start' while status is generating.
+
+    Prefer delivery_last_attempt_at (set in set_generating with status) over updated_at,
+    because update_intake_only bumps updated_at and would otherwise make stuck packs look
+    'fresh' forever (blocking account retry and skewing recovery).
+    """
+    v = order.get("delivery_last_attempt_at")
+    if v is not None and str(v).strip():
+        return v
+    return order.get("updated_at") or order.get("created_at")
+
+
 def row_needs_first_delivery_retry(
     order: Dict[str, Any],
     *,
@@ -49,15 +63,15 @@ def row_needs_first_delivery_retry(
             n = int(order.get("delivery_failure_count") or 0)
             return n < CAPTIONS_MAX_AUTO_DELIVERY_FAILURES
         if status == "generating":
-            updated = order.get("updated_at") or order.get("created_at")
-            if not updated:
+            ref = order_generating_attempt_reference(order)
+            if not ref:
                 return False
             try:
                 now = datetime.now(timezone.utc)
-                if isinstance(updated, str):
-                    udt = datetime.fromisoformat(updated.replace("Z", "+00:00"))
+                if isinstance(ref, str):
+                    udt = datetime.fromisoformat(ref.replace("Z", "+00:00"))
                 else:
-                    udt = updated
+                    udt = ref
                 if udt.tzinfo is None:
                     udt = udt.replace(tzinfo=timezone.utc)
                 return udt < now - timedelta(minutes=25)
@@ -100,15 +114,15 @@ def row_needs_first_delivery_retry(
                 pass
         return True
     if status == "generating":
-        updated = order.get("updated_at") or order.get("created_at")
-        if not updated:
+        ref = order_generating_attempt_reference(order)
+        if not ref:
             return False
         try:
             now = datetime.now(timezone.utc)
-            if isinstance(updated, str):
-                udt = datetime.fromisoformat(updated.replace("Z", "+00:00"))
+            if isinstance(ref, str):
+                udt = datetime.fromisoformat(ref.replace("Z", "+00:00"))
             else:
-                udt = updated
+                udt = ref
             if udt.tzinfo is None:
                 udt = udt.replace(tzinfo=timezone.utc)
             return udt < now - timedelta(minutes=25)

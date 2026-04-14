@@ -59,7 +59,10 @@ from api.passkey_routes import passkey_bp
 from api.billing_routes import billing_bp
 from api.oauth_routes import oauth_bp, init_customer_oauth, google_oauth_redirect_uri
 from services.login_guard import check_locked, record_failure, clear_failures
-from services.caption_delivery_recovery import CAPTIONS_MAX_AUTO_DELIVERY_FAILURES
+from services.caption_delivery_recovery import (
+    CAPTIONS_MAX_AUTO_DELIVERY_FAILURES,
+    order_generating_attempt_reference,
+)
 
 
 def _caption_pack_help_mailto(order: dict, customer_email: str) -> str:
@@ -2506,14 +2509,16 @@ def account_retry_caption_delivery():
                     }
                 ), 400
         if st == "generating":
-            updated = order.get("updated_at") or order.get("created_at")
-            if updated:
+            # Use delivery_last_attempt_at (set when generation starts), not updated_at — intake saves
+            # bump updated_at and would block retries indefinitely while the pack looks "stuck".
+            ref = order_generating_attempt_reference(order)
+            if ref:
                 try:
                     now = datetime.now(timezone.utc)
-                    if isinstance(updated, str):
-                        udt = datetime.fromisoformat(updated.replace("Z", "+00:00"))
+                    if isinstance(ref, str):
+                        udt = datetime.fromisoformat(ref.replace("Z", "+00:00"))
                     else:
-                        udt = updated
+                        udt = ref
                     if udt.tzinfo is None:
                         udt = udt.replace(tzinfo=timezone.utc)
                     if udt > now - timedelta(minutes=10):
