@@ -1051,10 +1051,9 @@
           <p style="margin: 0 0 0.75rem; color: #ffffff; line-height: 1.55;"><strong>Your latest pack didn’t finish sending.</strong> You can try again below — we’ll prepare your captions and email you.</p>
           <button type="button" class="account-btn-swipe-light retry-caption-delivery-btn" data-order-token="{{ o.get('token', '') }}" style="margin: 0;">Try sending my pack again</button>
           <p class="retry-caption-delivery-msg" data-for-token="{{ o.get('token', '') }}" style="display: none; margin: 0.65rem 0 0; font-size: 0.88rem; color: rgba(255,255,255,0.9);"></p>
-      {% else %}
-          <p style="margin: 0 0 0.75rem; color: #ffffff; line-height: 1.55;"><strong>Your pack is still being prepared.</strong> If this has been more than about 30 minutes with nothing in <strong>History</strong>, try again below.</p>
-          <button type="button" class="account-btn-swipe-light retry-caption-delivery-btn" data-order-token="{{ o.get('token', '') }}" style="margin: 0;">Try sending my pack again</button>
-          <p class="retry-caption-delivery-msg" data-for-token="{{ o.get('token', '') }}" style="display: none; margin: 0.65rem 0 0; font-size: 0.88rem; color: rgba(255,255,255,0.9);"></p>
+          {% else %}
+          <p style="margin: 0 0 0.65rem; color: #ffffff; line-height: 1.55;"><strong>Your pack is still being prepared.</strong> We’re generating your captions from your form — this usually finishes within a few minutes. You’ll get an email when it’s ready, and the pack will appear under <strong>History</strong>.</p>
+          <p style="margin: 0 0 0.65rem; font-size: 0.9rem; color: rgba(255,255,255,0.88); line-height: 1.5;">If it’s been more than about 30 minutes, check spam or promotions. Still nothing? Email <a href="mailto:hello@lumo22.com" style="color: var(--lum-gold, #c9a227); font-weight: 600;">hello@lumo22.com</a> — we’ll check your order.</p>
           {% endif %}
         </div>
         {% endif %}
