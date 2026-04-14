@@ -347,6 +347,16 @@ def _handle_captions_payment(session):
         return
     print(f"[Stripe webhook] Customer email from session: {customer_email}")
 
+    # Reverse self-applied referral promo discount (Stripe allows entry; Lumo enforces full price).
+    payment_status = (session.get("payment_status") or "").strip().lower()
+    if payment_status == "paid" and isinstance(session, dict):
+        try:
+            from services.stripe_referral_promotion import refund_self_referral_promotion_discount_if_needed
+
+            refund_self_referral_promotion_discount_if_needed(session, payer_email=customer_email)
+        except Exception as e:
+            print(f"[Stripe webhook] self-referral discount refund wrapper: {e!r}")
+
     stripe_customer_id = (session.get("customer") or "").strip() or None
     stripe_subscription_id = (session.get("subscription") or "").strip() or None
     if stripe_customer_id:

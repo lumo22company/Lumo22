@@ -174,3 +174,95 @@ def get_promotion_code_str_from_checkout_session(session_obj: Dict[str, Any]) ->
         if len(code) >= 4:
             return code
     return None
+
+
+def _payment_intent_id_from_checkout_session(session: Dict[str, Any]) -> str:
+    pi = session.get("payment_intent")
+    if isinstance(pi, dict):
+        return str(pi.get("id") or "").strip()
+    if isinstance(pi, str):
+        return pi.strip()
+    return ""
+
+
+def _checkout_amount_discount_cents(session: Dict[str, Any]) -> int:
+    """Smallest-currency-unit discount applied to the Checkout Session, if any."""
+    td = session.get("total_details") or {}
+    if not isinstance(td, dict):
+        td = {}
+    raw = td.get("amount_discount")
+    try:
+        n = int(raw) if raw is not None else 0
+    except (TypeError, ValueError):
+        n = 0
+    if n > 0:
+        return n
+    try:
+        sub = int(session.get("amount_subtotal") or 0)
+        tot = int(session.get("amount_total") or 0)
+    except (TypeError, ValueError):
+        return 0
+    if sub > tot:
+        return sub - tot
+    return 0
+
+
+def refund_self_referral_promotion_discount_if_needed(
+    session: Dict[str, Any], *, payer_email: str
+) -> None:
+    """
+    Stripe Checkout cannot forbid entering your own referral promotion code. If the payer's email
+    matches the Lumo customer who owns that code, refund only the promotion discount so they pay
+    the undiscounted amount. No-op if no self-referral, no discount, or no payment_intent.
+
+    Idempotent: uses Stripe idempotency key per Checkout Session id.
+    """
+    payer = (payer_email or "").strip().lower()
+    if not payer or not isinstance(session, dict):
+        return
+    sid = (session.get("id") or "").strip()
+    if not sid:
+        return
+    try:
+        from services.customer_auth_service import CustomerAuthService
+
+        promo_str = get_promotion_code_str_from_checkout_session(session)
+        if not promo_str:
+            return
+        owner = CustomerAuthService().get_by_referral_code(promo_str)
+        if not owner:
+            return
+        if (owner.get("email") or "").strip().lower() != payer:
+            return
+        discount = _checkout_amount_discount_cents(session)
+        if discount <= 0:
+            print(
+                f"[stripe_referral_promotion] self-referral: code {promo_str[:4]}… owner matches payer "
+                f"but amount_discount is 0; nothing to refund (session {sid[:16]}…)"
+            )
+            return
+        pi = _payment_intent_id_from_checkout_session(session)
+        if not pi.startswith("pi_"):
+            print(
+                f"[stripe_referral_promotion] self-referral: discount {discount} but no payment_intent "
+                f"on session {sid[:16]}…; refund skipped"
+            )
+            return
+        secret = (getattr(Config, "STRIPE_SECRET_KEY", None) or "").strip()
+        if not secret:
+            return
+        import stripe
+
+        stripe.api_key = secret
+        stripe.Refund.create(
+            payment_intent=pi,
+            amount=discount,
+            reason="requested_by_customer",
+            idempotency_key=f"lumo-self-referral-discount-{sid}",
+        )
+        print(
+            f"[stripe_referral_promotion] self-referral: refunded promotion discount "
+            f"({discount} minor units) on payment_intent {pi[:20]}…"
+        )
+    except Exception as e:
+        print(f"[stripe_referral_promotion] self-referral discount refund (non-fatal): {e!r}")
