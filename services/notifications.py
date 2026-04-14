@@ -377,7 +377,8 @@ def _branded_html_email(body_plain: str) -> str:
         )
         escaped_lines.append(line)
     body_html = "<br>\n".join(escaped_lines)
-    content = f'<div style="font-family: ' + BRAND_FONT + ';">{body_html}</div>'
+    # Do not use f'...' + BRAND_FONT + ';">{body_html}' — the quote after ; ends the f-string, so {body_html} was literal in emails.
+    content = '<div style="font-family: ' + BRAND_FONT + ';">' + body_html + "</div>"
     return _email_wrapper(content)
 
 
