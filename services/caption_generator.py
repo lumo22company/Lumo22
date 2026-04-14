@@ -615,6 +615,20 @@ def _build_stories_platform_interaction_block() -> str:
     )
 
 
+def _build_stories_cross_day_promise_block() -> str:
+    """
+    Stories are printed as a 30-day list; invented countdowns must pay off on the matching Pack Day
+    or the client sees contradictions (e.g. 'in three days' on Day 1 but bundles 'live now' only on Day 8).
+    """
+    return (
+        "Cross-day promises (CRITICAL): The reader sees **all 30 days** in one document. If **Suggested wording** commits to a **specific** future moment you invented "
+        "(e.g. “in three days … goes live”, “bundles drop Friday”, “registration opens Wednesday”), that **must** line up with **DATE_CONTEXT**: count calendar days / Pack Days so the **payoff** story falls on the day whose printed date matches the promise. "
+        "Do **not** say “in three days” on Day 1 and only return to that payoff on a much later day unless DATE_CONTEXT shows that later day **is** exactly three calendar days after Day 1’s date. "
+        "If you cannot align a numeric countdown or named weekday to an exact later row, use **neutral** timing (“this week”, “soon”, “watch this space”) or tie urgency **only** to **KEY_DATE_EVENTS / EVENT_CALENDAR** (already phased). "
+        "Avoid stacking two conflicting time anchors in one line (e.g. “in three days … go live” plus “Wednesday” for a different beat) unless both resolve unambiguously against DATE_CONTEXT.\n\n"
+    )
+
+
 def _build_stories_system_prompt(intake: Dict[str, Any], *, aligned_with_captions: bool) -> str:
     """System prompt for story generation; mirrors caption language so stories are not written in another language."""
     lang = (intake.get("caption_language") or "English (UK)").strip()
@@ -633,6 +647,7 @@ def _build_stories_system_prompt(intake: Dict[str, Any], *, aligned_with_caption
         "**Calendar month:** **Idea** and **Suggested wording** must match the **calendar month** on that row of DATE_CONTEXT "
         "(see **MONTH_NARRATIVE_ALIGNMENT** in the user prompt)—do not frame **April** as the month you are in or closing when that day is already in **May**; "
         "and do not say that **same** month is **coming** or **approaching** when the date is **already in that month** (e.g. not “May is coming” on 1 May).\n\n"
+        f"{_build_stories_cross_day_promise_block()}"
         "Quality bar: as tailored as a premium 30-day story plan. "
         "Always respect INTAKE exactly: use only the client's real business name and offer—never fictional or example brands.\n\n"
         "Do not invent suppliers, mile distances, certifications, named product lines, or regional sourcing claims unless they appear in the intake (including Facts / constraints). "
