@@ -8,6 +8,29 @@ from typing import Any, Dict, Optional
 
 from config import Config
 
+# Stripe PromotionCode metadata: documents referrer in Dashboard; self-use is blocked via refund webhook.
+STRIPE_REFERRAL_PC_META_REFERRER_ID = "lumo_referrer_customer_id"
+
+
+def _ensure_promotion_code_referrer_metadata(
+    stripe_mod: Any, prom_id: str, referrer_customer_id: str, log_prefix: str
+) -> None:
+    """Set lumo_referrer_customer_id on the Stripe Promotion Code when missing or wrong."""
+    if not prom_id or not referrer_customer_id:
+        return
+    try:
+        po = stripe_mod.PromotionCode.retrieve(prom_id)
+        meta = po.get("metadata") if isinstance(po, dict) else getattr(po, "metadata", None) or {}
+        if not isinstance(meta, dict):
+            meta = {}
+        if str(meta.get(STRIPE_REFERRAL_PC_META_REFERRER_ID) or "").strip() == referrer_customer_id:
+            return
+        stripe_mod.PromotionCode.modify(
+            prom_id, metadata={STRIPE_REFERRAL_PC_META_REFERRER_ID: referrer_customer_id}
+        )
+    except Exception as ex:
+        print(f"{log_prefix} promotion metadata sync failed for {prom_id[:12]}…: {ex!r}")
+
 
 def _promotion_code_fields(po: Any) -> tuple:
     """Return (code_upper, active) from Stripe PromotionCode object or dict."""
@@ -32,7 +55,13 @@ def _coupon_id_from_promo_row(row: Any) -> str:
 
 
 def _reconcile_promotion_id_from_stripe_list(
-    stripe_mod: Any, *, code: str, coupon_id: str, _save_pc, log_prefix: str
+    stripe_mod: Any,
+    *,
+    code: str,
+    coupon_id: str,
+    referrer_customer_id: str,
+    _save_pc,
+    log_prefix: str,
 ) -> Optional[str]:
     """
     If Stripe already has an active promotion for this customer-facing code + coupon but DB has no id,
@@ -50,6 +79,9 @@ def _reconcile_promotion_id_from_stripe_list(
                 continue
             pid = row.get("id") if isinstance(row, dict) else getattr(row, "id", None)
             if pid:
+                _ensure_promotion_code_referrer_metadata(
+                    stripe_mod, str(pid), referrer_customer_id, log_prefix
+                )
                 _save_pc(str(pid))
                 return str(pid)
     except Exception as ex:
@@ -90,6 +122,9 @@ def ensure_stripe_promotion_code_for_customer(customer: Dict[str, Any]) -> Optio
             po = stripe.PromotionCode.retrieve(existing)
             code_stripe, active = _promotion_code_fields(po)
             if active and code_stripe == code:
+                _ensure_promotion_code_referrer_metadata(
+                    stripe, existing, cid, "[stripe_referral_promotion]"
+                )
                 return existing
             print(
                 f"[stripe_referral_promotion] stored prom {existing[:12]}… mismatch or inactive "
@@ -103,6 +138,7 @@ def ensure_stripe_promotion_code_for_customer(customer: Dict[str, Any]) -> Optio
         stripe,
         code=code,
         coupon_id=coupon_id,
+        referrer_customer_id=cid,
         _save_pc=_save_pc,
         log_prefix="[stripe_referral_promotion]",
     )
@@ -110,7 +146,12 @@ def ensure_stripe_promotion_code_for_customer(customer: Dict[str, Any]) -> Optio
         return linked
 
     try:
-        pc = stripe.PromotionCode.create(coupon=coupon_id, code=code, active=True)
+        pc = stripe.PromotionCode.create(
+            coupon=coupon_id,
+            code=code,
+            active=True,
+            metadata={STRIPE_REFERRAL_PC_META_REFERRER_ID: cid},
+        )
         pid = pc.get("id") if isinstance(pc, dict) else getattr(pc, "id", None)
         if pid:
             _save_pc(str(pid))
@@ -125,6 +166,9 @@ def ensure_stripe_promotion_code_for_customer(customer: Dict[str, Any]) -> Optio
                     row = data[0]
                     pid = row.get("id") if isinstance(row, dict) else getattr(row, "id", None)
                     if pid:
+                        _ensure_promotion_code_referrer_metadata(
+                            stripe, str(pid), cid, "[stripe_referral_promotion]"
+                        )
                         _save_pc(str(pid))
                     return str(pid) if pid else None
             except Exception as ex2:

@@ -1110,7 +1110,7 @@
       <section class="account-section-block account-section-block--refer">
         <h2>Refer a friend</h2>
         {% if referral_code %}
-        <p class="account-section-desc">The <strong>10% friend discount</strong> applies when they <strong>enter your code at checkout</strong> (Add promotion code). Share your code below or via email/text—you get 10% off your next billing period for each friend who completes a purchase. Discounts don't stack: two referrals = 10% off your next two periods.</p>
+        <p class="account-section-desc">The <strong>10% friend discount</strong> applies when they <strong>enter your code at checkout</strong> (Add promotion code). Share your code below or via email/text—you get 10% off your next billing period for each friend who completes a purchase. <strong>Your own code cannot be used on your own order.</strong> Discounts don't stack: two referrals = 10% off your next two periods.</p>
         {% if referral_discount_configured|default(false) and not referral_stripe_promo_ok|default(false) %}
         <div class="account-referral-stripe-warning" style="margin-top: 0.75rem; padding: 0.75rem 1rem; background: rgba(220, 160, 50, 0.12); border: 1px solid rgba(255, 200, 80, 0.35); border-radius: 10px; color: #fff;">
           <p class="account-section-desc" style="margin: 0; color: #fff;">Your code could not be linked to the payment page yet (or the link expired). Use <strong>Retry linking</strong> below—we will try again with Stripe. You can still refresh the page. If a friend sees &ldquo;invalid code&rdquo; at checkout, email <a href="mailto:hello@lumo22.com" style="color: var(--lum-gold); font-weight: 600;">hello@lumo22.com</a>.</p>
