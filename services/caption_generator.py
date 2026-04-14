@@ -629,6 +629,21 @@ def _build_stories_cross_day_promise_block() -> str:
     )
 
 
+def _build_captions_cross_day_promise_block() -> str:
+    """
+    Captions PDF lists 30 days; invented promos with numeric countdowns must pay off on the matching Pack Day.
+    Mirrors _build_stories_cross_day_promise_block for **Caption:** body text.
+    """
+    return (
+        "Cross-day promises (CRITICAL): The client receives **all 30 days** in one plan. If any **Caption:** commits to a **specific** future moment you invented "
+        "(e.g. “in three days … goes live”, “sale drops Friday”, “registration opens Wednesday”), that **must** line up with **DATE_CONTEXT**: count calendar days / Pack Days so the **payoff** caption falls on the day whose printed date matches the promise. "
+        "Do **not** promise “in three days” on Day 1 and only return to that payoff on a much later day unless DATE_CONTEXT shows that later day **is** exactly three calendar days after Day 1’s date. "
+        "If you cannot align a numeric countdown or named weekday to an exact later row, use **neutral** timing (“this week”, “soon”, “details to follow”) or tie urgency **only** to **KEY_DATE_EVENTS / EVENT_CALENDAR** (already phased). "
+        "Avoid stacking two conflicting time anchors in one caption (e.g. “in three days … go live” plus “Wednesday” for a different beat) unless both resolve unambiguously against DATE_CONTEXT. "
+        "Story Ideas must stay consistent with the same timeline as captions.\n\n"
+    )
+
+
 def _build_stories_system_prompt(intake: Dict[str, Any], *, aligned_with_captions: bool) -> str:
     """System prompt for story generation; mirrors caption language so stories are not written in another language."""
     lang = (intake.get("caption_language") or "English (UK)").strip()
@@ -741,7 +756,7 @@ Calendar-day alignment (CRITICAL): The user prompt includes **DATE_CONTEXT** (an
 
 Deadlines and registration (CRITICAL): When **DATE_CONTEXT** and/or **DEADLINE_AND_REGISTRATION_ALIGNMENT** are in the user prompt, do **not** state a **registration close**, **early-bird end**, or **deadline** on a **calendar date before** that Day N’s post date while making it sound like the deadline is still **upcoming** (e.g. “closes on 8 April” on a 10 April post). Use past tense or move the deadline to on/after the post day.
 
-Named people (CRITICAL): Do not invent specific names of employees, customers, collaborators, or fictional staff unless the intake explicitly names them. Use generic roles (e.g. "our team", "the grower", "a customer") instead.
+{_build_captions_cross_day_promise_block()}Named people (CRITICAL): Do not invent specific names of employees, customers, collaborators, or fictional staff unless the intake explicitly names them. Use generic roles (e.g. "our team", "the grower", "a customer") instead.
 
 Business relevance (CRITICAL): Every caption must be clearly about THIS business—what they actually sell or do, who they serve, and their specific product or service. Do not write generic "founder", "strategy", "building a brand", or "scaling a business" captions that could apply to any company. If the business is cakes and baking, reference cakes, baking, ingredients, orders, customers, flavours, etc. If the business is coaching, reference coaching, clients, sessions, outcomes. Match the vocabulary and examples to the business type and "What they offer" from the intake. A reader should immediately understand which industry and offer the caption is for.
 
