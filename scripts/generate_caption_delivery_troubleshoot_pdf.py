@@ -54,24 +54,23 @@ def build_pdf() -> None:
         Spacer(1, 8),
         _p("1) Clearing the warning on the account (Manage subscription)", h2),
         _p(
-            "The orange/red banner appears only for subscription orders whose status is <b>failed</b> or <b>generating</b>. "
-            "It goes away when that order becomes <b>delivered</b> after a successful save + email (not on a timer).",
+            "The orange/red banner appears only when automatic delivery retries are <b>exhausted</b>: subscription order status is <b>failed</b> and "
+            "<b>delivery_failure_count</b> is at or above the cap (3). There is no in-account banner while status is <b>generating</b> or for <b>failed</b> with retries still left — "
+            "the customer only sees the panel once exhausted (team notified copy + Email Lumo 22). It goes away when that order becomes <b>delivered</b> after a successful save + email (not on a timer).",
             body,
         ),
         _p(
-            "<b>Exhausted auto-retries</b> (team notified + Email Lumo 22): shown when status is <b>failed</b> and "
-            "<b>delivery_failure_count</b> is at or above the cap (3). To clear: fix the underlying issue (see sections below), "
-            "then run a successful delivery so status becomes <b>delivered</b> and the failure count resets.",
+            "To clear: fix the underlying issue (see sections below), then run a successful delivery so status becomes <b>delivered</b> and the failure count resets.",
             body,
         ),
         _p(
             "<b>Your side (ops)</b>: ensure required Supabase columns exist (see §4). Confirm SendGrid and AI keys in Railway. "
-            "Retry delivery via Account → Try again, or <b>python3 scripts/fix_and_retry_caption_delivery.py TOKEN</b> with production .env, "
+            "Retry delivery with <b>python3 scripts/fix_and_retry_caption_delivery.py TOKEN</b> with production .env, "
             "or GET /api/captions-deliver-test?t=TOKEN&amp;secret=… (sync=1 optional).",
             body,
         ),
         _p(
-            "<b>Customer side</b>: they can use Try sending my pack again if retries remain, or email hello@lumo22.com. "
+            "<b>Customer side</b>: no self-serve retry on the account page; they can email hello@lumo22.com from the exhausted banner mailto. "
             "The exhausted banner does not auto-hide until delivery succeeds or the order row is corrected in the database.",
             body,
         ),
@@ -125,7 +124,7 @@ def build_pdf() -> None:
         _p("7) Internal alert email (delivery_failure_count cap)", h2),
         _p(
             "When automatic retries are exhausted, an email can be sent to <b>INTERNAL_ALERT_EMAIL</b> (default hello@lumo22.com). "
-            "Requires working SendGrid. Customer banner still says the team was notified only if that path actually fired.",
+            "Requires working SendGrid. The exhausted account banner uses standard “team notified” copy; treat the internal alert as best-effort if SendGrid fails.",
             body,
         ),
         Spacer(1, 6),
