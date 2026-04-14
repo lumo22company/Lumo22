@@ -1768,7 +1768,7 @@
   flex: 1;
   min-width: 0;
   /* Fill space beside sidebar; generous right gutter from viewport edge */
-  padding: 2rem 8rem 4rem 1rem;
+  padding: 2rem 11rem 4rem 1rem;
   max-width: none;
 }
 /* History: same full-width main — wide tables use horizontal scroll if needed */
@@ -1779,7 +1779,7 @@
 /* Desktop: consistent gutters next to nav + viewport edge */
 @media (min-width: 769px) {
   .account-main {
-    padding: 2rem 10rem 4rem 1rem;
+    padding: 2rem 13.75rem 4rem 1rem;
   }
 
   .product-hero {
@@ -2991,7 +2991,7 @@
   .account-sidebar-nav a { padding: 0.4rem 0.6rem; font-size: 1.15rem; }
   .account-sidebar-logout { margin-top: 0; padding-top: 0; border-top: none; margin-left: auto; }
   .account-main {
-    padding: 1.25rem 5.5rem 2.5rem 1rem;
+    padding: 1.25rem 7.5rem 2.5rem 1rem;
   }
   /* Edit form rows: name + Subscription/One-off pill on one line; buttons full width below */
   .account-edit-form-list .account-edit-form-row {
@@ -3137,7 +3137,7 @@
     align-items: flex-start;
   }
   .account-main .account-section-block {
-    padding: 1.25rem 3.65rem 1.75rem 1rem;
+    padding: 1.25rem 4.8rem 1.75rem 1rem;
   }
 
   /* Account page: sidebar as collapsible menu, single column, full-width actions */
@@ -3146,7 +3146,7 @@
     gap: 0;
     padding-top: 72px;
     padding-left: 0.75rem;
-    padding-right: 4.5rem;
+    padding-right: 6rem;
   }
   .account-page-wrap .account-sidebar-toggle {
     display: flex;
@@ -3194,12 +3194,12 @@
     display: block;
   }
   .account-page-wrap .account-main {
-    padding: 1.25rem 4.5rem 2.5rem 1rem;
+    padding: 1.25rem 6rem 2.5rem 1rem;
     max-width: none;
   }
   .account-page-wrap .account-main .account-section-block {
     margin-bottom: 1.5rem;
-    padding: 1rem 3.4rem 1.25rem 1rem;
+    padding: 1rem 4.55rem 1.25rem 1rem;
   }
   .account-page-wrap .account-info-row {
     flex-direction: column;
