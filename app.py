@@ -482,12 +482,12 @@ def captions_intake_page():
                 order = enrich_order_intake_from_checkout_session(svc, order)
                 if order.get("intake"):
                     existing_intake = order.get("intake") or {}
-                platforms_count = max(1, int(order.get("platforms_count", 1)))
-                selected_platforms = (order.get("selected_platforms") or "").strip() or ""
-                stories_paid = bool(order.get("include_stories"))
-                is_oneoff = not bool((order.get("stripe_subscription_id") or "").strip())
-                if is_oneoff and token:
-                    oneoff_consumed_by_subscription = svc.has_subscription_upgraded_from_oneoff_token(token)
+                    platforms_count = max(1, int(order.get("platforms_count", 1)))
+                    selected_platforms = (order.get("selected_platforms") or "").strip() or ""
+                    stories_paid = bool(order.get("include_stories"))
+                    is_oneoff = not bool((order.get("stripe_subscription_id") or "").strip())
+                    if is_oneoff and token:
+                        oneoff_consumed_by_subscription = svc.has_subscription_upgraded_from_oneoff_token(token)
                 # copy_from: only prefill when this order was explicitly upgraded from that one-off (one-off→subscription flow).
                 # If account was deleted and user resubscribes, order has no upgraded_from_token so we do not prefill.
                 # Also merge when Stripe only seeded business_name (existing_intake truthy but not a real brief).

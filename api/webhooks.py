@@ -614,6 +614,35 @@ def _handle_captions_payment(session):
         print(f"[Stripe webhook] Referrer credit increment failed (non-fatal): {e}")
 
 
+def _pack_sooner_webhook_ops_alert(
+    reason: str,
+    session: dict,
+    order: Optional[dict],
+    detail: str = "",
+) -> None:
+    """Email INTERNAL_ALERT_EMAIL when paid pack-sooner checkout did not start generation (non-fatal)."""
+    try:
+        from services.notifications import NotificationService
+
+        sid = (session.get("id") or "").strip()
+        oid = ""
+        if order and order.get("id") is not None:
+            oid = str(order.get("id") or "").strip()
+        if not oid:
+            meta = _checkout_session_metadata(session)
+            oid = (meta.get("order_id") or "").strip()
+        oemail = (order.get("customer_email") or "").strip() if order else ""
+        NotificationService().send_caption_pack_sooner_webhook_blocked_alert(
+            reason=reason,
+            session_id=sid,
+            order_id=oid,
+            customer_email_order=oemail,
+            detail=detail,
+        )
+    except Exception as e:
+        print(f"[Stripe webhook] pack sooner ops alert (non-fatal): {e!r}")
+
+
 def _handle_pack_sooner_checkout_completed(session: dict) -> None:
     """
     checkout.session.completed for fixed-price Get pack sooner (mode=payment).
@@ -643,15 +672,28 @@ def _handle_pack_sooner_checkout_completed(session: dict) -> None:
     sub_id = (meta.get("stripe_subscription_id") or "").strip()
     if not order_id or not sub_id:
         print("[Stripe webhook] pack sooner: missing order_id or stripe_subscription_id in metadata")
+        _pack_sooner_webhook_ops_alert(
+            "missing_order_or_subscription_in_metadata",
+            session,
+            None,
+            detail=f"order_id={order_id!r} stripe_subscription_id={sub_id!r}",
+        )
         return
 
     order_service = CaptionOrderService()
     order = order_service.get_by_id(order_id)
     if not order:
         print(f"[Stripe webhook] pack sooner: order {order_id} not found")
+        _pack_sooner_webhook_ops_alert("order_not_found", session, None, detail=f"metadata order_id={order_id}")
         return
     if (order.get("stripe_subscription_id") or "").strip() != sub_id:
         print("[Stripe webhook] pack sooner: subscription id does not match order")
+        _pack_sooner_webhook_ops_alert(
+            "subscription_id_mismatch",
+            session,
+            order,
+            detail=f"metadata sub={sub_id[:24]}… order sub={(order.get('stripe_subscription_id') or '')[:24]}…",
+        )
         return
     order_email = (order.get("customer_email") or "").strip().lower()
     email_sess = (_get_customer_email_from_session(session) or "").strip().lower()
@@ -671,13 +713,30 @@ def _handle_pack_sooner_checkout_completed(session: dict) -> None:
             "[Stripe webhook] pack sooner: email does not match order and Stripe customer id mismatch "
             f"(session_email={'set' if email_sess else 'empty'}, order_has_customer={bool(cust_order)})"
         )
+        _pack_sooner_webhook_ops_alert(
+            "checkout_email_or_customer_mismatch",
+            session,
+            order,
+            detail=(
+                f"order_email={order_email!r} session_email={email_sess!r} "
+                f"stripe_customer_order={cust_order!r} stripe_customer_session={cust_sess!r}"
+            ),
+        )
         return
     if _subscription_pack_delivery_recent_duplicate(order_id):
         print(f"[Stripe webhook] pack sooner: delivery dedupe for order {order_id}; skipping")
+        _pack_sooner_webhook_ops_alert(
+            "delivery_dedupe_skip",
+            session,
+            order,
+            detail="Another pack delivery for this order was registered within the dedupe window; "
+            "generation was not started again. If the customer was charged and has no pack, check logs.",
+        )
         return
 
     if not (getattr(Config, "STRIPE_SECRET_KEY", None) or "").strip():
         print("[Stripe webhook] pack sooner: STRIPE_SECRET_KEY missing")
+        _pack_sooner_webhook_ops_alert("stripe_secret_missing", session, order, detail="Cannot call Stripe API.")
         return
     stripe.api_key = Config.STRIPE_SECRET_KEY.strip()
     try:

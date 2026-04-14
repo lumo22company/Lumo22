@@ -1493,6 +1493,125 @@ The customer sees "Automatic retries are exhausted" on retry. The app will not a
             )
         return ok
 
+    def send_caption_delivery_failed_attempt_alert(
+        self,
+        *,
+        order_id: str,
+        attempt_number: int,
+        max_attempts: int,
+        customer_email: str,
+        order_token: str,
+        business_name: str,
+        stripe_subscription_id: str,
+        last_error: Optional[str],
+    ) -> bool:
+        """
+        Notify ops on each failed caption delivery attempt before the auto-retry cap
+        (so you see the first failure, not only when retries are exhausted).
+        """
+        to_email = _sanitize_email_value(Config.INTERNAL_ALERT_EMAIL or "") or "hello@lumo22.com"
+        oid = (order_id or "").strip() or "?"
+        subj = f"[Lumo 22] Caption delivery failed (attempt {attempt_number}/{max_attempts}) — {oid[:12]}"
+        err_snip = (last_error or "").strip().replace("\n", " ")
+        if len(err_snip) > 800:
+            err_snip = err_snip[:797] + "..."
+        body = f"""A caption pack delivery attempt failed (automatic retry may still run).
+
+Order ID: {oid}
+Order token: {(order_token or '').strip() or '(none)'}
+Customer email: {(customer_email or '').strip() or '(none)'}
+Business name: {(business_name or '').strip() or '(none)'}
+Stripe subscription: {(stripe_subscription_id or '').strip() or '(none)'}
+Attempt: {attempt_number} of {max_attempts} before auto-retry stops
+
+Last error (truncated):
+{err_snip or '(none)'}
+
+Check Railway logs for [Captions] DELIVERY_FAILED and SendGrid / AI keys.
+
+— Lumo 22 (automated)
+"""
+        ok = self.send_email(to_email, subj, body)
+        if not ok:
+            print(
+                f"[Captions] delivery failed attempt alert NOT sent to {to_email}; "
+                f"order_id={oid} attempt={attempt_number}"
+            )
+        return ok
+
+    def send_caption_stale_generating_recovery_alert(
+        self,
+        *,
+        order_id: str,
+        customer_email: str,
+        order_token: str,
+        business_name: str,
+        stripe_subscription_id: str,
+        delivery_last_attempt_at: str,
+    ) -> bool:
+        """
+        Notify ops when recovery cron picks up a subscription order stuck in status=generating
+        (e.g. dead worker thread) and starts a new delivery thread.
+        """
+        to_email = _sanitize_email_value(Config.INTERNAL_ALERT_EMAIL or "") or "hello@lumo22.com"
+        oid = (order_id or "").strip() or "?"
+        subj = f"[Lumo 22] Stuck generating — recovery started — {oid[:12]}"
+        body = f"""Caption recovery found a subscription order stuck in "generating" (likely no active thread).
+A new generation thread was started automatically.
+
+Order ID: {oid}
+Order token: {(order_token or '').strip() or '(none)'}
+Customer email: {(customer_email or '').strip() or '(none)'}
+Business name: {(business_name or '').strip() or '(none)'}
+Stripe subscription: {(stripe_subscription_id or '').strip() or '(none)'}
+delivery_last_attempt_at (generation start): {(delivery_last_attempt_at or '').strip() or '(none)'}
+
+If this repeats, check Railway logs for [Captions] and AI timeouts.
+
+— Lumo 22 (automated)
+"""
+        ok = self.send_email(to_email, subj, body)
+        if not ok:
+            print(
+                f"[Captions] stale generating alert NOT sent to {to_email}; order_id={oid}"
+            )
+        return ok
+
+    def send_caption_pack_sooner_webhook_blocked_alert(
+        self,
+        *,
+        reason: str,
+        session_id: str,
+        order_id: str,
+        customer_email_order: str,
+        detail: str,
+    ) -> bool:
+        """
+        Notify ops when Get pack sooner checkout.session.completed was paid but delivery was not started
+        (email mismatch, dedupe skip, missing metadata, etc.).
+        """
+        to_email = _sanitize_email_value(Config.INTERNAL_ALERT_EMAIL or "") or "hello@lumo22.com"
+        subj = f"[Lumo 22] Get pack sooner — webhook did not start delivery — {reason[:40]}"
+        body = f"""Stripe checkout.session.completed for Get pack sooner did not start pack generation.
+
+Reason: {reason.strip()}
+
+Stripe Checkout Session ID: {(session_id or '').strip() or '(none)'}
+Order ID (metadata): {(order_id or '').strip() or '(none)'}
+Order customer_email: {(customer_email_order or '').strip() or '(none)'}
+
+Detail:
+{(detail or '').strip()[:2000] or '(none)'}
+
+Search Stripe Dashboard for the session id, then Railway logs for [Stripe webhook] pack sooner.
+
+— Lumo 22 (automated)
+"""
+        ok = self.send_email(to_email, subj, body)
+        if not ok:
+            print(f"[Captions] pack sooner blocked alert NOT sent to {to_email}; reason={reason!r}")
+        return ok
+
     def send_password_reset_email(self, to_email: str, reset_url: str) -> bool:
         """Send password reset email with plain and HTML body; link is explicit in HTML so it always appears."""
         if not reset_url or not reset_url.startswith("http"):

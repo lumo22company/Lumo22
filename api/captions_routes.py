@@ -3610,6 +3610,44 @@ def _run_scheduled_deliveries():
     return {"scheduled_deliveries_triggered": triggered}
 
 
+_STALE_GENERATING_OPS_ALERT_AT: dict[str, float] = {}
+_STALE_GENERATING_OPS_ALERT_LOCK = threading.Lock()
+_STALE_GENERATING_OPS_COOLDOWN_SEC = 4 * 3600.0
+
+
+def _maybe_ops_alert_stale_generating_recovery(order: dict) -> None:
+    """Email INTERNAL_ALERT_EMAIL when recovery starts a thread for a stuck generating row (throttled per order)."""
+    if (order.get("status") or "").strip().lower() != "generating":
+        return
+    oid = str(order.get("id") or "").strip()
+    if not oid:
+        return
+    now_m = time.monotonic()
+    with _STALE_GENERATING_OPS_ALERT_LOCK:
+        stale_keys = [k for k, ts in _STALE_GENERATING_OPS_ALERT_AT.items() if (now_m - ts) > _STALE_GENERATING_OPS_COOLDOWN_SEC * 3]
+        for k in stale_keys:
+            _STALE_GENERATING_OPS_ALERT_AT.pop(k, None)
+        last = _STALE_GENERATING_OPS_ALERT_AT.get(oid)
+        if last is not None and (now_m - last) < _STALE_GENERATING_OPS_COOLDOWN_SEC:
+            return
+        _STALE_GENERATING_OPS_ALERT_AT[oid] = now_m
+    try:
+        from services.notifications import NotificationService
+
+        intake = order.get("intake") if isinstance(order.get("intake"), dict) else {}
+        biz = (intake.get("business_name") or "").strip()
+        NotificationService().send_caption_stale_generating_recovery_alert(
+            order_id=oid,
+            customer_email=str(order.get("customer_email") or ""),
+            order_token=str(order.get("token") or ""),
+            business_name=biz,
+            stripe_subscription_id=str(order.get("stripe_subscription_id") or ""),
+            delivery_last_attempt_at=str(order.get("delivery_last_attempt_at") or ""),
+        )
+    except Exception as e:
+        print(f"[Captions recovery] stale generating ops alert (non-fatal): {e!r}")
+
+
 def _run_stuck_first_deliveries(max_orders: int = 5) -> dict:
     """
     Pick orders that have intake but no captions_md and start generation threads.
@@ -3625,6 +3663,7 @@ def _run_stuck_first_deliveries(max_orders: int = 5) -> dict:
         order_id = order.get("id")
         if not order_id:
             continue
+        _maybe_ops_alert_stale_generating_recovery(order)
         thread = threading.Thread(target=_run_generation_and_deliver, args=(str(order_id),))
         thread.daemon = False
         thread.start()
