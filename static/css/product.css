@@ -1767,19 +1767,19 @@
 .account-main {
   flex: 1;
   min-width: 0;
-  /* Minimal horizontal padding; less on the right than the left */
-  padding: 2rem 0.15rem 4rem 0.65rem;
-  max-width: 720px;
+  /* Fill space beside sidebar; comfortable gutters (slightly more on the right) */
+  padding: 2rem 1.35rem 4rem 1rem;
+  max-width: none;
 }
-/* History needs more width so View/Download/Delete stay on one line */
+/* History: same full-width main — wide tables use horizontal scroll if needed */
 .account-main.account-main--wide {
-  max-width: 1000px;
+  max-width: none;
 }
 
-/* Desktop: trim right-edge page padding (main content sits closer to the viewport). */
+/* Desktop: consistent gutters next to nav + viewport edge */
 @media (min-width: 769px) {
   .account-main {
-    padding: 2rem 0 4rem 0.65rem;
+    padding: 2rem 1.5rem 4rem 1rem;
   }
 
   .product-hero {
@@ -2991,7 +2991,7 @@
   .account-sidebar-nav a { padding: 0.4rem 0.6rem; font-size: 1.15rem; }
   .account-sidebar-logout { margin-top: 0; padding-top: 0; border-top: none; margin-left: auto; }
   .account-main {
-    padding: 1rem 0.2rem 2rem 0.5rem;
+    padding: 1.25rem 1rem 2.5rem 1rem;
   }
   /* Edit form rows: name + Subscription/One-off pill on one line; buttons full width below */
   .account-edit-form-list .account-edit-form-row {
@@ -3137,7 +3137,7 @@
     align-items: flex-start;
   }
   .account-main .account-section-block {
-    padding: 1.1rem 0.4rem 1.5rem 0.6rem;
+    padding: 1.25rem 1rem 1.75rem 1rem;
   }
 
   /* Account page: sidebar as collapsible menu, single column, full-width actions */
@@ -3145,8 +3145,8 @@
     flex-direction: column;
     gap: 0;
     padding-top: 72px;
-    padding-left: 0.5rem;
-    padding-right: 0.35rem;
+    padding-left: 0.75rem;
+    padding-right: 1rem;
   }
   .account-page-wrap .account-sidebar-toggle {
     display: flex;
@@ -3194,12 +3194,12 @@
     display: block;
   }
   .account-page-wrap .account-main {
-    padding: 1rem 0 2rem;
+    padding: 1.25rem 1rem 2.5rem;
     max-width: none;
   }
   .account-page-wrap .account-main .account-section-block {
     margin-bottom: 1.5rem;
-    padding: 0.9rem 0.45rem 1.1rem 0.55rem;
+    padding: 1rem 0.85rem 1.25rem 1rem;
   }
   .account-page-wrap .account-info-row {
     flex-direction: column;
