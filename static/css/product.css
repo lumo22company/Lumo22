@@ -1767,7 +1767,8 @@
 .account-main {
   flex: 1;
   min-width: 0;
-  padding: 2rem 1.5rem 4rem;
+  /* Slightly less padding on the right than the left so content sits closer to the viewport edge */
+  padding: 2rem 0.75rem 4rem 1.5rem;
   max-width: 720px;
 }
 /* History needs more width so View/Download/Delete stay on one line */
@@ -1778,8 +1779,7 @@
 /* Desktop: trim right-edge page padding (main content sits closer to the viewport). */
 @media (min-width: 769px) {
   .account-main {
-    padding: 2rem 1.5rem 4rem;
-    padding-right: 0.4rem;
+    padding: 2rem 0 4rem 1.5rem;
   }
 
   .product-hero {
@@ -2990,7 +2990,9 @@
   }
   .account-sidebar-nav a { padding: 0.4rem 0.6rem; font-size: 1.15rem; }
   .account-sidebar-logout { margin-top: 0; padding-top: 0; border-top: none; margin-left: auto; }
-  .account-main { padding: 1.5rem 1rem 3rem; }
+  .account-main {
+    padding: 1.5rem 0.65rem 3rem 1rem;
+  }
   /* Edit form rows: name + Subscription/One-off pill on one line; buttons full width below */
   .account-edit-form-list .account-edit-form-row {
     grid-template-columns: 1fr;
