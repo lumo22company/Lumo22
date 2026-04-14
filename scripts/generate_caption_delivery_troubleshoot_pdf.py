@@ -123,7 +123,8 @@ def build_pdf() -> None:
         Spacer(1, 6),
         _p("7) Internal alert email (delivery_failure_count cap)", h2),
         _p(
-            "When automatic retries are exhausted, an email can be sent to <b>INTERNAL_ALERT_EMAIL</b> (default hello@lumo22.com). "
+            "When automatic retries are exhausted, <b>one</b> email is sent to <b>INTERNAL_ALERT_EMAIL</b> (default hello@lumo22.com). "
+            "Intermediate delivery failures do not email ops (Railway logs still show each attempt). "
             "Requires working SendGrid. The exhausted account banner uses standard “team notified” copy; treat the internal alert as best-effort if SendGrid fails.",
             body,
         ),

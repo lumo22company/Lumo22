@@ -610,38 +610,10 @@ class CaptionOrderService:
                 "delivery_last_attempt_at": now_iso,
             },
         )
-        if ok:
-            if n == CAPTIONS_MAX_AUTO_DELIVERY_FAILURES:
-                self._notify_delivery_retries_exhausted(order_id, row, err, n)
-            else:
-                self._notify_delivery_failed_attempt(order_id, row, err, n)
+        if ok and n == CAPTIONS_MAX_AUTO_DELIVERY_FAILURES:
+            # Single ops email when auto-retries are exhausted (no per-attempt inbox spam).
+            self._notify_delivery_retries_exhausted(order_id, row, err, n)
         return ok
-
-    def _notify_delivery_failed_attempt(
-        self,
-        order_id: str,
-        row: Dict[str, Any],
-        last_error: str,
-        delivery_failure_count: int,
-    ) -> None:
-        """Email ops on each failed attempt before the cap (first failures are otherwise silent)."""
-        try:
-            from services.notifications import NotificationService
-
-            intake = row.get("intake") if isinstance(row.get("intake"), dict) else {}
-            biz = (intake.get("business_name") or "").strip()
-            NotificationService().send_caption_delivery_failed_attempt_alert(
-                order_id=str(order_id),
-                attempt_number=int(delivery_failure_count),
-                max_attempts=CAPTIONS_MAX_AUTO_DELIVERY_FAILURES,
-                customer_email=str(row.get("customer_email") or ""),
-                order_token=str(row.get("token") or ""),
-                business_name=biz,
-                stripe_subscription_id=str(row.get("stripe_subscription_id") or ""),
-                last_error=last_error,
-            )
-        except Exception as e:
-            print(f"[Captions] _notify_delivery_failed_attempt failed: {e!r}")
 
     def _notify_delivery_retries_exhausted(
         self,
@@ -654,11 +626,13 @@ class CaptionOrderService:
         try:
             from services.notifications import NotificationService
 
+            intake = row.get("intake") if isinstance(row.get("intake"), dict) else {}
+            biz = (intake.get("business_name") or "").strip()
             NotificationService().send_caption_delivery_retries_exhausted_alert(
                 order_id=str(order_id),
                 customer_email=str(row.get("customer_email") or ""),
                 order_token=str(row.get("token") or ""),
-                business_name=str(row.get("business_name") or ""),
+                business_name=biz,
                 stripe_subscription_id=str(row.get("stripe_subscription_id") or ""),
                 stripe_customer_id=str(row.get("stripe_customer_id") or ""),
                 delivery_failure_count=int(delivery_failure_count),

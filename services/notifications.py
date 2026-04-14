@@ -1506,46 +1506,9 @@ delivery_failure_count: {delivery_failure_count}
 Last error (truncated):
 {err_snip or '(none)'}
 
-The customer sees "Automatic retries are exhausted" on retry. The app will not auto-retry further until you adjust the order or fix the underlying issue (Supabase / SendGrid / generation).
+Earlier failures on this order did not send separate ops emails; the app retried automatically until this cap.
 
-— Lumo 22 (automated)
-"""
-        return self._send_ops_alert_email(subj, body)
-
-    def send_caption_delivery_failed_attempt_alert(
-        self,
-        *,
-        order_id: str,
-        attempt_number: int,
-        max_attempts: int,
-        customer_email: str,
-        order_token: str,
-        business_name: str,
-        stripe_subscription_id: str,
-        last_error: Optional[str],
-    ) -> bool:
-        """
-        Notify ops on each failed caption delivery attempt before the auto-retry cap
-        (so you see the first failure, not only when retries are exhausted).
-        """
-        oid = (order_id or "").strip() or "?"
-        subj = f"[Lumo 22] Caption delivery failed (attempt {attempt_number}/{max_attempts}) — {oid[:12]}"
-        err_snip = (last_error or "").strip().replace("\n", " ")
-        if len(err_snip) > 800:
-            err_snip = err_snip[:797] + "..."
-        body = f"""A caption pack delivery attempt failed (automatic retry may still run).
-
-Order ID: {oid}
-Order token: {(order_token or '').strip() or '(none)'}
-Customer email: {(customer_email or '').strip() or '(none)'}
-Business name: {(business_name or '').strip() or '(none)'}
-Stripe subscription: {(stripe_subscription_id or '').strip() or '(none)'}
-Attempt: {attempt_number} of {max_attempts} before auto-retry stops
-
-Last error (truncated):
-{err_snip or '(none)'}
-
-Check Railway logs for [Captions] DELIVERY_FAILED and SendGrid / AI keys.
+The customer may see the exhausted “our team has been notified” message on the account page. The app will not auto-retry further until you fix the underlying issue (Supabase / SendGrid / generation) and run a successful delivery or adjust the row.
 
 — Lumo 22 (automated)
 """
