@@ -1053,7 +1053,7 @@
           <p class="retry-caption-delivery-msg" data-for-token="{{ o.get('token', '') }}" style="display: none; margin: 0.65rem 0 0; font-size: 0.88rem; color: rgba(255,255,255,0.9);"></p>
           {% else %}
           <p style="margin: 0 0 0.65rem; color: #ffffff; line-height: 1.55;"><strong>Your pack is still being prepared.</strong> We’re generating your captions from your form — this usually finishes within a few minutes. You’ll get an email when it’s ready, and the pack will appear under <strong>History</strong>.</p>
-          <p style="margin: 0 0 0.65rem; font-size: 0.9rem; color: rgba(255,255,255,0.88); line-height: 1.5;">If it’s been more than about 30 minutes, check spam or promotions. Still nothing? <a href="{{ caption_pack_help_mailto(o, customer.email if customer else '') }}" style="color: var(--lum-gold, #c9a227); font-weight: 600;">Email Lumo 22</a> — your order details are filled in automatically so we can find your pack.</p>
+          <p style="margin: 0 0 0.65rem; font-size: 0.9rem; color: rgba(255,255,255,0.88); line-height: 1.5;">If it’s been more than about 30 minutes, check spam or promotions. <strong>Our team is notified</strong> when a pack looks stuck on our side, and we’ll look into it — you don’t need to do anything for us to see a problem. Still want to reach us? <a href="{{ caption_pack_help_mailto(o, customer.email if customer else '') }}" style="color: var(--lum-gold, #c9a227); font-weight: 600;">Email Lumo 22</a> — your order details are filled in automatically.</p>
           {% endif %}
         </div>
         {% endif %}
