@@ -613,7 +613,7 @@ def _validate_launch_event_window(launch_desc: str, pack_start_date: str) -> Opt
     """
     Validate that every parseable calendar date in launch text falls within the 30-day pack window.
     pack_start_date is the inclusive first day of that window (use compute_intake_pack_day1_anchor on save).
-    Returns an error message when any parseable date is outside the window; else None.
+    Returns one error message when any parseable dates fall outside the window (lists all misaligned dates); else None.
     """
     text = (launch_desc or "").strip()
     if not text:
@@ -637,15 +637,17 @@ def _validate_launch_event_window(launch_desc: str, pack_start_date: str) -> Opt
         return None
 
     end = start + timedelta(days=29)
-    for d in dates:
-        if d < start or d > end:
-            return (
-                f"The date '{d.strftime('%d %B %Y')}' is outside your next 30-day captions window "
-                f"(starting {start.strftime('%d %B %Y')}). "
-                "Remove or rephrase dates that already passed before your pack starts, or move milestones so every "
-                "dated item falls inside that window—we phase countdowns from Day 1 of the delivered pack."
-            )
-    return None
+    bad = [d for d in dates if d < start or d > end]
+    if not bad:
+        return None
+    start_disp = start.strftime("%d %B %Y")
+    listed = ", ".join(d.strftime("%d %B %Y") for d in bad)
+    return (
+        f"You have specified dates outside your next 30-day captions window, which starts on {start_disp}. "
+        "Remove or rephrase dates that already passed before your next pack starts, or that fall after the last day "
+        f"of that window, so every dated item falls inside it—we can then tailor your captions more accurately. "
+        f"Not in the window: {listed}."
+    )
 
 
 def _customer_has_blocking_captions_subscription(email: str, target_business_key: Optional[str] = None) -> bool:
