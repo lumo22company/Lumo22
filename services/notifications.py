@@ -338,7 +338,7 @@ def _captions_reminder_email_html(
     account_url: str,
     business_name: Optional[str] = None,
     *,
-    next_pack_due_label: Optional[str] = None,
+    next_pack_cover_line: Optional[str] = None,
 ) -> str:
     """Build explicit HTML for the captions intake reminder email. Subscribers must log in first; link goes to login then redirects to form."""
     import html
@@ -354,10 +354,11 @@ def _captions_reminder_email_html(
     safe_business = _sanitize_email_value(business_name or "")
     if safe_business:
         business_line = f"<p style=\"margin:0 0 16px;\"><strong>Business:</strong> {safe_business}</p>"
-    safe_due = html.escape((next_pack_due_label or "").strip(), quote=True)
-    if safe_due:
-        timing_block = f"""<p style="margin:0 0 16px;">Your next 30 Days of Social Media Captions pack lines up with your subscription renewal on <strong>{safe_due}</strong>. You can update your preferences (business details, voice, platforms) anytime before we generate it.</p>
-<p style="margin:0 0 16px;">If you have a launch, event, or promotion in the <strong>30 days after that date</strong>, tell us on your form—we will tailor your captions to fit.</p>"""
+    safe_cover = html.escape((next_pack_cover_line or "").strip(), quote=True)
+    if safe_cover:
+        timing_block = f"""<p style="margin:0 0 16px;">{safe_cover}</p>
+<p style="margin:0 0 16px;">You can update your preferences (business details, voice, platforms) anytime before we generate it.</p>
+<p style="margin:0 0 16px;">If you have a launch, event, or promotion <strong>within that window</strong>, tell us on your form—we will tailor your captions to fit.</p>"""
     else:
         timing_block = f"""<p style="margin:0 0 16px;">Your next 30 Days of Social Media Captions pack is coming soon. You can update your preferences (business details, voice, platforms) anytime before we generate it.</p>
 <p style="margin:0 0 16px;">Do you have an event, promotion or something else coming up? Use your form to tell us about it and we'll tailor your captions to fit.</p>"""

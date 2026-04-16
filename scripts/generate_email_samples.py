@@ -56,7 +56,9 @@ def main():
             "reminder.html",
             "Pre-pack reminder",
             _captions_reminder_email_html(
-                login_url, account_url, next_pack_due_label="20 April 2026"
+                login_url,
+                account_url,
+                next_pack_cover_line="Your next pack covers Saturday 20th April 2026 – Tuesday 19th May 2026 (UTC).",
             ),
         )
     )

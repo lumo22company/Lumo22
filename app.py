@@ -684,25 +684,15 @@ def captions_intake_page():
         if token and is_oneoff and not oneoff_consumed_by_subscription
         else ""
     )
-    intake_pack_day1_display = None
-    intake_pack_day1_explainer = None
-    intake_pack_day1_source = None
-    intake_pack_window_range_display = None
+    intake_pack_cover_line = None
     if order:
-        from api.captions_routes import (
-            compute_intake_pack_day1_anchor,
-            format_intake_pack_window_range_for_display,
-            intake_pack_day1_explainer_for_source,
-        )
+        from api.captions_routes import compute_intake_pack_day1_anchor, format_pack_cover_line_ordinal_utc
 
-        _d1, _d1_src, _d1_disp = compute_intake_pack_day1_anchor(
+        _d1, _, _ = compute_intake_pack_day1_anchor(
             order,
             is_pack_sooner_edit_session=bool(is_prepare_pack_sooner_return),
         )
-        intake_pack_day1_display = _d1_disp
-        intake_pack_day1_source = _d1_src
-        intake_pack_day1_explainer = intake_pack_day1_explainer_for_source(_d1_src)
-        intake_pack_window_range_display = format_intake_pack_window_range_for_display(_d1) or None
+        intake_pack_cover_line = format_pack_cover_line_ordinal_utc(_d1) or None
     r = make_response(
         render_template(
             "captions_intake.html",
@@ -729,10 +719,7 @@ def captions_intake_page():
             oneoff_upgraded_to_subscription=oneoff_consumed_by_subscription,
             oneoff_subscribe_checkout_mode=oneoff_subscribe_checkout_mode,
             edit_intake_before_subscribe=edit_intake_before_subscribe,
-            intake_pack_day1_display=intake_pack_day1_display,
-            intake_pack_day1_explainer=intake_pack_day1_explainer,
-            intake_pack_day1_source=intake_pack_day1_source,
-            intake_pack_window_range_display=intake_pack_window_range_display,
+            intake_pack_cover_line=intake_pack_cover_line,
         )
     )
     r.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'

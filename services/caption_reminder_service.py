@@ -24,10 +24,15 @@ REMINDER_DAYS_BEFORE = 5
 INTAKE_BASE = "https://lumo-22-production.up.railway.app"
 
 
-def _format_next_pack_due_date(period_end_ts: int) -> str:
-    """Human-readable renewal date (UTC) for reminder copy."""
-    dt = datetime.fromtimestamp(int(period_end_ts), tz=timezone.utc)
-    return dt.strftime("%d %B %Y")
+def _pack_cover_line_from_period_end_utc(period_end_ts: int) -> str:
+    """Same pack-window sentence as captions intake (ordinal weekdays, UTC). Anchor = period end date, floored to today."""
+    from api.captions_routes import format_pack_cover_line_ordinal_utc
+
+    anchor = datetime.fromtimestamp(int(period_end_ts), tz=timezone.utc).date()
+    today = datetime.now(timezone.utc).date()
+    if anchor < today:
+        anchor = today
+    return format_pack_cover_line_ordinal_utc(anchor) or ""
 
 
 def _safe_base_url() -> str:
@@ -197,12 +202,14 @@ def run_reminders() -> Dict[str, Any]:
             subject = "Update your form before your next pack"
             if business_name:
                 subject = f"{subject} — {business_name}"
-            due_label = _format_next_pack_due_date(period_end_ts)
+            cover_line = _pack_cover_line_from_period_end_utc(period_end_ts)
             body = f"""Hi,
 
-{f"Business: {business_name}\n" if business_name else ""}Your next 30 Days of Social Media Captions pack lines up with your subscription renewal on {due_label}. You can update your preferences (business details, voice, platforms) anytime before we generate it.
+{f"Business: {business_name}\n" if business_name else ""}{cover_line}
 
-If you have a launch, event, or promotion in the 30 days after that date, tell us on your form—we will tailor your captions to fit.
+You can update your preferences (business details, voice, platforms) anytime before we generate it.
+
+If you have a launch, event, or promotion within that window, tell us on your form—we will tailor your captions to fit.
 
 Log in to update your form: {login_url}
 
@@ -221,7 +228,7 @@ Lumo 22
                 login_url,
                 account_url,
                 business_name=business_name or None,
-                next_pack_due_label=due_label,
+                next_pack_cover_line=cover_line,
             )
             ok = notif.send_email(email, subject, body, html_body=html_body)
             if ok:

@@ -78,7 +78,7 @@ def main():
     html = _captions_reminder_email_html(
         f"{base}/login?next=" + _urlquote(f"{base}/captions-intake?t=x", safe=""),
         f"{base}/account",
-        next_pack_due_label="20 April 2026",
+        next_pack_cover_line="Your next pack covers Saturday 20th April 2026 – Tuesday 19th May 2026 (UTC).",
     )
     check("Pre-pack reminder", html)
 

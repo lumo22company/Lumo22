@@ -610,6 +610,38 @@ def format_intake_pack_window_range_for_display(anchor) -> str:
     return f"{anchor.day} {anchor.strftime('%B %Y')}–{end.day} {end.strftime('%B %Y')}"
 
 
+def _ordinal_suffix(day: int) -> str:
+    if 10 <= day % 100 <= 20:
+        return "th"
+    return {1: "st", 2: "nd", 3: "rd"}.get(day % 10, "th")
+
+
+def _format_weekday_ordinal_month_year(d) -> str:
+    """UK-style weekday + ordinal day + month + year (UTC calendar date)."""
+    from datetime import date
+
+    if d is None or not isinstance(d, date):
+        return ""
+    return f"{d.strftime('%A')} {d.day}{_ordinal_suffix(d.day)} {d.strftime('%B %Y')}"
+
+
+def format_pack_cover_line_ordinal_utc(anchor) -> str:
+    """
+    One sentence for intake + reminder emails: inclusive 30-day captions window (Day 1 … Day 30).
+    Example: Your next pack covers Saturday 16th May 2026 – Monday 15th June 2026 (UTC).
+    """
+    from datetime import date, timedelta
+
+    if anchor is None or not isinstance(anchor, date):
+        return ""
+    end = anchor + timedelta(days=29)
+    start_s = _format_weekday_ordinal_month_year(anchor)
+    end_s = _format_weekday_ordinal_month_year(end)
+    if not start_s or not end_s:
+        return ""
+    return f"Your next pack covers {start_s} – {end_s} (UTC)."
+
+
 def resolve_pack_start_date_for_generation(order_row: Optional[Dict[str, Any]]) -> str:
     """
     Calendar Day 1 for caption generation and PDFs. Uses pack_start_date saved with the last intake

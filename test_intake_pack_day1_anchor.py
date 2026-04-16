@@ -111,3 +111,25 @@ def test_format_intake_pack_window_range_invalid_returns_empty():
 
     assert format_intake_pack_window_range_for_display(None) == ""
     assert format_intake_pack_window_range_for_display("x") == ""
+
+
+def test_format_pack_cover_line_ordinal_utc_cross_month():
+    from datetime import date
+
+    from api.captions_routes import format_pack_cover_line_ordinal_utc
+
+    s = format_pack_cover_line_ordinal_utc(date(2026, 5, 16))
+    assert s.startswith("Your next pack covers ")
+    assert "16th May 2026" in s
+    assert "June 2026" in s
+    assert s.endswith("(UTC).")
+
+
+def test_format_pack_cover_line_ordinal_utc_same_month():
+    from datetime import date
+
+    from api.captions_routes import format_pack_cover_line_ordinal_utc
+
+    s = format_pack_cover_line_ordinal_utc(date(2026, 5, 1))
+    assert "1st May 2026" in s
+    assert "30th May 2026" in s

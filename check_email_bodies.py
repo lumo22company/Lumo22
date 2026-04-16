@@ -75,7 +75,7 @@ def main():
     html = _captions_reminder_email_html(
         "https://example.com/login?next=https%3A%2F%2Fexample.com%2Fcaptions-intake%3Ft%3Dx",
         "https://example.com/account",
-        next_pack_due_label="20 April 2026",
+        next_pack_cover_line="Your next pack covers Saturday 20th April 2026 – Tuesday 19th May 2026 (UTC).",
     )
     check("Reminder (plain)", body)
     check("Reminder (HTML)", html, min_len=100)
