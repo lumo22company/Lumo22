@@ -73,7 +73,7 @@ def test_rejects_any_date_outside_window_when_multi_dated():
 
     assert r.status_code == 400
     msg = (r.get_json() or {}).get("error", "")
-    assert "April 2026" in msg
+    assert "16 April" in msg and "May 2026" in msg
     assert "outside your next 30-day captions window" in msg
 
 
