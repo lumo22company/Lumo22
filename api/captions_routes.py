@@ -641,12 +641,10 @@ def _validate_launch_event_window(launch_desc: str, pack_start_date: str) -> Opt
     if not bad:
         return None
     start_disp = start.strftime("%d %B %Y")
-    listed = ", ".join(d.strftime("%d %B %Y") for d in bad)
     return (
         f"You have specified dates outside your next 30-day captions window, which starts on {start_disp}. "
         "Remove or rephrase dates that already passed before your next pack starts, or that fall after the last day "
-        f"of that window, so every dated item falls inside it—we can then tailor your captions more accurately. "
-        f"Not in the window: {listed}."
+        "of that window, so every dated item falls inside it—we can then tailor your captions more accurately."
     )
 
 
