@@ -1873,6 +1873,8 @@
   flex-direction: column;
   align-items: flex-end;
   gap: 0.35rem;
+  flex-shrink: 0;
+  margin-left: auto;
 }
 .account-info-actions a {
   color: #8b6914;
@@ -1896,14 +1898,16 @@
   margin-top: 0.5rem;
   padding-top: 1rem;
 }
+/* Form wrapper must not steal flex alignment — button aligns like Change email / Manage billing */
+.account-info-row--delete .account-delete-form {
+  display: contents;
+  margin: 0;
+}
 .account-info-row--delete .account-info-actions {
   align-items: flex-end;
 }
-.account-info-row--delete .account-delete-form {
-  display: block;
-  margin: 0;
-  width: 100%;
-  text-align: right;
+.account-info-row--delete .account-delete-account-btn {
+  margin-inline-start: auto;
 }
 .account-delete-account-btn {
   appearance: none;
@@ -3247,6 +3251,8 @@
   }
   .account-page-wrap .account-info-actions {
     width: 100%;
+    margin-left: 0;
+    align-items: flex-end;
   }
   .account-page-wrap .account-info-actions a,
   .account-page-wrap .account-info-actions button {
@@ -3255,18 +3261,15 @@
     text-align: center;
     box-sizing: border-box;
   }
-  .account-page-wrap .account-info-row--delete .account-info-actions {
-    align-items: flex-end;
-  }
-  .account-page-wrap .account-info-row--delete .account-delete-form {
-    width: 100%;
-    text-align: right;
-  }
-  .account-page-wrap .account-info-row--delete .account-info-actions button {
-    width: auto;
+  /* Delete: keep control right-aligned like desktop; do not stretch to full row width */
+  .account-page-wrap .account-info-row--delete .account-info-actions a,
+  .account-page-wrap .account-info-row--delete .account-info-actions button,
+  .account-page-wrap .account-info-row--delete .account-info-actions .account-delete-account-btn {
+    width: auto !important;
     max-width: 100%;
-    display: inline-block;
+    display: inline-block !important;
     text-align: center;
+    margin-inline-start: auto;
   }
   .account-page-wrap .account-history-item {
     padding: 1rem;
