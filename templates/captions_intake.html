@@ -252,7 +252,7 @@
     .intake-page-body .lumo-nav { background: #000; border-bottom: 1px solid rgba(255,255,255,0.06); box-shadow: 0 4px 24px rgba(0,0,0,0.2); }
   </style>
 </head>
-<body class="lumo-landing intake-page-body" data-current-customer-email="{{ (current_customer.email or '')|lower if current_customer else '' }}" data-return-url="{{ return_url or '' }}" data-intake-view-only="{{ 'true' if intake_view_only else 'false' }}" data-oneoff-subscribe-checkout="{{ 'true' if oneoff_subscribe_checkout_mode|default(false) else 'false' }}" data-subscribe-url="{{ subscribe_url or '' }}" data-auto-open-review="{{ 'true' if oneoff_subscribe_checkout_mode|default(false) else 'false' }}" data-oneoff-upgrade-edit="{{ 'true' if edit_intake_before_subscribe|default(false) else 'false' }}" data-is-upgrade-flow="{{ 'true' if is_upgrade_flow|default(false) else 'false' }}" data-prepare-pack-sooner-edit="{{ 'true' if is_prepare_pack_sooner_return|default(false) and edit_intake_before_subscribe|default(false) else 'false' }}">
+<body class="lumo-landing intake-page-body" data-current-customer-email="{{ (current_customer.email or '')|lower if current_customer else '' }}" data-return-url="{{ return_url or '' }}" data-intake-view-only="{{ 'true' if intake_view_only else 'false' }}" data-oneoff-subscribe-checkout="{{ 'true' if oneoff_subscribe_checkout_mode|default(false) else 'false' }}" data-subscribe-url="{{ subscribe_url or '' }}" data-auto-open-review="{{ 'true' if oneoff_subscribe_checkout_mode|default(false) else 'false' }}" data-oneoff-upgrade-edit="{{ 'true' if edit_intake_before_subscribe|default(false) else 'false' }}" data-is-upgrade-flow="{{ 'true' if is_upgrade_flow|default(false) else 'false' }}" data-pack-sooner-hub-return="{{ 'true' if is_prepare_pack_sooner_return|default(false) else 'false' }}" data-prepare-pack-sooner-edit="{{ 'true' if is_prepare_pack_sooner_return|default(false) and edit_intake_before_subscribe|default(false) else 'false' }}">
   {% include '_lumo_nav.html' %}
 
   <main class="intake-page">
@@ -505,7 +505,10 @@
       </div>
       <div class="form-section">
         <h2>What's happening this month? <span class="intake-h2-meta">(optional)</span></h2>
-        <p class="field-helper">If you have a product launch, event, sale, or regular recurring event, we'll tailor captions: before the date we build anticipation; on the day we announce; during we promote; after we shift to thank-you. Countdowns follow <strong>Day 1 of your delivered pack</strong> (the day it is generated). <strong>List calendar dates only if they fall in the next 30 days from that day</strong>—when you save from this form, treat the window as starting <strong>today</strong> or later. Deadlines already before that window: use <strong>past tense</strong> or omit the date, or the form may not save until you adjust.</p>
+        {% if intake_pack_day1_display %}
+        <p class="field-helper intake-pack-day1-anchor" style="margin-bottom: 0.65rem; padding: 0.6rem 0.75rem; background: rgba(201,162,39,0.08); border: 1px solid rgba(201,162,39,0.28); border-radius: 8px; color: #1a1a1a;"><strong>Day 1 for your next pack:</strong> {{ intake_pack_day1_display }}. {% if intake_pack_day1_explainer %}{{ intake_pack_day1_explainer }}{% endif %}</p>
+        {% endif %}
+        <p class="field-helper">If you have a product launch, event, sale, or regular recurring event, we'll tailor captions: before the date we build anticipation; on the day we announce; during we promote; after we shift to thank-you. {% if intake_pack_day1_display %}Every calendar date you list should fall within <strong>30 days starting that Day 1</strong> (PDF day headings use the same start).{% else %}Every calendar date you list should fall within <strong>30 days from Day 1</strong> when your pack is generated (when you save here, use <strong>today</strong> or later as the start of that window).{% endif %} Events before that window: <strong>past tense</strong> or omit the date, or the form may not save.</p>
         <label for="launch_event_description">Include dates or regular events (each dated line must sit inside your 30-day pack window).</label>
         <textarea id="launch_event_description" name="launch_event_description" data-testid="launch_event_description" placeholder="e.g. Valentine's sale 10–14 Feb (dates inside your next 30-day pack), product launch 20 Feb, weekly tips every Tuesday" rows="4" style="min-height: 96px; resize: vertical;">{{ existing_intake.get('launch_event_description', '') }}</textarea>
         <p id="launch-date-hint" class="field-helper" style="display:none; color:#b45309; font-weight:600;"></p>
@@ -883,6 +886,9 @@
       }
       if (document.body.getAttribute('data-prepare-pack-sooner-edit') === 'true') {
         payload.prepare_pack_sooner_edit = true;
+      }
+      if (document.body.getAttribute('data-pack-sooner-hub-return') === 'true') {
+        payload.pack_sooner_hub_return = true;
       }
       var fOneOffChk = document.getElementById('captions-intake-form');
       var subUrlEarly = (document.body.getAttribute('data-subscribe-url') || '').trim();
@@ -1426,6 +1432,9 @@
         }
         if (document.body.getAttribute('data-prepare-pack-sooner-edit') === 'true') {
           payload.prepare_pack_sooner_edit = true;
+        }
+        if (document.body.getAttribute('data-pack-sooner-hub-return') === 'true') {
+          payload.pack_sooner_hub_return = true;
         }
         btnConfirm.disabled = true;
         btnConfirm.textContent = 'Sending…';

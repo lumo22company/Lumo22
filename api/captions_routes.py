@@ -10,7 +10,7 @@ import threading
 import hmac
 import hashlib
 import base64
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 from flask import Blueprint, request, jsonify, redirect, Response, url_for
 from urllib.parse import quote
 from config import Config
@@ -513,11 +513,90 @@ def _target_business_key_from_request(copy_from: str, explicit_business_key: str
     return ""
 
 
+def compute_intake_pack_day1_anchor(
+    order: Optional[Dict[str, Any]],
+    *,
+    is_pack_sooner_edit_session: bool = False,
+) -> tuple:
+    """
+    Calendar Day 1 used for PDF headers, launch-date validation, and intake helper copy.
+
+    Returns (anchor_date, source, display_str) where source is one of:
+    pack_sooner, scheduled_first_pack, stripe_renewal, calendar_fallback, today_fallback.
+    """
+    from datetime import datetime, timezone
+    from services.caption_generator import launch_window_start_for_intake_validation
+
+    today = datetime.utcnow().date()
+    disp = lambda d: d.strftime("%A %d %B %Y")
+
+    if not order:
+        return (today, "today_fallback", disp(today))
+
+    if is_pack_sooner_edit_session:
+        return (today, "pack_sooner", disp(today))
+
+    sched_raw = (order.get("scheduled_delivery_at") or "").strip()
+    if sched_raw:
+        try:
+            sdt = datetime.fromisoformat(sched_raw.replace("Z", "+00:00"))
+            if sdt.tzinfo is None:
+                sdt = sdt.replace(tzinfo=timezone.utc)
+            d = sdt.date()
+            if d > today:
+                return (d, "scheduled_first_pack", disp(d))
+        except Exception:
+            pass
+
+    sub_id = (order.get("stripe_subscription_id") or "").strip()
+    if sub_id and (getattr(Config, "STRIPE_SECRET_KEY", None) or "").strip():
+        try:
+            import stripe
+
+            stripe.api_key = Config.STRIPE_SECRET_KEY.strip()
+            sub = stripe.Subscription.retrieve(sub_id)
+            pe = sub.get("current_period_end")
+            if pe is not None:
+                d = datetime.utcfromtimestamp(int(pe)).date()
+                if d < today:
+                    d = today
+                return (d, "stripe_renewal", disp(d))
+        except Exception as e:
+            print(f"[intake_pack_day1] Stripe retrieve failed for sub {(sub_id or '')[:14]}...: {e}")
+
+    s = launch_window_start_for_intake_validation(today, (order.get("pack_start_date") or "").strip())
+    try:
+        d = datetime.strptime(s[:10], "%Y-%m-%d").date()
+    except ValueError:
+        d = today
+    return (d, "calendar_fallback", disp(d))
+
+
+def intake_pack_day1_explainer_for_source(source: str) -> str:
+    """Short sentence for captions intake template (shown next to Day 1 date)."""
+    if source == "pack_sooner":
+        return (
+            "Get my pack sooner: we generate your pack right after checkout, so milestones should fall in the 30 days from this day."
+        )
+    if source == "scheduled_first_pack":
+        return (
+            "Your first subscription pack after upgrading is scheduled for this day—that is Day 1 for PDF headings and for the dates you list below."
+        )
+    if source == "stripe_renewal":
+        return (
+            "This matches your next Stripe subscription renewal (when your monthly pack is generated). Use it when choosing dates below."
+        )
+    if source == "calendar_fallback":
+        return (
+            "We use this as the first day of the 30-day window for validating dates below when we do not yet have a renewal date from Stripe."
+        )
+    return "We use this as Day 1 for the 30-day window when checking the dates you list below."
+
+
 def _validate_launch_event_window(launch_desc: str, pack_start_date: str) -> Optional[str]:
     """
     Validate that every parseable calendar date in launch text falls within the 30-day pack window.
-    pack_start_date is the inclusive first day of that window (callers should pass
-    launch_window_start_for_intake_validation(today, order.pack_start_date) on save).
+    pack_start_date is the inclusive first day of that window (use compute_intake_pack_day1_anchor on save).
     Returns an error message when any parseable date is outside the window; else None.
     """
     text = (launch_desc or "").strip()
@@ -2202,15 +2281,14 @@ def _captions_intake_submit_impl(data):
         if fb:
             intake["platform"] = fb
 
-    from datetime import datetime
-    from services.caption_generator import launch_window_start_for_intake_validation
-
+    _pack_sooner_for_anchor = bool(prepare_pps or data.get("pack_sooner_hub_return"))
+    _anchor_d, _anchor_src, _ = compute_intake_pack_day1_anchor(
+        order,
+        is_pack_sooner_edit_session=_pack_sooner_for_anchor,
+    )
     launch_window_error = _validate_launch_event_window(
         intake.get("launch_event_description") or "",
-        launch_window_start_for_intake_validation(
-            datetime.utcnow().date(),
-            (order.get("pack_start_date") or "").strip(),
-        ),
+        _anchor_d.strftime("%Y-%m-%d"),
     )
     if launch_window_error:
         return jsonify({"error": launch_window_error}), 400
