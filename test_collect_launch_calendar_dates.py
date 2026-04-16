@@ -10,6 +10,7 @@ os.environ.setdefault("SUPABASE_KEY", "x")
 
 from services.caption_generator import (
     collect_launch_calendar_dates,
+    launch_window_start_for_intake_validation,
     _build_off_pack_window_dates_block,
     _build_user_prompt,
 )
@@ -41,6 +42,13 @@ def test_out_of_pack_empty_when_all_inside_window():
     text = "Summit 18-19 April."
     block = _build_off_pack_window_dates_block("2026-04-16", text)
     assert block == ""
+
+
+def test_launch_window_start_uses_max_of_today_and_order_pack_start():
+    """Stale order.pack_start in the past must not widen validation window backwards."""
+    assert launch_window_start_for_intake_validation(date(2026, 4, 14), "2026-04-01") == "2026-04-14"
+    assert launch_window_start_for_intake_validation(date(2026, 3, 10), "2026-04-01") == "2026-04-01"
+    assert launch_window_start_for_intake_validation(date(2026, 4, 14), "") == "2026-04-14"
 
 
 def test_user_prompt_includes_out_of_pack_when_early_date_before_pack():

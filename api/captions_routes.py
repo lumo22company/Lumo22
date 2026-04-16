@@ -516,7 +516,8 @@ def _target_business_key_from_request(copy_from: str, explicit_business_key: str
 def _validate_launch_event_window(launch_desc: str, pack_start_date: str) -> Optional[str]:
     """
     Validate that every parseable calendar date in launch text falls within the 30-day pack window.
-    Uses pack_start_date when set; otherwise today UTC (same anchor as generation at delivery time).
+    pack_start_date is the inclusive first day of that window (callers should pass
+    launch_window_start_for_intake_validation(today, order.pack_start_date) on save).
     Returns an error message when any parseable date is outside the window; else None.
     """
     text = (launch_desc or "").strip()
@@ -2201,9 +2202,15 @@ def _captions_intake_submit_impl(data):
         if fb:
             intake["platform"] = fb
 
+    from datetime import datetime
+    from services.caption_generator import launch_window_start_for_intake_validation
+
     launch_window_error = _validate_launch_event_window(
         intake.get("launch_event_description") or "",
-        (order.get("pack_start_date") or "").strip(),
+        launch_window_start_for_intake_validation(
+            datetime.utcnow().date(),
+            (order.get("pack_start_date") or "").strip(),
+        ),
     )
     if launch_window_error:
         return jsonify({"error": launch_window_error}), 400

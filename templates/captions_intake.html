@@ -986,6 +986,17 @@
           } else {
             var ctaEl = document.getElementById('intake-upgrade-cta');
             if (typeof lumoIntakeSetErrorFromApiResult === 'function') lumoIntakeSetErrorFromApiResult(result);
+            var launchHintEarly = document.getElementById('launch-date-hint');
+            if (launchHintEarly && result.json && result.json.error && result.json.error.toLowerCase().indexOf("outside your next 30-day captions window") !== -1) {
+              launchHintEarly.textContent = result.json.error;
+              launchHintEarly.style.display = 'block';
+              var launchFieldEarly = document.getElementById('launch_event_description');
+              if (typeof window.lumoIntakeScrollTo === 'function') window.lumoIntakeScrollTo(launchHintEarly);
+              if (launchFieldEarly && launchFieldEarly.scrollIntoView) launchFieldEarly.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            } else if (launchHintEarly) {
+              launchHintEarly.style.display = 'none';
+              launchHintEarly.textContent = '';
+            }
             if (ctaEl) {
               if (result.json.downgrade_required) {
                 var sym = result.json.new_price_symbol || '£';

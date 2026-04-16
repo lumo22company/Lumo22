@@ -189,6 +189,23 @@ def collect_launch_calendar_dates(text: str, pack_start_date: str) -> List[date]
     return sorted(found_dates)
 
 
+def launch_window_start_for_intake_validation(today: date, order_pack_start_raw: str) -> str:
+    """
+    First calendar day of the 30-day window used when validating “What’s happening?” on intake save.
+    max(today, order pack_start_date): a stale early-month pack_start on the row must not widen the
+    window backwards so past milestones (e.g. 8 April) appear “in range” while the next generated
+    pack will actually start on or after today.
+    """
+    raw = (order_pack_start_raw or "").strip()
+    if not raw:
+        return today.strftime("%Y-%m-%d")
+    try:
+        ps = datetime.strptime(raw[:10], "%Y-%m-%d").date()
+    except ValueError:
+        return today.strftime("%Y-%m-%d")
+    return max(today, ps).strftime("%Y-%m-%d")
+
+
 def _build_off_pack_window_dates_block(pack_start_date: str, launch_desc_raw: str) -> str:
     """
     When KEY_DATE_EVENTS lists dates outside Day 1–30, tell the model not to run false
