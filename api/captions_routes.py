@@ -593,6 +593,22 @@ def intake_pack_day1_explainer_for_source(source: str) -> str:
     return "We use this as Day 1 for the 30-day window when checking the dates you list below."
 
 
+def resolve_pack_start_date_for_generation(order_row: Optional[Dict[str, Any]]) -> str:
+    """
+    Calendar Day 1 for caption generation and PDFs. Uses pack_start_date saved with the last intake
+    submit (same anchor as launch-date validation). If missing, invalid, or stale (before today),
+    uses today (UTC) — matches launch_window_start_for_intake_validation.
+    """
+    from datetime import datetime
+    from services.caption_generator import launch_window_start_for_intake_validation
+
+    today = datetime.utcnow().date()
+    raw = ""
+    if order_row and isinstance(order_row, dict):
+        raw = (order_row.get("pack_start_date") or "").strip()
+    return launch_window_start_for_intake_validation(today, raw)
+
+
 def _validate_launch_event_window(launch_desc: str, pack_start_date: str) -> Optional[str]:
     """
     Validate that every parseable calendar date in launch text falls within the 30-day pack window.
@@ -1633,7 +1649,7 @@ def _run_generation_and_deliver(
         return (True, None)
     try:
         order_service.set_generating(order_id)
-        pack_start_date = datetime.utcnow().strftime("%Y-%m-%d")
+        pack_start_date = resolve_pack_start_date_for_generation(row)
         gen = CaptionGenerator()
         print(f"[Captions] Calling AI (provider={Config.AI_PROVIDER}) for order {order_id} (Day 1 = {pack_start_date})")
         stories_generation_failed = False
@@ -2404,13 +2420,20 @@ def _captions_intake_submit_impl(data):
                     scheduled_date_str = scheduled.strftime("%d %B %Y")
                 except Exception:
                     pass
-        if not order_service.save_intake(order_id, intake, scheduled_delivery_at=scheduled_delivery_at):
+        if not order_service.save_intake(
+            order_id,
+            intake,
+            scheduled_delivery_at=scheduled_delivery_at,
+            pack_start_date=pack_start_iso,
+        ):
             print(f"[captions_intake] save_intake FAILED for subscription order_id={order_id} token_tail=...{(order.get('token') or '')[-8:]}")
             return jsonify({"error": "Failed to save. Please try again."}), 500
         if deliver_base_one_off_now and base_one_off_id:
             try:
                 # Reuse submitted intake for the original one-off so customer receives the pack they already paid for.
-                if order_service.save_intake(base_one_off_id, intake):
+                b_anchor, _, _ = compute_intake_pack_day1_anchor(one_off, is_pack_sooner_edit_session=False)
+                one_off_pack_iso = b_anchor.strftime("%Y-%m-%d")
+                if order_service.save_intake(base_one_off_id, intake, pack_start_date=one_off_pack_iso):
                     thread_base = threading.Thread(target=_run_generation_and_deliver, args=(base_one_off_id,))
                     thread_base.daemon = False
                     thread_base.start()
@@ -2492,7 +2515,7 @@ def _captions_intake_submit_impl(data):
                 order_email = (order.get("customer_email") or "").strip().lower()
                 cust_email = (customer.get("email") or "").strip().lower() if customer else ""
                 if customer and order_email and cust_email == order_email:
-                    if not order_service.update_intake_only(order_id, intake):
+                    if not order_service.update_intake_only(order_id, intake, pack_start_date=pack_start_iso):
                         return jsonify({"error": "Failed to update. Please try again."}), 500
                     customer_has_account = True
                     return jsonify({
@@ -2540,7 +2563,7 @@ def _captions_intake_submit_impl(data):
                     "upgrade_type": "platforms",
                     "upgrade_url": upgrade_url,
                 }), 400
-        if not order_service.update_intake_only(order_id, intake):
+        if not order_service.update_intake_only(order_id, intake, pack_start_date=pack_start_iso):
             return jsonify({"error": "Failed to update. Please try again."}), 500
         customer_email = (order.get("customer_email") or "").strip().lower()
         customer_has_account = False

@@ -72,7 +72,11 @@ def main():
 
     # Caption reminder
     body = "Hi,\n\nYour next 30 Days of Social Media Captions pack is coming soon..."
-    html = _captions_reminder_email_html("https://example.com/login?next=https%3A%2F%2Fexample.com%2Fcaptions-intake%3Ft%3Dx", "https://example.com/account")
+    html = _captions_reminder_email_html(
+        "https://example.com/login?next=https%3A%2F%2Fexample.com%2Fcaptions-intake%3Ft%3Dx",
+        "https://example.com/account",
+        next_pack_due_label="20 April 2026",
+    )
     check("Reminder (plain)", body)
     check("Reminder (HTML)", html, min_len=100)
 

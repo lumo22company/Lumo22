@@ -24,6 +24,12 @@ REMINDER_DAYS_BEFORE = 5
 INTAKE_BASE = "https://lumo-22-production.up.railway.app"
 
 
+def _format_next_pack_due_date(period_end_ts: int) -> str:
+    """Human-readable renewal date (UTC) for reminder copy."""
+    dt = datetime.fromtimestamp(int(period_end_ts), tz=timezone.utc)
+    return dt.strftime("%d %B %Y")
+
+
 def _safe_base_url() -> str:
     """Base URL for intake links, with fallback."""
     base = (getattr(Config, "BASE_URL", None) or "").strip().rstrip("/")
@@ -191,11 +197,12 @@ def run_reminders() -> Dict[str, Any]:
             subject = "Update your form before your next pack"
             if business_name:
                 subject = f"{subject} — {business_name}"
+            due_label = _format_next_pack_due_date(period_end_ts)
             body = f"""Hi,
 
-{f"Business: {business_name}\n" if business_name else ""}Your next 30 Days of Social Media Captions pack is coming soon. You can update your preferences (business details, voice, platforms) anytime before we generate it.
+{f"Business: {business_name}\n" if business_name else ""}Your next 30 Days of Social Media Captions pack lines up with your subscription renewal on {due_label}. You can update your preferences (business details, voice, platforms) anytime before we generate it.
 
-Do you have an event, promotion or something else coming up? Use your form to tell us about it and we'll tailor your captions to fit.
+If you have a launch, event, or promotion in the 30 days after that date, tell us on your form—we will tailor your captions to fit.
 
 Log in to update your form: {login_url}
 
@@ -210,7 +217,12 @@ You can turn these reminders off in your account: {account_url}
 Lumo 22
 """
             from services.notifications import _captions_reminder_email_html
-            html_body = _captions_reminder_email_html(login_url, account_url, business_name=business_name or None)
+            html_body = _captions_reminder_email_html(
+                login_url,
+                account_url,
+                business_name=business_name or None,
+                next_pack_due_label=due_label,
+            )
             ok = notif.send_email(email, subject, body, html_body=html_body)
             if ok:
                 # Store period end as ISO for TIMESTAMPTZ (Postgres)

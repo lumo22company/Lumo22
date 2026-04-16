@@ -342,7 +342,7 @@ def test_subscription_prefill_when_db_only_has_business_name():
                 return order_b
             return None
 
-        def update_intake_only(self, order_id, intake):
+        def update_intake_only(self, order_id, intake, pack_start_date=None):
             assert str(order_id) == "ord-b"
             order_b["intake"] = dict(intake)
             return True

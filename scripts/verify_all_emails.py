@@ -75,7 +75,11 @@ def main():
 
     # 4. Pre-pack reminder
     from urllib.parse import quote as _urlquote
-    html = _captions_reminder_email_html(f"{base}/login?next=" + _urlquote(f"{base}/captions-intake?t=x", safe=""), f"{base}/account")
+    html = _captions_reminder_email_html(
+        f"{base}/login?next=" + _urlquote(f"{base}/captions-intake?t=x", safe=""),
+        f"{base}/account",
+        next_pack_due_label="20 April 2026",
+    )
     check("Pre-pack reminder", html)
 
     # 5. Intake reminder (awaiting_intake)

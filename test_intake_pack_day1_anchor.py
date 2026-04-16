@@ -47,3 +47,32 @@ def test_explainer_stripe_renewal():
 
     s = intake_pack_day1_explainer_for_source("stripe_renewal")
     assert "Stripe" in s or "renewal" in s.lower()
+
+
+def test_resolve_generation_uses_future_stored_anchor():
+    from datetime import datetime, timedelta
+
+    from api.captions_routes import resolve_pack_start_date_for_generation
+
+    future = (datetime.utcnow().date() + timedelta(days=12)).strftime("%Y-%m-%d")
+    assert resolve_pack_start_date_for_generation({"pack_start_date": future}) == future
+
+
+def test_resolve_generation_bumps_stale_persisted_anchor_to_today():
+    from datetime import datetime, timedelta
+
+    from api.captions_routes import resolve_pack_start_date_for_generation
+
+    past = (datetime.utcnow().date() - timedelta(days=6)).strftime("%Y-%m-%d")
+    today = datetime.utcnow().date().strftime("%Y-%m-%d")
+    assert resolve_pack_start_date_for_generation({"pack_start_date": past}) == today
+
+
+def test_resolve_generation_empty_row_is_today():
+    from datetime import datetime
+
+    from api.captions_routes import resolve_pack_start_date_for_generation
+
+    today = datetime.utcnow().date().strftime("%Y-%m-%d")
+    assert resolve_pack_start_date_for_generation(None) == today
+    assert resolve_pack_start_date_for_generation({}) == today

@@ -35,7 +35,7 @@ def test_get_pack_now_copies_intake_with_subscription_overrides():
         def get_by_token(self, token):
             return one_off_order if token == copy_from_token else None
 
-        def save_intake(self, order_id, intake):
+        def save_intake(self, order_id, intake, scheduled_delivery_at=None, pack_start_date=None):
             FakeOrderService.last_saved = {"order_id": order_id, "intake": dict(intake)}
             return True
 

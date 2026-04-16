@@ -51,7 +51,15 @@ def main():
     from urllib.parse import quote
     account_url = "https://www.lumo22.com/account"
     login_url = "https://www.lumo22.com/login?next=" + quote(intake_url, safe="")
-    samples.append(("reminder.html", "Pre-pack reminder", _captions_reminder_email_html(login_url, account_url)))
+    samples.append(
+        (
+            "reminder.html",
+            "Pre-pack reminder",
+            _captions_reminder_email_html(
+                login_url, account_url, next_pack_due_label="20 April 2026"
+            ),
+        )
+    )
 
     # 4. Password reset
     samples.append(("password_reset.html", "Password reset", _password_reset_email_html("https://www.lumo22.com/reset-password?token=sample-token")))

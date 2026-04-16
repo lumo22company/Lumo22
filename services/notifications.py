@@ -333,7 +333,13 @@ def _captions_delivery_email_html(
     return _email_wrapper(content)
 
 
-def _captions_reminder_email_html(login_url: str, account_url: str, business_name: Optional[str] = None) -> str:
+def _captions_reminder_email_html(
+    login_url: str,
+    account_url: str,
+    business_name: Optional[str] = None,
+    *,
+    next_pack_due_label: Optional[str] = None,
+) -> str:
     """Build explicit HTML for the captions intake reminder email. Subscribers must log in first; link goes to login then redirects to form."""
     import html
     login_url = (login_url or "").strip()
@@ -348,10 +354,16 @@ def _captions_reminder_email_html(login_url: str, account_url: str, business_nam
     safe_business = _sanitize_email_value(business_name or "")
     if safe_business:
         business_line = f"<p style=\"margin:0 0 16px;\"><strong>Business:</strong> {safe_business}</p>"
+    safe_due = html.escape((next_pack_due_label or "").strip(), quote=True)
+    if safe_due:
+        timing_block = f"""<p style="margin:0 0 16px;">Your next 30 Days of Social Media Captions pack lines up with your subscription renewal on <strong>{safe_due}</strong>. You can update your preferences (business details, voice, platforms) anytime before we generate it.</p>
+<p style="margin:0 0 16px;">If you have a launch, event, or promotion in the <strong>30 days after that date</strong>, tell us on your form—we will tailor your captions to fit.</p>"""
+    else:
+        timing_block = f"""<p style="margin:0 0 16px;">Your next 30 Days of Social Media Captions pack is coming soon. You can update your preferences (business details, voice, platforms) anytime before we generate it.</p>
+<p style="margin:0 0 16px;">Do you have an event, promotion or something else coming up? Use your form to tell us about it and we'll tailor your captions to fit.</p>"""
     content = f"""<p style="margin:0 0 16px;">Hi,</p>
 {business_line}
-<p style="margin:0 0 16px;">Your next 30 Days of Social Media Captions pack is coming soon. You can update your preferences (business details, voice, platforms) anytime before we generate it.</p>
-<p style="margin:0 0 16px;">Do you have an event, promotion or something else coming up? Use your form to tell us about it and we'll tailor your captions to fit.</p>
+{timing_block}
 <p style="margin:0 0 12px; font-size:14px; color:{BRAND_MUTED};"><strong style="color:{BRAND_TEXT};">You'll need to log in to your account first</strong>, then you'll be taken to your form.</p>
 <p style="margin:0 0 24px;"><a href="{safe_login}" style="display:inline-block; padding:14px 28px; background:{BRAND_GOLD}; color:{BRAND_BLACK}; text-decoration:none; border-radius:10px; font-weight:600;">Log in to update your form</a></p>
 <p style="margin:0 0 8px; font-size:14px; color:{BRAND_MUTED};">Or copy and paste this link into your browser:</p>

@@ -475,16 +475,29 @@ class CaptionOrderService:
         result = self.client.table(self.table).update(updates).eq("id", order_id).execute()
         return bool(result.data)
 
-    def save_intake(self, order_id: str, intake: Dict[str, Any], scheduled_delivery_at: Optional[str] = None) -> bool:
+    def save_intake(
+        self,
+        order_id: str,
+        intake: Dict[str, Any],
+        scheduled_delivery_at: Optional[str] = None,
+        pack_start_date: Optional[str] = None,
+    ) -> bool:
         """Save intake and set status to intake_completed. Optional scheduled_delivery_at for upgrade-from-one-off."""
         updates = {"intake": intake, "status": "intake_completed"}
         if scheduled_delivery_at:
             updates["scheduled_delivery_at"] = scheduled_delivery_at
+        if pack_start_date:
+            updates["pack_start_date"] = (pack_start_date or "").strip()[:10]
         return self.update(order_id, updates)
 
-    def update_intake_only(self, order_id: str, intake: Dict[str, Any]) -> bool:
+    def update_intake_only(
+        self, order_id: str, intake: Dict[str, Any], pack_start_date: Optional[str] = None
+    ) -> bool:
         """Update intake JSON without changing status or re-triggering generation."""
-        return self.update(order_id, {"intake": intake})
+        updates: Dict[str, Any] = {"intake": intake}
+        if pack_start_date:
+            updates["pack_start_date"] = (pack_start_date or "").strip()[:10]
+        return self.update(order_id, updates)
 
     def set_generating(self, order_id: str) -> bool:
         now_iso = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -543,6 +556,8 @@ class CaptionOrderService:
             "delivered_at": now_iso,
             "delivery_failure_count": 0,
             "delivery_last_error": None,
+            # Next renewal/generation should not reuse this pack's anchor unless the customer saves intake again.
+            "pack_start_date": None,
         }
         if did_archive_prior_pack:
             updates["delivery_archive"] = delivery_archive
