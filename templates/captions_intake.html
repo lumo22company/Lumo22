@@ -505,9 +505,9 @@
       </div>
       <div class="form-section">
         <h2>What's happening this month? <span class="intake-h2-meta">(optional)</span></h2>
-        <p class="field-helper">If you have a product launch, event, sale, or regular recurring event within the next 30 days, we'll tailor captions: before the date we build anticipation; on the day we announce; during we promote; after we shift to thank-you.</p>
-        <label for="launch_event_description">Include dates or regular events.</label>
-        <textarea id="launch_event_description" name="launch_event_description" data-testid="launch_event_description" placeholder="e.g. Valentine's sale 10–14 Feb, product launch 20 Feb, weekly tips every Tuesday" rows="4" style="min-height: 96px; resize: vertical;">{{ existing_intake.get('launch_event_description', '') }}</textarea>
+        <p class="field-helper">If you have a product launch, event, sale, or regular recurring event, we'll tailor captions: before the date we build anticipation; on the day we announce; during we promote; after we shift to thank-you. Countdowns follow <strong>Day 1 of your delivered pack</strong> (the day it is generated). <strong>List calendar dates only if they fall in the next 30 days from that day</strong>—when you save from this form, treat the window as starting <strong>today</strong> or later. Deadlines already before that window: use <strong>past tense</strong> or omit the date, or the form may not save until you adjust.</p>
+        <label for="launch_event_description">Include dates or regular events (each dated line must sit inside your 30-day pack window).</label>
+        <textarea id="launch_event_description" name="launch_event_description" data-testid="launch_event_description" placeholder="e.g. Valentine's sale 10–14 Feb (dates inside your next 30-day pack), product launch 20 Feb, weekly tips every Tuesday" rows="4" style="min-height: 96px; resize: vertical;">{{ existing_intake.get('launch_event_description', '') }}</textarea>
         <p id="launch-date-hint" class="field-helper" style="display:none; color:#b45309; font-weight:600;"></p>
       </div>
       <div class="form-section">
