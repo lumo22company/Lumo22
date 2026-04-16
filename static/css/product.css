@@ -1896,6 +1896,15 @@
   margin-top: 0.5rem;
   padding-top: 1rem;
 }
+.account-info-row--delete .account-info-actions {
+  align-items: flex-end;
+}
+.account-info-row--delete .account-delete-form {
+  display: block;
+  margin: 0;
+  width: 100%;
+  text-align: right;
+}
 .account-delete-account-btn {
   appearance: none;
   cursor: pointer;
@@ -3247,15 +3256,17 @@
     box-sizing: border-box;
   }
   .account-page-wrap .account-info-row--delete .account-info-actions {
-    align-items: flex-start;
+    align-items: flex-end;
   }
-  .account-page-wrap .account-info-row--delete .account-info-actions form {
-    align-self: flex-start;
-    width: auto;
+  .account-page-wrap .account-info-row--delete .account-delete-form {
+    width: 100%;
+    text-align: right;
   }
   .account-page-wrap .account-info-row--delete .account-info-actions button {
     width: auto;
+    max-width: 100%;
     display: inline-block;
+    text-align: center;
   }
   .account-page-wrap .account-history-item {
     padding: 1rem;
