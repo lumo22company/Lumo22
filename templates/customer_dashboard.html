@@ -150,7 +150,11 @@
           <div class="account-info-row account-info-row--delete">
             <div>
               <span class="account-info-label">Delete Account</span>
-              <div class="account-info-value">Permanently delete your account and associated data. This cannot be undone. Deleting your account does not cancel your subscription.</div>
+              <div class="account-info-value account-info-value--delete-desc">
+                Permanently delete your account and associated data.<br />
+                This cannot be undone.<br />
+                Deleting your account does not cancel your subscription.
+              </div>
             </div>
             <div class="account-info-actions">
               <form id="account-delete-form" action="/api/auth/delete-account" method="POST" class="account-delete-form">
