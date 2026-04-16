@@ -10,6 +10,7 @@ from services.caption_generator import (
     _stories_month_future_framing_error,
 )
 from services.caption_pdf import pack_month_range_label
+from api.captions_routes import _pdf_pack_attachment_filename
 
 
 def _long_two_sentences():
@@ -287,6 +288,14 @@ def test_pack_month_range_label_single_month():
 
 def test_pack_month_range_label_spans_year():
     assert pack_month_range_label("2026-12-28") == "28 Dec 2026 – 26 Jan 2027"
+
+
+def test_pdf_pack_attachment_filename():
+    fn = _pdf_pack_attachment_filename("CAPTIONS", "Riverside Events Co.", "2026-04-16")
+    assert fn.startswith("CAPTIONS-Riverside_Events_Co-")
+    assert fn.endswith(".pdf")
+    assert "Apr" in fn and "May" in fn
+    assert _pdf_pack_attachment_filename("STORIES", "", "2026-03-01").startswith("STORIES-Client-")
 
 
 def test_month_alignment_rejects_april_wrap_on_may_day():

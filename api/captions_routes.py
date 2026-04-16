@@ -237,6 +237,30 @@ def _filename_safe(s: str, max_len: int = 50) -> str:
     return result if result else ""
 
 
+def _pdf_pack_attachment_filename(prefix: str, business_raw: str, pack_anchor_iso: str) -> str:
+    """
+    Email / download basename: CAPTIONS-{Business}-{pack_date_range}.pdf or STORIES-...
+    pack_anchor_iso: YYYY-MM-DD (Day 1) — human range via pack_month_range_label (matches PDF banner).
+    """
+    from services.caption_pdf import pack_month_range_label
+
+    biz = _filename_safe((business_raw or "").strip(), max_len=70)
+    if not biz:
+        biz = "Client"
+    ps = (pack_anchor_iso or "").strip()[:10]
+    date_part = ""
+    if ps:
+        rng = pack_month_range_label(ps)
+        if rng:
+            date_part = _filename_safe(rng.replace("–", "-").replace("—", "-"), max_len=60)
+    if not date_part:
+        date_part = ps if len(ps) == 10 else "pack"
+    pfx = (prefix or "CAPTIONS").strip().upper()
+    if pfx not in ("CAPTIONS", "STORIES"):
+        pfx = "CAPTIONS"
+    return f"{pfx}-{biz}-{date_part}.pdf"
+
+
 # Amounts in smallest unit (pence/cents) for add-ons when using price_data (USD/EUR). GBP add-ons use existing Price IDs.
 _CURRENCY_ADDON_AMOUNTS = {
     "gbp": {"extra_oneoff": 2900, "extra_sub": 1900, "stories_oneoff": 2900, "stories_sub": 1700},
@@ -1747,7 +1771,7 @@ def _run_generation_and_deliver(
         logo_path = get_logo_path()
         try:
             pdf_bytes = build_caption_pdf(captions_md, logo_path=logo_path, pack_start_date=pack_start_date)
-            filename = "30_Days_Captions.pdf"
+            filename = _pdf_pack_attachment_filename("CAPTIONS", (intake.get("business_name") or "").strip(), pack_start_date)
             mime_type = "application/pdf"
             file_content_bytes = pdf_bytes
             file_content = None
@@ -1764,7 +1788,7 @@ def _run_generation_and_deliver(
             )
             if stories_pdf:
                 extra_attachments.append({
-                    "filename": "30_Days_Story_Ideas.pdf",
+                    "filename": _pdf_pack_attachment_filename("STORIES", (intake.get("business_name") or "").strip(), pack_start_date),
                     "content": stories_pdf,
                     "mime_type": "application/pdf",
                 })
@@ -2688,8 +2712,7 @@ def captions_download():
     if not date_str:
         date_str = (order.get("created_at") or "")[:10] if order.get("created_at") else datetime.utcnow().strftime("%Y-%m-%d")
     intake = order.get("intake") or {}
-    business_name = _filename_safe((intake.get("business_name") or "").strip())
-    name_label = business_name if business_name else "Pack"
+    biz_raw = (intake.get("business_name") or "").strip()
 
     if download_type == "stories":
         if not payload.get("include_stories"):
@@ -2716,7 +2739,7 @@ def captions_download():
                 return jsonify({"error": "Could not build Stories PDF: {}".format(str(e))}), 500
         if not pdf_bytes:
             return jsonify({"error": "Stories PDF not available for this pack"}), 404
-        filename = f"{name_label}_Stories_{date_str}.pdf"
+        filename = _pdf_pack_attachment_filename("STORIES", biz_raw, date_str)
         disp = "inline" if inline else "attachment"
         return Response(
             pdf_bytes,
@@ -2745,7 +2768,7 @@ def captions_download():
             )
         except Exception as e:
             return jsonify({"error": "Could not build PDF: {}".format(str(e))}), 500
-    filename = f"{name_label}_Captions_{date_str}.pdf"
+    filename = _pdf_pack_attachment_filename("CAPTIONS", biz_raw, date_str)
     disp = "inline" if inline else "attachment"
     return Response(
         pdf_bytes,
@@ -2788,16 +2811,19 @@ def captions_download_public():
     if not captions_md:
         return jsonify({"error": "Captions file not found"}), 404
     from datetime import datetime
-    date_str = (order.get("created_at") or "")[:10] if order.get("created_at") else datetime.utcnow().strftime("%Y-%m-%d")
+
+    date_str = (order.get("delivered_at") or order.get("created_at") or "")[:10]
+    if not date_str:
+        date_str = datetime.utcnow().strftime("%Y-%m-%d")
     intake = order.get("intake") or {}
-    business_name = _filename_safe((intake.get("business_name") or "").strip())
-    name_label = business_name if business_name else "Pack"
+    biz_raw = (intake.get("business_name") or "").strip()
     if download_type == "stories":
         from services.caption_order_service import order_includes_stories_addon
 
         if not order_includes_stories_addon(order):
             return jsonify({"error": "This order did not include the Stories add-on"}), 400
         import base64
+
         stored_b64 = (order.get("stories_pdf_base64") or "").strip()
         if stored_b64:
             try:
@@ -2809,19 +2835,21 @@ def captions_download_public():
         if not pdf_bytes:
             try:
                 from services.caption_pdf import build_stories_pdf, get_logo_path
+
                 logo_path = get_logo_path()
                 pdf_bytes = build_stories_pdf(captions_md, logo_path=logo_path, pack_start_date=date_str)
             except Exception as e:
                 return jsonify({"error": "Could not build Stories PDF: {}".format(str(e))}), 500
         if not pdf_bytes:
             return jsonify({"error": "Stories PDF not available for this pack"}), 404
-        filename = f"{name_label}_Stories_{date_str}.pdf"
-    return Response(
+        filename = _pdf_pack_attachment_filename("STORIES", biz_raw, date_str)
+        return Response(
             pdf_bytes,
             mimetype="application/pdf",
             headers={"Content-Disposition": "attachment; filename={}".format(filename)},
         )
     import base64
+
     stored_captions_b64 = (order.get("captions_pdf_base64") or "").strip()
     if stored_captions_b64:
         try:
@@ -2833,11 +2861,12 @@ def captions_download_public():
     if not pdf_bytes:
         try:
             from services.caption_pdf import build_caption_pdf, get_logo_path
+
             logo_path = get_logo_path()
             pdf_bytes = build_caption_pdf(captions_md, logo_path=logo_path, pack_start_date=date_str)
         except Exception as e:
             return jsonify({"error": "Could not build PDF: {}".format(str(e))}), 500
-    filename = f"{name_label}_Captions_{date_str}.pdf"
+    filename = _pdf_pack_attachment_filename("CAPTIONS", biz_raw, date_str)
     return Response(
         pdf_bytes,
         mimetype="application/pdf",
@@ -2890,6 +2919,8 @@ def captions_resend_delivery():
         if not captions_md:
             return jsonify({"ok": False, "error": "No captions content saved for this pack"}), 404
 
+        intake = order.get("intake") if isinstance(order.get("intake"), dict) else {}
+
         # Primary artifact: saved captions PDF; fallback to regenerate.
         captions_pdf = None
         stored_captions_b64 = (order.get("captions_pdf_base64") or "").strip()
@@ -2898,10 +2929,15 @@ def captions_resend_delivery():
                 captions_pdf = base64.b64decode(stored_captions_b64)
             except Exception:
                 captions_pdf = None
+        anchor_iso = (
+            (order.get("pack_start_date") or order.get("delivered_at") or order.get("created_at") or "")[:10]
+        )
+        if not anchor_iso:
+            anchor_iso = time.strftime("%Y-%m-%d")
         if not captions_pdf:
             from services.caption_pdf import build_caption_pdf, get_logo_path
-            date_str = (order.get("created_at") or "")[:10] or time.strftime("%Y-%m-%d")
-            captions_pdf = build_caption_pdf(captions_md, logo_path=get_logo_path(), pack_start_date=date_str)
+
+            captions_pdf = build_caption_pdf(captions_md, logo_path=get_logo_path(), pack_start_date=anchor_iso)
 
         include_stories = order_includes_stories_addon(order)
         extra_attachments = []
@@ -2916,18 +2952,22 @@ def captions_resend_delivery():
             if not stories_pdf:
                 try:
                     from services.caption_pdf import build_stories_pdf, get_logo_path
-                    date_str = (order.get("created_at") or "")[:10] or time.strftime("%Y-%m-%d")
+
                     stories_pdf = build_stories_pdf(
-                        captions_md, logo_path=get_logo_path(), pack_start_date=date_str
+                        captions_md, logo_path=get_logo_path(), pack_start_date=anchor_iso
                     )
                 except Exception:
                     stories_pdf = None
             if stories_pdf:
-                extra_attachments.append({
-                    "filename": "30_Days_Story_Ideas.pdf",
-                    "content": stories_pdf,
-                    "mime_type": "application/pdf",
-                })
+                extra_attachments.append(
+                    {
+                        "filename": _pdf_pack_attachment_filename(
+                            "STORIES", (intake.get("business_name") or "").strip(), anchor_iso
+                        ),
+                        "content": stories_pdf,
+                        "mime_type": "application/pdf",
+                    }
+                )
 
         safe_token = (order.get("token") or "").strip()
         base = (Config.BASE_URL or "").strip().rstrip("/")
@@ -2957,7 +2997,6 @@ def captions_resend_delivery():
             body += "Deleting this email or the PDF does not cancel your subscription. To cancel, go to your account -> Manage subscription.\n\n"
         body += "Lumo 22\n"
 
-        intake = order.get("intake") if isinstance(order.get("intake"), dict) else {}
         business_name = (intake.get("business_name") or "").strip() if intake else ""
         html_body = _captions_delivery_email_html(
             bool(extra_attachments),
@@ -2975,7 +3014,7 @@ def captions_resend_delivery():
             email,
             subject,
             body,
-            filename="30_Days_Captions.pdf",
+            filename=_pdf_pack_attachment_filename("CAPTIONS", business_name, anchor_iso),
             file_content_bytes=captions_pdf,
             mime_type="application/pdf",
             extra_attachments=extra_attachments if extra_attachments else None,
