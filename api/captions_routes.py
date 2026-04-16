@@ -5,6 +5,7 @@ Subscription (£79/mo) vs one-off (£97): same intake form and delivery flow; su
 mode=subscription and is detected in webhook so we create order and send intake email on first payment.
 """
 import os
+import re
 import time
 import threading
 import hmac
@@ -237,6 +238,17 @@ def _filename_safe(s: str, max_len: int = 50) -> str:
     return result if result else ""
 
 
+def _pack_range_slug_for_filename(rng: str) -> str:
+    """Turn '16 Apr – 15 May 2026' into 16_Apr-15_May_2026 (no _-_ around the dash)."""
+    s = (rng or "").strip()
+    if not s:
+        return ""
+    s = s.replace("–", "-").replace("—", "-")
+    s = re.sub(r"\s*-\s*", "-", s)
+    s = s.replace(" ", "_")
+    return _filename_safe(s, max_len=60)
+
+
 def _pdf_pack_attachment_filename(prefix: str, business_raw: str, pack_anchor_iso: str) -> str:
     """
     Email / download basename: CAPTIONS-{Business}-{pack_date_range}.pdf or STORIES-...
@@ -252,7 +264,7 @@ def _pdf_pack_attachment_filename(prefix: str, business_raw: str, pack_anchor_is
     if ps:
         rng = pack_month_range_label(ps)
         if rng:
-            date_part = _filename_safe(rng.replace("–", "-").replace("—", "-"), max_len=60)
+            date_part = _pack_range_slug_for_filename(rng)
     if not date_part:
         date_part = ps if len(ps) == 10 else "pack"
     pfx = (prefix or "CAPTIONS").strip().upper()
