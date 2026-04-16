@@ -278,11 +278,15 @@ def test_calendar_allows_this_friday_from_thursday_post():
 
 
 def test_pack_month_range_label_spans_two_months():
-    assert pack_month_range_label("2026-04-09") == "April – May 2026"
+    assert pack_month_range_label("2026-04-09") == "9 Apr – 8 May 2026"
 
 
 def test_pack_month_range_label_single_month():
-    assert pack_month_range_label("2026-03-01") == "March 2026"
+    assert pack_month_range_label("2026-03-01") == "1 Mar – 30 Mar 2026"
+
+
+def test_pack_month_range_label_spans_year():
+    assert pack_month_range_label("2026-12-28") == "28 Dec 2026 – 26 Jan 2027"
 
 
 def test_month_alignment_rejects_april_wrap_on_may_day():

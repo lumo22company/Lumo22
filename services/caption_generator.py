@@ -634,7 +634,7 @@ def _build_month_narrative_alignment_block(*, for_stories: bool = False) -> str:
     """
     if for_stories:
         return (
-            "MONTH_NARRATIVE_ALIGNMENT (CRITICAL): The story title may show **two months** (e.g. April – May 2026) when "
+            "MONTH_NARRATIVE_ALIGNMENT (CRITICAL): The story title may show a **dated range** (e.g. 9 Apr – 8 May 2026) when "
             "the 30-day window crosses a calendar month. **Ignore** treating the whole pack as a single month: for **each Day N**, "
             "**Idea** and **Suggested wording** must match the **calendar month** on that day's **DATE_CONTEXT** line — "
             "not only the first month in the title. "
@@ -649,7 +649,7 @@ def _build_month_narrative_alignment_block(*, for_stories: bool = False) -> str:
             "If **Day N** is still in April per DATE_CONTEXT, April-themed framing for that day is fine."
         )
     return (
-        "MONTH_NARRATIVE_ALIGNMENT (CRITICAL): The document subtitle may show **two months** (e.g. April – May 2026) when "
+        "MONTH_NARRATIVE_ALIGNMENT (CRITICAL): The document subtitle may show a **dated range** (e.g. 9 Apr – 8 May 2026) when "
         "the 30-day window crosses a calendar month. **Ignore** any single-month habit: every **Caption:** for **Day N** "
         "must match the **calendar month (and date)** on that day's **DATE_CONTEXT** line — not the first month of the subtitle alone. "
         "If **Day 30 = Fri 08 May 2026**, do **not** write “as we close out April”, “April draws to a close”, or “throughout April we…” — "

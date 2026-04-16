@@ -14,9 +14,9 @@ LUMO_GOLD = "#fff200"  # Accent yellow from brand (landing.css, BRAND_STYLE_GUID
 
 def pack_month_range_label(pack_start_date: Optional[str]) -> str:
     """
-    Cover / markdown subtitle month line for a 30-day pack.
-    Single calendar month → 'March 2026'. Spans two months → 'April – May 2026'
-    so copy does not treat the whole pack as the start month only.
+    Cover / markdown subtitle line for a 30-day pack (days 1–30 = start through start + 29 days).
+    Always includes calendar day numbers so the PDF banner matches the billed window, e.g.
+    '16 Apr – 14 Jun 2026', or '28 Dec 2026 – 26 Jan 2027' when the span crosses a year boundary.
     """
     s = (pack_start_date or "").strip()
     if not s:
@@ -28,12 +28,13 @@ def pack_month_range_label(pack_start_date: Optional[str]) -> str:
         end = start + timedelta(days=29)
     except ValueError:
         return ""
-    if start.month == end.month and start.year == end.year:
-        return start.strftime("%B %Y")
-    sm, em = start.strftime("%B"), end.strftime("%B")
+
+    def _short(d):
+        return f"{d.day} {d.strftime('%b')}"
+
     if start.year == end.year:
-        return f"{sm} – {em} {start.year}"
-    return f"{sm} {start.year} – {em} {end.year}"
+        return f"{_short(start)} – {_short(end)} {start.year}"
+    return f"{_short(start)} {start.year} – {_short(end)} {end.year}"
 
 
 def _parse_markdown_to_structure(md: str) -> Tuple[Dict[str, str], List[Tuple[str, List[Dict[str, str]]]]]:
@@ -634,13 +635,11 @@ def build_stories_pdf(
         return None
     cover, _ = _parse_markdown_to_structure(captions_md)
     cover = _parse_stories_cover_from_md(captions_md, cover)
-    # Keep month label aligned to the billed pack date (same rule as captions PDF).
+    # Keep date line aligned to the billed pack date (same rule as captions PDF).
     if pack_start_date:
-        try:
-            from datetime import datetime
-            cover["month_year"] = datetime.strptime(pack_start_date.strip()[:10], "%Y-%m-%d").strftime("%B %Y")
-        except Exception:
-            pass
+        my = pack_month_range_label(pack_start_date)
+        if my:
+            cover["month_year"] = my
 
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4
