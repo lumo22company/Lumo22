@@ -158,8 +158,8 @@
             <div class="account-info-actions">
               <form id="account-delete-form" action="/api/auth/delete-account" method="POST" class="account-delete-form">
                 <button type="button" class="account-delete-account-btn" id="account-delete-trigger">Delete Account</button>
-              </form>
-            </div>
+      </form>
+    </div>
           </div>
         </div>
       </section>
@@ -999,7 +999,7 @@
         {% endif %}
         {% if pack_sooner_checkout_done %}
         <div class="account-info-panel pack-sooner-paid-banner" role="status" aria-live="polite" style="margin-bottom: 1.25rem; background: rgba(76, 175, 80, 0.18); border: 1px solid rgba(120, 200, 130, 0.45); border-radius: 8px; padding: 1rem 1.1rem;">
-          <p style="margin: 0; color: #ffffff; line-height: 1.55;"><strong>Payment received.</strong> We are processing your pack sooner request — you will get an email when your captions and stories are ready (usually within a few minutes). Check spam or promotions if nothing arrives. When the pack is ready, it also appears under <strong>History</strong> in your account with download links. Your next billing date is now 30 days from this payment. If you were charged but still don’t see a new pack after about 30 minutes, email <a href="mailto:hello@lumo22.com" style="color: var(--lum-gold, #c9a227); font-weight: 600;">hello@lumo22.com</a> — we’ll verify your payment and help.</p>
+          <p style="margin: 0; color: #ffffff; line-height: 1.55;"><strong>Payment received.</strong> We are processing your pack sooner request. We email your captions and stories as <strong>PDFs</strong> to <strong>{% if customer and customer.email %}{{ customer.email }}{% else %}the email on this account{% endif %}</strong> when they’re ready (usually within a few minutes). Check spam or promotions if nothing arrives. When the pack is ready, it also appears under <strong>History</strong> in your account with download links. Your next billing date is now 30 days from this payment. If automatic delivery fails after retries, this page shows an alert under <strong>Manage subscription</strong> with an <strong>Email Lumo 22</strong> link.</p>
         </div>
         <script>
         (function() {
