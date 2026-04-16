@@ -76,3 +76,38 @@ def test_resolve_generation_empty_row_is_today():
     today = datetime.utcnow().date().strftime("%Y-%m-%d")
     assert resolve_pack_start_date_for_generation(None) == today
     assert resolve_pack_start_date_for_generation({}) == today
+
+
+def test_format_intake_pack_window_range_same_month():
+    from datetime import date
+
+    from api.captions_routes import format_intake_pack_window_range_for_display
+
+    s = format_intake_pack_window_range_for_display(date(2026, 5, 1))
+    assert s == "1–30 May 2026"
+
+
+def test_format_intake_pack_window_range_cross_month():
+    from datetime import date
+
+    from api.captions_routes import format_intake_pack_window_range_for_display
+
+    s = format_intake_pack_window_range_for_display(date(2026, 5, 16))
+    assert s == "16 May–14 June 2026"
+
+
+def test_format_intake_pack_window_range_cross_year():
+    from datetime import date
+
+    from api.captions_routes import format_intake_pack_window_range_for_display
+
+    s = format_intake_pack_window_range_for_display(date(2026, 12, 10))
+    assert "December 2026" in s
+    assert "January 2027" in s
+
+
+def test_format_intake_pack_window_range_invalid_returns_empty():
+    from api.captions_routes import format_intake_pack_window_range_for_display
+
+    assert format_intake_pack_window_range_for_display(None) == ""
+    assert format_intake_pack_window_range_for_display("x") == ""

@@ -593,6 +593,23 @@ def intake_pack_day1_explainer_for_source(source: str) -> str:
     return "We use this as Day 1 for the 30-day window when checking the dates you list below."
 
 
+def format_intake_pack_window_range_for_display(anchor) -> str:
+    """
+    Short inclusive calendar range for the 30-day captions window (Day 1 through Day 1 + 29).
+    Matches validation; dates are UTC calendar days. Examples: 16–25 May 2026; 16 May–14 June 2026.
+    """
+    from datetime import date, timedelta
+
+    if anchor is None or not isinstance(anchor, date):
+        return ""
+    end = anchor + timedelta(days=29)
+    if anchor.year == end.year and anchor.month == end.month:
+        return f"{anchor.day}–{end.day} {anchor.strftime('%B %Y')}"
+    if anchor.year == end.year:
+        return f"{anchor.day} {anchor.strftime('%B')}–{end.day} {end.strftime('%B %Y')}"
+    return f"{anchor.day} {anchor.strftime('%B %Y')}–{end.day} {end.strftime('%B %Y')}"
+
+
 def resolve_pack_start_date_for_generation(order_row: Optional[Dict[str, Any]]) -> str:
     """
     Calendar Day 1 for caption generation and PDFs. Uses pack_start_date saved with the last intake
@@ -613,7 +630,7 @@ def _validate_launch_event_window(launch_desc: str, pack_start_date: str) -> Opt
     """
     Validate that every parseable calendar date in launch text falls within the 30-day pack window.
     pack_start_date is the inclusive first day of that window (use compute_intake_pack_day1_anchor on save).
-    Returns one error message when any parseable dates fall outside the window (lists all misaligned dates); else None.
+    Returns one error message when any parseable dates fall outside the window; else None.
     """
     text = (launch_desc or "").strip()
     if not text:

@@ -687,8 +687,13 @@ def captions_intake_page():
     intake_pack_day1_display = None
     intake_pack_day1_explainer = None
     intake_pack_day1_source = None
+    intake_pack_window_range_display = None
     if order:
-        from api.captions_routes import compute_intake_pack_day1_anchor, intake_pack_day1_explainer_for_source
+        from api.captions_routes import (
+            compute_intake_pack_day1_anchor,
+            format_intake_pack_window_range_for_display,
+            intake_pack_day1_explainer_for_source,
+        )
 
         _d1, _d1_src, _d1_disp = compute_intake_pack_day1_anchor(
             order,
@@ -697,6 +702,7 @@ def captions_intake_page():
         intake_pack_day1_display = _d1_disp
         intake_pack_day1_source = _d1_src
         intake_pack_day1_explainer = intake_pack_day1_explainer_for_source(_d1_src)
+        intake_pack_window_range_display = format_intake_pack_window_range_for_display(_d1) or None
     r = make_response(
         render_template(
             "captions_intake.html",
@@ -726,6 +732,7 @@ def captions_intake_page():
             intake_pack_day1_display=intake_pack_day1_display,
             intake_pack_day1_explainer=intake_pack_day1_explainer,
             intake_pack_day1_source=intake_pack_day1_source,
+            intake_pack_window_range_display=intake_pack_window_range_display,
         )
     )
     r.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'

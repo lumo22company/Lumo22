@@ -507,6 +507,9 @@
         <h2>What's happening this month? <span class="intake-h2-meta">(optional)</span></h2>
         {% if intake_pack_day1_display %}
         <p class="field-helper intake-pack-day1-anchor" style="margin-bottom: 0.65rem; padding: 0.6rem 0.75rem; background: rgba(201,162,39,0.08); border: 1px solid rgba(201,162,39,0.28); border-radius: 8px; color: #1a1a1a;"><strong>Day 1 for your next pack:</strong> {{ intake_pack_day1_display }}. {% if intake_pack_day1_explainer %}{{ intake_pack_day1_explainer }}{% endif %}</p>
+        {% if intake_pack_window_range_display %}
+        <p class="field-helper intake-pack-window-range" style="margin-bottom: 0.65rem; padding: 0.55rem 0.75rem; background: rgba(0,0,0,0.04); border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; color: #1a1a1a; font-size: 0.9rem;"><strong>Calendar window for dated milestones:</strong> {{ intake_pack_window_range_display }} (UTC, inclusive). List key dates that fall within these days.</p>
+        {% endif %}
         {% endif %}
         <p class="field-helper">If you have a product launch, event, sale, or regular recurring event, we'll tailor captions: before the date we build anticipation; on the day we announce; during we promote; after we shift to thank-you. {% if intake_pack_day1_display %}Every calendar date you list should fall within <strong>30 days starting that Day 1</strong> (PDF day headings use the same start).{% else %}Every calendar date you list should fall within <strong>30 days from Day 1</strong> when your pack is generated (when you save here, use <strong>today</strong> or later as the start of that window).{% endif %} Events before that window: <strong>past tense</strong> or omit the date, or the form may not save.</p>
         <label for="launch_event_description">Include dates or regular events (each dated line must sit inside your 30-day pack window).</label>
