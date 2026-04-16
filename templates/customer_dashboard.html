@@ -193,8 +193,10 @@
           {% for item in delivered_entries %}
           {% set o = item.order %}
           {% set biz = (item.business_name or (o.get('intake') or {}).get('business_name', ''))|trim %}
-          {% set is_sub = (o.get('stripe_subscription_id') or '')|trim %}
-          {% set label = (biz|title) if biz else ('Subscription' if is_sub else 'One-off') %}
+          {# Match Edit form: active sub vs former sub (cancelled / id cleared) vs true one-off #}
+          {% set is_sub_row = (o.get('stripe_subscription_id') or '')|trim %}
+          {% set is_former_sub = o.get('subscription_cancelled_at') or (o.get('subscription_pause') or {}).get('cancelled_now') or (not is_sub_row and ((o.get('upgraded_from_token') or '')|trim)) %}
+          {% set label = (biz|title) if biz else ('Subscription' if is_sub_row else ('Former subscription' if is_former_sub else 'One-off')) %}
           {% set pack_date_src = item.delivered_at %}
           {% if item.archive_index is not none %}
             {% set archive_q = '&archive=' ~ item.archive_index %}
@@ -204,12 +206,12 @@
           <div class="account-history-item" data-history-token="{{ o.token }}" data-business="{{ biz }}">
             <div class="account-history-item-cols">
               <label class="account-history-check-label">
-                <input type="checkbox" class="account-history-select" data-token="{{ o.token }}" data-is-subscription="{{ '1' if is_sub else '0' }}" data-archive-index="{% if item.archive_index is not none %}{{ item.archive_index }}{% endif %}" aria-label="Select {{ label }} pack {{ pack_date_src[:10] if pack_date_src else '' }}" />
+                <input type="checkbox" class="account-history-select" data-token="{{ o.token }}" data-is-subscription="{{ '1' if is_sub_row else '0' }}" data-archive-index="{% if item.archive_index is not none %}{{ item.archive_index }}{% endif %}" aria-label="Select {{ label }} pack {{ pack_date_src[:10] if pack_date_src else '' }}" />
               </label>
               <div class="account-history-item-body">
             <div class="account-history-item-title-row">
               <span>{{ label }} — Pack {{ pack_date_src[:10] if pack_date_src else '—' }}</span>
-              <span class="account-history-type account-history-type--{{ 'subscription' if is_sub else 'oneoff' }}">{{ 'Subscription' if is_sub else 'One-off' }}</span>
+              <span class="account-history-type account-history-type--{{ 'subscription' if is_sub_row else ('former-sub' if is_former_sub else 'oneoff') }}">{{ 'Subscription' if is_sub_row else ('Former subscription' if is_former_sub else 'One-off') }}</span>
             </div>
             <div class="account-history-actions">
               <span class="account-history-actions-row account-history-actions-captions">
@@ -222,7 +224,7 @@
                 <a href="/api/captions-download?t={{ o.token }}{{ archive_q }}&type=stories" class="account-btn-link account-btn-link--secondary">Download stories</a>
               </span>
             {% endif %}
-              <button type="button" class="account-btn-link account-history-delete" data-token="{{ o.token }}" data-is-subscription="{{ '1' if is_sub else '0' }}" data-archive-index="{% if item.archive_index is not none %}{{ item.archive_index }}{% endif %}" onclick="showDeletePackModal(this)" aria-label="Delete pack from history">Delete</button>
+              <button type="button" class="account-btn-link account-history-delete" data-token="{{ o.token }}" data-is-subscription="{{ '1' if is_sub_row else '0' }}" data-archive-index="{% if item.archive_index is not none %}{{ item.archive_index }}{% endif %}" onclick="showDeletePackModal(this)" aria-label="Delete pack from history">Delete</button>
             </div>
               </div>
             </div>

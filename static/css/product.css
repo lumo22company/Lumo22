@@ -2587,6 +2587,11 @@
   color: #666;
   border: 1px solid rgba(0,0,0,0.12);
 }
+.account-history-item .account-history-type--former-sub {
+  background: rgba(232, 196, 96, 0.22);
+  color: #4a3d12;
+  border: 1px solid rgba(180, 150, 60, 0.42);
+}
 .account-history-item .account-btn-link {
   flex-shrink: 0;
   padding: 0.4rem 0.75rem;
