@@ -122,7 +122,8 @@ def test_format_pack_cover_line_ordinal_utc_cross_month():
     assert s.startswith("Your next pack covers ")
     assert "16th May 2026" in s
     assert "June 2026" in s
-    assert s.endswith("(UTC).")
+    assert s.endswith(".")
+    assert "UTC" not in s
 
 
 def test_format_pack_cover_line_ordinal_utc_same_month():

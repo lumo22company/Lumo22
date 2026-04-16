@@ -628,7 +628,7 @@ def _format_weekday_ordinal_month_year(d) -> str:
 def format_pack_cover_line_ordinal_utc(anchor) -> str:
     """
     One sentence for intake + reminder emails: inclusive 30-day captions window (Day 1 … Day 30).
-    Example: Your next pack covers Saturday 16th May 2026 – Monday 15th June 2026 (UTC).
+    Example: Your next pack covers Saturday 16th May 2026 – Sunday 14th June 2026.
     """
     from datetime import date, timedelta
 
@@ -639,7 +639,7 @@ def format_pack_cover_line_ordinal_utc(anchor) -> str:
     end_s = _format_weekday_ordinal_month_year(end)
     if not start_s or not end_s:
         return ""
-    return f"Your next pack covers {start_s} – {end_s} (UTC)."
+    return f"Your next pack covers {start_s} – {end_s}."
 
 
 def resolve_pack_start_date_for_generation(order_row: Optional[Dict[str, Any]]) -> str:
@@ -691,7 +691,7 @@ def _validate_launch_event_window(launch_desc: str, pack_start_date: str) -> Opt
         return None
     window_disp = format_intake_pack_window_range_for_display(start) or start.strftime("%d %B %Y")
     return (
-        f"You have specified dates outside your next 30-day captions window ({window_disp}, UTC, inclusive). "
+        f"You have specified dates outside your next 30-day captions window ({window_disp}, inclusive). "
         "Remove or rephrase dates that fall outside of that window, so every dated item falls inside it—we can "
         "then tailor your captions more accurately."
     )

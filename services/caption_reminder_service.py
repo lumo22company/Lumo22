@@ -25,7 +25,7 @@ INTAKE_BASE = "https://lumo-22-production.up.railway.app"
 
 
 def _pack_cover_line_from_period_end_utc(period_end_ts: int) -> str:
-    """Same pack-window sentence as captions intake (ordinal weekdays, UTC). Anchor = period end date, floored to today."""
+    """Same pack-window sentence as captions intake (ordinal weekdays). Anchor = period end date, floored to today."""
     from api.captions_routes import format_pack_cover_line_ordinal_utc
 
     anchor = datetime.fromtimestamp(int(period_end_ts), tz=timezone.utc).date()
