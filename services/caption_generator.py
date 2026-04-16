@@ -2,7 +2,7 @@
 Generate 30 Days of Social Media Captions using AI (OpenAI or Anthropic Claude).
 Uses the product framework: Authority, Educational, Brand Personality, Soft Promotion, Engagement.
 """
-from typing import Dict, Any, Optional, Tuple, List
+from typing import Dict, Any, Optional, Tuple, List, Set
 from config import Config
 from services.ai_provider import chat_completion
 from datetime import datetime, timedelta, date
@@ -135,6 +135,103 @@ def _parse_event_range_dates(text: str, pack_start_date: str) -> Optional[Tuple[
             except ValueError:
                 pass
     return None
+
+
+def collect_launch_calendar_dates(text: str, pack_start_date: str) -> List[date]:
+    """
+    Collect calendar dates mentioned in launch / 'what's happening' text: range endpoints
+    (e.g. 18–19 April) plus all day+month / month+day literals. Used for intake validation and
+    OUT_OF_PACK_CALENDAR prompt rules.
+    """
+    if not text or not pack_start_date:
+        return []
+    try:
+        start = datetime.strptime(pack_start_date.strip()[:10], "%Y-%m-%d")
+        default_year = start.year
+    except ValueError:
+        return []
+    text_lower = text.strip().lower()
+    found_dates: Set[date] = set()
+
+    range_t = _parse_event_range_dates(text, pack_start_date)
+    if range_t:
+        found_dates.add(range_t[0])
+        found_dates.add(range_t[1])
+
+    def _add(y: int, month_num: int, day_num: int) -> None:
+        try:
+            found_dates.add(datetime(y, month_num, day_num).date())
+        except ValueError:
+            pass
+
+    for m in re.finditer(
+        r"(\d{1,2})(?:st|nd|rd|th)?\s*(" + _MONTH_NAMES + r")(?:\s+(\d{4}))?",
+        text_lower,
+    ):
+        day_num = int(m.group(1))
+        month_num = _MONTH_NUM.get(m.group(2))
+        if not month_num:
+            continue
+        year = int(m.group(3)) if m.group(3) else default_year
+        _add(year, month_num, day_num)
+
+    for m in re.finditer(
+        r"(" + _MONTH_NAMES + r")\s*(\d{1,2})(?:st|nd|rd|th)?(?:\s+(\d{4}))?",
+        text_lower,
+    ):
+        month_num = _MONTH_NUM.get(m.group(1))
+        day_num = int(m.group(2))
+        if not month_num:
+            continue
+        year = int(m.group(3)) if m.group(3) else default_year
+        _add(year, month_num, day_num)
+
+    return sorted(found_dates)
+
+
+def _build_off_pack_window_dates_block(pack_start_date: str, launch_desc_raw: str) -> str:
+    """
+    When KEY_DATE_EVENTS lists dates outside Day 1–30, tell the model not to run false
+    countdowns (e.g. early-bird already passed before pack start).
+    """
+    raw = (launch_desc_raw or "").strip()
+    if not raw or not pack_start_date:
+        return ""
+    try:
+        start = datetime.strptime(pack_start_date.strip()[:10], "%Y-%m-%d").date()
+    except ValueError:
+        return ""
+    end = start + timedelta(days=29)
+    dates = collect_launch_calendar_dates(raw, pack_start_date)
+    if not dates:
+        return ""
+    before = sorted({d for d in dates if d < start})
+    after = sorted({d for d in dates if d > end})
+    if not before and not after:
+        return ""
+    lines: List[str] = [
+        "",
+        "OUT_OF_PACK_CALENDAR (the client also mentioned dates **outside** this pack’s Day 1–30 window in DATE_CONTEXT — real context, but **not** days you are writing feed copy for):",
+    ]
+    if before:
+        lines.append(
+            "- **Before Day 1:** "
+            + ", ".join(d.strftime("%a %d %b %Y") for d in before)
+            + ". These are **already past** relative to Day 1. Do **not** use them for upcoming urgency "
+            '(no “closes tomorrow”, “early bird ends tonight”, “last chance before [that date]”) unless you clearly frame them in the **past** '
+            '(e.g. “early bird closed on …”) or as brief background only.'
+        )
+    if after:
+        lines.append(
+            "- **After Day 30:** "
+            + ", ".join(d.strftime("%a %d %b %Y") for d in after)
+            + ". Do not imply this pack’s daily captions are building toward that date as an imminent deadline inside this 30-day window."
+        )
+    lines.append(
+        "- **Countdowns, “tomorrow”, and teaser deadlines** must follow **EVENT_CALENDAR / COUNTDOWN_RULES** and dates **inside** DATE_CONTEXT only; "
+        "do not invent upcoming deadlines from out-of-window lines in KEY_DATE_EVENTS."
+    )
+    return "\n".join(lines)
 
 
 def _resolve_event_pack_bounds(
@@ -316,6 +413,9 @@ def _build_key_date_events_story_block(
             "",
             f"IMPORTANT — The client's key date above falls on Day {key_date_day}. Write pre-launch/anticipation stories for days 1 to {key_date_day - 1}, launch-day/announcement for Day {key_date_day}, and post-launch/thank-you for days {key_date_day + 1} to 30. Suggested wording must reference the correct dates (e.g. if launch is Day 7 = Fri 27 Mar, do not say \"opens in April\" on Day 7).",
         ])
+    ow = _build_off_pack_window_dates_block(start_str, launch_desc_raw)
+    if ow:
+        parts.append(ow)
     return "\n".join(parts)
 
 
@@ -467,7 +567,9 @@ def _build_explicit_weekday_dom_month_block() -> str:
         "EXPLICIT_WEEKDAY_DATE (CRITICAL — **Caption:**): If you write a **weekday name** together with a "
         "**day-of-month** and **month** (e.g. “Saturday 11 April”, “Sun 12 Apr”), that combination must be a **real** "
         "calendar date: the named weekday must match that exact calendar day (use **DATE_CONTEXT** to verify). "
-        "Do **not** shift the day number by one or pair a weekday with the wrong calendar date. "
+        "Do **not** shift the day number by one or pair a weekday with the wrong calendar date — e.g. never write "
+        "**Friday 11 April** when **11 April** in that year is a **Saturday**; read the **Day N = …** line in **DATE_CONTEXT** "
+        "for that caption and match weekday + day number + month exactly, or drop the explicit triple. "
         "If you are unsure of the exact date, use **DATE_CONTEXT** for Day N or neutral wording (**today**, **tomorrow**, "
         "**opening day**, **this weekend** only when it matches **DATE_CONTEXT**)."
     )
@@ -899,7 +1001,7 @@ def _build_user_prompt(
             "KEY_DATE_EVENTS (user included dates in description):",
             launch_desc,
             "",
-            "Phase content by the dates above: BEFORE = anticipation, teasers; ON/DURING = announce, promote; AFTER = thank-you, feedback. Support multiple events if listed.",
+            "Phase content by the dates above: BEFORE = anticipation, teasers; ON/DURING = announce, promote; AFTER = thank-you, feedback. Support multiple dated items when they fall inside DATE_CONTEXT; if **OUT_OF_PACK_CALENDAR** appears below, follow it for any date before Day 1 or after Day 30.",
         ])
         if event_strict:
             parts.extend(["", event_strict])
@@ -951,6 +1053,9 @@ def _build_user_prompt(
                 "",
                 "KEY_DATE_EVENTS — caption bodies: The client listed dates or events above. Weave those specific events into **Caption:** text across the appropriate days (before / during / after as described). Captions must not ignore these events while stories mention them—keep the same timeline in both.",
             ])
+        ow = _build_off_pack_window_dates_block(start_str, launch_desc_raw)
+        if ow:
+            parts.append(ow)
 
     # Date context: Day 1 = pack_start_date so captions are date-aware and key date aligns
     date_context = _build_date_context(start_str)
@@ -2226,7 +2331,7 @@ class CaptionGenerator:
                 content = chat_completion(
                     system=system,
                     user=user,
-                    temperature=0.6,
+            temperature=0.6,
                     max_tokens=chunk_max_tokens,
                 )
                 if not content:

@@ -515,61 +515,41 @@ def _target_business_key_from_request(copy_from: str, explicit_business_key: str
 
 def _validate_launch_event_window(launch_desc: str, pack_start_date: str) -> Optional[str]:
     """
-    Validate key-date text falls within the upcoming 30-day pack window.
-    Returns an error message when a parseable date is outside the window; else None.
+    Validate that every parseable calendar date in launch text falls within the 30-day pack window.
+    Uses pack_start_date when set; otherwise today UTC (same anchor as generation at delivery time).
+    Returns an error message when any parseable date is outside the window; else None.
     """
     text = (launch_desc or "").strip()
     if not text:
         return None
     try:
-        from datetime import datetime
-        import re
-        from services.caption_generator import _parse_key_date_from_text
+        from datetime import datetime, timedelta
+        from services.caption_generator import collect_launch_calendar_dates
     except Exception:
         return None
+
     start_raw = (pack_start_date or "").strip()
     if not start_raw:
-        return None
+        start_raw = datetime.utcnow().strftime("%Y-%m-%d")
     try:
-        start = datetime.strptime(start_raw[:10], "%Y-%m-%d")
+        start = datetime.strptime(start_raw[:10], "%Y-%m-%d").date()
     except ValueError:
         return None
 
-    month_names = (
-        "january|february|march|april|may|june|july|august|september|october|november|december"
-    )
-    month_num = {m: i for i, m in enumerate(month_names.split("|"), 1)}
-    t = text.lower()
-    m = re.search(r"(\d{1,2})(?:st|nd|rd|th)?\s*(" + month_names + r")(?:\s+(\d{4}))?", t)
-    day_num = None
-    month_idx = None
-    year = start.year
-    if m:
-        day_num = int(m.group(1))
-        month_idx = month_num.get(m.group(2))
-        if m.group(3):
-            year = int(m.group(3))
-    if day_num is None or month_idx is None:
-        m = re.search(r"(" + month_names + r")\s*(\d{1,2})(?:st|nd|rd|th)?(?:\s+(\d{4}))?", t)
-        if m:
-            month_idx = month_num.get(m.group(1))
-            day_num = int(m.group(2))
-            if m.group(3):
-                year = int(m.group(3))
-    if day_num is None or month_idx is None:
+    dates = collect_launch_calendar_dates(text, start_raw)
+    if not dates:
         return None
-    try:
-        event_date = datetime(year, month_idx, day_num)
-    except ValueError:
-        return "The date in 'What's happening this month?' is invalid. Please check it and try again."
 
-    in_window_day = _parse_key_date_from_text(text, start_raw)
-    if in_window_day is not None:
-        return None
-    return (
-        f"The date '{event_date.strftime('%d %B %Y')}' is outside your next 30-day captions window "
-        f"(starting {start.strftime('%d %B %Y')}). Please correct it so we can phase before/on/after content correctly."
-    )
+    end = start + timedelta(days=29)
+    for d in dates:
+        if d < start or d > end:
+            return (
+                f"The date '{d.strftime('%d %B %Y')}' is outside your next 30-day captions window "
+                f"(starting {start.strftime('%d %B %Y')}). "
+                "Remove or rephrase dates that already passed before your pack starts, or move milestones so every "
+                "dated item falls inside that window—we phase countdowns from Day 1 of the delivered pack."
+            )
+    return None
 
 
 def _customer_has_blocking_captions_subscription(email: str, target_business_key: Optional[str] = None) -> bool:
@@ -2679,7 +2659,7 @@ def captions_download_public():
         if not pdf_bytes:
             return jsonify({"error": "Stories PDF not available for this pack"}), 404
         filename = f"{name_label}_Stories_{date_str}.pdf"
-        return Response(
+    return Response(
             pdf_bytes,
             mimetype="application/pdf",
             headers={"Content-Disposition": "attachment; filename={}".format(filename)},
