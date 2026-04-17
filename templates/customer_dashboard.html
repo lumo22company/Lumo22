@@ -1041,6 +1041,7 @@
         {% set dfc = (o.get('delivery_failure_count') or 0)|int %}
         {% set stuck_biz = ((o.get('intake') or {}).get('business_name') or '')|trim %}
         {% set delivery_exhausted = (o.get('status') or '')|lower == 'failed' and dfc >= CAPTIONS_MAX_AUTO_DELIVERY_FAILURES %}
+        {% set generating_stuck = (o.get('status') or '')|lower == 'generating' and caption_order_generating_stuck_visible(o) %}
         {% if delivery_exhausted %}
         <div class="account-info-panel account-stuck-pack-banner" role="alert" style="margin-bottom: 1.25rem; background: rgba(120, 55, 40, 0.35); border: 1px solid rgba(255, 160, 120, 0.4); border-radius: 8px; padding: 1rem 1.1rem;">
           {% if stuck_biz %}
@@ -1050,6 +1051,14 @@
           <p style="margin: 0 0 0.75rem; font-size: 0.9rem; color: rgba(255,255,255,0.9); line-height: 1.5;">We’re working to get your captions to you as soon as we can. Thank you for your patience.</p>
           <p style="margin: 0 0 0.65rem; font-size: 0.88rem; color: rgba(255,255,255,0.78); line-height: 1.45;">Want to add a note? Email us — your order details are included automatically.</p>
           <a href="{{ caption_pack_help_mailto(o, customer.email if customer else '') }}" class="account-btn-swipe-light account-stuck-pack-help-mailto">Email Lumo 22</a>
+        </div>
+        {% elif generating_stuck %}
+        <div class="account-info-panel account-generating-delay-banner" role="status" aria-live="polite" style="margin-bottom: 1.25rem; background: rgba(201, 162, 39, 0.2); border: 1px solid rgba(201, 162, 39, 0.45); border-radius: 8px; padding: 1rem 1.1rem;">
+          {% if stuck_biz %}
+          <p style="margin: 0 0 0.55rem; font-size: 0.92rem; color: #1a1a1a; line-height: 1.35;"><strong>{{ stuck_biz|title }}</strong></p>
+          {% endif %}
+          <p style="margin: 0 0 0.65rem; color: #1a1a1a; line-height: 1.55;"><strong>Your pack is taking longer than usual.</strong> We’re still preparing your captions PDF — this can happen when our systems retry automatically. You don’t need to press anything here; check your email (including spam) shortly.</p>
+          <p style="margin: 0 0 0.65rem; font-size: 0.88rem; color: #333; line-height: 1.45;">If you received an email from us saying we’re on it, we already have your order in recovery. Still nothing after several hours? <a href="{{ caption_pack_help_mailto(o, customer.email if customer else '') }}" style="color: #1a5fb4; font-weight: 600;">Email Lumo 22</a> and we’ll help.</p>
         </div>
         {% endif %}
         {% endfor %}

@@ -22,12 +22,6 @@ from services.caption_order_service import DELIVERY_ARCHIVE_MAX, order_includes_
 _login_tokens = {}  # token -> {"customer_id": str, "email": str, "expires": float}
 _LOGIN_TOKEN_TTL = 120  # seconds
 
-# Customer "retry pack delivery" — per order cooldown to limit duplicate AI runs
-_RETRY_CAPTION_LAST = {}
-_RETRY_CAPTION_LOCK = threading.Lock()
-_RETRY_CAPTION_COOLDOWN_SEC = 600.0
-
-
 def _create_login_token(customer_id: str, email: str) -> str:
     token = secrets.token_urlsafe(32)
     _login_tokens[token] = {
@@ -62,6 +56,7 @@ from services.login_guard import check_locked, record_failure, clear_failures
 from services.caption_delivery_recovery import (
     CAPTIONS_MAX_AUTO_DELIVERY_FAILURES,
     order_generating_attempt_reference,
+    STALE_GENERATING_RETRY_AFTER_MINUTES,
 )
 
 
@@ -96,11 +91,39 @@ def _caption_pack_help_mailto(order: dict, customer_email: str) -> str:
     )
 
 
+def caption_order_generating_stuck_visible(order: Optional[dict]) -> bool:
+    """
+    True when status is generating and delivery_last_attempt_at is older than
+    STALE_GENERATING_RETRY_AFTER_MINUTES (account banner; matches auto-recovery threshold).
+    """
+    if not order or not isinstance(order, dict):
+        return False
+    if (order.get("status") or "").strip().lower() != "generating":
+        return False
+    from datetime import datetime, timezone, timedelta
+
+    ref = order_generating_attempt_reference(order)
+    if not ref:
+        return False
+    try:
+        now = datetime.now(timezone.utc)
+        if isinstance(ref, str):
+            udt = datetime.fromisoformat(ref.replace("Z", "+00:00"))
+        else:
+            udt = ref
+        if udt.tzinfo is None:
+            udt = udt.replace(tzinfo=timezone.utc)
+        return udt < now - timedelta(minutes=STALE_GENERATING_RETRY_AFTER_MINUTES)
+    except Exception:
+        return False
+
+
 app = Flask(__name__)
 app.config.from_object(Config)
 app.jinja_env.globals["order_includes_stories"] = order_includes_stories_addon
 app.jinja_env.globals["CAPTIONS_MAX_AUTO_DELIVERY_FAILURES"] = CAPTIONS_MAX_AUTO_DELIVERY_FAILURES
 app.jinja_env.globals["caption_pack_help_mailto"] = _caption_pack_help_mailto
+app.jinja_env.globals["caption_order_generating_stuck_visible"] = caption_order_generating_stuck_visible
 if Config.is_production():
     app.config['SESSION_COOKIE_SECURE'] = True
 
@@ -2456,129 +2479,6 @@ def referral_stripe_sync_api():
     except Exception as e:
         print(f"[referral-stripe-sync] {e!r}")
         return jsonify({"ok": False, "linked": False, "error": "server_error"}), 500
-
-
-@app.route("/api/account/retry-caption-delivery", methods=["POST"])
-@customer_login_required
-def account_retry_caption_delivery():
-    """
-    Logged-in: re-run caption generation + email for a subscription order stuck in
-    failed or generating. Delivered orders are not self-serve retried (abuse / unpaid
-    repeats); customers should email support for verified resends.
-    """
-    customer = get_current_customer()
-    if not customer:
-        return jsonify({"ok": False, "error": "sign_in_required"}), 401
-    data = request.get_json(silent=True) or {}
-    token = (data.get("order_token") or data.get("token") or "").strip()
-    if not token:
-        return jsonify({"ok": False, "error": "missing_token"}), 400
-    ce = (customer.get("email") or "").strip().lower()
-    if not ce:
-        return jsonify({"ok": False, "error": "invalid_session"}), 400
-    try:
-        from datetime import datetime, timezone, timedelta
-
-        from services.caption_order_service import CaptionOrderService
-        from api.captions_routes import _run_generation_and_deliver
-
-        order_service = CaptionOrderService()
-        order = order_service.get_by_token(token)
-        if not order:
-            return jsonify({"ok": False, "error": "not_found"}), 404
-        oe = (order.get("customer_email") or "").strip().lower()
-        if not oe or oe != ce:
-            return jsonify({"ok": False, "error": "forbidden"}), 403
-        if not (order.get("stripe_subscription_id") or "").strip():
-            return jsonify({"ok": False, "error": "not_subscription"}), 400
-        st = (order.get("status") or "").strip().lower()
-        if st == "delivered":
-            return jsonify(
-                {
-                    "ok": False,
-                    "error": "no_self_serve_regenerate",
-                    "message": "We can’t resend a completed pack from this page. If you were charged but didn’t receive your order, email hello@lumo22.com and we’ll verify your payment.",
-                }
-            ), 400
-        if st not in ("failed", "generating"):
-            return jsonify(
-                {
-                    "ok": False,
-                    "error": "not_stuck",
-                    "message": "This order is not waiting for a delivery retry.",
-                }
-            ), 400
-        if st == "failed":
-            n = int(order.get("delivery_failure_count") or 0)
-            if n >= CAPTIONS_MAX_AUTO_DELIVERY_FAILURES:
-                return jsonify(
-                    {
-                        "ok": False,
-                        "error": "max_retries",
-                        "message": "We couldn’t complete delivery automatically from here. Please email hello@lumo22.com — we’ll help.",
-                    }
-                ), 400
-        if st == "generating":
-            # Use delivery_last_attempt_at (set when generation starts), not updated_at — intake saves
-            # bump updated_at and would block retries indefinitely while the pack looks "stuck".
-            ref = order_generating_attempt_reference(order)
-            if ref:
-                try:
-                    now = datetime.now(timezone.utc)
-                    if isinstance(ref, str):
-                        udt = datetime.fromisoformat(ref.replace("Z", "+00:00"))
-                    else:
-                        udt = ref
-                    if udt.tzinfo is None:
-                        udt = udt.replace(tzinfo=timezone.utc)
-                    if udt > now - timedelta(minutes=10):
-                        return jsonify(
-                            {
-                                "ok": False,
-                                "error": "still_generating",
-                                "message": "Your pack is still being prepared. Wait a few minutes and refresh this page.",
-                            }
-                        ), 429
-                except Exception:
-                    pass
-        oid = str(order.get("id") or "").strip()
-        if not oid:
-            return jsonify({"ok": False, "error": "invalid_order"}), 400
-        now_m = time.monotonic()
-        with _RETRY_CAPTION_LOCK:
-            stale = [k for k, ts in _RETRY_CAPTION_LAST.items() if (now_m - ts) > _RETRY_CAPTION_COOLDOWN_SEC * 3]
-            for k in stale:
-                _RETRY_CAPTION_LAST.pop(k, None)
-            last = _RETRY_CAPTION_LAST.get(oid)
-            if last is not None and (now_m - last) < _RETRY_CAPTION_COOLDOWN_SEC:
-                wait = int(_RETRY_CAPTION_COOLDOWN_SEC - (now_m - last)) + 1
-                return jsonify(
-                    {
-                        "ok": False,
-                        "error": "rate_limited",
-                        "retry_after_seconds": max(1, wait),
-                        "message": f"You can try again in about {max(1, wait)} seconds.",
-                    }
-                ), 429
-            _RETRY_CAPTION_LAST[oid] = now_m
-        thread = threading.Thread(
-            target=_run_generation_and_deliver,
-            args=(oid,),
-            kwargs={"force_redeliver": True, "from_delivery_recovery": True},
-        )
-        thread.daemon = False
-        thread.start()
-        print(f"[account] retry-caption-delivery started for order {oid}")
-        return jsonify(
-            {
-                "ok": True,
-                "message": "We are preparing your pack again. You will receive an email when it is ready (usually within a few minutes).",
-            }
-        ), 200
-    except Exception as e:
-        print(f"[account] retry-caption-delivery: {e!r}")
-        traceback.print_exc()
-        return jsonify({"ok": False, "error": "server_error"}), 500
 
 
 @app.route("/api/account/billing-data", methods=["GET"])

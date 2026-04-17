@@ -92,6 +92,27 @@ def _delivery_retries_exhausted_customer_email_html(manage_url: str, business_na
     return _email_wrapper(content)
 
 
+def _generating_stuck_customer_email_html(manage_url: str, business_name: Optional[str]) -> str:
+    """Branded HTML when auto-recovery picks up an order stuck in generating (amber / reassurance tone)."""
+    import html
+
+    safe_url = html.escape(manage_url, quote=True)
+    business_line = ""
+    safe_business = _sanitize_email_value(business_name or "")
+    if safe_business:
+        business_line = (
+            f'<p style="margin:0 0 16px;"><strong>Business:</strong> '
+            f"{html.escape(safe_business, quote=False)}</p>"
+        )
+    content = f"""<p style="margin:0 0 16px;">Hi,</p>
+{business_line}
+<p style="margin:0 0 16px;">Your <strong>30 Days of Social Media Captions</strong> pack is taking <strong>longer than usual</strong> to finish generating and send. <strong>Our systems have already started an automatic recovery run</strong>, and we’ve been notified so we can troubleshoot if needed.</p>
+<p style="margin:0 0 16px;">You don’t need to do anything right now. Please check your inbox (and spam or promotions) over the next little while for your PDF. When you’re signed in, you can also open <a href="{safe_url}" style="color:{BRAND_BLACK}; text-decoration:none; border-bottom:1px solid {BRAND_BLACK};">Manage subscription</a> for your account status.</p>
+<p style="margin:0 0 16px;">If nothing arrives after a few hours, reply to this email or contact us at hello@lumo22.com and we’ll help.</p>
+<p style="margin:0;">— Lumo 22</p>"""
+    return _email_wrapper(content)
+
+
 def _account_history_notice_delivery_html() -> str:
     """Delivery email: PDFs just sent — also available under History until removed."""
     import html as html_mod
@@ -1646,6 +1667,39 @@ We’re sorry for the delay and will get your captions to you as soon as we can.
         ok = self.send_email(to_email, subject, body, html_body=html_body)
         if ok:
             print(f"[SendGrid] Delivery exhausted customer notice sent to {to_email!r}")
+        return ok
+
+    def send_caption_generating_stuck_customer_notice(
+        self,
+        to_email: str,
+        *,
+        business_name: Optional[str] = None,
+    ) -> bool:
+        """
+        One email to the customer when stale-generating recovery claims their row (deduped in DB).
+        """
+        to_email = _sanitize_email_value(to_email or "")
+        if not to_email or "@" not in to_email:
+            print("[SendGrid] Generating-stuck customer notice NOT sent: invalid to_email")
+            return False
+        safe_business = _sanitize_email_value(business_name or "")
+        subject = _subject_with_business("Your captions pack is taking a little longer", safe_business or None)
+        manage_url = _account_manage_subscription_url()
+        business_plain = f"Business: {safe_business}\n\n" if safe_business else ""
+        body = f"""Hi,
+
+{business_plain}Your 30 Days of Social Media Captions pack is taking longer than usual to finish generating and send. Our systems have already started an automatic recovery run, and we've been notified so we can troubleshoot if needed.
+
+You don't need to do anything right now. Please check your inbox (and spam or promotions) over the next little while for your PDF. When you're signed in, Manage subscription in your Lumo 22 account shows your subscription status:
+{manage_url}
+
+If nothing arrives after a few hours, reply to this email or contact us at hello@lumo22.com and we'll help.
+
+— Lumo 22"""
+        html_body = _generating_stuck_customer_email_html(manage_url, safe_business or None)
+        ok = self.send_email(to_email, subject, body, html_body=html_body)
+        if ok:
+            print(f"[SendGrid] Generating-stuck customer notice sent to {to_email!r}")
         return ok
 
     def send_caption_stale_generating_recovery_alert(

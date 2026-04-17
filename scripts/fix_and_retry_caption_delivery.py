@@ -86,7 +86,7 @@ def main():
     else:
         print("Email already lowercase; account should show this order after refresh.")
 
-    # 2) Run generation and delivery (same as /api/account/retry-caption-delivery).
+    # 2) Run generation and delivery (operator / support path; no in-account customer retry button).
     # force_redeliver=True for failed or generating so we don't no-op (matches "Try sending my pack again").
     force_redeliver = status in ("failed", "generating")
     print("Running caption generation and sending delivery email ...")

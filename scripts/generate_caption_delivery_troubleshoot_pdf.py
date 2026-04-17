@@ -54,9 +54,10 @@ def build_pdf() -> None:
         Spacer(1, 8),
         _p("1) Clearing the warning on the account (Manage subscription)", h2),
         _p(
-            "The orange/red banner appears only when automatic delivery retries are <b>exhausted</b>: subscription order status is <b>failed</b> and "
-            "<b>delivery_failure_count</b> is at or above the cap (3). There is no in-account banner while status is <b>generating</b> or for <b>failed</b> with retries still left — "
-            "the customer only sees the panel once exhausted (team notified copy + Email Lumo 22). It goes away when that order becomes <b>delivered</b> after a successful save + email (not on a timer).",
+            "Two account panels: (A) <b>Amber</b> — status <b>generating</b> and the generation attempt started longer ago than the stale threshold (same as auto-recovery, typically 45 minutes). "
+            "No customer retry button. (B) <b>Red / exhausted</b> — status <b>failed</b> and <b>delivery_failure_count</b> at or above the cap (3 automatic failures). "
+            "Customer email goes out with the exhausted panel; ops alert uses <b>INTERNAL_ALERT_EMAIL</b> in Railway. "
+            "Panels clear when the order becomes <b>delivered</b> after a successful run (not on a timer).",
             body,
         ),
         _p(
@@ -70,8 +71,8 @@ def build_pdf() -> None:
             body,
         ),
         _p(
-            "<b>Customer side</b>: no self-serve retry on the account page; they can email hello@lumo22.com from the exhausted banner mailto. "
-            "The exhausted banner does not auto-hide until delivery succeeds or the order row is corrected in the database.",
+            "<b>Customer side</b>: no self-serve retry on the account page. They can email hello@lumo22.com from the exhausted banner mailto. "
+            "When generating is stale, recovery sends a one-time reassurance email (requires <b>database_caption_orders_generating_stuck_customer_notice.sql</b> in Supabase).",
             body,
         ),
         Spacer(1, 6),

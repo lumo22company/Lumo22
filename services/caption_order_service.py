@@ -27,6 +27,12 @@ def _is_stale_generating_alert_column_missing(exc: Exception) -> bool:
     return "PGRST204" in s and "stale_generating_recovery_alert_sent_at" in s
 
 
+def _is_generating_stuck_notice_column_missing(exc: Exception) -> bool:
+    """PostgREST when caption_orders.generating_stuck_customer_notified_at was never migrated."""
+    s = str(exc)
+    return "PGRST204" in s and "generating_stuck_customer_notified_at" in s
+
+
 def _is_unique_stripe_session_violation(exc: Exception) -> bool:
     """True if insert failed because stripe_session_id already exists (PostgREST / Postgres)."""
     s = str(exc).lower()
@@ -513,6 +519,43 @@ class CaptionOrderService:
             print(f"[CaptionOrderService] try_claim_stale_generating_recovery_alert (non-fatal): {e!r}")
             return None
 
+    def try_claim_generating_stuck_customer_notice(self, order_id: str) -> bool:
+        """
+        Atomically set generating_stuck_customer_notified_at if still null (status=generating).
+        Returns True if this caller should send the one-time customer email for a stale-generating recovery run.
+        """
+        if not order_id:
+            return False
+        now_iso = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+        try:
+            result = (
+                self.client.table(self.table)
+                .update(
+                    {"generating_stuck_customer_notified_at": now_iso},
+                    count=CountMethod.exact,
+                )
+                .eq("id", order_id)
+                .eq("status", "generating")
+                .is_("generating_stuck_customer_notified_at", "null")
+                .execute()
+            )
+            if result.data and len(result.data) > 0:
+                return True
+            c = getattr(result, "count", None)
+            if isinstance(c, int) and c > 0:
+                return True
+            return False
+        except Exception as e:
+            if _is_generating_stuck_notice_column_missing(e):
+                print(
+                    "[CaptionOrderService] generating_stuck_customer_notified_at column missing — run "
+                    "database_caption_orders_generating_stuck_customer_notice.sql in Supabase; "
+                    "skipping generating-stuck customer email until then."
+                )
+                return False
+            print(f"[CaptionOrderService] try_claim_generating_stuck_customer_notice (non-fatal): {e!r}")
+            return False
+
     def release_checkout_confirmation_email_claim(self, order_id: str) -> None:
         """Clear claim so a failed send can be retried (e.g. SendGrid error)."""
         if not order_id:
@@ -630,6 +673,15 @@ class CaptionOrderService:
         if ok:
             # New month always shows in History again (column may not exist until migration is applied).
             self.update(order_id, {"history_hide_current": False})
+            try:
+                self.client.table(self.table).update(
+                    {"generating_stuck_customer_notified_at": None}
+                ).eq("id", order_id).execute()
+            except Exception as e:
+                if not _is_generating_stuck_notice_column_missing(e):
+                    print(
+                        f"[CaptionOrderService] clear generating_stuck_customer_notified_at (non-fatal): {e!r}"
+                    )
         return ok
 
     def remove_delivery_archive_entry(self, order_id: str, archive_index: int) -> bool:

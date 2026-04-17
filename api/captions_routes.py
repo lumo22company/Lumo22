@@ -3836,6 +3836,54 @@ _STALE_GENERATING_OPS_ALERT_LOCK = threading.Lock()
 _STALE_GENERATING_OPS_COOLDOWN_SEC = 4 * 3600.0
 
 
+def _maybe_send_generating_stuck_customer_notice_once(order_service, order: dict) -> None:
+    """
+    One-time customer email when recovery is about to start for a row stuck in status=generating
+    (same stale threshold as row_needs_first_delivery_retry). Deduped via generating_stuck_customer_notified_at.
+    """
+    if (order.get("status") or "").strip().lower() != "generating":
+        return
+    oid = str(order.get("id") or "").strip()
+    if not oid:
+        return
+    if order.get("generating_stuck_customer_notified_at"):
+        return
+    customer_em = str(order.get("customer_email") or "").strip()
+    if not customer_em or "@" not in customer_em:
+        return
+    claimed = order_service.try_claim_generating_stuck_customer_notice(oid)
+    if not claimed:
+        return
+    intake = order.get("intake") if isinstance(order.get("intake"), dict) else {}
+    biz = (intake.get("business_name") or "").strip()
+    try:
+        from services.notifications import NotificationService
+
+        ok = NotificationService().send_caption_generating_stuck_customer_notice(
+            customer_em,
+            business_name=biz or None,
+        )
+        if not ok:
+            print(
+                f"[Captions recovery] generating-stuck customer notice send failed for order {oid[:8]}...; "
+                "releasing claim"
+            )
+            try:
+                order_service.client.table(order_service.table).update(
+                    {"generating_stuck_customer_notified_at": None}
+                ).eq("id", oid).execute()
+            except Exception:
+                pass
+    except Exception as e:
+        print(f"[Captions recovery] generating-stuck customer notice (non-fatal): {e!r}")
+        try:
+            order_service.client.table(order_service.table).update(
+                {"generating_stuck_customer_notified_at": None}
+            ).eq("id", oid).execute()
+        except Exception:
+            pass
+
+
 def _maybe_ops_alert_stale_generating_recovery(order_service, order: dict) -> None:
     """Email INTERNAL_ALERT_EMAIL when recovery starts a thread for a stuck generating row (throttled per order).
 
@@ -3896,6 +3944,7 @@ def _run_stuck_first_deliveries(max_orders: int = 5) -> dict:
         order_id = order.get("id")
         if not order_id:
             continue
+        _maybe_send_generating_stuck_customer_notice_once(order_service, order)
         _maybe_ops_alert_stale_generating_recovery(order_service, order)
         thread = threading.Thread(
             target=_run_generation_and_deliver,
