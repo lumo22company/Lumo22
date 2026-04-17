@@ -21,6 +21,12 @@ def _is_checkout_claim_column_missing(exc: Exception) -> bool:
     return "PGRST204" in s and "checkout_confirmation_email_sent_at" in s
 
 
+def _is_stale_generating_alert_column_missing(exc: Exception) -> bool:
+    """PostgREST when caption_orders.stale_generating_recovery_alert_sent_at was never migrated."""
+    s = str(exc)
+    return "PGRST204" in s and "stale_generating_recovery_alert_sent_at" in s
+
+
 def _is_unique_stripe_session_violation(exc: Exception) -> bool:
     """True if insert failed because stripe_session_id already exists (PostgREST / Postgres)."""
     s = str(exc).lower()
@@ -457,6 +463,55 @@ class CaptionOrderService:
                 return True
             print(f"[CaptionOrderService] try_claim_checkout_confirmation_email (non-fatal): {e!r}")
             return True
+
+    def try_claim_stale_generating_recovery_alert(
+        self, order_id: str, *, cooldown_hours: float = 4.0
+    ) -> Optional[bool]:
+        """
+        Atomically set stale_generating_recovery_alert_sent_at when allowed (null or older than cooldown).
+        Uses Postgres RPC claim_stale_generating_recovery_alert (4h window in SQL) so parallel workers dedupe.
+        cooldown_hours is reserved for future SQL parameterization; the migration function uses 4 hours.
+
+        Returns True if this caller should send the ops email, False if another worker already claimed recently,
+        None if RPC/column is not migrated (caller may use in-process throttle only).
+        """
+        if not order_id:
+            return False
+        _ = cooldown_hours  # matches SQL interval in database_caption_orders_stale_generating_recovery_alert.sql
+        try:
+            result = self.client.rpc(
+                "claim_stale_generating_recovery_alert",
+                {"p_order_id": order_id},
+            ).execute()
+            data = result.data
+            if data is True:
+                return True
+            if data is False:
+                return False
+            if isinstance(data, list) and len(data) == 1:
+                v = data[0]
+                if isinstance(v, dict) and len(v) == 1:
+                    v = next(iter(v.values()))
+                return bool(v)
+            return bool(data)
+        except Exception as e:
+            s = str(e).lower()
+            if _is_stale_generating_alert_column_missing(e):
+                print(
+                    "[CaptionOrderService] stale_generating_recovery_alert_sent_at column missing — run "
+                    "database_caption_orders_stale_generating_recovery_alert.sql in Supabase; "
+                    "using in-process throttle only for stale-generating ops alerts."
+                )
+                return None
+            if "claim_stale_generating_recovery_alert" in s or "pgrst202" in s or "42883" in s:
+                print(
+                    "[CaptionOrderService] claim_stale_generating_recovery_alert RPC missing — run "
+                    "database_caption_orders_stale_generating_recovery_alert.sql in Supabase; "
+                    "using in-process throttle only for stale-generating ops alerts."
+                )
+                return None
+            print(f"[CaptionOrderService] try_claim_stale_generating_recovery_alert (non-fatal): {e!r}")
+            return None
 
     def release_checkout_confirmation_email_claim(self, order_id: str) -> None:
         """Clear claim so a failed send can be retried (e.g. SendGrid error)."""

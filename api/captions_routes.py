@@ -3803,22 +3803,34 @@ _STALE_GENERATING_OPS_ALERT_LOCK = threading.Lock()
 _STALE_GENERATING_OPS_COOLDOWN_SEC = 4 * 3600.0
 
 
-def _maybe_ops_alert_stale_generating_recovery(order: dict) -> None:
-    """Email INTERNAL_ALERT_EMAIL when recovery starts a thread for a stuck generating row (throttled per order)."""
+def _maybe_ops_alert_stale_generating_recovery(order_service, order: dict) -> None:
+    """Email INTERNAL_ALERT_EMAIL when recovery starts a thread for a stuck generating row (throttled per order).
+
+    Uses a Supabase-backed claim when stale_generating_recovery_alert_sent_at exists so multiple
+    Railway workers do not each send the same ops email (in-memory throttle alone is per-process).
+    """
     if (order.get("status") or "").strip().lower() != "generating":
         return
     oid = str(order.get("id") or "").strip()
     if not oid:
         return
-    now_m = time.monotonic()
-    with _STALE_GENERATING_OPS_ALERT_LOCK:
-        stale_keys = [k for k, ts in _STALE_GENERATING_OPS_ALERT_AT.items() if (now_m - ts) > _STALE_GENERATING_OPS_COOLDOWN_SEC * 3]
-        for k in stale_keys:
-            _STALE_GENERATING_OPS_ALERT_AT.pop(k, None)
-        last = _STALE_GENERATING_OPS_ALERT_AT.get(oid)
-        if last is not None and (now_m - last) < _STALE_GENERATING_OPS_COOLDOWN_SEC:
-            return
-        _STALE_GENERATING_OPS_ALERT_AT[oid] = now_m
+    claim = order_service.try_claim_stale_generating_recovery_alert(oid)
+    if claim is False:
+        return
+    if claim is None:
+        now_m = time.monotonic()
+        with _STALE_GENERATING_OPS_ALERT_LOCK:
+            stale_keys = [
+                k
+                for k, ts in _STALE_GENERATING_OPS_ALERT_AT.items()
+                if (now_m - ts) > _STALE_GENERATING_OPS_COOLDOWN_SEC * 3
+            ]
+            for k in stale_keys:
+                _STALE_GENERATING_OPS_ALERT_AT.pop(k, None)
+            last = _STALE_GENERATING_OPS_ALERT_AT.get(oid)
+            if last is not None and (now_m - last) < _STALE_GENERATING_OPS_COOLDOWN_SEC:
+                return
+            _STALE_GENERATING_OPS_ALERT_AT[oid] = now_m
     try:
         from services.notifications import NotificationService
 
@@ -3851,7 +3863,7 @@ def _run_stuck_first_deliveries(max_orders: int = 5) -> dict:
         order_id = order.get("id")
         if not order_id:
             continue
-        _maybe_ops_alert_stale_generating_recovery(order)
+        _maybe_ops_alert_stale_generating_recovery(order_service, order)
         thread = threading.Thread(target=_run_generation_and_deliver, args=(str(order_id),))
         thread.daemon = False
         thread.start()
