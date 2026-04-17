@@ -1051,7 +1051,11 @@ def stripe_webhook():
                 print("[Stripe webhook] invoice.paid: not captions subscription; skipping.")
                 return jsonify({"received": True}), 200
             from services.caption_order_service import CaptionOrderService
-            from api.captions_routes import _run_generation_and_deliver
+            from api.captions_routes import (
+                _run_generation_and_deliver,
+                _subscription_pack_delivery_recent_duplicate,
+                _subscription_pack_delivery_register,
+            )
             import threading
             order_service = CaptionOrderService()
             order = order_service.get_by_stripe_subscription_id(sub_id)
@@ -1076,6 +1080,35 @@ def stripe_webhook():
                     stripe.Subscription.modify(sub_id, metadata={"lumo_get_pack_sooner": ""})
                 except Exception as e_clr:
                     print(f"[Stripe webhook] invoice.paid: could not clear lumo_get_pack_sooner: {e_clr!r}")
+                # Same Get pack sooner payment often emits checkout.session.completed AND invoice.paid.
+                # Checkout registers a short dedupe window; without these guards invoice can start a second
+                # force_redeliver run minutes later and send duplicate PDF emails (force_redeliver bypasses
+                # "already delivered" for subscriptions).
+                fresh = order_service.get_by_id(order_id) or order
+                st = (fresh.get("status") or "").strip().lower()
+                da_raw = (fresh.get("delivered_at") or "").strip()
+                if st == "delivered" and da_raw:
+                    try:
+                        from datetime import datetime, timezone, timedelta
+
+                        da = datetime.fromisoformat(da_raw.replace("Z", "+00:00"))
+                        if da.tzinfo is None:
+                            da = da.replace(tzinfo=timezone.utc)
+                        if datetime.now(timezone.utc) - da < timedelta(hours=6):
+                            print(
+                                "[Stripe webhook] invoice.paid: pack sooner skip — order "
+                                f"{order_id} already delivered at {da_raw} (within 6h; checkout path likely won)."
+                            )
+                            return jsonify({"received": True}), 200
+                    except Exception:
+                        pass
+                if _subscription_pack_delivery_recent_duplicate(str(order_id)):
+                    print(
+                        "[Stripe webhook] invoice.paid: pack sooner skip — delivery dedupe window "
+                        f"(checkout or parallel webhook already claimed this pack for order {order_id})."
+                    )
+                    return jsonify({"received": True}), 200
+                _subscription_pack_delivery_register(str(order_id))
                 print(
                     f"[Stripe webhook] invoice.paid: triggering generation for order {order_id} "
                     f"(get pack sooner / subscription_update)"
