@@ -1631,8 +1631,8 @@ def _run_generation_and_deliver(
     force_redeliver: when True, regenerate and email even if status is 'delivered', and retry even if
     status is 'generating' (support redeliver). Otherwise stale generating (see
     STALE_GENERATING_RETRY_AFTER_MINUTES in caption_delivery_recovery) still retries like recovery cron.
-    from_delivery_recovery: when True (APScheduler/cron recovery only), allow replacing a stuck in-process
-    lock so a hung generation thread cannot block retries forever.
+    from_delivery_recovery: when True, allow replacing a stuck in-process lock (cron recovery or logged-in
+    account retry) so a hung generation thread cannot block retries forever on the same worker.
     force_captions_only: when True, skip stories generation and deliver captions only.
     pack_sooner_receipt: optional dict from get-pack-sooner webhook with amount_paid_display, ongoing_monthly_display;
     prepends payment + plan summary to the delivery email (single combined message)."""

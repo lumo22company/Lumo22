@@ -2564,7 +2564,7 @@ def account_retry_caption_delivery():
         thread = threading.Thread(
             target=_run_generation_and_deliver,
             args=(oid,),
-            kwargs={"force_redeliver": True},
+            kwargs={"force_redeliver": True, "from_delivery_recovery": True},
         )
         thread.daemon = False
         thread.start()

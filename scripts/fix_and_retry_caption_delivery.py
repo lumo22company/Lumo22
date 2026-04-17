@@ -92,7 +92,11 @@ def main():
     print("Running caption generation and sending delivery email ...")
     try:
         from api.captions_routes import _run_generation_and_deliver
-        ok, err = _run_generation_and_deliver(str(order_id), force_redeliver=force_redeliver)
+        ok, err = _run_generation_and_deliver(
+            str(order_id),
+            force_redeliver=force_redeliver,
+            from_delivery_recovery=force_redeliver,
+        )
         print()
         if status == "delivered" and not force_redeliver:
             print(
