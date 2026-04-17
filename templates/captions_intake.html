@@ -252,7 +252,7 @@
     .intake-page-body .lumo-nav { background: #000; border-bottom: 1px solid rgba(255,255,255,0.06); box-shadow: 0 4px 24px rgba(0,0,0,0.2); }
   </style>
 </head>
-<body class="lumo-landing intake-page-body" data-current-customer-email="{{ (current_customer.email or '')|lower if current_customer else '' }}" data-return-url="{{ return_url or '' }}" data-intake-view-only="{{ 'true' if intake_view_only else 'false' }}" data-oneoff-subscribe-checkout="{{ 'true' if oneoff_subscribe_checkout_mode|default(false) else 'false' }}" data-subscribe-url="{{ subscribe_url or '' }}" data-auto-open-review="{{ 'true' if oneoff_subscribe_checkout_mode|default(false) else 'false' }}" data-oneoff-upgrade-edit="{{ 'true' if edit_intake_before_subscribe|default(false) else 'false' }}" data-is-upgrade-flow="{{ 'true' if is_upgrade_flow|default(false) else 'false' }}" data-pack-sooner-hub-return="{{ 'true' if is_prepare_pack_sooner_return|default(false) else 'false' }}" data-prepare-pack-sooner-edit="{{ 'true' if is_prepare_pack_sooner_return|default(false) and edit_intake_before_subscribe|default(false) else 'false' }}">
+<body class="lumo-landing intake-page-body" data-current-customer-email="{{ (current_customer.email or '')|lower if current_customer else '' }}" data-return-url="{{ return_url or '' }}" data-intake-view-only="{{ 'true' if intake_view_only else 'false' }}" data-oneoff-subscribe-checkout="{{ 'true' if oneoff_subscribe_checkout_mode|default(false) else 'false' }}" data-subscribe-url="{{ subscribe_url or '' }}" data-auto-open-review="{{ 'true' if oneoff_subscribe_checkout_mode|default(false) else 'false' }}" data-oneoff-upgrade-edit="{{ 'true' if edit_intake_before_subscribe|default(false) else 'false' }}" data-is-upgrade-flow="{{ 'true' if is_upgrade_flow|default(false) else 'false' }}" data-pack-sooner-hub-return="{{ 'true' if is_prepare_pack_sooner_return|default(false) else 'false' }}" data-prepare-pack-sooner-edit="{{ 'true' if is_prepare_pack_sooner_return|default(false) and edit_intake_before_subscribe|default(false) else 'false' }}"{% if is_prepare_pack_sooner_return|default(false) and edit_intake_before_subscribe|default(false) %} data-pack-sooner-align-stories="{{ 'true' if existing_intake.get('align_stories_to_captions') else 'false' }}"{% endif %}>
   {% include '_lumo_nav.html' %}
 
   <main class="intake-page">
@@ -907,9 +907,9 @@
             if (returnUrl) {
               if (returnUrl.indexOf('/account/upgrade') !== -1) {
                 var params = new URLSearchParams(window.location.search || '');
-                var token = (params.get('t') || '').trim();
-                if (token) {
-                  var q = 'copy_from=' + encodeURIComponent(token) + '&platforms=' + encodeURIComponent(params.get('platforms') || '1') + '&currency=' + encodeURIComponent(params.get('currency') || 'gbp');
+                var urlTok = (params.get('t') || '').trim();
+                if (urlTok) {
+                  var q = 'copy_from=' + encodeURIComponent(urlTok) + '&platforms=' + encodeURIComponent(params.get('platforms') || '1') + '&currency=' + encodeURIComponent(params.get('currency') || 'gbp');
                   var sel = (params.get('selected') || '').trim();
                   if (sel) q += '&selected=' + encodeURIComponent(sel);
                   if (params.get('upgrade_stories') === '1') q += '&stories=1';
@@ -917,6 +917,83 @@
                   window.location.href = '/captions-checkout-subscription?' + q;
                   return;
                 }
+              }
+              if (document.body.getAttribute('data-prepare-pack-sooner-edit') === 'true') {
+                var ppsTok = (payload.token || '').trim();
+                var sp = new URLSearchParams(window.location.search || '');
+                var platN = Math.max(1, Math.min(4, parseInt(sp.get('platforms') || '1', 10) || 1));
+                var selRaw = (sp.get('selected') || '').trim();
+                var selectedList = [];
+                if (selRaw) {
+                  selRaw.split(',').forEach(function(part) {
+                    var t0 = part.trim();
+                    if (t0) selectedList.push(t0);
+                  });
+                }
+                if (selectedList.length !== platN) {
+                  if (platN === 1 && selectedList.length === 0) {
+                    selectedList = ['Instagram & Facebook'];
+                  } else {
+                    window.location.href = returnUrl;
+                    return;
+                  }
+                }
+                var hasIgfb = false;
+                for (var ii = 0; ii < selectedList.length; ii++) {
+                  if (selectedList[ii] === 'Instagram & Facebook') { hasIgfb = true; break; }
+                }
+                var newStories = !!(sp.get('upgrade_stories') === '1' && hasIgfb);
+                var alignStories = newStories && (document.body.getAttribute('data-pack-sooner-align-stories') === 'true');
+                if (btn) btn.textContent = 'Updating plan…';
+                fetch('/api/billing/change-subscription-plan', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  credentials: 'same-origin',
+                  body: JSON.stringify({
+                    token: ppsTok,
+                    new_stories: newStories,
+                    selected_platforms: selectedList,
+                    align_stories_to_captions: alignStories
+                  })
+                })
+                .then(function(r) { return r.json().then(function(j) { return { ok: r.ok, json: j }; }); })
+                .then(function(res) {
+                  if (!res.ok || !(res.json && res.json.ok)) {
+                    throw new Error((res.json && res.json.error) || 'Plan update failed');
+                  }
+                  if (btn) btn.textContent = 'Opening checkout…';
+                  return fetch('/api/captions/get-pack-sooner', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ token: ppsTok })
+                  });
+                })
+                .then(function(r) { return r.json().then(function(j) { return { ok: r.ok, json: j }; }); })
+                .then(function(res) {
+                  var j = res.json || {};
+                  if (!res.ok || !j.ok) {
+                    throw new Error((j && j.error) || 'Checkout failed');
+                  }
+                  if (j.payment_already_complete) {
+                    window.location.href = returnUrl;
+                    return;
+                  }
+                  var payUrl = j.stripe_checkout_url || j.stripeCheckoutUrl || j.stripe_invoice_url || j.stripeInvoiceUrl;
+                  if (payUrl) {
+                    window.location.href = payUrl;
+                    return;
+                  }
+                  window.location.href = returnUrl;
+                })
+                .catch(function() {
+                  if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = typeof window.lumoIntakeBtnConfirmLabel === 'function' ? window.lumoIntakeBtnConfirmLabel() : 'Send details';
+                  }
+                  window.location.href = returnUrl;
+                });
+                return;
               }
               window.location.href = returnUrl;
               return;
@@ -1451,9 +1528,9 @@
             if (returnUrl) {
               if (returnUrl.indexOf('/account/upgrade') !== -1) {
                 var params = new URLSearchParams(window.location.search || '');
-                var token = (params.get('t') || '').trim();
-                if (token) {
-                  var q = 'copy_from=' + encodeURIComponent(token) + '&platforms=' + encodeURIComponent(params.get('platforms') || '1') + '&currency=' + encodeURIComponent(params.get('currency') || 'gbp');
+                var urlTok2 = (params.get('t') || '').trim();
+                if (urlTok2) {
+                  var q = 'copy_from=' + encodeURIComponent(urlTok2) + '&platforms=' + encodeURIComponent(params.get('platforms') || '1') + '&currency=' + encodeURIComponent(params.get('currency') || 'gbp');
                   var sel = (params.get('selected') || '').trim();
                   if (sel) q += '&selected=' + encodeURIComponent(sel);
                   if (params.get('upgrade_stories') === '1') q += '&stories=1';
@@ -1461,6 +1538,81 @@
                   window.location.href = '/captions-checkout-subscription?' + q;
                   return;
                 }
+              }
+              if (document.body.getAttribute('data-prepare-pack-sooner-edit') === 'true') {
+                var ppsTok2 = (payload.token || '').trim();
+                var sp2 = new URLSearchParams(window.location.search || '');
+                var platN2 = Math.max(1, Math.min(4, parseInt(sp2.get('platforms') || '1', 10) || 1));
+                var selRaw2 = (sp2.get('selected') || '').trim();
+                var selectedList2 = [];
+                if (selRaw2) {
+                  selRaw2.split(',').forEach(function(part) {
+                    var t1 = part.trim();
+                    if (t1) selectedList2.push(t1);
+                  });
+                }
+                if (selectedList2.length !== platN2) {
+                  if (platN2 === 1 && selectedList2.length === 0) {
+                    selectedList2 = ['Instagram & Facebook'];
+                  } else {
+                    window.location.href = returnUrl;
+                    return;
+                  }
+                }
+                var hasIgfb2 = false;
+                for (var ij = 0; ij < selectedList2.length; ij++) {
+                  if (selectedList2[ij] === 'Instagram & Facebook') { hasIgfb2 = true; break; }
+                }
+                var newStories2 = !!(sp2.get('upgrade_stories') === '1' && hasIgfb2);
+                var alignStories2 = newStories2 && (document.body.getAttribute('data-pack-sooner-align-stories') === 'true');
+                btnConfirm.textContent = 'Updating plan…';
+                fetch('/api/billing/change-subscription-plan', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  credentials: 'same-origin',
+                  body: JSON.stringify({
+                    token: ppsTok2,
+                    new_stories: newStories2,
+                    selected_platforms: selectedList2,
+                    align_stories_to_captions: alignStories2
+                  })
+                })
+                .then(function(r) { return r.json().then(function(j) { return { ok: r.ok, json: j }; }); })
+                .then(function(res) {
+                  if (!res.ok || !(res.json && res.json.ok)) {
+                    throw new Error((res.json && res.json.error) || 'Plan update failed');
+                  }
+                  btnConfirm.textContent = 'Opening checkout…';
+                  return fetch('/api/captions/get-pack-sooner', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ token: ppsTok2 })
+                  });
+                })
+                .then(function(r) { return r.json().then(function(j) { return { ok: r.ok, json: j }; }); })
+                .then(function(res) {
+                  var j2 = res.json || {};
+                  if (!res.ok || !j2.ok) {
+                    throw new Error((j2 && j2.error) || 'Checkout failed');
+                  }
+                  if (j2.payment_already_complete) {
+                    window.location.href = returnUrl;
+                    return;
+                  }
+                  var payUrl2 = j2.stripe_checkout_url || j2.stripeCheckoutUrl || j2.stripe_invoice_url || j2.stripeInvoiceUrl;
+                  if (payUrl2) {
+                    window.location.href = payUrl2;
+                    return;
+                  }
+                  window.location.href = returnUrl;
+                })
+                .catch(function() {
+                  btnConfirm.disabled = false;
+                  btnConfirm.textContent = window.lumoIntakeBtnConfirmLabel();
+                  window.location.href = returnUrl;
+                });
+                return;
               }
               window.location.href = returnUrl;
               return;
