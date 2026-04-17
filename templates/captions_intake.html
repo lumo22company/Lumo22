@@ -252,7 +252,7 @@
     .intake-page-body .lumo-nav { background: #000; border-bottom: 1px solid rgba(255,255,255,0.06); box-shadow: 0 4px 24px rgba(0,0,0,0.2); }
   </style>
 </head>
-<body class="lumo-landing intake-page-body" data-current-customer-email="{{ (current_customer.email or '')|lower if current_customer else '' }}" data-return-url="{{ return_url or '' }}" data-intake-view-only="{{ 'true' if intake_view_only else 'false' }}" data-oneoff-subscribe-checkout="{{ 'true' if oneoff_subscribe_checkout_mode|default(false) else 'false' }}" data-subscribe-url="{{ subscribe_url or '' }}" data-auto-open-review="{{ 'true' if oneoff_subscribe_checkout_mode|default(false) else 'false' }}" data-oneoff-upgrade-edit="{{ 'true' if edit_intake_before_subscribe|default(false) else 'false' }}" data-is-upgrade-flow="{{ 'true' if is_upgrade_flow|default(false) else 'false' }}" data-pack-sooner-hub-return="{{ 'true' if is_prepare_pack_sooner_return|default(false) else 'false' }}" data-prepare-pack-sooner-edit="{{ 'true' if is_prepare_pack_sooner_return|default(false) and edit_intake_before_subscribe|default(false) else 'false' }}"{% if is_prepare_pack_sooner_return|default(false) and edit_intake_before_subscribe|default(false) %} data-pack-sooner-align-stories="{{ 'true' if existing_intake.get('align_stories_to_captions') else 'false' }}"{% endif %}>
+<body class="lumo-landing intake-page-body" data-current-customer-email="{{ (current_customer.email or '')|lower if current_customer else '' }}" data-return-url="{{ return_url or '' }}" data-intake-view-only="{{ 'true' if intake_view_only else 'false' }}" data-oneoff-subscribe-checkout="{{ 'true' if oneoff_subscribe_checkout_mode|default(false) else 'false' }}" data-subscribe-url="{{ subscribe_url or '' }}" data-auto-open-review="{{ 'true' if oneoff_subscribe_checkout_mode|default(false) else 'false' }}" data-oneoff-upgrade-edit="{{ 'true' if edit_intake_before_subscribe|default(false) else 'false' }}" data-is-upgrade-flow="{{ 'true' if is_upgrade_flow|default(false) else 'false' }}" data-pack-sooner-hub-return="{{ 'true' if is_prepare_pack_sooner_return|default(false) else 'false' }}" data-prepare-pack-sooner-edit="{{ 'true' if is_prepare_pack_sooner_return|default(false) and edit_intake_before_subscribe|default(false) else 'false' }}">
   {% include '_lumo_nav.html' %}
 
   <main class="intake-page">
@@ -943,7 +943,7 @@
                   if (selectedList[ii] === 'Instagram & Facebook') { hasIgfb = true; break; }
                 }
                 var newStories = !!(sp.get('upgrade_stories') === '1' && hasIgfb);
-                var alignStories = newStories && (document.body.getAttribute('data-pack-sooner-align-stories') === 'true');
+                var alignStories = newStories && !!payload.align_stories_to_captions;
                 if (btn) btn.textContent = 'Updating plan…';
                 fetch('/api/billing/change-subscription-plan', {
                   method: 'POST',
@@ -1564,7 +1564,7 @@
                   if (selectedList2[ij] === 'Instagram & Facebook') { hasIgfb2 = true; break; }
                 }
                 var newStories2 = !!(sp2.get('upgrade_stories') === '1' && hasIgfb2);
-                var alignStories2 = newStories2 && (document.body.getAttribute('data-pack-sooner-align-stories') === 'true');
+                var alignStories2 = newStories2 && !!payload.align_stories_to_captions;
                 btnConfirm.textContent = 'Updating plan…';
                 fetch('/api/billing/change-subscription-plan', {
                   method: 'POST',
