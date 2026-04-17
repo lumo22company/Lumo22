@@ -90,3 +90,18 @@ def test_coerce_platform_selection_fills_defaults_deterministically():
     # Legacy labels normalize and preserve expected order while filling.
     out2 = _coerce_platform_selection("Facebook, LinkedIn", 3)
     assert out2 == "Instagram & Facebook, LinkedIn, TikTok"
+
+
+def test_merge_platform_list_preserves_explicit_pair_when_stripe_count_matches():
+    """subscription.updated must not replace TikTok with LinkedIn when names already match Stripe count."""
+    from api.billing_routes import merge_platform_list_with_stripe_count
+    from api.webhooks import _coerce_platform_selection
+
+    assert (
+        merge_platform_list_with_stripe_count("Instagram & Facebook, TikTok", 2)
+        == "Instagram & Facebook, TikTok"
+    )
+    # Incomplete list still uses default fill order (same as legacy _coerce_platform_selection).
+    assert merge_platform_list_with_stripe_count("Instagram & Facebook", 2) == _coerce_platform_selection(
+        "Instagram & Facebook", 2
+    )

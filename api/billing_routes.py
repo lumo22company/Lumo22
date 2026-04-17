@@ -157,6 +157,24 @@ def _coerce_platform_selection(raw: str, desired_count: int) -> str:
     return ", ".join(items)
 
 
+def merge_platform_list_with_stripe_count(raw: str, new_platforms: int) -> str:
+    """
+    Align caption_orders.selected_platforms with Stripe subscription item counts.
+
+    When the customer already has an explicit list of N network names and Stripe reports N
+    platforms, preserve their order and labels — do not re-run _coerce_platform_selection, which
+    would append defaults (e.g. LinkedIn before TikTok) and can race subscription.updated before
+    change-subscription-plan persists the hub's TikTok choice.
+    """
+    desired = max(1, min(4, int(new_platforms or 1)))
+    items = _normalize_platform_list(raw)
+    if len(items) == desired:
+        return ", ".join(items)
+    if len(items) > desired:
+        return ", ".join(items[:desired])
+    return _coerce_platform_selection(raw, desired)
+
+
 def _stripe_subscription_item_updates_for_plan(
     items_data: list,
     new_platforms: int,
@@ -759,6 +777,7 @@ def reduce_subscription():
             change_bits.append(
                 f"your subscription now includes {new_platforms} platform{'s' if new_platforms != 1 else ''} instead of {order_platforms}"
             )
+            change_bits.append(f"your platforms are now: {selected_synced}")
         if order_has_stories and not new_stories:
             change_bits.append("Story Ideas has been removed from your subscription")
         if not change_bits:

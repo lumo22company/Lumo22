@@ -1218,7 +1218,11 @@ def stripe_webhook():
             if not base.startswith("http"):
                 base = "https://" + base
             # Plan change via Stripe billing portal: sync stored plan fields and send confirmation email.
-            from api.billing_routes import _subscription_monthly_price, subscription_platforms_and_stories_from_stripe
+            from api.billing_routes import (
+                _subscription_monthly_price,
+                merge_platform_list_with_stripe_count,
+                subscription_platforms_and_stories_from_stripe,
+            )
             from services.caption_order_service import CaptionOrderService
             order_service = CaptionOrderService()
             if customer_email and "@" in customer_email:
@@ -1230,7 +1234,7 @@ def stripe_webhook():
                     new_platforms, new_stories = subscription_platforms_and_stories_from_stripe(sub_obj)
                     intake_existing = order.get("intake") if isinstance(order.get("intake"), dict) else {}
                     selected_source = (intake_existing.get("platform") or "").strip() or (order.get("selected_platforms") or "").strip()
-                    selected_synced = _coerce_platform_selection(selected_source, new_platforms)
+                    selected_synced = merge_platform_list_with_stripe_count(selected_source, new_platforms)
                     updated_intake = dict(intake_existing or {})
                     updated_intake["platform"] = selected_synced
                     updated_intake["include_stories"] = new_stories
@@ -1258,6 +1262,8 @@ def stripe_webhook():
                     change_bits = []
                     if new_platforms != old_platforms:
                         change_bits.append(f"your subscription now includes {new_platforms} platform{'s' if new_platforms != 1 else ''} instead of {old_platforms}")
+                    if (selected_synced or "").strip():
+                        change_bits.append(f"your platforms are now: {(selected_synced or '').strip()}")
                     if new_stories and not old_stories:
                         change_bits.append("30 Days Story Ideas has been added to your subscription")
                     elif old_stories and not new_stories:
