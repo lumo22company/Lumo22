@@ -86,7 +86,7 @@ def _delivery_retries_exhausted_customer_email_html(manage_url: str, business_na
     content = f"""<p style="margin:0 0 16px;">Hi,</p>
 {business_line}
 <p style="margin:0 0 16px;">We weren’t able to finish sending your latest <strong>30 Days of Social Media Captions</strong> pack automatically after several attempts. <strong>Our team has already been notified</strong> and will look into this — <strong>you don’t need to do anything</strong> for us to investigate.</p>
-<p style="margin:0 0 16px;">When you’re signed in, <strong>Manage subscription</strong> in your Lumo account shows the same notice and a quick way to email us if you’d like to add a note: <a href="{safe_url}" style="color:{BRAND_BLACK}; text-decoration:none; border-bottom:1px solid {BRAND_BLACK};">Open Manage subscription</a></p>
+<p style="margin:0 0 16px;">When you’re signed in, <strong>Manage subscription</strong> in your Lumo 22 account shows the same notice and a quick way to email us if you’d like to add a note: <a href="{safe_url}" style="color:{BRAND_BLACK}; text-decoration:none; border-bottom:1px solid {BRAND_BLACK};">Open Manage subscription</a></p>
 <p style="margin:0 0 16px;">We’re sorry for the delay and will get your captions to you as soon as we can.</p>
 <p style="margin:0;">— Lumo 22</p>"""
     return _email_wrapper(content)
@@ -1615,7 +1615,7 @@ The customer may see the exhausted “our team has been notified” message on t
 
 {business_plain}We weren’t able to finish sending your latest 30 Days of Social Media Captions pack automatically after several attempts. Our team has already been notified and will look into this — you don’t need to do anything for us to investigate.
 
-When you’re signed in, Manage subscription in your Lumo account shows the same notice and a quick way to email us if you’d like to add a note:
+When you’re signed in, Manage subscription in your Lumo 22 account shows the same notice and a quick way to email us if you’d like to add a note:
 {manage_url}
 
 We’re sorry for the delay and will get your captions to you as soon as we can.
