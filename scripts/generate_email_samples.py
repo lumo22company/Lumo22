@@ -103,6 +103,21 @@ def main():
         ),
     ))
 
+    # 8b. Plan change after intake (Get my pack sooner → checkout next)
+    samples.append((
+        "plan_change_pack_sooner_intake.html",
+        "Plan change confirmation (Get my pack sooner intake — generation note)",
+        _plan_change_confirmation_email_html(
+            "What changed: your subscription now includes 2 platforms instead of 1.",
+            "Changes apply to your next pack. Packs already delivered will not change.",
+            "https://www.lumo22.com/account",
+            new_price_display="£98",
+            old_price_display="£79",
+            pack_sooner_next_checkout_note=True,
+            include_stories_in_pack=True,
+        ),
+    ))
+
     # 9. Subscription cancelled
     samples.append((
         "subscription_cancelled.html",

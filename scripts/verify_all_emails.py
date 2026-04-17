@@ -106,6 +106,18 @@ def main():
     )
     check("Plan change (reduce)", html)
 
+    # 7b. Plan change + Get my pack sooner checkout note (intake hub)
+    html = _plan_change_confirmation_email_html(
+        "What changed: your subscription now includes 2 platforms instead of 1.",
+        "Changes apply to your next pack.",
+        f"{base}/account",
+        new_price_display="£98",
+        old_price_display="£79",
+        pack_sooner_next_checkout_note=True,
+        include_stories_in_pack=True,
+    )
+    check("Plan change (pack sooner note + stories)", html)
+
     # 8. Subscription cancelled
     html = _subscription_cancelled_email_html(f"{base}/captions")
     check("Subscription cancelled", html)

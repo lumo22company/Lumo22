@@ -954,7 +954,8 @@
                     token: ppsTok,
                     new_stories: newStories,
                     selected_platforms: selectedList,
-                    align_stories_to_captions: alignStories
+                    align_stories_to_captions: alignStories,
+                    prepare_pack_sooner_checkout: true
                   })
                 })
                 .then(function(r) { return r.json().then(function(j) { return { ok: r.ok, json: j }; }); })
@@ -1575,7 +1576,8 @@
                     token: ppsTok2,
                     new_stories: newStories2,
                     selected_platforms: selectedList2,
-                    align_stories_to_captions: alignStories2
+                    align_stories_to_captions: alignStories2,
+                    prepare_pack_sooner_checkout: true
                   })
                 })
                 .then(function(r) { return r.json().then(function(j) { return { ok: r.ok, json: j }; }); })

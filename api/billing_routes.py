@@ -38,6 +38,7 @@ def _send_plan_change_confirmation_with_webhook_dedupe(
     new_price_display: str,
     old_price_display: str,
     business_name: Optional[str],
+    pack_sooner_next_checkout_note: bool = False,
 ) -> None:
     """
     Send plan-change confirmation and record the same dedupe key Stripe webhooks use.
@@ -67,6 +68,8 @@ def _send_plan_change_confirmation_with_webhook_dedupe(
             new_price_display=new_price_display,
             old_price_display=old_price_display,
             business_name=business_name,
+            pack_sooner_next_checkout_note=pack_sooner_next_checkout_note,
+            include_stories_in_pack=new_stories,
         )
         _mark_plan_change_email_sent(key)
     except Exception as e:
@@ -817,6 +820,9 @@ def change_subscription_plan():
       selected_platforms (optional): list of 1–4 labels from
         Instagram & Facebook, LinkedIn, TikTok, Pinterest,
       align_stories_to_captions (optional bool; only when new_stories is true).
+      prepare_pack_sooner_checkout (optional bool): set by Get my pack sooner → Update preferences → intake;
+        adds a short note that checkout is next and captions (and stories if applicable) arrive in a separate email after payment.
+    }
     - Stripe is updated only when platform count or Story Ideas billing changes.
     - Intake is always updated so the form can be prefilled.
     - Subscription.modify uses proration_behavior=none (no proration lines).
@@ -829,6 +835,7 @@ def change_subscription_plan():
         data = request.get_json() or {}
         token = (data.get("token") or "").strip()
         new_stories = bool(data.get("new_stories"))
+        prepare_pack_sooner_checkout_note = bool(data.get("prepare_pack_sooner_checkout"))
         selected_list = _parse_selected_platforms_from_body(data.get("selected_platforms"))
         align_stories_to_captions = bool(data.get("align_stories_to_captions")) if new_stories else False
         if selected_list is not None:
@@ -980,6 +987,7 @@ def change_subscription_plan():
             new_price_display=f"{new_sym}{new_amt}",
             old_price_display=f"{old_sym}{old_amt}",
             business_name=((order.get("intake") or {}).get("business_name") or None),
+            pack_sooner_next_checkout_note=prepare_pack_sooner_checkout_note,
         )
 
     return jsonify({

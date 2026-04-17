@@ -1311,6 +1311,9 @@ def _plan_change_confirmation_email_html(
     new_price_display: str | None = None,
     old_price_display: str | None = None,
     business_name: Optional[str] = None,
+    *,
+    pack_sooner_next_checkout_note: bool = False,
+    include_stories_in_pack: bool = False,
 ) -> str:
     """Build branded HTML for plan change (upgrade/downgrade/add-on) confirmation."""
     import html
@@ -1332,12 +1335,30 @@ def _plan_change_confirmation_email_html(
     safe_business = _sanitize_email_value(business_name or "")
     if safe_business:
         business_line = f"<p style=\"margin:0 0 16px;\"><strong>Business:</strong> {safe_business}</p>"
+    pack_note_block = ""
+    if pack_sooner_next_checkout_note:
+        if include_stories_in_pack:
+            gen_line = (
+                "Once your payment is complete, we'll generate your <strong>30 Days of Social Media Captions</strong> "
+                "and <strong>30 Days of Story Ideas</strong> from your updated form and send them in a "
+                "<strong>separate email</strong> when they're ready."
+            )
+        else:
+            gen_line = (
+                "Once your payment is complete, we'll generate your <strong>30 Days of Social Media Captions</strong> "
+                "from your updated form and send them in a <strong>separate email</strong> when they're ready."
+            )
+        pack_note_block = (
+            f'<p style="margin:0 0 16px;"><strong>Get my pack sooner:</strong> you\'re about to open checkout. '
+            f"{gen_line}</p>"
+        )
     content = f"""<p style="margin:0 0 16px;">Hi,</p>
 {business_line}
 <p style="margin:0 0 12px;">You made changes to your Lumo 22 subscription.</p>
 <p style="margin:0 0 16px;">{summary_html}</p>
 {price_line}
 <p style="margin:0 0 16px;"><strong>When does this take effect?</strong> {safe_when}</p>
+{pack_note_block}
 <p style="margin:0 0 16px;">You can manage your subscription anytime in your <a href="{safe_account}" style="color:{BRAND_BLACK}; text-decoration:none; border-bottom:1px solid {BRAND_BLACK};">account</a>.</p>
 <p style="margin:0;">— Lumo 22</p>"""
     return _email_wrapper(content)
@@ -1793,6 +1814,9 @@ If you didn't create this account, you can ignore this email.
         new_price_display: str | None = None,
         old_price_display: str | None = None,
         business_name: Optional[str] = None,
+        *,
+        pack_sooner_next_checkout_note: bool = False,
+        include_stories_in_pack: bool = False,
     ) -> bool:
         """Send confirmation when customer upgrades, downgrades, or adds Stories."""
         safe_business = _sanitize_email_value(business_name or "")
@@ -1804,6 +1828,21 @@ If you didn't create this account, you can ignore this email.
             else:
                 price_block = f"\nNew price: {new_price_display}/month.\n"
         business_line = f"Business: {safe_business}\n\n" if safe_business else ""
+        pack_note_plain = ""
+        if pack_sooner_next_checkout_note:
+            if include_stories_in_pack:
+                gen_plain = (
+                    "Once your payment is complete, we'll generate your 30 Days of Social Media Captions and "
+                    "30 Days of Story Ideas from your updated form and send them in a separate email when they're ready."
+                )
+            else:
+                gen_plain = (
+                    "Once your payment is complete, we'll generate your 30 Days of Social Media Captions from your "
+                    "updated form and send them in a separate email when they're ready."
+                )
+            pack_note_plain = (
+                f"\nGet my pack sooner: you're about to open checkout. {gen_plain}\n"
+            )
         body = f"""Hi,
 
 You made changes to your Lumo 22 subscription.
@@ -1812,7 +1851,7 @@ You made changes to your Lumo 22 subscription.
 {change_summary or "Your plan has been updated."}
 {price_block}
 When does this take effect? {when_effective or "Changes apply to your next pack."}
-
+{pack_note_plain}
 You can manage your subscription anytime in your account: {account_url or ""}
 
 — Lumo 22"""
@@ -1821,6 +1860,8 @@ You can manage your subscription anytime in your account: {account_url or ""}
             new_price_display=new_price_display,
             old_price_display=old_price_display,
             business_name=safe_business or None,
+            pack_sooner_next_checkout_note=pack_sooner_next_checkout_note,
+            include_stories_in_pack=include_stories_in_pack,
         )
         return self.send_email(to_email, subject, body, html_body=html_body)
 
