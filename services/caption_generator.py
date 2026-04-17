@@ -2286,6 +2286,9 @@ class CaptionGenerator:
     """Generate 30 captions from intake using AI. Uses 3 chunks to avoid timeouts and token limits."""
 
     CHUNKS = [(1, 10), (11, 20), (21, 30)]
+    # Full-pack calendar/structure validation can flake on weekday hooks; retries + cooler temps reduce failed deliveries.
+    FULL_PACK_VALIDATION_MAX_ATTEMPTS = 4
+    _FULL_PACK_ATTEMPT_TEMPERATURES = (0.58, 0.45, 0.35, 0.28)
     MAX_TOKENS_PER_CHUNK = 6000
     # 3+ platforms × 10 days often exceeds 6000 output tokens in any chunk; truncation drops
     # the last day(s) or Platform: blocks (e.g. missing Day 20 in 11–20, incomplete Day 30 in 21–30).
@@ -2324,7 +2327,11 @@ class CaptionGenerator:
         header = _build_doc_header(intake, pack_start_date=start_str)
         full_pack_suffix = ""
         result = ""
-        for full_attempt in range(2):
+        max_full = self.FULL_PACK_VALIDATION_MAX_ATTEMPTS
+        for full_attempt in range(max_full):
+            pack_temp = self._FULL_PACK_ATTEMPT_TEMPERATURES[
+                min(full_attempt, len(self._FULL_PACK_ATTEMPT_TEMPERATURES) - 1)
+            ]
             parts = [header]
             for day_start, day_end in self.CHUNKS:
                 multi_platform_chunk = expected_platform_count >= 3
@@ -2348,7 +2355,7 @@ class CaptionGenerator:
                 content = chat_completion(
                     system=system,
                     user=user,
-            temperature=0.6,
+                    temperature=pack_temp,
                     max_tokens=chunk_max_tokens,
                 )
                 if not content:
@@ -2435,12 +2442,13 @@ class CaptionGenerator:
                 full_err = _explicit_weekday_dom_month_consistency_error(captions_only, start_str)
             if not full_err:
                 break
-            if full_attempt >= 1:
+            if full_attempt >= max_full - 1:
                 raise RuntimeError(
                     f"Caption pack failed full 30-day validation: {full_err}. Please try again."
                 )
-            full_pack_suffix = (
-                "\n\nIMPORTANT — full 30-day pack validation failed: "
+            repair = (
+                "\n\nIMPORTANT — full 30-day pack validation failed (attempt "
+                f"{full_attempt + 1}/{max_full}): "
                 + full_err
                 + " Regenerate all three day ranges with that fixed. "
                 "If the error is about **this [weekday]** vs **DATE_CONTEXT**: when the post goes live on the **same** "
@@ -2455,6 +2463,14 @@ class CaptionGenerator:
                 "**this morning / today / Mornings at [Business]…**. "
                 "Engagement days must use different hooks across the month; do not duplicate origin-story question patterns."
             )
+            if full_attempt >= 1:
+                repair += (
+                    "\n\n**WEEKDAY_OPENING_STRICT (required on this retry):** Do not begin any **Caption:** with "
+                    "`[Weekday] morning(s)` / `[Weekday] afternoon` / `[Weekday] evening(s)` "
+                    "unless that exact weekday matches the **Day N = …** line in DATE_CONTEXT for **that same Day N**. "
+                    "If unsure, open with **This morning**, **Today**, **Tonight**, or the **business name** — no leading weekday word."
+                )
+            full_pack_suffix += repair
 
         # Stories add-on: when IG & FB selected and include_stories
         platform_raw = (intake.get("platform") or "").strip().lower()
