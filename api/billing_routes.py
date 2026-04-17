@@ -27,6 +27,52 @@ def _account_url():
     return base.rstrip("/") + "/account"
 
 
+def _send_plan_change_confirmation_with_webhook_dedupe(
+    subscription_id: str,
+    customer_email: str,
+    new_platforms: int,
+    new_stories: bool,
+    *,
+    change_summary: str,
+    when_effective: str,
+    new_price_display: str,
+    old_price_display: str,
+    business_name: Optional[str],
+) -> None:
+    """
+    Send plan-change confirmation and record the same dedupe key Stripe webhooks use.
+    Avoids duplicate emails when subscription.updated arrives around the same time as this API response.
+    """
+    from api.webhooks import (
+        _mark_plan_change_email_sent,
+        _plan_change_dedupe_key,
+        _plan_change_email_recently_sent,
+    )
+    from services.notifications import NotificationService
+
+    sid = (subscription_id or "").strip()
+    em = (customer_email or "").strip()
+    if not sid or not em or "@" not in em:
+        return
+    key = _plan_change_dedupe_key(sid, em, int(new_platforms), bool(new_stories))
+    if _plan_change_email_recently_sent(key):
+        print(f"[billing] plan-change email deduped (recent send or webhook) sub={sid[:18]}...")
+        return
+    try:
+        NotificationService().send_plan_change_confirmation_email(
+            em,
+            change_summary=change_summary,
+            when_effective=when_effective,
+            account_url=_account_url(),
+            new_price_display=new_price_display,
+            old_price_display=old_price_display,
+            business_name=business_name,
+        )
+        _mark_plan_change_email_sent(key)
+    except Exception as e:
+        print(f"[billing] Plan change confirmation email failed: {e}")
+
+
 def _subscription_monthly_price(currency: str, platforms: int, include_stories: bool) -> tuple[str, int]:
     """Return (symbol, amount) for subscription monthly price, e.g. ('£', 96)."""
     prices = _DISPLAY_PRICES.get((currency or "gbp").strip().lower(), _DISPLAY_PRICES["gbp"])
@@ -558,24 +604,21 @@ def add_stories_to_subscription():
             co_svc.update_intake_only(order["id"], intake)
         customer_email = (order.get("customer_email") or "").strip()
         if customer_email and "@" in customer_email:
-            try:
-                from services.notifications import NotificationService
-                notif = NotificationService()
-                currency = (order.get("currency") or "gbp").strip().lower()
-                platforms = max(1, int(order.get("platforms_count", 1)))
-                old_sym, old_amt = _subscription_monthly_price(currency, platforms, False)
-                new_sym, new_amt = _subscription_monthly_price(currency, platforms, True)
-                notif.send_plan_change_confirmation_email(
-                    customer_email,
-                    change_summary="What changed: 30 Days Story Ideas has been added to your subscription.",
-                    when_effective="Stories will be included in your next pack.",
-                    account_url=_account_url(),
-                    new_price_display=f"{new_sym}{new_amt}",
-                    old_price_display=f"{old_sym}{old_amt}",
-                    business_name=((order.get("intake") or {}).get("business_name") or None),
-                )
-            except Exception as e:
-                print(f"[billing] Plan change confirmation email failed: {e}")
+            currency = (order.get("currency") or "gbp").strip().lower()
+            platforms = max(1, int(order.get("platforms_count", 1)))
+            old_sym, old_amt = _subscription_monthly_price(currency, platforms, False)
+            new_sym, new_amt = _subscription_monthly_price(currency, platforms, True)
+            _send_plan_change_confirmation_with_webhook_dedupe(
+                subscription_id,
+                customer_email,
+                platforms,
+                True,
+                change_summary="What changed: 30 Days Story Ideas has been added to your subscription.",
+                when_effective="Stories will be included in your next pack.",
+                new_price_display=f"{new_sym}{new_amt}",
+                old_price_display=f"{old_sym}{old_amt}",
+                business_name=((order.get("intake") or {}).get("business_name") or None),
+            )
         return jsonify({
             "ok": True,
             "message": "Story Ideas added to your subscription. Stories will be included in your next pack.",
@@ -710,39 +753,34 @@ def reduce_subscription():
 
     customer_email = (order.get("customer_email") or "").strip()
     if customer_email and "@" in customer_email:
-        try:
-            from services.notifications import NotificationService
-            notif = NotificationService()
-            # Make the email explicit about what changed.
-            # Examples:
-            # - Reduced from 3 platforms to 1.
-            # - Removed Story Ideas.
-            # - Both.
-            change_bits = []
-            if new_platforms < order_platforms:
-                change_bits.append(f"your subscription now includes {new_platforms} platform{'s' if new_platforms != 1 else ''} instead of {order_platforms}")
-            if order_has_stories and not new_stories:
-                change_bits.append("Story Ideas has been removed from your subscription")
-            if not change_bits:
-                change_text = "your plan has been updated."
-            else:
-                change_text = "; ".join(change_bits) + "."
-            change_summary = f"What changed: {change_text}"
-            when_effective = "Changes apply to your next pack. Packs already delivered will not change."
-            currency = (order.get("currency") or "gbp").strip().lower()
-            old_sym, old_amt = _subscription_monthly_price(currency, order_platforms, order_has_stories)
-            new_sym, new_amt = _subscription_monthly_price(currency, new_platforms, new_stories)
-            notif.send_plan_change_confirmation_email(
-                customer_email,
-                change_summary=change_summary,
-                when_effective=when_effective,
-                account_url=_account_url(),
-                new_price_display=f"{new_sym}{new_amt}",
-                old_price_display=f"{old_sym}{old_amt}",
-                business_name=((order.get("intake") or {}).get("business_name") or None),
+        # Make the email explicit about what changed.
+        change_bits = []
+        if new_platforms < order_platforms:
+            change_bits.append(
+                f"your subscription now includes {new_platforms} platform{'s' if new_platforms != 1 else ''} instead of {order_platforms}"
             )
-        except Exception as e:
-            print(f"[billing] Plan change confirmation email failed: {e}")
+        if order_has_stories and not new_stories:
+            change_bits.append("Story Ideas has been removed from your subscription")
+        if not change_bits:
+            change_text = "your plan has been updated."
+        else:
+            change_text = "; ".join(change_bits) + "."
+        change_summary = f"What changed: {change_text}"
+        when_effective = "Changes apply to your next pack. Packs already delivered will not change."
+        currency = (order.get("currency") or "gbp").strip().lower()
+        old_sym, old_amt = _subscription_monthly_price(currency, order_platforms, order_has_stories)
+        new_sym, new_amt = _subscription_monthly_price(currency, new_platforms, new_stories)
+        _send_plan_change_confirmation_with_webhook_dedupe(
+            subscription_id,
+            customer_email,
+            new_platforms,
+            new_stories,
+            change_summary=change_summary,
+            when_effective=when_effective,
+            new_price_display=f"{new_sym}{new_amt}",
+            old_price_display=f"{old_sym}{old_amt}",
+            business_name=((order.get("intake") or {}).get("business_name") or None),
+        )
 
     return jsonify({
         "ok": True,
@@ -888,45 +926,42 @@ def change_subscription_plan():
 
     customer_email = (order.get("customer_email") or "").strip()
     if customer_email and "@" in customer_email:
-        try:
-            from services.notifications import NotificationService
-            notif = NotificationService()
-            change_bits = []
-            if new_platforms != order_platforms:
-                change_bits.append(
-                    f"your subscription now includes {new_platforms} platform{'s' if new_platforms != 1 else ''} instead of {order_platforms}"
-                )
-            if _platform_signature(selected_synced) != _platform_signature(canonical_existing):
-                change_bits.append(f"your platforms are now: {selected_synced}")
-            if not order_has_stories and new_stories:
-                change_bits.append("30 Days Story Ideas has been added to your subscription")
-            elif order_has_stories and not new_stories:
-                change_bits.append("Story Ideas has been removed from your subscription")
-            if new_stories and align_stories_to_captions != old_align:
-                if align_stories_to_captions:
-                    change_bits.append("Story Ideas will align to each day's caption")
-                else:
-                    change_bits.append("Story Ideas will not be aligned to each day's caption")
-            if not change_bits:
-                change_text = "your plan has been updated."
-            else:
-                change_text = "; ".join(change_bits) + "."
-            change_summary = f"What changed: {change_text}"
-            when_effective = "Changes apply to your next pack. Packs already delivered will not change."
-            currency = (order.get("currency") or "gbp").strip().lower()
-            old_sym, old_amt = _subscription_monthly_price(currency, order_platforms, order_has_stories)
-            new_sym, new_amt = _subscription_monthly_price(currency, new_platforms, new_stories)
-            notif.send_plan_change_confirmation_email(
-                customer_email,
-                change_summary=change_summary,
-                when_effective=when_effective,
-                account_url=_account_url(),
-                new_price_display=f"{new_sym}{new_amt}",
-                old_price_display=f"{old_sym}{old_amt}",
-                business_name=((order.get("intake") or {}).get("business_name") or None),
+        change_bits = []
+        if new_platforms != order_platforms:
+            change_bits.append(
+                f"your subscription now includes {new_platforms} platform{'s' if new_platforms != 1 else ''} instead of {order_platforms}"
             )
-        except Exception as e:
-            print(f"[billing] Plan change confirmation email failed: {e}")
+        if _platform_signature(selected_synced) != _platform_signature(canonical_existing):
+            change_bits.append(f"your platforms are now: {selected_synced}")
+        if not order_has_stories and new_stories:
+            change_bits.append("30 Days Story Ideas has been added to your subscription")
+        elif order_has_stories and not new_stories:
+            change_bits.append("Story Ideas has been removed from your subscription")
+        if new_stories and align_stories_to_captions != old_align:
+            if align_stories_to_captions:
+                change_bits.append("Story Ideas will align to each day's caption")
+            else:
+                change_bits.append("Story Ideas will not be aligned to each day's caption")
+        if not change_bits:
+            change_text = "your plan has been updated."
+        else:
+            change_text = "; ".join(change_bits) + "."
+        change_summary = f"What changed: {change_text}"
+        when_effective = "Changes apply to your next pack. Packs already delivered will not change."
+        currency = (order.get("currency") or "gbp").strip().lower()
+        old_sym, old_amt = _subscription_monthly_price(currency, order_platforms, order_has_stories)
+        new_sym, new_amt = _subscription_monthly_price(currency, new_platforms, new_stories)
+        _send_plan_change_confirmation_with_webhook_dedupe(
+            subscription_id,
+            customer_email,
+            new_platforms,
+            new_stories,
+            change_summary=change_summary,
+            when_effective=when_effective,
+            new_price_display=f"{new_sym}{new_amt}",
+            old_price_display=f"{old_sym}{old_amt}",
+            business_name=((order.get("intake") or {}).get("business_name") or None),
+        )
 
     return jsonify({
         "ok": True,

@@ -39,3 +39,35 @@ def test_plan_change_email_dedupe_ttl_window():
     assert _plan_change_email_recently_sent(key, now_ts=1200.0) is True
     # After TTL (1 hour), it should no longer dedupe.
     assert _plan_change_email_recently_sent(key, now_ts=5000.0) is False
+
+
+def test_billing_plan_change_helper_respects_webhook_dedupe(monkeypatch):
+    """After webhook marks dedupe, billing must not send a second identical plan-change email."""
+    import time
+
+    from api import billing_routes
+    from services.notifications import NotificationService
+
+    _plan_change_email_dedupe.clear()
+    key = _plan_change_dedupe_key("sub_abcd", "client@example.com", 2, False)
+    # Use a current unix time so TTL cleanup does not drop the entry before the helper runs.
+    now = time.time()
+    _mark_plan_change_email_sent(key, now_ts=now)
+    sent = []
+
+    def _fake_send(self, customer_email, **kwargs):
+        sent.append((customer_email, kwargs))
+
+    monkeypatch.setattr(NotificationService, "send_plan_change_confirmation_email", _fake_send)
+    billing_routes._send_plan_change_confirmation_with_webhook_dedupe(
+        "sub_abcd",
+        "client@example.com",
+        2,
+        False,
+        change_summary="What changed: test.",
+        when_effective="Next pack.",
+        new_price_display="£1",
+        old_price_display="£2",
+        business_name="Biz",
+    )
+    assert sent == []
