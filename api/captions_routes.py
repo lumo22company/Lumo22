@@ -1593,6 +1593,12 @@ def _pack_generation_lock_release(order_id: str) -> None:
             pass
 
 
+def _pack_generation_lock_reset(order_id: str) -> None:
+    """Drop the in-process lock for this order so a new run can acquire (recovery after a hung thread)."""
+    with _PACK_GEN_LOCKS_GUARD:
+        _PACK_GEN_LOCKS.pop(order_id, None)
+
+
 def _subscription_pack_delivery_recent_duplicate(order_id: str) -> bool:
     """Suppress a second subscription renewal / get-pack-sooner run within TTL (webhook + API race)."""
     now = time.monotonic()
@@ -1619,10 +1625,14 @@ def _run_generation_and_deliver(
     force_redeliver: bool = False,
     force_captions_only: bool = False,
     pack_sooner_receipt: Optional[dict] = None,
+    from_delivery_recovery: bool = False,
 ):
     """Background: generate captions, save, email client. Runs outside request context.
     force_redeliver: when True, regenerate and email even if status is 'delivered', and retry even if
-    status is 'generating' (support redeliver). Otherwise stale generating (>25m) still retries like recovery cron.
+    status is 'generating' (support redeliver). Otherwise stale generating (see
+    STALE_GENERATING_RETRY_AFTER_MINUTES in caption_delivery_recovery) still retries like recovery cron.
+    from_delivery_recovery: when True (APScheduler/cron recovery only), allow replacing a stuck in-process
+    lock so a hung generation thread cannot block retries forever.
     force_captions_only: when True, skip stories generation and deliver captions only.
     pack_sooner_receipt: optional dict from get-pack-sooner webhook with amount_paid_display, ongoing_monthly_display;
     prepends payment + plan summary to the delivery email (single combined message)."""
@@ -1630,7 +1640,10 @@ def _run_generation_and_deliver(
     from datetime import datetime
 
     from services.caption_order_service import CaptionOrderService
-    from services.caption_delivery_recovery import order_generating_attempt_reference
+    from services.caption_delivery_recovery import (
+        STALE_GENERATING_RETRY_AFTER_MINUTES,
+        order_generating_attempt_reference,
+    )
     from services.caption_generator import CaptionGenerator, extract_day_categories_from_captions_md
     from services.notifications import (
         NotificationService,
@@ -1651,7 +1664,7 @@ def _run_generation_and_deliver(
         print(f"[Captions] Order {order_id} already delivered, skipping duplicate")
         return (True, None)
     if status == "generating":
-        # In-flight run: skip. Stuck "generating" (worker died): allow retry after 25m (same rule as
+        # In-flight run: skip. Stuck "generating" (worker died): allow retry after STALE_GENERATING_* (same as
         # row_needs_first_delivery_retry). Support/cron redeliver uses force_redeliver to bypass.
         allow_retry = force_redeliver
         if not allow_retry:
@@ -1667,7 +1680,7 @@ def _run_generation_and_deliver(
                         udt = ref
                     if udt.tzinfo is None:
                         udt = udt.replace(tzinfo=timezone.utc)
-                    allow_retry = udt < now - timedelta(minutes=25)
+                    allow_retry = udt < now - timedelta(minutes=STALE_GENERATING_RETRY_AFTER_MINUTES)
                 except Exception:
                     allow_retry = True
             else:
@@ -1701,7 +1714,10 @@ def _run_generation_and_deliver(
         if force_redeliver:
             print(f"[Captions] Order {order_id} force redeliver: retrying despite generating status")
         else:
-            print(f"[Captions] Order {order_id} stale generating (>25m); retrying delivery")
+            print(
+                f"[Captions] Order {order_id} stale generating "
+                f"(>{STALE_GENERATING_RETRY_AFTER_MINUTES}m); retrying delivery"
+            )
     intake = row.get("intake") or {}
     token = (row.get("token") or "").strip()
     customer_email = (row.get("customer_email") or "").strip()
@@ -1727,7 +1743,15 @@ def _run_generation_and_deliver(
             if previous_pack_themes:
                 print(f"[Captions] Subscription order {order_id}: varying from {len(previous_pack_themes)} previous pack(s)")
 
-    if not _pack_generation_lock_acquire(str(order_id)):
+    acquired = _pack_generation_lock_acquire(str(order_id))
+    if not acquired and from_delivery_recovery:
+        print(
+            f"[Captions] Order {order_id} delivery recovery: resetting stuck in-process "
+            "generation lock (previous thread may be hung or worker was replaced)"
+        )
+        _pack_generation_lock_reset(str(order_id))
+        acquired = _pack_generation_lock_acquire(str(order_id))
+    if not acquired:
         print(
             f"[Captions] Order {order_id} skip duplicate: another generation thread is in progress (lock)"
         )
@@ -2086,7 +2110,11 @@ def captions_delivery_health():
         from collections import Counter
         from datetime import datetime, timezone, timedelta
 
-        from services.caption_delivery_recovery import CAPTIONS_MAX_AUTO_DELIVERY_FAILURES
+        from services.caption_delivery_recovery import (
+            CAPTIONS_MAX_AUTO_DELIVERY_FAILURES,
+            STALE_GENERATING_RETRY_AFTER_MINUTES,
+            order_generating_attempt_reference,
+        )
         from services.caption_order_service import CaptionOrderService
 
         svc = CaptionOrderService()
@@ -2128,16 +2156,19 @@ def captions_delivery_health():
         for r in rows:
             if (r.get("status") or "").lower() != "generating":
                 continue
-            updated = r.get("updated_at") or r.get("created_at")
+            ref = order_generating_attempt_reference(r)
+            if not ref:
+                continue
             try:
-                udt = datetime.fromisoformat(str(updated).replace("Z", "+00:00"))
+                udt = datetime.fromisoformat(str(ref).replace("Z", "+00:00"))
                 if udt.tzinfo is None:
                     udt = udt.replace(tzinfo=timezone.utc)
-                if udt < now - timedelta(minutes=30):
+                if udt < now - timedelta(minutes=STALE_GENERATING_RETRY_AFTER_MINUTES):
                     stale_generating.append(
                         {
                             "id": str(r.get("id")),
                             "email": r.get("customer_email"),
+                            "delivery_last_attempt_at": r.get("delivery_last_attempt_at"),
                             "updated_at": r.get("updated_at"),
                         }
                     )
@@ -2160,7 +2191,8 @@ def captions_delivery_health():
                 "recovery_queue": stuck_summary,
                 "recent_failed": failed_recent,
                 "alerts": {
-                    "stale_generating_over_30m": stale_generating[:12],
+                    "stale_generating_past_recovery_threshold": stale_generating[:12],
+                    "stale_generating_threshold_minutes": STALE_GENERATING_RETRY_AFTER_MINUTES,
                     "repeating_failed_errors": repeating_failures[:8],
                 },
             }
@@ -3864,7 +3896,11 @@ def _run_stuck_first_deliveries(max_orders: int = 5) -> dict:
         if not order_id:
             continue
         _maybe_ops_alert_stale_generating_recovery(order_service, order)
-        thread = threading.Thread(target=_run_generation_and_deliver, args=(str(order_id),))
+        thread = threading.Thread(
+            target=_run_generation_and_deliver,
+            args=(str(order_id),),
+            kwargs={"from_delivery_recovery": True},
+        )
         thread.daemon = False
         thread.start()
         triggered += 1

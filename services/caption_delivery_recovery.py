@@ -13,6 +13,11 @@ from typing import Any, Dict
 # Total failed attempts before auto-retry stops (1st try + 2 automatic retries).
 CAPTIONS_MAX_AUTO_DELIVERY_FAILURES = 3
 
+# If status is "generating" this long without delivery, cron/recovery may retry. Kept below worst-case
+# wall time for a full pack (multi-chunk + validation + HTTP retries) but high enough that recovery
+# does not fight a legitimately slow run.
+STALE_GENERATING_RETRY_AFTER_MINUTES = 45
+
 
 def order_generating_attempt_reference(order: Dict[str, Any]) -> Any:
     """
@@ -74,7 +79,7 @@ def row_needs_first_delivery_retry(
                     udt = ref
                 if udt.tzinfo is None:
                     udt = udt.replace(tzinfo=timezone.utc)
-                return udt < now - timedelta(minutes=25)
+                return udt < now - timedelta(minutes=STALE_GENERATING_RETRY_AFTER_MINUTES)
             except Exception:
                 return True
 
@@ -125,7 +130,7 @@ def row_needs_first_delivery_retry(
                 udt = ref
             if udt.tzinfo is None:
                 udt = udt.replace(tzinfo=timezone.utc)
-            return udt < now - timedelta(minutes=25)
+            return udt < now - timedelta(minutes=STALE_GENERATING_RETRY_AFTER_MINUTES)
         except Exception:
             return False
     return False

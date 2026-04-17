@@ -63,7 +63,7 @@ def test_subscription_failed_with_captions_md_needs_retry():
 
 
 def test_subscription_generating_stale_with_captions_md_needs_retry():
-    stale = datetime.now(timezone.utc) - timedelta(minutes=30)
+    stale = datetime.now(timezone.utc) - timedelta(minutes=50)
     row = {
         "status": "generating",
         "captions_md": "## Previous month",
@@ -114,7 +114,7 @@ def test_intake_completed_fresh_skipped_grace():
 
 
 def test_generating_stuck_needs_retry():
-    stale = datetime.now(timezone.utc) - timedelta(minutes=30)
+    stale = datetime.now(timezone.utc) - timedelta(minutes=50)
     row = {
         "status": "generating",
         "captions_md": "",
@@ -133,6 +133,18 @@ def test_generating_recent_no_retry():
     assert row_needs_first_delivery_retry(row) is False
 
 
+def test_generating_below_stale_threshold_no_retry():
+    """Below STALE_GENERATING_RETRY_AFTER_MINUTES: do not auto-retry (may still be generating)."""
+    ref = datetime.now(timezone.utc) - timedelta(minutes=40)
+    row = {
+        "status": "generating",
+        "captions_md": "",
+        "delivery_last_attempt_at": _old(ref),
+        "updated_at": _old(datetime.now(timezone.utc)),
+    }
+    assert row_needs_first_delivery_retry(row) is False
+
+
 def test_order_generating_attempt_reference_prefers_delivery_last_attempt_at():
     stale = datetime.now(timezone.utc) - timedelta(minutes=30)
     fresh = datetime.now(timezone.utc) - timedelta(seconds=30)
@@ -146,7 +158,7 @@ def test_order_generating_attempt_reference_prefers_delivery_last_attempt_at():
 
 def test_subscription_generating_stale_attempt_despite_recent_intake_save():
     """Intake-only save bumps updated_at; recovery should still see stale generation."""
-    stale = datetime.now(timezone.utc) - timedelta(minutes=30)
+    stale = datetime.now(timezone.utc) - timedelta(minutes=50)
     fresh_save = datetime.now(timezone.utc) - timedelta(minutes=1)
     row = {
         "status": "generating",
