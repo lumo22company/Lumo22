@@ -70,7 +70,7 @@ class Config:
     FROM_EMAIL = _sanitize_header_value(os.getenv('FROM_EMAIL', '') or '') or 'noreply@lumo22.com'
     FROM_NAME = _sanitize_header_value(os.getenv('FROM_NAME', '') or '') or 'Lumo 22'
     # Ops alerts: stale-generating recovery, delivery retries exhausted, pack-sooner webhook blocks, etc.
-    # Set INTERNAL_ALERT_EMAIL in Railway (e.g. lumo22@gmail.com) so SendGrid delivers to your troubleshooting inbox.
+    # Set INTERNAL_ALERT_EMAIL in Railway if you want a different ops inbox; default below is hello@lumo22.com.
     INTERNAL_ALERT_EMAIL = _sanitize_header_value(os.getenv('INTERNAL_ALERT_EMAIL', '') or '') or 'hello@lumo22.com'
     # Optional duplicate recipient for the same ops emails (e.g. personal inbox if primary is role-based).
     _ial_cc = _sanitize_header_value(os.getenv("INTERNAL_ALERT_EMAIL_CC", "") or "").strip()
