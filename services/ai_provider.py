@@ -108,7 +108,8 @@ def _openai_completion(system: str, user: str, temperature: float, max_tokens: i
 
     if not Config.OPENAI_API_KEY:
         raise ValueError("OPENAI_API_KEY not configured (required when AI_PROVIDER=openai)")
-    client = OpenAI(api_key=Config.OPENAI_API_KEY)
+    timeout = float(getattr(Config, "AI_HTTP_TIMEOUT_SECONDS", 300.0) or 300.0)
+    client = OpenAI(api_key=Config.OPENAI_API_KEY, timeout=timeout)
 
     def _do() -> str:
         response = client.chat.completions.create(
@@ -130,7 +131,8 @@ def _anthropic_completion(system: str, user: str, temperature: float, max_tokens
 
     if not Config.ANTHROPIC_API_KEY:
         raise ValueError("ANTHROPIC_API_KEY not configured (required when AI_PROVIDER=anthropic)")
-    client = Anthropic(api_key=Config.ANTHROPIC_API_KEY)
+    timeout = float(getattr(Config, "AI_HTTP_TIMEOUT_SECONDS", 300.0) or 300.0)
+    client = Anthropic(api_key=Config.ANTHROPIC_API_KEY, timeout=timeout)
 
     def _do() -> str:
         response = client.messages.create(

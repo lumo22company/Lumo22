@@ -46,7 +46,13 @@ class Config:
     # Anthropic (for AI_PROVIDER=anthropic)
     ANTHROPIC_API_KEY = _sanitize_header_value(os.getenv('ANTHROPIC_API_KEY', '') or '')
     ANTHROPIC_MODEL = (os.getenv('ANTHROPIC_MODEL') or 'claude-haiku-4-5-20251001').strip()
-    
+    # Per chat-completion HTTP timeout (OpenAI / Anthropic). Caps how long one provider call can hang.
+    _ai_http_timeout_raw = (os.getenv("AI_HTTP_TIMEOUT_SECONDS") or "300").strip()
+    try:
+        AI_HTTP_TIMEOUT_SECONDS = max(30.0, min(900.0, float(_ai_http_timeout_raw)))
+    except ValueError:
+        AI_HTTP_TIMEOUT_SECONDS = 300.0
+
     # Supabase (sanitize URL so httpx doesn't raise InvalidURL from env newlines)
     SUPABASE_URL = _sanitize_url(os.getenv('SUPABASE_URL', '') or '')
     SUPABASE_KEY = (os.getenv('SUPABASE_KEY') or '').strip()
