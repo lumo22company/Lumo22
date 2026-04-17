@@ -20,8 +20,8 @@
       border-radius: 12px;
       border: 1px solid var(--lum-border, rgba(255,255,255,0.08));
     }
-    .pps-thank-card h1 { font-family: var(--font-display); font-size: 1.65rem; margin-bottom: 1rem; line-height: 1.25; }
-    .pps-thank-card p { color: var(--lum-text-muted); line-height: 1.7; margin-bottom: 1.1rem; }
+    .pps-thank-card h1 { font-family: var(--font-display); font-size: 1.65rem; margin-bottom: 1rem; line-height: 1.25; color: var(--lum-text); }
+    .pps-thank-card p { color: var(--lum-text); line-height: 1.7; margin-bottom: 1.1rem; }
     .pps-thank-actions {
       display: flex;
       flex-direction: column;
@@ -73,7 +73,7 @@
     </div>
     <div class="pps-thank-card">
       <h1>Thank you — we’re preparing your pack</h1>
-      <p>Your payment went through and your <strong>next billing date</strong> is now aligned from today. We’re generating your monthly pack from your current form. We email the <strong>PDF pack</strong> to <strong>{% if current_customer and current_customer.email %}{{ current_customer.email }}{% else %}the email on your Lumo account{% endif %}</strong> when it’s ready (usually within a few minutes).</p>
+      <p>Your payment went through and your <strong>next billing date</strong> is now aligned <strong>30 days from today</strong>. We’re generating your monthly pack from your current form. We email the <strong>PDF pack</strong> to <strong>{% if current_customer and current_customer.email %}{{ current_customer.email }}{% else %}the email on your Lumo account{% endif %}</strong> when it’s ready (usually within a few minutes).</p>
       <p>Check <strong>spam or promotions</strong> if nothing appears in that inbox. When the pack is ready, it also appears under <strong>History</strong> in your account with download links.</p>
       <div class="pps-thank-actions">
         <a href="{{ url_for('account_page', section='subscription') }}" class="lumo-btn-primary thankyou-cta-swipe ppso-btn-primary">Back to Manage subscription</a>
