@@ -637,15 +637,16 @@ class CaptionOrderService:
         last_error: str,
         delivery_failure_count: int,
     ) -> None:
-        """Email ops once when auto-retries are exhausted (see CAPTIONS_MAX_AUTO_DELIVERY_FAILURES)."""
+        """Email ops once when auto-retries are exhausted; email customer with the same reassurance as the account banner."""
+        intake = row.get("intake") if isinstance(row.get("intake"), dict) else {}
+        biz = (intake.get("business_name") or "").strip()
+        customer_em = str(row.get("customer_email") or "").strip()
         try:
             from services.notifications import NotificationService
 
-            intake = row.get("intake") if isinstance(row.get("intake"), dict) else {}
-            biz = (intake.get("business_name") or "").strip()
             NotificationService().send_caption_delivery_retries_exhausted_alert(
                 order_id=str(order_id),
-                customer_email=str(row.get("customer_email") or ""),
+                customer_email=customer_em,
                 order_token=str(row.get("token") or ""),
                 business_name=biz,
                 stripe_subscription_id=str(row.get("stripe_subscription_id") or ""),
@@ -654,7 +655,17 @@ class CaptionOrderService:
                 last_error=last_error,
             )
         except Exception as e:
-            print(f"[Captions] _notify_delivery_retries_exhausted failed: {e!r}")
+            print(f"[Captions] _notify_delivery_retries_exhausted ops alert failed: {e!r}")
+        try:
+            if customer_em and "@" in customer_em:
+                from services.notifications import NotificationService
+
+                NotificationService().send_caption_delivery_retries_exhausted_customer_notice(
+                    customer_em,
+                    business_name=biz or None,
+                )
+        except Exception as e:
+            print(f"[Captions] _notify_delivery_retries_exhausted customer notice failed: {e!r}")
 
     def hide_current_from_history(self, order_id: str) -> bool:
         """Hide only the live latest pack row on Account History; delivery_archive rows stay listed."""

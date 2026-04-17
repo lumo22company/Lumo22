@@ -63,6 +63,35 @@ def _account_history_url() -> str:
     return f"{base}/account?section=history"
 
 
+def _account_manage_subscription_url() -> str:
+    """Customer account — Manage subscription (matches dashboard nav)."""
+    base = (Config.BASE_URL or "").strip().rstrip("/")
+    if not base or not base.startswith("http"):
+        base = "https://www.lumo22.com"
+    return f"{base}/account/subscription"
+
+
+def _delivery_retries_exhausted_customer_email_html(manage_url: str, business_name: Optional[str]) -> str:
+    """Branded HTML when auto-delivery retries are exhausted (matches account red banner tone)."""
+    import html
+
+    safe_url = html.escape(manage_url, quote=True)
+    business_line = ""
+    safe_business = _sanitize_email_value(business_name or "")
+    if safe_business:
+        business_line = (
+            f'<p style="margin:0 0 16px;"><strong>Business:</strong> '
+            f"{html.escape(safe_business, quote=False)}</p>"
+        )
+    content = f"""<p style="margin:0 0 16px;">Hi,</p>
+{business_line}
+<p style="margin:0 0 16px;">We weren’t able to finish sending your latest <strong>30 Days of Social Media Captions</strong> pack automatically after several attempts. <strong>Our team has already been notified</strong> and will look into this — <strong>you don’t need to do anything</strong> for us to investigate.</p>
+<p style="margin:0 0 16px;">When you’re signed in, <strong>Manage subscription</strong> in your Lumo account shows the same notice and a quick way to email us if you’d like to add a note: <a href="{safe_url}" style="color:{BRAND_BLACK}; text-decoration:none; border-bottom:1px solid {BRAND_BLACK};">Open Manage subscription</a></p>
+<p style="margin:0 0 16px;">We’re sorry for the delay and will get your captions to you as soon as we can.</p>
+<p style="margin:0;">— Lumo 22</p>"""
+    return _email_wrapper(content)
+
+
 def _account_history_notice_delivery_html() -> str:
     """Delivery email: PDFs just sent — also available under History until removed."""
     import html as html_mod
@@ -1563,6 +1592,40 @@ The customer may see the exhausted “our team has been notified” message on t
 
 {self._caption_ops_mail_footer()}"""
         return self._send_ops_alert_email(subj, body)
+
+    def send_caption_delivery_retries_exhausted_customer_notice(
+        self,
+        to_email: str,
+        *,
+        business_name: Optional[str] = None,
+    ) -> bool:
+        """
+        One email to the customer when automatic delivery retries are exhausted (same moment as ops alert).
+        Reassures team is notified; points to Manage subscription for the in-account notice + mailto.
+        """
+        to_email = _sanitize_email_value(to_email or "")
+        if not to_email or "@" not in to_email:
+            print("[SendGrid] Delivery exhausted customer notice NOT sent: invalid to_email")
+            return False
+        safe_business = _sanitize_email_value(business_name or "")
+        subject = _subject_with_business("We’re working on your captions pack", safe_business or None)
+        manage_url = _account_manage_subscription_url()
+        business_plain = f"Business: {safe_business}\n\n" if safe_business else ""
+        body = f"""Hi,
+
+{business_plain}We weren’t able to finish sending your latest 30 Days of Social Media Captions pack automatically after several attempts. Our team has already been notified and will look into this — you don’t need to do anything for us to investigate.
+
+When you’re signed in, Manage subscription in your Lumo account shows the same notice and a quick way to email us if you’d like to add a note:
+{manage_url}
+
+We’re sorry for the delay and will get your captions to you as soon as we can.
+
+— Lumo 22"""
+        html_body = _delivery_retries_exhausted_customer_email_html(manage_url, safe_business or None)
+        ok = self.send_email(to_email, subject, body, html_body=html_body)
+        if ok:
+            print(f"[SendGrid] Delivery exhausted customer notice sent to {to_email!r}")
+        return ok
 
     def send_caption_stale_generating_recovery_alert(
         self,
