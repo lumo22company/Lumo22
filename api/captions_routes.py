@@ -2419,9 +2419,10 @@ def _captions_intake_submit_impl(data):
         order,
         is_pack_sooner_edit_session=_pack_sooner_for_anchor,
     )
+    pack_start_iso = _anchor_d.strftime("%Y-%m-%d")
     launch_window_error = _validate_launch_event_window(
         intake.get("launch_event_description") or "",
-        _anchor_d.strftime("%Y-%m-%d"),
+        pack_start_iso,
     )
     if launch_window_error:
         return jsonify({"error": launch_window_error}), 400

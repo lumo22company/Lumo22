@@ -73,8 +73,10 @@ def test_rejects_any_date_outside_window_when_multi_dated():
 
     assert r.status_code == 400
     msg = (r.get_json() or {}).get("error", "")
-    assert "16 April" in msg and "May 2026" in msg
     assert "outside your next 30-day captions window" in msg
+    # Window start follows launch_window_start_for_intake_validation (may bump stale pack_start_date to today).
+    assert "May 2026" in msg
+    assert "16 April" in msg or "17 April" in msg
 
 
 def test_rejects_empty_voice_words():
