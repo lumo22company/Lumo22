@@ -551,7 +551,7 @@
         {% if not oneoff_subscribe_checkout_mode|default(false) %}
         <button type="button" class="btn-submit btn-secondary account-btn-swipe-light" id="btn-edit">Edit</button>
         {% endif %}
-        <button type="button" class="btn-submit account-btn-swipe-light" id="btn-confirm">{% if oneoff_subscribe_checkout_mode|default(false) %}Confirm and continue{% elif is_upgrade_flow|default(false) %}Next step{% else %}Send details{% endif %}</button>
+        <button type="button" class="btn-submit account-btn-swipe-light" id="btn-confirm">{% if oneoff_subscribe_checkout_mode|default(false) %}Confirm and continue{% elif is_upgrade_flow|default(false) %}Next step{% elif is_prepare_pack_sooner_return|default(false) and edit_intake_before_subscribe|default(false) %}Checkout{% else %}Send details{% endif %}</button>
       </div>
     </div>
     {% endif %}
@@ -578,6 +578,7 @@
       var b = document.body;
       if (b.getAttribute('data-oneoff-subscribe-checkout') === 'true') return 'Confirm and continue';
       if (b.getAttribute('data-is-upgrade-flow') === 'true') return 'Next step';
+      if (b.getAttribute('data-prepare-pack-sooner-edit') === 'true') return 'Checkout';
       return 'Send details';
     };
     var PLAN_UPGRADE = 'Your answers are not saved on our servers yet. After checkout completes and the new price is active, come back to this page and tap Next step again to save (or open the form from your confirmation email).';
