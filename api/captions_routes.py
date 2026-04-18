@@ -3651,8 +3651,9 @@ def captions_get_pack_sooner():
 @captions_bp.route("/captions/dismiss-cancelled-subscription", methods=["POST"])
 def captions_dismiss_cancelled_subscription():
     """
-    Hide one ended subscription row from Account → Cancelled subscriptions (resubscribe list).
-    Does not delete the order, cancel billing, or remove packs from History.
+    Hide one ended subscription row from Account → Cancelled subscriptions, subscribe options,
+    and Upgrade / Resubscribe → Base subscription on (same flag as account context).
+    Does not delete the order, intake, cancel billing, or remove packs from History.
     Body: { "token": "..." } — order token for that subscription row.
     """
     from api.auth_routes import get_current_customer

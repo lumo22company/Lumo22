@@ -1401,7 +1401,7 @@ def _order_hidden_from_account(o: dict) -> bool:
 
 
 def _order_resubscribe_prompt_dismissed(o: dict) -> bool:
-    """True if customer removed this ended subscription from the Cancelled subscriptions / resubscribe list."""
+    """True if customer hid this order from Cancelled subscriptions, subscribe_options, and Upgrade Base subscription on."""
     v = o.get("resubscribe_prompt_dismissed_at")
     if v is None:
         return False
@@ -2092,11 +2092,11 @@ def _account_context_build(customer: dict, section: Optional[str] = None) -> dic
         and not _order_hidden_from_account(o)
     ]
     one_off_upgrade_options = [o for o in one_off_orders if _one_off_eligible_for_upgrade_base_dropdown(o)]
+    # Same list drives Upgrade → "Base subscription on" and subscribe_options; omit dismissed rows everywhere.
+    one_off_upgrade_options = [o for o in one_off_upgrade_options if not _order_resubscribe_prompt_dismissed(o)]
     if one_off_upgrade_options:
         from urllib.parse import urlencode
         for o in one_off_upgrade_options:
-            if _order_resubscribe_prompt_dismissed(o):
-                continue
             token = (o.get("token") or "").strip()
             if not token:
                 continue
