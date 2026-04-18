@@ -3648,6 +3648,59 @@ def captions_get_pack_sooner():
         return jsonify({"ok": False, "error": str(e)}), 500
 
 
+@captions_bp.route("/captions/dismiss-cancelled-subscription", methods=["POST"])
+def captions_dismiss_cancelled_subscription():
+    """
+    Hide one ended subscription row from Account → Cancelled subscriptions (resubscribe list).
+    Does not delete the order, cancel billing, or remove packs from History.
+    Body: { "token": "..." } — order token for that subscription row.
+    """
+    from api.auth_routes import get_current_customer
+    from datetime import datetime, timezone
+
+    customer = get_current_customer()
+    if not customer:
+        return jsonify({"ok": False, "error": "Not logged in"}), 401
+    email = (customer.get("email") or "").strip().lower()
+    if not email or "@" not in email:
+        return jsonify({"ok": False, "error": "Invalid customer"}), 400
+    try:
+        data = request.get_json() or {}
+        token = (data.get("token") or "").strip()
+        if not token:
+            return jsonify({"ok": False, "error": "token required"}), 400
+        from services.caption_order_service import CaptionOrderService
+
+        order_service = CaptionOrderService()
+        order = order_service.get_by_token(token)
+        if not order:
+            return jsonify({"ok": False, "error": "Order not found"}), 404
+        order_email = (order.get("customer_email") or "").strip().lower()
+        if order_email != email:
+            return jsonify({"ok": False, "error": "This order does not belong to your account"}), 403
+        from app import _order_has_active_stripe_subscription, _order_is_former_subscription_row
+
+        if _order_has_active_stripe_subscription(order):
+            return jsonify({"ok": False, "error": "This subscription is still active. Cancel it under Manage subscription if needed."}), 400
+        if not _order_is_former_subscription_row(order):
+            return jsonify({"ok": False, "error": "Only ended subscriptions can be removed from this list."}), 400
+        order_id = order.get("id")
+        if not order_id:
+            return jsonify({"ok": False, "error": "Invalid order"}), 400
+        now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f+00:00")
+        if not order_service.update(str(order_id), {"resubscribe_prompt_dismissed_at": now_iso}):
+            return jsonify({"ok": False, "error": "Could not update. If this persists, contact support."}), 500
+        return jsonify({"ok": True, "message": "Removed from list."}), 200
+    except Exception as e:
+        err = str(e)
+        if "resubscribe_prompt_dismissed_at" in err or "PGRST204" in err:
+            return jsonify({
+                "ok": False,
+                "error": "This feature needs a quick database update. Please try again later or contact support.",
+            }), 503
+        return jsonify({"ok": False, "error": err[:200]}), 500
+
+
 @captions_bp.route("/captions/hide-pack", methods=["POST"])
 def captions_hide_pack():
     """

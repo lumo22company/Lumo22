@@ -1400,6 +1400,16 @@ def _order_hidden_from_account(o: dict) -> bool:
     return (o.get("status") or "").strip().lower() == "hidden"
 
 
+def _order_resubscribe_prompt_dismissed(o: dict) -> bool:
+    """True if customer removed this ended subscription from the Cancelled subscriptions / resubscribe list."""
+    v = o.get("resubscribe_prompt_dismissed_at")
+    if v is None:
+        return False
+    if isinstance(v, str) and not v.strip():
+        return False
+    return True
+
+
 def _subscription_pause_cancelled_in_stripe(o: dict) -> bool:
     """True when Stripe subscription status is canceled (set by _load_account_stripe_subscription_data)."""
     return bool((o.get("subscription_pause") or {}).get("cancelled_now"))
@@ -2085,6 +2095,8 @@ def _account_context_build(customer: dict, section: Optional[str] = None) -> dic
     if one_off_upgrade_options:
         from urllib.parse import urlencode
         for o in one_off_upgrade_options:
+            if _order_resubscribe_prompt_dismissed(o):
+                continue
             token = (o.get("token") or "").strip()
             if not token:
                 continue
@@ -2108,6 +2120,7 @@ def _account_context_build(customer: dict, section: Optional[str] = None) -> dic
                 "business_name": business_name,
                 "is_resubscribe": _order_is_former_subscription_row(o),
                 "cancelled_on_display": _cancelled_on_display_for_order(o),
+                "order_token": token,
             })
     # Split for Manage subscription UI: former subs (resubscribe) vs one-off → new subscription
     subscribe_options_resubscribe_only = [x for x in subscribe_options if x.get("is_resubscribe")]

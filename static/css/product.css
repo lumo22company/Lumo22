@@ -3981,6 +3981,36 @@
   flex-shrink: 0;
   align-self: center;
 }
+.account-page-wrap .account-subscription-resubscribe-panel .account-cancelled-sub-row__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+.account-page-wrap .account-subscription-resubscribe-panel .account-cancelled-sub-dismiss-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  margin: 0;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.92);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.account-page-wrap .account-subscription-resubscribe-panel .account-cancelled-sub-dismiss-btn:hover {
+  background: rgba(200, 80, 80, 0.35);
+  border-color: rgba(255, 160, 140, 0.55);
+  color: #fff;
+}
+.account-page-wrap .account-subscription-resubscribe-panel .account-cancelled-sub-dismiss-btn:focus-visible {
+  outline: 2px solid var(--lum-gold, #c9a227);
+  outline-offset: 2px;
+}
 
 /* Upgrade section: align heading and description with form labels (Base subscription on, etc.) */
 .account-upgrade-section {
