@@ -782,6 +782,39 @@ class CaptionOrderService:
         """Mark order as hidden so it no longer appears in account history (status -> hidden)."""
         return self.update(order_id, {"status": "hidden"})
 
+    def purge_former_subscription_order_customer_data(self, order_id: str) -> bool:
+        """
+        Account → Cancelled subscriptions bin: permanently clear intake, captions, archives, and story
+        payloads for this order; mark status hidden so it drops out of History, Upgrade, and lists.
+        Order row (token, Stripe ids, email) is kept for billing/ops continuity.
+        """
+        if not order_id:
+            return False
+        updates: Dict[str, Any] = {
+            "intake": {},
+            "captions_md": "",
+            "delivery_archive": [],
+            "pack_history": [],
+            "status": "hidden",
+            "include_stories": False,
+            "stories_pdf_base64": "",
+            "history_hide_current": False,
+        }
+        slim: Dict[str, Any] = {
+            "intake": {},
+            "captions_md": "",
+            "delivery_archive": [],
+            "status": "hidden",
+            "include_stories": False,
+        }
+        for payload in (updates, slim):
+            try:
+                if self.update(str(order_id), payload):
+                    return True
+            except Exception as e:
+                print(f"[CaptionOrderService] purge_former_subscription_order_customer_data: {e!r}")
+        return False
+
     def delete_by_customer_email(self, email: str) -> bool:
         """Permanently delete all caption orders for this customer (for account deletion).
         Deletes by customer_email and by stripe_customer_id (catches orders from different checkout emails)."""

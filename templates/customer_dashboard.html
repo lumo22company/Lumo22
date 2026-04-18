@@ -1099,7 +1099,7 @@
         {% if cancelled_sub_dismiss_tokens|length > 1 %}
         <script type="application/json" id="account-cancelled-subs-dismiss-all-tokens">{{ cancelled_sub_dismiss_tokens|tojson }}</script>
         <p class="account-cancelled-sub-remove-all-wrap">
-          <button type="button" class="account-cancelled-sub-remove-all-btn" onclick="showDismissAllCancelledSubsModal()" aria-label="Remove all ended subscriptions from this list">Remove all from this list</button>
+          <button type="button" class="account-cancelled-sub-remove-all-btn" onclick="showDismissAllCancelledSubsModal()" aria-label="Permanently delete form and delivery data for all ended subscriptions in this list">Delete all</button>
         </p>
         {% endif %}
         {% for opt in subscribe_options_resubscribe_only %}
@@ -1115,7 +1115,7 @@
           <div class="account-cancelled-sub-row__actions">
             <a href="{{ opt.url }}" class="dfd-btn dfd-btn-secondary account-upgrade-subscription-btn">Resubscribe</a>
             {% if opt.order_token %}
-            <button type="button" class="account-cancelled-sub-dismiss-btn" data-order-token="{{ opt.order_token }}" data-business-label="{% if opt.business_name %}{{ opt.business_name|e }}{% else %}Subscription{% endif %}" onclick="showDismissCancelledSubModal(this)" aria-label="Remove ended subscription from this list" title="Remove from list">
+            <button type="button" class="account-cancelled-sub-dismiss-btn" data-order-token="{{ opt.order_token }}" data-business-label="{% if opt.business_name %}{{ opt.business_name|e }}{% else %}Subscription{% endif %}" onclick="showDismissCancelledSubModal(this)" aria-label="Permanently delete form and delivery data for this ended subscription" title="Delete form and data for this order">
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
             </button>
             {% endif %}
@@ -1338,24 +1338,24 @@
     <div id="dismiss-cancelled-sub-modal" class="account-delete-modal" role="dialog" aria-labelledby="dismiss-cancelled-sub-modal-title" aria-modal="true" hidden>
       <div class="account-delete-modal-backdrop" onclick="closeDismissCancelledSubModal()"></div>
       <div class="account-delete-modal-box account-glass-modal-box" style="max-width: 520px;">
-        <h2 id="dismiss-cancelled-sub-modal-title" class="account-delete-modal-title">Remove from your account?</h2>
+        <h2 id="dismiss-cancelled-sub-modal-title" class="account-delete-modal-title">Delete form and data?</h2>
         <p id="dismiss-cancelled-sub-modal-lead" class="account-delete-modal-text"></p>
-        <p class="account-delete-modal-text" style="font-size: 0.9rem; color: rgba(255,255,255,0.88); line-height: 1.55;">This removes the row from <strong>Cancelled subscriptions</strong> and from &#8216;Base subscription on&#8217; in <strong>Upgrade or Resubscribe</strong>. Past packs stay in <strong>History</strong> if they are still there. <strong>This cannot be undone.</strong></p>
+        <p class="account-delete-modal-text" style="font-size: 0.9rem; color: rgba(255,255,255,0.88); line-height: 1.55;">This <strong>permanently deletes</strong> your saved form answers, captions, and pack archive for this order. It removes this subscription from <strong>Cancelled subscriptions</strong>, from <strong>History</strong>, and from &#8216;Base subscription on&#8217; in <strong>Upgrade or Resubscribe</strong>. Payment records may still appear in Stripe. <strong>This cannot be undone.</strong></p>
         <div class="account-delete-modal-buttons">
           <button type="button" class="account-delete-modal-btn account-delete-modal-keep" onclick="closeDismissCancelledSubModal()">Cancel</button>
-          <button type="button" class="account-delete-modal-btn account-delete-modal-confirm" id="dismiss-cancelled-sub-confirm-btn">Remove</button>
+          <button type="button" class="account-delete-modal-btn account-delete-modal-confirm account-delete-modal-confirm--danger" id="dismiss-cancelled-sub-confirm-btn">Delete permanently</button>
         </div>
       </div>
     </div>
     <div id="dismiss-all-cancelled-subs-modal" class="account-delete-modal" role="dialog" aria-labelledby="dismiss-all-cancelled-subs-modal-title" aria-modal="true" hidden>
       <div class="account-delete-modal-backdrop" onclick="closeDismissAllCancelledSubsModal()"></div>
       <div class="account-delete-modal-box account-glass-modal-box" style="max-width: 520px;">
-        <h2 id="dismiss-all-cancelled-subs-modal-title" class="account-delete-modal-title">Remove all from this list?</h2>
+        <h2 id="dismiss-all-cancelled-subs-modal-title" class="account-delete-modal-title">Delete form and data for all?</h2>
         <p id="dismiss-all-cancelled-subs-modal-lead" class="account-delete-modal-text"></p>
-        <p class="account-delete-modal-text" style="font-size: 0.9rem; color: rgba(255,255,255,0.88); line-height: 1.55;">This removes the rows from <strong>Cancelled subscriptions</strong> and from &#8216;Base subscription on&#8217; in <strong>Upgrade or Resubscribe</strong>. Past packs stay in <strong>History</strong> if they are still there. <strong>This cannot be undone.</strong></p>
+        <p class="account-delete-modal-text" style="font-size: 0.9rem; color: rgba(255,255,255,0.88); line-height: 1.55;">This <strong>permanently deletes</strong> saved form answers, captions, and pack archives for each order below. Those subscriptions disappear from <strong>Cancelled subscriptions</strong>, from <strong>History</strong>, and from &#8216;Base subscription on&#8217; in <strong>Upgrade or Resubscribe</strong>. Payment records may still appear in Stripe. <strong>This cannot be undone.</strong></p>
         <div class="account-delete-modal-buttons">
           <button type="button" class="account-delete-modal-btn account-delete-modal-keep" onclick="closeDismissAllCancelledSubsModal()">Cancel</button>
-          <button type="button" class="account-delete-modal-btn account-delete-modal-confirm" id="dismiss-all-cancelled-subs-confirm-btn">Remove all</button>
+          <button type="button" class="account-delete-modal-btn account-delete-modal-confirm account-delete-modal-confirm--danger" id="dismiss-all-cancelled-subs-confirm-btn">Delete all permanently</button>
         </div>
       </div>
     </div>
@@ -2254,13 +2254,13 @@
         var label = (btn.getAttribute('data-business-label') || 'This subscription').trim();
         var lead = document.getElementById('dismiss-cancelled-sub-modal-lead');
         if (lead) {
-          lead.textContent = 'Are you sure you want to permanently remove "' + label + '" from this list?';
+          lead.textContent = 'Permanently delete form and delivery data for "' + label + '"?';
         }
         var modal = document.getElementById('dismiss-cancelled-sub-modal');
         var cbtn = document.getElementById('dismiss-cancelled-sub-confirm-btn');
         if (cbtn) {
           cbtn.disabled = false;
-          cbtn.textContent = 'Remove';
+          cbtn.textContent = 'Delete permanently';
         }
         if (modal) {
           modal.removeAttribute('hidden');
@@ -2284,7 +2284,7 @@
         }
         if (btn) {
           btn.disabled = true;
-          btn.textContent = 'Removing…';
+          btn.textContent = 'Deleting…';
         }
         fetch('/api/captions/dismiss-cancelled-subscription', {
           method: 'POST',
@@ -2308,7 +2308,7 @@
             alert(err.message || 'Something went wrong — try again.');
             if (btn) {
               btn.disabled = false;
-              btn.textContent = 'Remove';
+              btn.textContent = 'Delete permanently';
             }
           });
       }
@@ -2337,13 +2337,13 @@
         var n = tokens.length;
         var lead = document.getElementById('dismiss-all-cancelled-subs-modal-lead');
         if (lead) {
-          lead.textContent = 'Remove all ' + n + ' ended subscriptions from this list?';
+          lead.textContent = 'Permanently delete form and delivery data for all ' + n + ' ended subscriptions?';
         }
         var modal = document.getElementById('dismiss-all-cancelled-subs-modal');
         var cbtn = document.getElementById('dismiss-all-cancelled-subs-confirm-btn');
         if (cbtn) {
           cbtn.disabled = false;
-          cbtn.textContent = 'Remove all';
+          cbtn.textContent = 'Delete all permanently';
         }
         if (modal) {
           modal.removeAttribute('hidden');
@@ -2367,7 +2367,7 @@
         }
         if (btn) {
           btn.disabled = true;
-          btn.textContent = 'Removing…';
+          btn.textContent = 'Deleting…';
         }
         Promise.allSettled(tokens.map(function(token) {
           return fetch('/api/captions/dismiss-cancelled-subscription', {
@@ -2393,7 +2393,7 @@
             alert(err0 && err0.message ? err0.message : 'Something went wrong — try again.');
             if (btn) {
               btn.disabled = false;
-              btn.textContent = 'Remove all';
+              btn.textContent = 'Delete all permanently';
             }
           });
       }

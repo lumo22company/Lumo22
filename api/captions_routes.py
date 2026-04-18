@@ -3651,13 +3651,12 @@ def captions_get_pack_sooner():
 @captions_bp.route("/captions/dismiss-cancelled-subscription", methods=["POST"])
 def captions_dismiss_cancelled_subscription():
     """
-    Hide one ended subscription row from Account → Cancelled subscriptions, subscribe options,
-    and Upgrade / Resubscribe → Base subscription on (same flag as account context).
-    Does not delete the order, intake, cancel billing, or remove packs from History.
+    Account → Cancelled subscriptions bin: permanently clear saved form and delivery content for
+    this ended-subscription order (intake, captions, archives, stories PDF payload), set status
+    hidden so it disappears from History and Upgrade / Resubscribe. Keeps the order row for Stripe/billing.
     Body: { "token": "..." } — order token for that subscription row.
     """
     from api.auth_routes import get_current_customer
-    from datetime import datetime, timezone
 
     customer = get_current_customer()
     if not customer:
@@ -3688,17 +3687,11 @@ def captions_dismiss_cancelled_subscription():
         order_id = order.get("id")
         if not order_id:
             return jsonify({"ok": False, "error": "Invalid order"}), 400
-        now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f+00:00")
-        if not order_service.update(str(order_id), {"resubscribe_prompt_dismissed_at": now_iso}):
-            return jsonify({"ok": False, "error": "Could not update. If this persists, contact support."}), 500
-        return jsonify({"ok": True, "message": "Removed from list."}), 200
+        if not order_service.purge_former_subscription_order_customer_data(str(order_id)):
+            return jsonify({"ok": False, "error": "Could not delete data. If this persists, contact support."}), 500
+        return jsonify({"ok": True, "message": "Order data deleted."}), 200
     except Exception as e:
         err = str(e)
-        if "resubscribe_prompt_dismissed_at" in err or "PGRST204" in err:
-            return jsonify({
-                "ok": False,
-                "error": "This feature needs a quick database update. Please try again later or contact support.",
-            }), 503
         return jsonify({"ok": False, "error": err[:200]}), 500
 
 

@@ -2339,6 +2339,32 @@
   transform: none;
   box-shadow: none;
 }
+/* Destructive confirm (e.g. delete cancelled-sub order data) */
+.account-delete-modal-confirm--danger {
+  color: #fff;
+  background: #b91c1c;
+  border-color: rgba(0, 0, 0, 0.35);
+}
+.account-delete-modal-confirm--danger:hover:not(:disabled) {
+  background: #991b1b;
+  color: #fff;
+  border-color: rgba(0, 0, 0, 0.45);
+  transform: translateY(-1px);
+  box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.4);
+}
+.account-delete-modal-confirm--danger:focus-visible {
+  outline: 2px solid #fecaca;
+  outline-offset: 2px;
+}
+.account-delete-modal-confirm--danger:disabled {
+  opacity: 0.55;
+}
+.account-delete-modal-confirm--danger:disabled:hover {
+  background: #b91c1c;
+  color: #fff;
+  transform: none;
+  box-shadow: none;
+}
 .account-add-stories-confirm,
 .account-remove-stories-confirm {
   color: #000;
