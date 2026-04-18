@@ -249,11 +249,11 @@ def _captions_delivery_review_tip_html(has_stories: bool) -> str:
     if has_stories:
         return (
             f'<p style="margin:0 0 16px; font-size:14px; color:#555;">We recommend you read through all of this '
-            f"month's captions and Story Ideas before you post.</p>"
+            f"month's captions and Story Ideas before you start posting.</p>"
         )
     return (
         f'<p style="margin:0 0 16px; font-size:14px; color:#555;">Tip: read through this month\'s captions before you '
-        f"post. Edit anything so it fits your voice, your brand, and any rules that apply to you.</p>"
+        f"start posting. Edit anything so it fits your voice, your brand, and any rules that apply to you.</p>"
     )
 
 
@@ -261,10 +261,10 @@ def captions_delivery_review_tip_plain(has_stories: bool) -> str:
     """Plain-text review tip for pack delivery email (kept in sync with _captions_delivery_review_tip_html)."""
     if has_stories:
         return (
-            "We recommend you read through all of this month's captions and Story Ideas before you post.\n\n"
+            "We recommend you read through all of this month's captions and Story Ideas before you start posting.\n\n"
         )
     return (
-        "Tip: read through this month's captions before you post. Edit anything so it fits your voice, your brand, and "
+        "Tip: read through this month's captions before you start posting. Edit anything so it fits your voice, your brand, and "
         "any rules that apply to you.\n\n"
     )
 
