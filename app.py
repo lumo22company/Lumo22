@@ -713,6 +713,16 @@ def captions_intake_page():
             is_pack_sooner_edit_session=bool(is_prepare_pack_sooner_return),
         )
         intake_pack_cover_line = format_pack_cover_line_ordinal_utc(_d1) or None
+    # Hub "Edit form" link passes upgrade_stories=1 when customer checked Story Ideas on the hub (add at
+    # pack-sooner/upgrade checkout). Show the stories UI even when subscription billing does not yet
+    # include Story Ideas (stories_paid is false).
+    upgrade_stories_q = (request.args.get("upgrade_stories") or "").strip()
+    hub_wants_stories_addon = bool(
+        account_hub_plan_picker
+        and edit_intake_before_subscribe
+        and upgrade_stories_q == "1"
+    )
+    stories_section_visible = bool(stories_paid or hub_wants_stories_addon)
     r = make_response(
         render_template(
             "captions_intake.html",
@@ -722,6 +732,8 @@ def captions_intake_page():
             prefilled_platform=prefilled_platform,
             prefilled_primary=prefilled_primary,
             stories_paid=stories_paid,
+            hub_wants_stories_addon=hub_wants_stories_addon,
+            stories_section_visible=stories_section_visible,
             is_oneoff=is_oneoff,
             selected_platforms=selected_platforms,
             subscribe_url=subscribe_url,
