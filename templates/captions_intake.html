@@ -945,8 +945,8 @@
                 }
                 var newStories = !!(sp.get('upgrade_stories') === '1' && hasIgfb);
                 var alignStories = newStories && !!payload.align_stories_to_captions;
-                if (btn) btn.textContent = 'Updating plan…';
-                fetch('/api/billing/change-subscription-plan', {
+                if (btn) btn.textContent = 'Opening checkout…';
+                fetch('/api/captions/get-pack-sooner', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   credentials: 'same-origin',
@@ -954,22 +954,8 @@
                     token: ppsTok,
                     new_stories: newStories,
                     selected_platforms: selectedList,
-                    align_stories_to_captions: alignStories,
-                    prepare_pack_sooner_checkout: true
+                    align_stories_to_captions: alignStories
                   })
-                })
-                .then(function(r) { return r.json().then(function(j) { return { ok: r.ok, json: j }; }); })
-                .then(function(res) {
-                  if (!res.ok || !(res.json && res.json.ok)) {
-                    throw new Error((res.json && res.json.error) || 'Plan update failed');
-                  }
-                  if (btn) btn.textContent = 'Opening checkout…';
-                  return fetch('/api/captions/get-pack-sooner', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'same-origin',
-                    body: JSON.stringify({ token: ppsTok })
-                  });
                 })
                 .then(function(r) { return r.json().then(function(j) { return { ok: r.ok, json: j }; }); })
                 .then(function(res) {
@@ -1567,8 +1553,8 @@
                 }
                 var newStories2 = !!(sp2.get('upgrade_stories') === '1' && hasIgfb2);
                 var alignStories2 = newStories2 && !!payload.align_stories_to_captions;
-                btnConfirm.textContent = 'Updating plan…';
-                fetch('/api/billing/change-subscription-plan', {
+                btnConfirm.textContent = 'Opening checkout…';
+                fetch('/api/captions/get-pack-sooner', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   credentials: 'same-origin',
@@ -1576,22 +1562,8 @@
                     token: ppsTok2,
                     new_stories: newStories2,
                     selected_platforms: selectedList2,
-                    align_stories_to_captions: alignStories2,
-                    prepare_pack_sooner_checkout: true
+                    align_stories_to_captions: alignStories2
                   })
-                })
-                .then(function(r) { return r.json().then(function(j) { return { ok: r.ok, json: j }; }); })
-                .then(function(res) {
-                  if (!res.ok || !(res.json && res.json.ok)) {
-                    throw new Error((res.json && res.json.error) || 'Plan update failed');
-                  }
-                  btnConfirm.textContent = 'Opening checkout…';
-                  return fetch('/api/captions/get-pack-sooner', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'same-origin',
-                    body: JSON.stringify({ token: ppsTok2 })
-                  });
                 })
                 .then(function(r) { return r.json().then(function(j) { return { ok: r.ok, json: j }; }); })
                 .then(function(res) {

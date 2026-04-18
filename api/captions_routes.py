@@ -3565,8 +3565,14 @@ def captions_get_pack_sooner():
         currency = (order.get("currency") or "gbp").strip().lower()
         if currency not in ("gbp", "usd", "eur"):
             currency = "gbp"
-        platforms = max(1, int(order.get("platforms_count") or 1))
-        include_stories = bool(order.get("include_stories"))
+        try:
+            from api.billing_routes import resolve_intended_plan_for_pack_sooner_checkout
+
+            platforms, include_stories, selected_synced_for_meta, align_for_meta = resolve_intended_plan_for_pack_sooner_checkout(
+                order, data
+            )
+        except ValueError as ve:
+            return jsonify({"ok": False, "error": str(ve)}), 400
         _, amt_whole = _subscription_monthly_price(currency, platforms, include_stories)
         try:
             expected_minor = int(amt_whole) * 100
@@ -3591,6 +3597,7 @@ def captions_get_pack_sooner():
         cancel_url = f"{base}/account?section=subscription"
 
         ot = (order.get("token") or "").strip()
+        sel_meta = (selected_synced_for_meta or "").strip()[:500]
         metadata = {
             "product": "captions_pack_sooner",
             "order_id": str(order_id),
@@ -3598,6 +3605,8 @@ def captions_get_pack_sooner():
             "stripe_subscription_id": sub_id,
             "platforms": str(platforms),
             "include_stories": "1" if include_stories else "0",
+            "selected_platforms": sel_meta,
+            "align_stories": "1" if (align_for_meta and include_stories) else "0",
         }
         create_params = {
             "mode": "payment",

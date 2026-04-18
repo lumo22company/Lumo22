@@ -6,7 +6,11 @@ Also ensures CAPTIONS_DISPLAY_PRICES (app) stays aligned with billing display pr
 """
 import pytest
 
-from api.billing_routes import _subscription_monthly_price
+from api.billing_routes import (
+    _subscription_monthly_price,
+    pack_sooner_plan_from_checkout_metadata,
+    resolve_intended_plan_for_pack_sooner_checkout,
+)
 from app import CAPTIONS_DISPLAY_PRICES
 
 
@@ -41,3 +45,40 @@ def test_billing_display_prices_match_app_captions_prices():
         assert _DISPLAY_PRICES[cur]["extra_sub"] == CAPTIONS_DISPLAY_PRICES[cur]["extra_sub"]
         assert _DISPLAY_PRICES[cur]["stories_sub"] == CAPTIONS_DISPLAY_PRICES[cur]["stories_sub"]
         assert _DISPLAY_PRICES[cur]["symbol"] == CAPTIONS_DISPLAY_PRICES[cur]["symbol"]
+
+
+def test_pack_sooner_plan_from_checkout_metadata_parses_selected():
+    order = {
+        "platforms_count": 1,
+        "include_stories": False,
+        "selected_platforms": "",
+        "intake": {},
+    }
+    meta = {
+        "platforms": "2",
+        "include_stories": "1",
+        "selected_platforms": "Instagram & Facebook, LinkedIn",
+        "align_stories": "0",
+    }
+    np, ns, sel, align = pack_sooner_plan_from_checkout_metadata(meta, order)
+    assert np == 2 and ns is True
+    assert "LinkedIn" in sel
+    assert align is False
+
+
+def test_resolve_intended_plan_for_pack_sooner_matches_body():
+    order = {
+        "platforms_count": 1,
+        "include_stories": False,
+        "selected_platforms": "Instagram & Facebook",
+        "intake": {"align_stories_to_captions": False},
+    }
+    data = {
+        "new_stories": True,
+        "selected_platforms": ["Instagram & Facebook", "LinkedIn"],
+        "align_stories_to_captions": True,
+    }
+    np, ns, sel, align = resolve_intended_plan_for_pack_sooner_checkout(order, data)
+    assert np == 2 and ns is True
+    assert "LinkedIn" in sel
+    assert align is True

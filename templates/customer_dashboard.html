@@ -569,35 +569,21 @@
               selectedList = getSelectedList();
             }
             showPpsContinueErr('');
-            var payloadPlan = {
-              token: token,
-              new_stories: newStories,
-              selected_platforms: selectedList,
-              align_stories_to_captions: alignStories
-            };
             if (continueBtn) {
               continueBtn.disabled = true;
-              continueBtn.textContent = 'Updating plan…';
+              continueBtn.textContent = 'Opening checkout…';
             }
-            fetch('/api/billing/change-subscription-plan', {
+            fetch('/api/captions/get-pack-sooner', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               credentials: 'same-origin',
-              body: JSON.stringify(payloadPlan)
-            })
-            .then(function(r) { return r.json().then(function(j) { return { ok: r.ok, status: r.status, json: j }; }); })
-            .then(function(res) {
-              var j = res.json || {};
-              if (!res.ok || !j.ok) {
-                throw new Error((j && j.error) || 'Could not update your plan. Try again or use Manage subscription.');
-              }
-              if (continueBtn) continueBtn.textContent = 'Confirming payment…';
-              return fetch('/api/captions/get-pack-sooner', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'same-origin',
-                body: JSON.stringify({ token: token, order_id: orderId || undefined })
-              });
+              body: JSON.stringify({
+                token: token,
+                order_id: orderId || undefined,
+                new_stories: newStories,
+                selected_platforms: selectedList,
+                align_stories_to_captions: alignStories
+              })
             })
             .then(function(r) {
               return r.json().then(function(data) {

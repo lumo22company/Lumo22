@@ -271,6 +271,203 @@ def subscription_platforms_and_stories_from_stripe(sub_obj: dict) -> tuple[int, 
     return (platforms, include_stories)
 
 
+def pack_sooner_plan_from_checkout_metadata(meta: dict, order: dict) -> tuple[int, bool, str, bool]:
+    """
+    Parse Stripe Checkout session metadata for captions_pack_sooner into intended plan fields.
+    Falls back to caption_orders + intake when selected_platforms is absent (older sessions).
+    """
+    raw_pf = (meta.get("platforms") or "1").strip()
+    try:
+        new_platforms = max(1, min(4, int(raw_pf)))
+    except (TypeError, ValueError):
+        new_platforms = max(1, min(4, int(order.get("platforms_count") or 1)))
+    new_stories = (meta.get("include_stories") or "0").strip() == "1"
+    sel = (meta.get("selected_platforms") or "").strip()
+    if sel:
+        selected_synced = merge_platform_list_with_stripe_count(sel, new_platforms)
+    else:
+        selected_raw = (order.get("selected_platforms") or "").strip()
+        intake_existing = order.get("intake") if isinstance(order.get("intake"), dict) else {}
+        intake_platform_raw = (intake_existing.get("platform") or "").strip() if intake_existing else ""
+        selected_source = intake_platform_raw or selected_raw
+        selected_synced = _coerce_platform_selection(selected_source, new_platforms)
+    align = (meta.get("align_stories") or "0").strip() == "1"
+    if not new_stories:
+        align = False
+    return (new_platforms, new_stories, selected_synced, align)
+
+
+def resolve_intended_plan_for_pack_sooner_checkout(order: dict, data: dict) -> tuple[int, bool, str, bool]:
+    """
+    Intended subscription plan for a get-pack-sooner Checkout session (body may override order row).
+    Used so Stripe line items match checkout metadata; plan is applied after payment in the webhook.
+    """
+    selected_list = _parse_selected_platforms_from_body(data.get("selected_platforms"))
+    intake_existing = order.get("intake") if isinstance(order.get("intake"), dict) else {}
+    if selected_list is not None:
+        if len(selected_list) < 1 or len(selected_list) > 4:
+            raise ValueError("Select 1–4 platforms")
+        new_platforms = len(selected_list)
+        selected_synced = ", ".join(selected_list)
+    else:
+        new_platforms = max(1, min(4, int(order.get("platforms_count") or 1)))
+        selected_raw = (order.get("selected_platforms") or "").strip()
+        intake_platform_raw = (intake_existing.get("platform") or "").strip() if intake_existing else ""
+        selected_source = intake_platform_raw or selected_raw
+        selected_synced = _coerce_platform_selection(selected_source, new_platforms)
+
+    if "new_stories" in data and data.get("new_stories") is not None:
+        new_stories = bool(data.get("new_stories"))
+    else:
+        new_stories = bool(order.get("include_stories"))
+
+    if "align_stories_to_captions" in data and data.get("align_stories_to_captions") is not None:
+        align_stories_to_captions = bool(data.get("align_stories_to_captions")) if new_stories else False
+    else:
+        align_stories_to_captions = bool(intake_existing.get("align_stories_to_captions")) if new_stories else False
+
+    return (new_platforms, new_stories, selected_synced, align_stories_to_captions)
+
+
+def apply_pack_sooner_paid_plan_and_anchor(
+    order: dict,
+    co_svc,
+    meta: dict,
+    *,
+    get_pack_sooner_meta_key: str,
+) -> tuple[bool, Optional[str]]:
+    """
+    After pack-sooner payment: align Stripe subscription items + caption_orders with checkout metadata,
+    reset billing anchor to now, clear lumo_get_pack_sooner flag, send plan-change email when the plan changed.
+    """
+    subscription_id = (order.get("stripe_subscription_id") or "").strip()
+    if not subscription_id:
+        return False, "missing subscription on order"
+
+    new_platforms, new_stories, selected_synced, align_stories_to_captions = pack_sooner_plan_from_checkout_metadata(
+        meta, order
+    )
+
+    order_platforms = max(1, int(order.get("platforms_count", 1)))
+    order_has_stories = bool(order.get("include_stories"))
+    intake_existing = order.get("intake") if isinstance(order.get("intake"), dict) else {}
+    old_align = bool(intake_existing.get("align_stories_to_captions"))
+
+    canonical_existing = _canonical_platform_string_from_order(order)
+    billing_changed = (new_platforms != order_platforms) or (new_stories != order_has_stories)
+    meta_changed = (_platform_signature(selected_synced) != _platform_signature(canonical_existing)) or (
+        align_stories_to_captions != old_align
+    )
+
+    stories_price_id = (getattr(Config, "STRIPE_CAPTIONS_STORIES_SUBSCRIPTION_PRICE_ID", None) or "").strip()
+    extra_platform_price_id = (getattr(Config, "STRIPE_CAPTIONS_EXTRA_PLATFORM_SUBSCRIPTION_PRICE_ID", None) or "").strip()
+    if not getattr(Config, "STRIPE_SECRET_KEY", None):
+        return False, "billing not configured"
+
+    try:
+        import stripe
+
+        stripe.api_key = Config.STRIPE_SECRET_KEY
+        sub = stripe.Subscription.retrieve(subscription_id, expand=["items.data.price"])
+    except Exception as e:
+        return False, str(e)[:200]
+
+    must_sync_stripe = bool(billing_changed)
+    if not must_sync_stripe:
+        sp, ss = subscription_platforms_and_stories_from_stripe(sub)
+        must_sync_stripe = (sp != new_platforms) or (ss != new_stories)
+
+    md = dict(sub.get("metadata") or {})
+    md.pop(get_pack_sooner_meta_key, None)
+
+    modify_params: dict = {
+        "proration_behavior": "none",
+        "billing_cycle_anchor": "now",
+        "metadata": md,
+    }
+
+    if must_sync_stripe:
+        items_data = (sub.get("items") or {}).get("data") if hasattr(sub.get("items"), "get") else getattr(
+            sub.get("items"), "data", None
+        )
+        items_data = items_data or []
+        item_updates = _stripe_subscription_item_updates_for_plan(
+            items_data,
+            new_platforms,
+            new_stories,
+            stories_price_id,
+            extra_platform_price_id,
+        )
+        modify_params["items"] = item_updates
+
+    try:
+        stripe.Subscription.modify(subscription_id, **modify_params)
+    except Exception as e:
+        return False, str(e)[:200]
+
+    try:
+        from app import invalidate_account_stripe_subscription_cache
+
+        invalidate_account_stripe_subscription_cache(subscription_id)
+    except Exception:
+        pass
+
+    if billing_changed or meta_changed:
+        updates = {
+            "platforms_count": new_platforms,
+            "include_stories": new_stories,
+            "selected_platforms": selected_synced,
+        }
+        updated_intake = dict(intake_existing or {})
+        updated_intake["platform"] = selected_synced
+        updated_intake["include_stories"] = new_stories
+        updated_intake["align_stories_to_captions"] = align_stories_to_captions
+        updates["intake"] = updated_intake
+        co_svc.update(order["id"], updates)
+
+        customer_email = (order.get("customer_email") or "").strip()
+        if customer_email and "@" in customer_email:
+            change_bits = []
+            if new_platforms != order_platforms:
+                change_bits.append(
+                    f"your subscription now includes {new_platforms} platform{'s' if new_platforms != 1 else ''} instead of {order_platforms}"
+                )
+            if _platform_signature(selected_synced) != _platform_signature(canonical_existing):
+                change_bits.append(f"your platforms are now: {selected_synced}")
+            if not order_has_stories and new_stories:
+                change_bits.append("30 Days Story Ideas has been added to your subscription")
+            elif order_has_stories and not new_stories:
+                change_bits.append("Story Ideas has been removed from your subscription")
+            if new_stories and align_stories_to_captions != old_align:
+                if align_stories_to_captions:
+                    change_bits.append("Story Ideas will align to each day's caption")
+                else:
+                    change_bits.append("Story Ideas will not be aligned to each day's caption")
+            if not change_bits:
+                change_text = "your plan has been updated."
+            else:
+                change_text = "; ".join(change_bits) + "."
+            change_summary = f"What changed: {change_text}"
+            when_effective = "Changes apply to your next pack. Packs already delivered will not change."
+            currency = (order.get("currency") or "gbp").strip().lower()
+            old_sym, old_amt = _subscription_monthly_price(currency, order_platforms, order_has_stories)
+            new_sym, new_amt = _subscription_monthly_price(currency, new_platforms, new_stories)
+            _send_plan_change_confirmation_with_webhook_dedupe(
+                subscription_id,
+                customer_email,
+                new_platforms,
+                new_stories,
+                change_summary=change_summary,
+                when_effective=when_effective,
+                new_price_display=f"{new_sym}{new_amt}",
+                old_price_display=f"{old_sym}{old_amt}",
+                business_name=((order.get("intake") or {}).get("business_name") or None),
+                pack_sooner_next_checkout_note=False,
+            )
+
+    return True, None
+
+
 billing_bp = Blueprint("billing", __name__, url_prefix="/api/billing")
 
 # Stripe Customer Portal: hosted_confirmation.custom_message max 500 characters (subscription_cancel deep link).
@@ -820,8 +1017,8 @@ def change_subscription_plan():
       selected_platforms (optional): list of 1–4 labels from
         Instagram & Facebook, LinkedIn, TikTok, Pinterest,
       align_stories_to_captions (optional bool; only when new_stories is true).
-      prepare_pack_sooner_checkout (optional bool): set by Get my pack sooner → Update preferences → intake;
-        adds a short note that checkout is next and captions (and stories if applicable) arrive in a separate email after payment.
+      prepare_pack_sooner_checkout (optional bool): legacy; pack-sooner checkout now applies the plan after payment (webhook).
+        When still sent, adds the short “checkout next” note to the plan-change email if something else triggers this endpoint.
     }
     - Stripe is updated only when platform count or Story Ideas billing changes.
     - Intake is always updated so the form can be prefilled.

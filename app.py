@@ -602,7 +602,7 @@ def captions_intake_page():
     # stories_paid must reflect subscription/Stripe billing on the order row only — do not override from
     # ?upgrade_stories= on the intake URL. Hub may send upgrade_stories=1 from stale sessionStorage after
     # the customer removed Story Ideas in Manage subscription; client JS still reads upgrade_stories for
-    # change-subscription-plan + checkout.
+    # get-pack-sooner checkout (plan is applied after payment in the webhook).
     upgrade_selected = (request.args.get("selected", "").strip() if account_hub_plan_picker else "") or ""
     if account_hub_plan_picker and token:
         upgrade_platforms = request.args.get("platforms", "").strip()

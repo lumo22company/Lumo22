@@ -740,21 +740,23 @@ def _handle_pack_sooner_checkout_completed(session: dict) -> None:
         return
     stripe.api_key = Config.STRIPE_SECRET_KEY.strip()
     try:
-        sub = stripe.Subscription.retrieve(sub_id)
-        md = dict(sub.get("metadata") or {})
-        md.pop(GET_PACK_SOONER_META_KEY, None)
-        stripe.Subscription.modify(
-            sub_id,
-            billing_cycle_anchor="now",
-            proration_behavior="none",
-            metadata=md,
-        )
-        try:
-            from app import invalidate_account_stripe_subscription_cache
+        from api.billing_routes import apply_pack_sooner_paid_plan_and_anchor
 
-            invalidate_account_stripe_subscription_cache(sub_id)
-        except Exception:
-            pass
+        ok_apply, err_apply = apply_pack_sooner_paid_plan_and_anchor(
+            order,
+            order_service,
+            meta,
+            get_pack_sooner_meta_key=GET_PACK_SOONER_META_KEY,
+        )
+        if not ok_apply:
+            print(f"[Stripe webhook] pack sooner: apply plan+anchor failed: {err_apply!r}")
+            _pack_sooner_webhook_ops_alert(
+                "plan_anchor_apply_failed",
+                session,
+                order,
+                detail=(err_apply or "")[:500],
+            )
+        order = order_service.get_by_id(order_id) or order
     except Exception as e:
         print(f"[Stripe webhook] pack sooner: Subscription.modify failed (non-fatal): {e!r}")
 
