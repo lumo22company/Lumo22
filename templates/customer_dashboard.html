@@ -550,7 +550,10 @@
             continueErr.style.color = '#ffb4b4';
           }
           function runPrepareCheckout() {
-            refreshPpsHubFromStorage();
+            // Do not call restorePpsHubState() here: it replays stale sessionStorage over the live
+            // form and syncPpsStoriesAddon() then clears Story Ideas when IG/FB was overwritten.
+            syncPpsStoriesAddon();
+            updatePpsForm();
             var fromStore = readValidatedPpsHubFromStorage();
             var selectedList;
             var newStories;
