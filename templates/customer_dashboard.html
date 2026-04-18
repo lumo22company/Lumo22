@@ -1094,7 +1094,7 @@
       {% if subscribe_options_resubscribe_only|default([])|length > 0 %}
       <div class="account-subscription-resubscribe-panel" role="region" aria-label="Cancelled subscriptions" style="margin-top: {% if sub_orders or (subscribe_options_upgrade_only|default([])|length > 0) %}2rem{% else %}1.25rem{% endif %}; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.18);">
         <h2 style="margin-top: 0;">Cancelled subscriptions</h2>
-        <p class="account-section-desc" style="margin-bottom: 0.75rem;">These monthly plans have ended. Resubscribe to get packs again—your choices will be prefilled, and you can edit them and your form before checkout if you need to.</p>
+        <p class="account-section-desc" style="margin-bottom: 0.75rem;">These monthly plans have ended. Resubscribe to get packs again—your choices will be prefilled, you can edit them and your form before checkout if you need to.</p>
         {% for opt in subscribe_options_resubscribe_only %}
         <div class="account-settings-row account-cancelled-sub-row">
           <div class="account-cancelled-sub-row__text">
