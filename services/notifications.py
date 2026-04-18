@@ -361,7 +361,8 @@ def _captions_delivery_email_html(
     else:
         main = """<p style="margin:0 0 16px;">Your 30 Days of Social Media Captions are ready. The document is attached.</p>
 <p style="margin:0 0 16px;">Copy each caption as you need it, or edit to fit.</p>"""
-    content = intro + main + _account_history_notice_delivery_html() + _captions_delivery_review_tip_html(has_stories)
+    # Review tip directly after "Copy each…"; then account History notice.
+    content = intro + main + _captions_delivery_review_tip_html(has_stories) + _account_history_notice_delivery_html()
     if (next_billing_display or "").strip():
         safe_nb = html_mod.escape((next_billing_display or "").strip(), quote=True)
         content += f"""
@@ -1076,13 +1077,13 @@ def _subscription_welcome_monthly_review_line_html(include_stories: bool) -> str
         return (
             f'<p style="margin:0 0 16px; font-size:14px; color:#555;">Each month when your pack arrives by email, '
             f"read through your captions and Story Ideas and edit anything so it fits your brand, your voice, and any "
-            f"rules that apply to you before you post.</p>"
+            f"rules that apply to you before you start posting.</p>"
             + hist
         )
     return (
         f'<p style="margin:0 0 16px; font-size:14px; color:#555;">Each month when your pack arrives by email, '
         f"read through your captions and edit anything so it fits your brand, your voice, and any rules that apply to "
-        f"you before you post.</p>"
+        f"you before you start posting.</p>"
         + hist
     )
 
@@ -1096,12 +1097,12 @@ def _subscription_welcome_monthly_review_line_plain(include_stories: bool) -> st
     if include_stories:
         return (
             "\nEach month when your pack arrives by email, read through your captions and Story Ideas and edit "
-            "anything so it fits your brand, your voice, and any rules that apply to you before you post."
+            "anything so it fits your brand, your voice, and any rules that apply to you before you start posting."
             + hist
         )
     return (
         "\nEach month when your pack arrives by email, read through your captions and edit anything so it fits your "
-        "brand, your voice, and any rules that apply to you before you post."
+        "brand, your voice, and any rules that apply to you before you start posting."
         + hist
     )
 

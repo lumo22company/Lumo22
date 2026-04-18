@@ -1881,6 +1881,7 @@ def _run_generation_and_deliver(
                 + next_billing_plain
                 + "Your 30 Days of Social Media Captions and 30 Days of Story Ideas are ready. "
                 "Both documents are attached.\n\nCopy each caption and story idea as you need them, or edit to fit.\n\n"
+                + captions_delivery_review_tip_plain(True)
                 + _account_history_notice_delivery_plain()
             )
         else:
@@ -1890,6 +1891,7 @@ def _run_generation_and_deliver(
                 + next_billing_plain
                 + "Your 30 Days of Social Media Captions are ready. The document is attached.\n\n"
                 "Copy each caption as you need it, or edit to fit.\n\n"
+                + captions_delivery_review_tip_plain(False)
                 + _account_history_notice_delivery_plain()
             )
             if stories_generation_failed:
@@ -1897,7 +1899,6 @@ def _run_generation_and_deliver(
                     "Note: your Story Ideas add-on was not generated successfully in this run. "
                     "We've delivered your captions now so you can start posting.\n\n"
                 )
-        body += captions_delivery_review_tip_plain(bool(extra_attachments))
         if has_sub:
             body += "Deleting this email or the PDF does not cancel your subscription. To cancel, go to your account → Manage subscription.\n\n"
         body += "If attachments don't appear in your inbox, use your backup download link(s):\n"
