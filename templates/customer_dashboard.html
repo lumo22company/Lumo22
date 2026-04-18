@@ -186,7 +186,9 @@
             <input type="checkbox" id="account-history-select-all" class="account-history-select-all" aria-label="Select all" />
             <span>Select all</span>
           </label>
-          <button type="button" class="account-history-delete-selected" id="account-history-delete-selected" disabled>Delete selected</button>
+          <button type="button" class="account-history-delete-selected" id="account-history-delete-selected" disabled aria-label="Delete selected packs from history" title="Delete selected">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+          </button>
           <span class="account-history-selected-hint" id="account-history-selected-hint" aria-live="polite"></span>
         </div>
         <div class="account-history-list" id="account-history-list-region">
@@ -224,7 +226,10 @@
                 <a href="/api/captions-download?t={{ o.token }}{{ archive_q }}&type=stories" class="account-btn-link account-btn-link--secondary">Download stories</a>
               </span>
             {% endif %}
-              <button type="button" class="account-btn-link account-history-delete" data-token="{{ o.token }}" data-is-subscription="{{ '1' if is_sub_row else '0' }}" data-archive-index="{% if item.archive_index is not none %}{{ item.archive_index }}{% endif %}" onclick="showDeletePackModal(this)" aria-label="Delete pack from history">Delete</button>
+              <button type="button" class="account-history-delete" data-token="{{ o.token }}" data-is-subscription="{{ '1' if is_sub_row else '0' }}" data-archive-index="{% if item.archive_index is not none %}{{ item.archive_index }}{% endif %}" onclick="showDeletePackModal(this)" aria-label="Remove pack from history" title="Remove from history">
+                <span class="account-history-delete__idle" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg></span>
+                <span class="account-history-delete__busy" hidden>Deleting…</span>
+              </button>
             </div>
               </div>
             </div>
@@ -2166,7 +2171,13 @@
         if (!token) return;
         closeDeletePackModal();
         btn.disabled = true;
-        btn.textContent = 'Deleting…';
+        btn.setAttribute('aria-busy', 'true');
+        var prevAria = btn.getAttribute('aria-label') || '';
+        btn.setAttribute('aria-label', 'Removing pack from history');
+        var idleEl = btn.querySelector('.account-history-delete__idle');
+        var busyEl = btn.querySelector('.account-history-delete__busy');
+        if (idleEl) idleEl.hidden = true;
+        if (busyEl) busyEl.hidden = false;
         var archRaw = btn.getAttribute('data-archive-index');
         var payload = { token: token };
         if (archRaw !== null && archRaw !== undefined && String(archRaw).trim() !== '') {
@@ -2192,13 +2203,19 @@
           } else {
             alert(data.error || 'Could not delete pack');
             btn.disabled = false;
-            btn.textContent = 'Delete';
+            btn.removeAttribute('aria-busy');
+            if (prevAria) btn.setAttribute('aria-label', prevAria); else btn.removeAttribute('aria-label');
+            if (idleEl) idleEl.hidden = false;
+            if (busyEl) busyEl.hidden = true;
           }
         })
         .catch(function() {
           alert('Something went wrong — try again.');
           btn.disabled = false;
-          btn.textContent = 'Delete';
+          btn.removeAttribute('aria-busy');
+          if (prevAria) btn.setAttribute('aria-label', prevAria); else btn.removeAttribute('aria-label');
+          if (idleEl) idleEl.hidden = false;
+          if (busyEl) busyEl.hidden = true;
         });
       }
       (function initDeletePackModal() {

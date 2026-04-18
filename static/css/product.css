@@ -2435,22 +2435,32 @@
   cursor: pointer;
 }
 .account-history-delete-selected {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  margin: 0;
   font-size: 0.88rem;
   font-weight: 600;
-  padding: 0.5rem 1rem;
   color: #1a1a1a;
   background: #fff200;
-  border: none;
-  border-radius: var(--dfd-radius-btn);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 10px;
   cursor: pointer;
   box-sizing: border-box;
   font-family: inherit;
-  line-height: 1.3;
-  transition: background 0.15s ease, opacity 0.15s ease;
+  line-height: 1;
+  transition: background 0.15s ease, opacity 0.15s ease, border-color 0.15s ease;
+}
+.account-history-delete-selected svg {
+  flex-shrink: 0;
 }
 .account-history-delete-selected:hover:not(:disabled) {
   background: #e6db00;
   color: #1a1a1a;
+  border-color: rgba(0, 0, 0, 0.18);
 }
 .account-history-delete-selected:focus-visible {
   outline: 2px solid #1a1a1a;
@@ -2618,20 +2628,49 @@
   background: rgba(0,0,0,0.1);
 }
 .account-history-item .account-history-delete {
-  background: transparent;
-  border: 1px solid rgba(0,0,0,0.2);
-  color: #666;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  margin: 0;
+  flex-shrink: 0;
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  border-radius: 10px;
+  color: #555;
   cursor: pointer;
   font: inherit;
+  line-height: 1;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
-.account-history-item .account-history-delete:hover {
+.account-history-item .account-history-delete svg {
+  flex-shrink: 0;
+}
+.account-history-item .account-history-delete:hover:not(:disabled) {
   color: #b00;
-  border-color: rgba(180,0,0,0.4);
-  background: rgba(180,0,0,0.06);
+  border-color: rgba(180, 0, 0, 0.45);
+  background: rgba(180, 0, 0, 0.08);
+}
+.account-history-item .account-history-delete:focus-visible {
+  outline: 2px solid #1a1a1a;
+  outline-offset: 2px;
 }
 .account-history-item .account-history-delete:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+.account-history-item .account-history-delete[aria-busy="true"] {
+  cursor: wait;
+}
+.account-history-item .account-history-delete__busy {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #666;
+  line-height: 1.2;
+  text-align: center;
+  padding: 0 0.15rem;
 }
 
 .account-history-item--hidden-extra {
