@@ -1828,6 +1828,27 @@
 .account-main .account-section-block {
   margin-bottom: 2.5rem;
 }
+/* History: align heading + intro lines with Business filter (same left edge as full-width controls) */
+.account-main .account-section-block--history > h2 {
+  display: block;
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+  padding-left: 0;
+  padding-right: 0;
+}
+.account-main .account-section-block--history > p.account-section-desc {
+  display: block;
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+  padding-left: 0;
+  padding-right: 0;
+}
+.account-main .account-section-block--history > p.account-history-archive-notice {
+  padding: 0.75rem 0;
+  max-width: 52rem;
+}
 /* Stack heading + intro line (global h2 / .account-section-desc are inline-block and sit on one row) */
 .account-main .account-section-block--information {
   display: flex;
