@@ -1092,9 +1092,16 @@
         {% endif %}
       {% endif %}
       {% if subscribe_options_resubscribe_only|default([])|length > 0 %}
+      {% set cancelled_sub_dismiss_tokens = subscribe_options_resubscribe_only|selectattr('order_token')|map(attribute='order_token')|list %}
       <div class="account-subscription-resubscribe-panel" role="region" aria-label="Cancelled subscriptions" style="margin-top: {% if sub_orders or (subscribe_options_upgrade_only|default([])|length > 0) %}2rem{% else %}1.25rem{% endif %}; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.18);">
         <h2 style="margin-top: 0;">Cancelled subscriptions</h2>
         <p class="account-section-desc" style="margin-bottom: 0.75rem;">These monthly plans have ended. Resubscribe to get packs again—your choices will be prefilled, you can edit them and your form before checkout if you need to.</p>
+        {% if cancelled_sub_dismiss_tokens|length > 1 %}
+        <script type="application/json" id="account-cancelled-subs-dismiss-all-tokens">{{ cancelled_sub_dismiss_tokens|tojson }}</script>
+        <p class="account-cancelled-sub-remove-all-wrap">
+          <button type="button" class="account-cancelled-sub-remove-all-btn" onclick="showDismissAllCancelledSubsModal()" aria-label="Remove all ended subscriptions from this list">Remove all from this list</button>
+        </p>
+        {% endif %}
         {% for opt in subscribe_options_resubscribe_only %}
         <div class="account-settings-row account-cancelled-sub-row">
           <div class="account-cancelled-sub-row__text">
@@ -1337,6 +1344,18 @@
         <div class="account-delete-modal-buttons">
           <button type="button" class="account-delete-modal-btn account-delete-modal-keep" onclick="closeDismissCancelledSubModal()">Cancel</button>
           <button type="button" class="account-delete-modal-btn account-delete-modal-confirm" id="dismiss-cancelled-sub-confirm-btn">Remove</button>
+        </div>
+      </div>
+    </div>
+    <div id="dismiss-all-cancelled-subs-modal" class="account-delete-modal" role="dialog" aria-labelledby="dismiss-all-cancelled-subs-modal-title" aria-modal="true" hidden>
+      <div class="account-delete-modal-backdrop" onclick="closeDismissAllCancelledSubsModal()"></div>
+      <div class="account-delete-modal-box account-glass-modal-box" style="max-width: 520px;">
+        <h2 id="dismiss-all-cancelled-subs-modal-title" class="account-delete-modal-title">Remove all from this list?</h2>
+        <p id="dismiss-all-cancelled-subs-modal-lead" class="account-delete-modal-text"></p>
+        <p class="account-delete-modal-text" style="font-size: 0.9rem; color: rgba(255,255,255,0.88); line-height: 1.55;">This only removes the rows from your <strong>Cancelled subscriptions</strong> list in Lumo. It does not delete past packs from <strong>History</strong> if they are still there. You can still restart a subscription from the <strong>Upgrade or Resubscribe</strong> page. <strong>This cannot be undone.</strong></p>
+        <div class="account-delete-modal-buttons">
+          <button type="button" class="account-delete-modal-btn account-delete-modal-keep" onclick="closeDismissAllCancelledSubsModal()">Cancel</button>
+          <button type="button" class="account-delete-modal-btn account-delete-modal-confirm" id="dismiss-all-cancelled-subs-confirm-btn">Remove all</button>
         </div>
       </div>
     </div>
@@ -2302,6 +2321,91 @@
       })();
       window.showDismissCancelledSubModal = showDismissCancelledSubModal;
       window.closeDismissCancelledSubModal = closeDismissCancelledSubModal;
+
+      var dismissAllCancelledSubTokens = [];
+      function showDismissAllCancelledSubsModal() {
+        var el = document.getElementById('account-cancelled-subs-dismiss-all-tokens');
+        if (!el) return;
+        var tokens;
+        try {
+          tokens = JSON.parse(el.textContent || '[]');
+        } catch (e) {
+          return;
+        }
+        if (!tokens || !tokens.length || tokens.length < 2) return;
+        dismissAllCancelledSubTokens = tokens;
+        var n = tokens.length;
+        var lead = document.getElementById('dismiss-all-cancelled-subs-modal-lead');
+        if (lead) {
+          lead.textContent = 'Remove all ' + n + ' ended subscriptions from this list?';
+        }
+        var modal = document.getElementById('dismiss-all-cancelled-subs-modal');
+        var cbtn = document.getElementById('dismiss-all-cancelled-subs-confirm-btn');
+        if (cbtn) {
+          cbtn.disabled = false;
+          cbtn.textContent = 'Remove all';
+        }
+        if (modal) {
+          modal.removeAttribute('hidden');
+          modal.classList.add('account-delete-modal--open');
+        }
+      }
+      function closeDismissAllCancelledSubsModal() {
+        dismissAllCancelledSubTokens = [];
+        var modal = document.getElementById('dismiss-all-cancelled-subs-modal');
+        if (modal) {
+          modal.setAttribute('hidden', '');
+          modal.classList.remove('account-delete-modal--open');
+        }
+      }
+      function confirmDismissAllCancelledSubs() {
+        var tokens = dismissAllCancelledSubTokens.slice();
+        var btn = document.getElementById('dismiss-all-cancelled-subs-confirm-btn');
+        if (!tokens.length) {
+          closeDismissAllCancelledSubsModal();
+          return;
+        }
+        if (btn) {
+          btn.disabled = true;
+          btn.textContent = 'Removing…';
+        }
+        Promise.allSettled(tokens.map(function(token) {
+          return fetch('/api/captions/dismiss-cancelled-subscription', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ token: token })
+          }).then(function(r) {
+            return r.json().then(function(j) {
+              if (!r.ok || !j.ok) {
+                throw new Error((j && j.error) || 'Could not remove');
+              }
+            });
+          });
+        }))
+          .then(function(results) {
+            var okCount = results.filter(function(r) { return r.status === 'fulfilled'; }).length;
+            if (okCount > 0) {
+              window.location.reload();
+              return;
+            }
+            var err0 = results[0] && results[0].status === 'rejected' ? results[0].reason : null;
+            alert(err0 && err0.message ? err0.message : 'Something went wrong — try again.');
+            if (btn) {
+              btn.disabled = false;
+              btn.textContent = 'Remove all';
+            }
+          });
+      }
+      (function initDismissAllCancelledSubsModal() {
+        var modal = document.getElementById('dismiss-all-cancelled-subs-modal');
+        var confirmBtn = document.getElementById('dismiss-all-cancelled-subs-confirm-btn');
+        var backdrop = modal ? modal.querySelector('.account-delete-modal-backdrop') : null;
+        if (backdrop) backdrop.addEventListener('click', closeDismissAllCancelledSubsModal);
+        if (confirmBtn) confirmBtn.addEventListener('click', confirmDismissAllCancelledSubs);
+      })();
+      window.showDismissAllCancelledSubsModal = showDismissAllCancelledSubsModal;
+      window.closeDismissAllCancelledSubsModal = closeDismissAllCancelledSubsModal;
 
       function getVisibleHistoryItems() {
         var list = document.querySelector('.account-history-list');

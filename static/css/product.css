@@ -3999,6 +3999,39 @@
   max-width: none;
   box-sizing: border-box;
 }
+.account-page-wrap .account-subscription-resubscribe-panel .account-cancelled-sub-remove-all-wrap {
+  margin: 0 0 0.85rem;
+  width: 100%;
+}
+.account-page-wrap .account-subscription-resubscribe-panel .account-cancelled-sub-remove-all-btn {
+  appearance: none;
+  margin: 0;
+  padding: 0.35rem 0;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.88);
+  background: none;
+  border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 0;
+  cursor: pointer;
+  text-align: left;
+  line-height: 1.4;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.account-page-wrap .account-subscription-resubscribe-panel .account-cancelled-sub-remove-all-btn:hover {
+  color: #fff;
+  border-bottom-color: rgba(255, 255, 255, 0.65);
+}
+.account-page-wrap .account-subscription-resubscribe-panel .account-cancelled-sub-remove-all-btn:focus-visible {
+  outline: 2px solid var(--lum-gold, #c9a227);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
 .account-page-wrap .account-subscription-resubscribe-panel .account-cancelled-sub-row {
   display: flex;
   align-items: center;
