@@ -3023,25 +3023,32 @@ def captions_resend_delivery():
         backup_stories_url = _build_public_download_url(base, safe_token, "stories") if include_stories else ""
         has_sub = bool(order.get("stripe_subscription_id"))
 
+        # Plain text matches _captions_delivery_email_html: ready → copy line → review tip → History → backups.
         if extra_attachments:
             body = (
-                "Hi,\n\nYour 30 Days of Social Media Captions and 30 Days of Story Ideas are attached.\n\n"
+                "Hi,\n\n"
+                "Your 30 Days of Social Media Captions and 30 Days of Story Ideas are ready. "
+                "Both documents are attached.\n\n"
+                "Copy each caption and story idea as you need them, or edit to fit.\n\n"
+                + captions_delivery_review_tip_plain(True)
                 + _account_history_notice_delivery_plain()
-                + "If attachments don't appear in your inbox, use your backup download link(s):\n"
-                f"For your security, these backup links expire within {_public_download_expiry_hours()} hour(s).\n"
-                f"{backup_captions_url}\n{backup_stories_url}\n\n"
             )
         else:
             body = (
-                "Hi,\n\nYour 30 Days of Social Media Captions are attached.\n\n"
+                "Hi,\n\n"
+                "Your 30 Days of Social Media Captions are ready. The document is attached.\n\n"
+                "Copy each caption as you need it, or edit to fit.\n\n"
+                + captions_delivery_review_tip_plain(False)
                 + _account_history_notice_delivery_plain()
-                + "If attachments don't appear in your inbox, use your backup download link:\n"
-                f"For your security, this backup link expires within {_public_download_expiry_hours()} hour(s).\n"
-                f"{backup_captions_url}\n\n"
             )
         if has_sub:
-            body += "Deleting this email or the PDF does not cancel your subscription. To cancel, go to your account -> Manage subscription.\n\n"
-        body += "Lumo 22\n"
+            body += "Deleting this email or the PDF does not cancel your subscription. To cancel, go to your account → Manage subscription.\n\n"
+        body += "If attachments don't appear in your inbox, use your backup download link(s):\n"
+        body += f"For your security, these backup links expire within {_public_download_expiry_hours()} hour(s).\n"
+        body += backup_captions_url + "\n"
+        if backup_stories_url:
+            body += backup_stories_url + "\n"
+        body += "\nLumo 22\n"
 
         business_name = (intake.get("business_name") or "").strip() if intake else ""
         html_body = _captions_delivery_email_html(
