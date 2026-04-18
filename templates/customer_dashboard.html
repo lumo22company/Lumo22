@@ -391,6 +391,8 @@
           var returnHub = {{ pps_return|tojson }};
           var currency = {{ pps.currency|tojson }};
           var ppsAlignStories = {{ pps.align_stories_to_captions|tojson }};
+          /** Subscription currently includes Story Ideas billing — used to ignore stale sessionStorage */
+          var serverIncludeStories = {{ pps.include_stories|tojson }};
           if (!prices[currency]) currency = 'gbp';
           var platformsSelect = document.getElementById('pps-platforms');
           var storiesWrap = document.getElementById('pps-stories-wrap');
@@ -454,7 +456,15 @@
                   cb.checked = s.selected.indexOf(cb.value) !== -1;
                 });
               }
-              if (storiesCb && typeof s.stories === 'boolean') storiesCb.checked = s.stories;
+              if (storiesCb && typeof s.stories === 'boolean') {
+                if (serverIncludeStories === false && s.stories === true) {
+                  s.stories = false;
+                  try {
+                    sessionStorage.setItem('pps_hub_' + token, JSON.stringify(s));
+                  } catch (e2) {}
+                }
+                storiesCb.checked = s.stories;
+              }
               return true;
             } catch (e) {
               return false;

@@ -599,13 +599,10 @@ def captions_intake_page():
         )
     )
     account_hub_plan_picker = is_upgrade_flow or is_prepare_pack_sooner_return
-    # Account hub (upgrade or prepare-pack-sooner): query params match the hub form before intake
-    if account_hub_plan_picker and token:
-        upgrade_stories = request.args.get("upgrade_stories", "").strip()
-        if upgrade_stories == "0":
-            stories_paid = False
-        elif upgrade_stories == "1":
-            stories_paid = True
+    # stories_paid must reflect subscription/Stripe billing on the order row only — do not override from
+    # ?upgrade_stories= on the intake URL. Hub may send upgrade_stories=1 from stale sessionStorage after
+    # the customer removed Story Ideas in Manage subscription; client JS still reads upgrade_stories for
+    # change-subscription-plan + checkout.
     upgrade_selected = (request.args.get("selected", "").strip() if account_hub_plan_picker else "") or ""
     if account_hub_plan_picker and token:
         upgrade_platforms = request.args.get("platforms", "").strip()
