@@ -775,7 +775,7 @@ def _customer_has_blocking_captions_subscription(email: str, target_business_key
 
 @captions_bp.route("/referral-code-check", methods=["GET"])
 def referral_code_check():
-    """Public: whether a Lumo refer-a-friend code exists (for /captions Apply button)."""
+    """Public: whether a Lumo 22 refer-a-friend code exists (for /captions Apply button)."""
     code = (request.args.get("code") or "").strip()
     if len(code) < 4:
         return jsonify({"valid": False})

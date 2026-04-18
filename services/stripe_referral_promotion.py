@@ -1,6 +1,6 @@
 """
 Stripe Promotion Codes for refer-a-friend: one Promotion Code per customer, same underlying Coupon (STRIPE_REFERRAL_COUPON_ID).
-Friends enter the code on Stripe Checkout; Lumo does not auto-apply discounts on Session.create.
+Friends enter the code on Stripe Checkout; Lumo 22 does not auto-apply discounts on Session.create.
 """
 from __future__ import annotations
 
@@ -256,7 +256,7 @@ def refund_self_referral_promotion_discount_if_needed(
 ) -> None:
     """
     Stripe Checkout cannot forbid entering your own referral promotion code. If the payer's email
-    matches the Lumo customer who owns that code, refund only the promotion discount so they pay
+    matches the Lumo 22 customer who owns that code, refund only the promotion discount so they pay
     the undiscounted amount. No-op if no self-referral, no discount, or no payment_intent.
 
     Idempotent: uses Stripe idempotency key per Checkout Session id.

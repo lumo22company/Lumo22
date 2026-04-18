@@ -101,7 +101,7 @@ def main():
         if status == "delivered" and not force_redeliver:
             print(
                 "This order is already marked delivered, so no new generation was started.\n"
-                "If the PDF never arrived, check spam; open your Lumo account for backup download links;\n"
+                "If the PDF never arrived, check spam; open your Lumo 22 account for backup download links;\n"
                 "or ask support to resend the delivery email for this order."
             )
         elif ok and not err:

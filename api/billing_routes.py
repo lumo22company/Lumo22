@@ -473,14 +473,14 @@ billing_bp = Blueprint("billing", __name__, url_prefix="/api/billing")
 # Stripe Customer Portal: hosted_confirmation.custom_message max 500 characters (subscription_cancel deep link).
 _PORTAL_CANCEL_CONFIRMATION_MESSAGE = (
     "Your captions subscription is cancelled—you won't be charged again. "
-    "Delivered packs stay in your Lumo account under History. "
+    "Delivered packs stay in your Lumo 22 account under History. "
     "To download past invoices, choose Manage billing from your account and open Stripe's invoice list."
 )
 
 
 def _sync_lumo_stripe_subscription_descriptions_for_portal(stripe_api_key: str, orders: list, stripe_customer_id: str) -> None:
     """
-    Align Stripe subscription.description with Lumo intake business names so the Customer Portal
+    Align Stripe subscription.description with Lumo 22 intake business names so the Customer Portal
     shows which business each subscription belongs to (subscriptions created before this feature may
     lack a description until the customer opens Manage billing again).
     """
@@ -599,7 +599,7 @@ def billing_portal():
 @billing_bp.route("/portal-cancel-subscription", methods=["GET"])
 def billing_portal_cancel_subscription():
     """
-    Deep-link into Stripe Customer Portal's subscription-cancel flow, then show a Lumo
+    Deep-link into Stripe Customer Portal's subscription-cancel flow, then show a Lumo 22
     hosted_confirmation message (Stripe max 500 chars).
     """
     customer, email, orders = _caption_orders_for_portal_customer()

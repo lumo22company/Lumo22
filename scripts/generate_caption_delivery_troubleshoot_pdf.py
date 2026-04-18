@@ -79,7 +79,7 @@ def build_pdf() -> None:
         _p("2) Which email should the customer get?", h2),
         _p(
             "After intake or subscription delivery, the main message is the <b>delivery email</b> with PDF attachments (captions; Stories PDF if purchased). "
-            "Get my pack sooner prepends payment context into that same delivery email — there is not usually a separate Stripe receipt email from Lumo for that path.",
+            "Get my pack sooner prepends payment context into that same delivery email — there is not usually a separate Stripe receipt email from Lumo 22 for that path.",
             body,
         ),
         Spacer(1, 6),

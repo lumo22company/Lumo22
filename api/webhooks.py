@@ -347,7 +347,7 @@ def _handle_captions_payment(session):
         return
     print(f"[Stripe webhook] Customer email from session: {customer_email}")
 
-    # Reverse self-applied referral promo discount (Stripe allows entry; Lumo enforces full price).
+    # Reverse self-applied referral promo discount (Stripe allows entry; Lumo 22 enforces full price).
     payment_status = (session.get("payment_status") or "").strip().lower()
     if payment_status == "paid" and isinstance(session, dict):
         try:
@@ -834,7 +834,7 @@ def _stripe_nested_to_dict(obj):
 
 def _send_captions_subscription_cancelled_confirmation(sub_id: str, sub_obj: dict | None) -> dict | None:
     """
-    Send Lumo cancellation confirmation email for a Captions Stripe subscription.
+    Send Lumo 22 cancellation confirmation email for a Captions Stripe subscription.
 
     Uses caption_orders when a row matches stripe_subscription_id. If none (stale DB,
     duplicate subs, webhook ordering), falls back to Stripe subscription + customer email.

@@ -73,7 +73,7 @@
     </div>
     <div class="pps-thank-card">
       <h1>Thank you — we’re preparing your pack</h1>
-      <p>Your payment went through and your <strong>next billing date</strong> is now aligned <strong>30 days from today</strong>. We’re generating your monthly pack from your current form. We email the <strong>PDF pack</strong> to <strong>{% if current_customer and current_customer.email %}{{ current_customer.email }}{% else %}the email on your Lumo account{% endif %}</strong> when it’s ready (usually within a few minutes).</p>
+      <p>Your payment went through and your <strong>next billing date</strong> is now aligned <strong>30 days from today</strong>. We’re generating your monthly pack from your current form. We email the <strong>PDF pack</strong> to <strong>{% if current_customer and current_customer.email %}{{ current_customer.email }}{% else %}the email on your Lumo 22 account{% endif %}</strong> when it’s ready (usually within a few minutes).</p>
       <p>Check <strong>spam or promotions</strong> if nothing appears in that inbox. When the pack is ready, it also appears under <strong>History</strong> in your account with download links.</p>
       <div class="pps-thank-actions">
         <a href="{{ url_for('account_page', section='subscription') }}" class="lumo-btn-primary thankyou-cta-swipe ppso-btn-primary">Back to Manage subscription</a>

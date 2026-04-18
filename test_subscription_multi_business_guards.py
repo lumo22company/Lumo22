@@ -90,7 +90,7 @@ def test_subscription_metadata_includes_business_context():
     assert md.get("business_name") == "Acme Bakery"
     kw = captured.get("session_kwargs") or {}
     sd = kw.get("subscription_data") or {}
-    assert sd.get("description") == "Acme Bakery — Lumo"
+    assert sd.get("description") == "Acme Bakery — Lumo 22"
     assert (sd.get("metadata") or {}).get("lumo_business_name") == "Acme Bakery"
 
 

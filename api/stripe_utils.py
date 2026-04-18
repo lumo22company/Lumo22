@@ -22,5 +22,5 @@ def lumo_stripe_subscription_portal_description(business_name: Optional[str]) ->
     """
     bn = (business_name or "").strip()
     if bn:
-        return f"{bn[:400]} — Lumo"[:500]
-    return "Lumo — 30 Days Captions"
+        return f"{bn[:400]} — Lumo 22"[:500]
+    return "Lumo 22 — 30 Days Captions"
