@@ -1220,8 +1220,9 @@ def _intake_link_email_html(
         business_line = f"<p style=\"margin:0 0 16px;\"><strong>Business:</strong> {safe_business}</p>"
     content = f"""<p style="margin:0 0 16px;">Hi,</p>
 {business_line}
-<p style="margin:0 0 16px;">We've received your payment — thank you. Your 30 Days of Social Media Captions will be tailored to your business and voice.</p>
-{summary_block}<p style="margin:0 0 12px;">Next step: complete this short form so we can create your captions. It takes about 2 minutes.</p>
+<p style="margin:0 0 16px;">We've received your payment — thank you.</p>
+{summary_block}<p style="margin:0 0 12px;"><strong>Next step: complete this short form so we can create your captions. It takes about 2 minutes.</strong></p>
+<p style="margin:0 0 16px;">Your 30 Days of Social Media Captions will be tailored to your business and voice.</p>
 <p style="margin:0 0 12px; font-size:14px; color:{BRAND_MUTED};"><strong style="color:{BRAND_TEXT};">For security:</strong> If you already have a Lumo 22 account, <a href="{safe_login}" style="color:{BRAND_BLACK}; text-decoration:none; border-bottom:1px solid {BRAND_BLACK};">log in first</a>, then use the button below to open your form.</p>
 <p style="margin:0 0 24px;"><a href="{safe_url}" style="display:inline-block; padding:14px 28px; background:{BRAND_GOLD}; color:{BRAND_BLACK}; text-decoration:none; border-radius:10px; font-weight:600;">Complete the form</a></p>
 <p style="margin:0 0 8px; font-size:14px; color:{BRAND_MUTED};">Or copy and paste this link into your browser:</p>
@@ -2080,12 +2081,13 @@ If you didn't request this, you can ignore this email. Your email address will s
                 discount_label=pay["discount_label"],
                 ongoing_monthly_display=pay["ongoing_monthly"],
             )
-        body = "Hi,\n\nWe've received your payment — thank you. Your 30 Days of Social Media Captions will be tailored to your business and voice.\n\n"
+        body = "Hi,\n\nWe've received your payment — thank you.\n\n"
         if business_name:
-            body = f"Hi,\n\nBusiness: {business_name}\n\nWe've received your payment — thank you. Your 30 Days of Social Media Captions will be tailored to your business and voice.\n\n"
+            body = f"Hi,\n\nBusiness: {business_name}\n\nWe've received your payment — thank you.\n\n"
         if order_detail_plain:
             body += "Order summary\n" + order_detail_plain + "\n\n"
         body += "Next step: complete this short form so we can create your captions. It takes about 2 minutes.\n\n"
+        body += "Your 30 Days of Social Media Captions will be tailored to your business and voice.\n\n"
         base = (Config.BASE_URL or "").strip().rstrip("/")
         login_url = f"{base}/login" if base and base.startswith("http") else "https://www.lumo22.com/login"
         body += "For security: If you already have a Lumo 22 account, log in first (" + login_url + "), then use the link below to open your form.\n\n"
