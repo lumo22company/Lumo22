@@ -15,9 +15,6 @@
     .thankyou-card { max-width: 520px; margin: 0 auto; padding: 2.5rem; background: var(--lum-card-bg, rgba(255,255,255,0.03)); border-radius: 12px; border: 1px solid var(--lum-border, rgba(255,255,255,0.08)); }
     .thankyou-card h1 { font-family: var(--font-display); font-size: 1.75rem; margin-bottom: 1rem; }
     .thankyou-card p { color: var(--lum-text-muted); line-height: 1.7; margin-bottom: 1.25rem; }
-    .thankyou-card .thankyou-back { margin-top: 2rem; }
-    .thankyou-card .thankyou-back a { color: var(--lum-text-muted); text-decoration: none; font-size: 0.95rem; }
-    .thankyou-card .thankyou-back a:hover { color: var(--lum-text); }
     .thankyou-card input::placeholder { color: #666; }
     /* Primary: landing.css .thankyou-cta-swipe */
     .thankyou-spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid var(--lum-text-muted); border-top-color: transparent; border-radius: 50%; animation: thankyou-spin 0.8s linear infinite; vertical-align: middle; margin-right: 0.5rem; }
@@ -198,7 +195,6 @@
         </div>
         <p id="thankyou-email-error" style="display: none; margin: 0.5rem 0 0; font-size: 0.9rem; color: #f99;"></p>
       </div>
-      <p class="thankyou-back">{% if current_customer %}<a href="/account">← Back to account</a>{% else %}<a href="/captions">← Back to Captions</a>{% endif %} · <a href="/">Lumo 22 home</a></p>
     </div>
   </section>
 
