@@ -96,11 +96,11 @@
       color: var(--lum-text, #f5f5f0);
       font-weight: 600;
     }
-    .thankyou-card #thankyou-email-msg {
-      color: #ffffff !important;
-    }
+    .thankyou-card #thankyou-email-msg,
     .thankyou-card #thankyou-product-nudge {
       color: #ffffff !important;
+      font-size: 1rem;
+      line-height: 1.55;
     }
     /* Override .thankyou-card p (muted) — same element, higher specificity */
     .thankyou-card p.thankyou-action-hint {
@@ -148,7 +148,7 @@
           <p id="thankyou-later-hint" style="display: none; margin: 0.75rem 0 0; font-size: 0.85rem; line-height: 1.45; color: var(--lum-text-muted); max-width: 34rem;"></p>
         </div>
         <p id="thankyou-email-msg" style="margin: 1.25rem 0 0.75rem;"></p>
-        <p id="thankyou-product-nudge" class="thankyou-product-nudge" style="display: none; margin: 0 0 1.25rem; font-size: 0.92rem; line-height: 1.55; max-width: 36rem;"></p>
+        <p id="thankyou-product-nudge" class="thankyou-product-nudge" style="display: none; margin: 0 0 1.25rem; max-width: 36rem;"></p>
         <div id="thankyou-wrong-email-wrap" style="display: none; margin: 0.25rem 0 1.25rem;">
           <button type="button" id="thankyou-wrong-email-toggle" class="thankyou-link-wrong-email">Wrong email?</button>
           <div id="thankyou-wrong-email-form" style="display: none; margin-top: 0.75rem; max-width: 420px;">
