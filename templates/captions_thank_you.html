@@ -108,7 +108,8 @@
       <h1>30 Days of Social Media Captions</h1>
       <p id="thankyou-message" role="status" aria-live="polite"><span class="thankyou-spinner" aria-hidden="true"></span> We've received your payment. We're preparing your secure form link — this usually takes a few seconds.</p>
       <div id="thankyou-form-link" style="display: none;" aria-hidden="true">
-        <p id="thankyou-email-msg" style="margin-bottom: 1.25rem;"></p>
+        <p id="thankyou-email-msg" style="margin-bottom: 0.75rem;"></p>
+        <p id="thankyou-product-nudge" class="thankyou-product-nudge" style="display: none; margin: 0 0 1.25rem; font-size: 0.92rem; line-height: 1.55; color: var(--lum-text-muted); max-width: 36rem;"></p>
         <div id="thankyou-wrong-email-wrap" style="display: none; margin: 0.25rem 0 1.25rem;">
           <button type="button" id="thankyou-wrong-email-toggle" class="thankyou-link-wrong-email">Wrong email?</button>
           <div id="thankyou-wrong-email-form" style="display: none; margin-top: 0.75rem; max-width: 420px;">
@@ -126,6 +127,7 @@
           <p class="thankyou-link-later-wrap">
             <a href="{% if current_customer %}/account{% else %}/{% endif %}" id="later-link" class="thankyou-link-later">I'll do it later</a>
           </p>
+          <p id="thankyou-later-hint" style="display: none; margin: 0.4rem 0 0; font-size: 0.85rem; line-height: 1.45; color: var(--lum-text-muted); max-width: 34rem;"></p>
         </div>
         <p id="thankyou-oneoff-account-hint" style="display:none; margin: 1rem 0 0; font-size: 0.95rem; line-height: 1.5; color: var(--lum-text-muted);">You already have a Lumo 22 account for this email. <a id="thankyou-oneoff-login-link" href="/login" style="color: var(--lum-gold); font-weight: 600; text-decoration: none; border-bottom: 1px solid var(--lum-gold);">Log in</a> to access captions in your dashboard when they are ready.</p>
         <p id="thankyou-oneoff-signup-wrap" style="display:none; margin: 1rem 0 0; font-size: 0.95rem; line-height: 1.5; color: var(--lum-text-muted);">Optional: <a id="thankyou-oneoff-signup-link" href="/signup" style="color: var(--lum-gold); font-weight: 600; text-decoration: none; border-bottom: 1px solid var(--lum-gold);">Sign up</a> with this email prefilled, then open the form link above (or from your inbox).</p>
@@ -342,6 +344,36 @@
 
         var emailText = leadText + prefilledEditLine + timingPart + accountSuffix;
         emailMsgEl.innerHTML = emailText;
+        var productNudgeEl = document.getElementById('thankyou-product-nudge');
+        if (productNudgeEl) {
+          productNudgeEl.innerHTML = '';
+          productNudgeEl.style.display = 'none';
+          if (firstPackImmediate && isSubscription && isPrefilledFromOneoff) {
+            productNudgeEl.innerHTML = 'When you have a moment, open your form to <strong>review or tweak</strong> your details—edits are free and help keep your next packs aligned with your brand.';
+            productNudgeEl.style.display = 'block';
+          } else if (isSubscription) {
+            productNudgeEl.innerHTML = 'We generate your first pack <strong>after</strong> you submit the form—the sooner you send it, the sooner it reaches your inbox. Pack dates follow your billing cycle, so a few minutes now avoids waiting on this step.';
+            productNudgeEl.style.display = 'block';
+          } else {
+            productNudgeEl.innerHTML = 'For <strong>one-off</strong> packs, your 30-day caption calendar starts when you submit the form, not the day you paid. If you can, take a few minutes now so the month you have in mind lines up with your captions.';
+            productNudgeEl.style.display = 'block';
+          }
+        }
+        var laterHintEl = document.getElementById('thankyou-later-hint');
+        if (laterHintEl) {
+          laterHintEl.style.display = 'none';
+          laterHintEl.textContent = '';
+          if (firstPackImmediate && isSubscription && isPrefilledFromOneoff) {
+            laterHintEl.textContent = 'We will email this link again. Reviewing your form soon helps keep future packs on-brand.';
+            laterHintEl.style.display = 'block';
+          } else if (isSubscription) {
+            laterHintEl.textContent = 'We will email this link again. Your first pack is only sent after you submit the form—waiting does not start delivery.';
+            laterHintEl.style.display = 'block';
+          } else {
+            laterHintEl.textContent = 'We will email this link again. For one-off packs, your 30-day window starts when you submit—delaying pushes your calendar forward.';
+            laterHintEl.style.display = 'block';
+          }
+        }
         intakeLinkEl.href = url;
         intakeLinkEl.removeAttribute('aria-disabled');
         intakeLinkEl.textContent = isPrefilledFromOneoff ? 'Review your form' : (isLoggedIn ? 'Open form' : 'Fill out form now');

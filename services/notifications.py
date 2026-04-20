@@ -1218,12 +1218,18 @@ def _intake_link_email_html(
     safe_business = _sanitize_email_value(business_name or "")
     if safe_business:
         business_line = f"<p style=\"margin:0 0 16px;\"><strong>Business:</strong> {safe_business}</p>"
+    if is_subscription:
+        timing_tip = f"""<p style="margin:0 0 16px; font-size:14px; line-height:1.55; color:{BRAND_BLACK};">We generate your first pack <strong>after</strong> you submit the form—the sooner you send it, the sooner it reaches your inbox. Pack dates follow your billing cycle, so a few minutes now avoids waiting on this step.</p>
+"""
+    else:
+        timing_tip = f"""<p style="margin:0 0 16px; font-size:14px; line-height:1.55; color:{BRAND_BLACK};">For <strong>one-off</strong> packs, your 30-day caption calendar starts when you submit the form, not the day you paid. If you can, take a few minutes now so the month you have in mind lines up with your captions.</p>
+"""
     content = f"""<p style="margin:0 0 16px;">Hi,</p>
 {business_line}
 <p style="margin:0 0 16px;">We've received your payment — thank you.</p>
 {summary_block}<p style="margin:0 0 12px;"><strong>Next step: complete this short form so we can create your captions. It takes about 2 minutes.</strong></p>
 <p style="margin:0 0 16px;">Your 30 Days of Social Media Captions will be tailored to your business and voice.</p>
-<p style="margin:0 0 12px; font-size:14px; color:{BRAND_MUTED};"><strong style="color:{BRAND_TEXT};">For security:</strong> If you already have a Lumo 22 account, <a href="{safe_login}" style="color:{BRAND_BLACK}; text-decoration:none; border-bottom:1px solid {BRAND_BLACK};">log in first</a>, then use the button below to open your form.</p>
+{timing_tip}<p style="margin:0 0 12px; font-size:14px; color:{BRAND_MUTED};"><strong style="color:{BRAND_TEXT};">For security:</strong> If you already have a Lumo 22 account, <a href="{safe_login}" style="color:{BRAND_BLACK}; text-decoration:none; border-bottom:1px solid {BRAND_BLACK};">log in first</a>, then use the button below to open your form.</p>
 <p style="margin:0 0 24px;"><a href="{safe_url}" style="display:inline-block; padding:14px 28px; background:{BRAND_GOLD}; color:{BRAND_BLACK}; text-decoration:none; border-radius:10px; font-weight:600;">Complete the form</a></p>
 <p style="margin:0 0 8px; font-size:14px; color:{BRAND_MUTED};">Or copy and paste this link into your browser:</p>
 <p style="margin:0 0 24px; font-size:13px; word-break:break-all; color:#333;">{safe_url}</p>
@@ -2081,6 +2087,7 @@ If you didn't request this, you can ignore this email. Your email address will s
                 discount_label=pay["discount_label"],
                 ongoing_monthly_display=pay["ongoing_monthly"],
             )
+        is_sub = bool(order and (order.get("stripe_subscription_id") or "").strip())
         body = "Hi,\n\nWe've received your payment — thank you.\n\n"
         if business_name:
             body = f"Hi,\n\nBusiness: {business_name}\n\nWe've received your payment — thank you.\n\n"
@@ -2088,11 +2095,20 @@ If you didn't request this, you can ignore this email. Your email address will s
             body += "Order summary\n" + order_detail_plain + "\n\n"
         body += "Next step: complete this short form so we can create your captions. It takes about 2 minutes.\n\n"
         body += "Your 30 Days of Social Media Captions will be tailored to your business and voice.\n\n"
+        if is_sub:
+            body += (
+                "We generate your first pack after you submit the form—the sooner you send it, the sooner it reaches your inbox. "
+                "Pack dates follow your billing cycle, so completing it now avoids waiting on this step.\n\n"
+            )
+        else:
+            body += (
+                "For one-off packs, your 30-day caption calendar starts when you submit the form, not the day you paid. "
+                "If you can, take a few minutes now so the month you have in mind lines up with your captions.\n\n"
+            )
         base = (Config.BASE_URL or "").strip().rstrip("/")
         login_url = f"{base}/login" if base and base.startswith("http") else "https://www.lumo22.com/login"
         body += "For security: If you already have a Lumo 22 account, log in first (" + login_url + "), then use the link below to open your form.\n\n"
         body += intake_url
-        is_sub = bool(order and (order.get("stripe_subscription_id") or "").strip())
         account_line = "On the form you can also create an account to access your captions and manage your subscription in one place." if is_sub else "On the form you can also create an account to access your captions in one place."
         body += (
             "\n\nOnce you submit, we'll generate your 30 captions and send them to you by email within a few minutes.\n\n"

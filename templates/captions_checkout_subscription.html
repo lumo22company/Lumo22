@@ -121,7 +121,10 @@
           </span>
         </label>
       </div>
-      <p class="price-note">Renews monthly until you cancel (Stripe customer portal).{% if not is_upgrade_from_oneoff|default(false) %} After payment you’ll complete a short form—captions ready in about 15 minutes.{% endif %}</p>
+      <p class="price-note">Renews monthly until you cancel (Stripe customer portal).{% if not is_upgrade_from_oneoff|default(false) %} After payment you’ll complete a short form—captions ready in about 15 minutes after you submit it.{% endif %}</p>
+      {% if not is_upgrade_from_oneoff|default(false) %}
+      <p style="font-size: 0.9rem; color: var(--lum-text-muted); margin: 0.65rem 0 0; line-height: 1.5;">We send your first pack <strong style="color: rgba(255,255,255,0.92);">after</strong> that form is submitted; pack dates follow your billing cycle. If you can, take a few minutes right after payment so your first delivery is not waiting on this step.</p>
+      {% endif %}
 
       {% if not platforms_invalid|default(false) %}
       <div class="checkout-business-field">
