@@ -738,6 +738,14 @@ def captions_intake_page():
             is_pack_sooner_edit_session=bool(is_prepare_pack_sooner_return),
         )
         intake_pack_cover_line = format_pack_cover_line_ordinal_utc(_d1) or None
+    _from_checkout_raw = (request.args.get("from_checkout") or "").strip().lower()
+    post_checkout_sub_banner = bool(
+        _from_checkout_raw in ("1", "true", "yes")
+        and order
+        and (order.get("stripe_subscription_id") or "").strip()
+        and not intake_view_only
+        and (order.get("status") or "").strip().lower() == "awaiting_intake"
+    )
     # Hub "Edit form" link passes upgrade_stories=1 when customer checked Story Ideas on the hub (add at
     # pack-sooner/upgrade checkout). Show the stories UI even when subscription billing does not yet
     # include Story Ideas (stories_paid is false).
@@ -777,6 +785,7 @@ def captions_intake_page():
             oneoff_subscribe_checkout_mode=oneoff_subscribe_checkout_mode,
             edit_intake_before_subscribe=edit_intake_before_subscribe,
             intake_pack_cover_line=intake_pack_cover_line,
+            post_checkout_sub_banner=post_checkout_sub_banner,
         )
     )
     r.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'

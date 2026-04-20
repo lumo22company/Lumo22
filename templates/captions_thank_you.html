@@ -287,18 +287,29 @@
         if (msg) msg.textContent = '';
       }
 
+      function intakeUrlWithCheckoutFlag(url, isSubscription) {
+        if (!url || !isSubscription) return url;
+        try {
+          var u = new URL(url, window.location.origin);
+          if (!u.searchParams.get('from_checkout')) u.searchParams.set('from_checkout', '1');
+          return u.toString();
+        } catch (e) {
+          return url + (url.indexOf('?') >= 0 ? '&' : '?') + 'from_checkout=1';
+        }
+      }
+
       function scheduleIntakeRedirectAfterThankYou(url, isSubscription, isLoggedIn, customerEmail) {
         clearSubscriptionIntakeRedirect();
         if (!isSubscription || !url) return;
         var guestNeedsAccountBlock = !!(isSubscription && !isLoggedIn && customerEmail);
-        var delayMs = guestNeedsAccountBlock ? 15000 : 5000;
+        var delayMs = guestNeedsAccountBlock ? 11000 : 3500;
         var notice = document.getElementById('thankyou-subscription-redirect-notice');
         var msg = document.getElementById('thankyou-subscription-redirect-msg');
         if (!notice || !msg) return;
         subscriptionIntakeRedirectTarget = url;
         msg.textContent = guestNeedsAccountBlock
-          ? 'Your payment is complete—you\u2019re on the right page. In a few more seconds we\u2019ll open your intake form as the next step (you can still use \u201cCreate your account\u201d below first). '
-          : 'Your payment is complete—you\u2019re on the right page. In a few seconds we\u2019ll open your intake form as the next step. ';
+          ? 'Your payment is complete—you\u2019re on the right page. In a few seconds we\u2019ll open your intake form so you can finish while it\u2019s fresh. Complete it soon so your 30 caption days line up with your subscription billing (you can still use \u201cCreate your account\u201d below first). '
+          : 'Your payment is complete—you\u2019re on the right page. In a few seconds we\u2019ll open your intake form. Complete it soon so your posting dates line up with your subscription billing. ';
         notice.style.display = 'block';
         subscriptionIntakeRedirectTimer = setTimeout(function() {
           subscriptionIntakeRedirectTimer = null;
@@ -310,6 +321,7 @@
 
       function showIntake(url, customerEmail, isSubscription, isPrefilledFromOneoff, emailRecoveryToken, firstPackImmediate, mePayload, customerHasAccount) {
         clearSubscriptionIntakeRedirect();
+        url = intakeUrlWithCheckoutFlag(url, isSubscription);
         customerHasAccount = !!customerHasAccount;
         recoveryToken = (emailRecoveryToken || recoveryToken || '');
         firstPackImmediate = !!firstPackImmediate;
@@ -416,7 +428,7 @@
             productNudgeEl.innerHTML = 'When you have a moment, open your form to <strong>review or tweak</strong> your details—edits are free and help keep your next packs aligned with your brand.';
             productNudgeEl.style.display = 'block';
           } else if (isSubscription) {
-            productNudgeEl.innerHTML = '<strong>Billing vs PDF:</strong> Stripe sets when you are charged; the dates printed in each PDF are the posting window for that pack when we build it—they are not the same clock.';
+            productNudgeEl.innerHTML = 'For <strong>subscriptions</strong>, finishing this form <strong>soon after payment</strong> helps your first 30-day caption calendar match your <strong>Stripe billing period</strong>. If you come back much later, you still get <strong>30 forward-looking postable days</strong> from when you submit—but the dates may no longer line up with the start of the period you already paid for.';
             productNudgeEl.style.display = 'block';
           } else {
             productNudgeEl.innerHTML = 'For <strong>one-off</strong> packs, your 30-day caption calendar starts when you submit the form, not the day you paid. If you can, take a few minutes now so the month you have in mind lines up with your captions.';
@@ -431,7 +443,7 @@
             laterHintEl.textContent = 'We will email this link again. Reviewing your form soon helps keep future packs on-brand.';
             laterHintEl.style.display = 'block';
           } else if (isSubscription) {
-            laterHintEl.textContent = 'We will email this link again. Your first pack is only sent after you submit the form—waiting does not start delivery.';
+            laterHintEl.textContent = 'We will email this link again. Your first pack is only sent after you submit the form—waiting does not start delivery, and waiting can shift your caption dates away from your billing anchor.';
             laterHintEl.style.display = 'block';
           } else {
             laterHintEl.textContent = 'We will email this link again. For one-off packs, your 30-day window starts when you submit—delaying pushes your calendar forward.';
@@ -444,7 +456,7 @@
         var subCtaLine = document.getElementById('thankyou-subscription-cta-line');
         if (subCtaLine) {
           if (isSubscription && !subPackTodayLineHidden) {
-            subCtaLine.innerHTML = 'Fill out your form now to <strong>get your pack today</strong>—we usually email it within about 15 minutes after you submit.';
+            subCtaLine.innerHTML = '<strong>Next step:</strong> submit your form now so your 30 days of captions can align with your subscription billing—we usually email your pack within about 15 minutes.';
             subCtaLine.style.display = 'block';
           } else {
             subCtaLine.style.display = 'none';
@@ -452,7 +464,7 @@
           }
         }
         if (isSubscription && !subPackTodayLineHidden) {
-          intakeLinkEl.textContent = isPrefilledFromOneoff ? 'Review your form' : 'Fill out your form now';
+          intakeLinkEl.textContent = isPrefilledFromOneoff ? 'Review your form' : 'Start my form now';
         } else {
           intakeLinkEl.textContent = isPrefilledFromOneoff ? 'Review your form' : (isLoggedIn ? 'Open your form' : 'Fill out my form');
         }

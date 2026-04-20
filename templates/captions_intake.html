@@ -208,6 +208,42 @@
       color: #1a1a1a;
     }
     .intake-draft-banner strong { font-weight: 600; }
+    .intake-post-checkout-banner {
+      position: relative;
+      margin: 0 0 1.25rem;
+      padding: 0.9rem 2.25rem 0.9rem 1rem;
+      background: rgba(201, 162, 39, 0.14);
+      border: 1px solid rgba(201, 162, 39, 0.5);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      line-height: 1.55;
+      color: #1a1a1a;
+    }
+    .intake-post-checkout-banner .intake-post-checkout-title {
+      margin: 0 0 0.35rem;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #5c4a12;
+    }
+    .intake-post-checkout-banner p { margin: 0; }
+    .intake-post-checkout-dismiss {
+      position: absolute;
+      top: 0.35rem;
+      right: 0.35rem;
+      width: 2rem;
+      height: 2rem;
+      padding: 0;
+      border: none;
+      background: transparent;
+      color: #555;
+      font-size: 1.35rem;
+      line-height: 1;
+      cursor: pointer;
+      border-radius: 6px;
+    }
+    .intake-post-checkout-dismiss:hover { color: #000; background: rgba(0,0,0,0.06); }
     .intake-error-cta { margin-top: 0.85rem; padding-top: 0.75rem; border-top: 1px solid rgba(0,0,0,0.12); }
     .intake-error-cta p { margin: 0 0 0.5rem; font-size: 0.9rem; font-weight: 600; color: #1a1a1a; }
     a.intake-error-cta-link { display: inline-flex !important; align-items: center; justify-content: center; margin: 0.35rem 0.5rem 0 0; padding: 0.4rem 0.9rem !important; min-height: auto !important; font-size: 0.7rem !important; font-weight: 600 !important; letter-spacing: 0.2em !important; text-transform: uppercase !important; text-decoration: none !important; border-radius: var(--radius-btn, 8px); }
@@ -324,6 +360,13 @@
         <a href="/account/edit-form" id="intake-error-edit-form-link" class="intake-error-cta-link account-btn-swipe-light" style="display: none;">Edit form (subscription)</a>
       </div>
     </div>
+    {% if post_checkout_sub_banner|default(false) %}
+    <div id="intake-post-checkout-banner" class="intake-post-checkout-banner" role="status">
+      <button type="button" class="intake-post-checkout-dismiss" id="intake-post-checkout-dismiss" aria-label="Dismiss notice">×</button>
+      <p class="intake-post-checkout-title">Payment confirmed</p>
+      <p>You’re in the right place. Submit this short form <strong>now</strong> so your <strong>30 days of captions</strong> can line up with your <strong>subscription billing period</strong>. If you wait, we still send 30 forward-looking postable days from when you submit—but filling in straight after payment gives the best match to your renewal dates.</p>
+    </div>
+    {% endif %}
     {% if not intake_view_only %}
     <div id="intake-draft-banner" class="intake-draft-banner" role="status">
       <strong>Unsaved edits restored.</strong> We loaded your last answers from this browser. Submit when you are ready so we can save them to your order.
@@ -574,6 +617,21 @@
   {% if intake_token %}
   <script>
   (function(){
+    var postCheckoutBanner = document.getElementById('intake-post-checkout-banner');
+    var postCheckoutDismiss = document.getElementById('intake-post-checkout-dismiss');
+    if (postCheckoutBanner && postCheckoutDismiss) {
+      postCheckoutDismiss.addEventListener('click', function() {
+        if (postCheckoutBanner.parentNode) postCheckoutBanner.parentNode.removeChild(postCheckoutBanner);
+        try {
+          var u = new URL(window.location.href);
+          if (u.searchParams.has('from_checkout')) {
+            u.searchParams.delete('from_checkout');
+            var qs = u.searchParams.toString();
+            window.history.replaceState({}, '', u.pathname + (qs ? '?' + qs : '') + u.hash);
+          }
+        } catch (e) {}
+      });
+    }
     window.lumoIntakeBtnConfirmLabel = function() {
       var b = document.body;
       if (b.getAttribute('data-oneoff-subscribe-checkout') === 'true') return 'Confirm and continue';
