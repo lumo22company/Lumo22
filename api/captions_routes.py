@@ -693,9 +693,12 @@ def format_pack_cover_line_ordinal_utc(anchor) -> str:
 
 def resolve_pack_start_date_for_generation(order_row: Optional[Dict[str, Any]]) -> str:
     """
-    Calendar Day 1 for caption generation and PDFs. Uses pack_start_date saved with the last intake
-    submit (same anchor as launch-date validation). If missing, invalid, or stale (before today),
-    uses today (UTC) — matches launch_window_start_for_intake_validation.
+    Calendar Day 1 for caption generation and PDFs.
+    Uses pack_start_date saved with the last intake submit when set (same anchor as launch-date validation);
+    stale persisted dates before today bump forward via launch_window_start_for_intake_validation.
+    Subscription rows with no pack_start_date (cleared in set_delivered after a pack ships) use
+    compute_intake_pack_day1_anchor so renewals follow Stripe current_period_end instead of
+    defaulting to "today" and duplicating the previous pack's calendar window on renewal day.
     """
     from datetime import datetime
     from services.caption_generator import launch_window_start_for_intake_validation
@@ -704,6 +707,11 @@ def resolve_pack_start_date_for_generation(order_row: Optional[Dict[str, Any]]) 
     raw = ""
     if order_row and isinstance(order_row, dict):
         raw = (order_row.get("pack_start_date") or "").strip()
+        sub_id = (order_row.get("stripe_subscription_id") or "").strip()
+        if sub_id and not raw:
+            anchor_d, _, _ = compute_intake_pack_day1_anchor(order_row, is_pack_sooner_edit_session=False)
+            return anchor_d.strftime("%Y-%m-%d")
+
     return launch_window_start_for_intake_validation(today, raw)
 
 

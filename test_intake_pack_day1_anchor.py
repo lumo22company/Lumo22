@@ -78,6 +78,33 @@ def test_resolve_generation_empty_row_is_today():
     assert resolve_pack_start_date_for_generation({}) == today
 
 
+def test_resolve_generation_subscription_empty_pack_uses_stripe_period_end():
+    """After delivery clears pack_start_date, renewals must not default to 'today' only (duplicate window)."""
+    from unittest.mock import MagicMock, patch
+
+    from api.captions_routes import resolve_pack_start_date_for_generation
+
+    period_end = int(datetime(2031, 7, 20, 12, 0, 0, tzinfo=timezone.utc).timestamp())
+    sub = MagicMock()
+    sub.get = lambda k, d=None: period_end if k == "current_period_end" else d
+
+    order = {"stripe_subscription_id": "sub_renew123", "pack_start_date": ""}
+    with patch("api.captions_routes.Config.STRIPE_SECRET_KEY", "sk_test_fake"):
+        with patch("stripe.Subscription.retrieve", return_value=sub):
+            assert resolve_pack_start_date_for_generation(order) == "2031-07-20"
+
+
+def test_resolve_generation_subscription_empty_pack_no_stripe_key_falls_back_to_today():
+    from unittest.mock import patch
+
+    from api.captions_routes import resolve_pack_start_date_for_generation
+
+    today = datetime.utcnow().date().strftime("%Y-%m-%d")
+    order = {"stripe_subscription_id": "sub_x", "pack_start_date": ""}
+    with patch("api.captions_routes.Config.STRIPE_SECRET_KEY", ""):
+        assert resolve_pack_start_date_for_generation(order) == today
+
+
 def test_format_intake_pack_window_range_same_month():
     from datetime import date
 

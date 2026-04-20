@@ -54,7 +54,7 @@ Both `_generate_stories` and `_generate_stories_aligned` receive `KEY_DATE_EVENT
 | What | Who owns it |
 |------|----------------|
 | **When the customer is charged / renews** | **Stripe** — subscription created at Checkout, renewals on `invoice.paid` (`subscription_cycle`), plan changes via portal or `Subscription.modify` where applicable. |
-| **Dates beside Day 1–30 in the PDF** | **Lumo** — `pack_start_date` + `resolve_pack_start_date_for_generation()` at **each** generation run, and `compute_intake_pack_day1_anchor()` when intake is saved. First pack often reads Stripe `current_period_end` as an anchor input; **delivering a pack does not move Stripe billing** (`set_delivered` only clears `pack_start_date` on the order for the next run). |
+| **Dates beside Day 1–30 in the PDF** | **Lumo** — `pack_start_date` at intake save from `compute_intake_pack_day1_anchor()`; each generation uses `resolve_pack_start_date_for_generation()` (persisted anchor when set; **subscriptions with cleared `pack_start_date`** after delivery re-read Stripe `current_period_end` so the next pack advances with the billing period). **Delivering a pack does not move Stripe billing** (`set_delivered` clears `pack_start_date` only). |
 
 So: **Stripe renewal date is not “updated because the first pack was generated.”** PDF posting dates are the window for **that** generated pack. Marketing and emails should not imply the PDF’s Day 1 is always the calendar day after the previous pack’s Day 30 unless we implement that explicitly later.
 
