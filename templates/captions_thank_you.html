@@ -101,6 +101,10 @@
     .thankyou-subscription-redirect-notice button.thankyou-link-later {
       vertical-align: baseline;
     }
+    .thankyou-subscription-cta-line strong {
+      color: var(--lum-text, #f5f5f0);
+      font-weight: 600;
+    }
   </style>
 </head>
 <body class="lumo-landing" data-current-customer="{{ 'true' if current_customer else 'false' }}">
@@ -144,6 +148,7 @@
           <span id="thankyou-subscription-redirect-msg"></span><button type="button" id="thankyou-cancel-subscription-redirect" class="thankyou-link-later" style="margin-left: 0.35rem;">Stay on this page</button>
         </p>
         <div class="thankyou-cta-stack">
+          <p id="thankyou-subscription-cta-line" class="thankyou-subscription-cta-line" style="display: none; margin: 0 0 0.65rem; font-size: 0.95rem; line-height: 1.55; color: var(--lum-text-muted); text-align: center; max-width: 34rem; align-self: center;"></p>
           <a href="#" id="intake-link" class="thankyou-cta-swipe" aria-disabled="true">Fill out my form</a>
           <p class="thankyou-link-later-wrap">
             <a href="{% if current_customer %}/account{% else %}/{% endif %}" id="later-link" class="thankyou-link-later">I'll do it later</a>
@@ -411,7 +416,7 @@
             productNudgeEl.innerHTML = 'When you have a moment, open your form to <strong>review or tweak</strong> your details—edits are free and help keep your next packs aligned with your brand.';
             productNudgeEl.style.display = 'block';
           } else if (isSubscription) {
-            productNudgeEl.innerHTML = 'We generate your first pack <strong>after</strong> you submit the form—the sooner you send it, the sooner it reaches your inbox. Pack dates follow your billing cycle, so a few minutes now avoids waiting on this step. <strong>Billing vs PDF:</strong> Stripe sets when you are charged; the dates printed in each PDF are the posting window for that pack when we build it—they are not the same clock.';
+            productNudgeEl.innerHTML = '<strong>Billing vs PDF:</strong> Stripe sets when you are charged; the dates printed in each PDF are the posting window for that pack when we build it—they are not the same clock.';
             productNudgeEl.style.display = 'block';
           } else {
             productNudgeEl.innerHTML = 'For <strong>one-off</strong> packs, your 30-day caption calendar starts when you submit the form, not the day you paid. If you can, take a few minutes now so the month you have in mind lines up with your captions.';
@@ -435,7 +440,22 @@
         }
         intakeLinkEl.href = url;
         intakeLinkEl.removeAttribute('aria-disabled');
-        intakeLinkEl.textContent = isPrefilledFromOneoff ? 'Review your form' : (isLoggedIn ? 'Open your form' : 'Fill out my form');
+        var subPackTodayLineHidden = !!(firstPackImmediate && isSubscription && isPrefilledFromOneoff);
+        var subCtaLine = document.getElementById('thankyou-subscription-cta-line');
+        if (subCtaLine) {
+          if (isSubscription && !subPackTodayLineHidden) {
+            subCtaLine.innerHTML = 'Fill out your form now to <strong>get your pack today</strong>—we usually email it within about 15 minutes after you submit.';
+            subCtaLine.style.display = 'block';
+          } else {
+            subCtaLine.style.display = 'none';
+            subCtaLine.innerHTML = '';
+          }
+        }
+        if (isSubscription && !subPackTodayLineHidden) {
+          intakeLinkEl.textContent = isPrefilledFromOneoff ? 'Review your form' : 'Fill out your form now';
+        } else {
+          intakeLinkEl.textContent = isPrefilledFromOneoff ? 'Review your form' : (isLoggedIn ? 'Open your form' : 'Fill out my form');
+        }
         var nextStepWrap = document.getElementById('thankyou-next-step-wrap');
         if (nextStepWrap) {
           nextStepWrap.style.display = 'block';
