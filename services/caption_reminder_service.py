@@ -5,6 +5,10 @@ Opt-out by default (reminder_opt_out=false means reminders are ON).
 
 Also sends one-off upgrade reminders: a few days before "day 30" (e.g. 25 or 27 days after
 delivery), email one-off customers to offer subscription upgrade.
+
+New subscribers: `run_subscription_awaiting_intake_early_reminder` emails once if intake is still
+awaiting ~2+ hours after checkout (scheduled every 30 minutes in production; requires DB column
+intake_early_reminder_sent_at).
 """
 import re
 from datetime import datetime, timezone
@@ -22,6 +26,10 @@ from services.notifications import (
 REMINDER_DAYS_BEFORE = 5
 # Intake base URL (fallback if Config.BASE_URL has issues)
 INTAKE_BASE = "https://lumo-22-production.up.railway.app"
+# Subscription checkout → still no intake after this many hours: send one nudge email (idempotent).
+SUBSCRIPTION_INTAKE_REMINDER_AFTER_HOURS = 2.0
+# Skip very old awaiting_intake rows (e.g. after DB migration adds the tracking column).
+SUBSCRIPTION_INTAKE_REMINDER_MAX_ORDER_AGE_HOURS = 168.0
 
 
 def _pack_cover_line_from_period_end_utc(period_end_ts: int) -> str:
@@ -127,6 +135,124 @@ def _has_other_ready_or_completed_orders(order_service: CaptionOrderService, cur
         if (o.get("captions_md") or "").strip():
             return True
     return False
+
+
+def run_subscription_awaiting_intake_early_reminder() -> Dict[str, Any]:
+    """
+    One email per subscription order: if status is still awaiting_intake and the order is at least
+    SUBSCRIPTION_INTAKE_REMINDER_AFTER_HOURS old, send a reminder with the intake link.
+    Records intake_early_reminder_sent_at so we never duplicate.
+    """
+    import stripe
+
+    from api.stripe_utils import is_valid_stripe_subscription_id
+
+    if not getattr(Config, "STRIPE_SECRET_KEY", None) or not str(Config.STRIPE_SECRET_KEY).strip():
+        return {"sent": 0, "skipped": 0, "errors": ["STRIPE_SECRET_KEY not configured"]}
+
+    stripe.api_key = Config.STRIPE_SECRET_KEY.strip()
+    order_service = CaptionOrderService()
+    notif = NotificationService()
+    base = _safe_base_url()
+    deleted_emails = order_service.get_deleted_account_emails()
+    now = datetime.now(timezone.utc)
+    sent = 0
+    skipped = 0
+    errors: List[str] = []
+
+    try:
+        awaiting_orders = order_service.get_awaiting_intake_orders()
+    except Exception as e:
+        return {"sent": 0, "skipped": 0, "errors": [repr(e)]}
+
+    for order in awaiting_orders:
+        if (order.get("status") or "").strip().lower() != "awaiting_intake":
+            skipped += 1
+            continue
+        sub_id = (order.get("stripe_subscription_id") or "").strip()
+        if not sub_id or not is_valid_stripe_subscription_id(sub_id):
+            skipped += 1
+            continue
+        if order.get("intake_early_reminder_sent_at"):
+            skipped += 1
+            continue
+        created_raw = order.get("created_at")
+        if not created_raw:
+            skipped += 1
+            continue
+        try:
+            if isinstance(created_raw, str):
+                created_dt = datetime.fromisoformat(created_raw.replace("Z", "+00:00"))
+            else:
+                created_dt = created_raw
+            if created_dt.tzinfo is None:
+                created_dt = created_dt.replace(tzinfo=timezone.utc)
+        except Exception:
+            skipped += 1
+            continue
+        age_hours = (now - created_dt).total_seconds() / 3600.0
+        if age_hours < SUBSCRIPTION_INTAKE_REMINDER_AFTER_HOURS:
+            skipped += 1
+            continue
+        if age_hours > SUBSCRIPTION_INTAKE_REMINDER_MAX_ORDER_AGE_HOURS:
+            skipped += 1
+            continue
+        try:
+            sub = stripe.Subscription.retrieve(sub_id)
+            if not _is_subscription_reminder_eligible(sub):
+                skipped += 1
+                continue
+        except Exception as e:
+            errors.append(f"Order {order.get('id')} sub {sub_id[:14]}...: {e!r}")
+            skipped += 1
+            continue
+
+        email = (order.get("customer_email") or "").strip()
+        token = (order.get("token") or "").strip()
+        if not token or not email or "@" not in email:
+            skipped += 1
+            continue
+        if email.strip().lower() in deleted_emails:
+            skipped += 1
+            continue
+
+        intake_url = f"{base}/captions-intake?t={token}"
+        intake = order.get("intake") if isinstance(order.get("intake"), dict) else {}
+        business_name = (intake.get("business_name") or "").strip() if intake else ""
+        subject = "Complete your form — your subscription is waiting"
+        if business_name:
+            subject = f"{subject} — {business_name}"
+        body = f"""Hi,
+
+{f"Business: {business_name}\n" if business_name else ""}Thanks for subscribing to 30 Days of Social Media Captions.
+
+It has been a couple of hours and we have not received your intake form yet. We need it before we can generate your first pack.
+
+Complete your form now: {intake_url}
+
+Or copy and paste this link into your browser:
+
+{intake_url}
+
+This takes about 5–10 minutes. Once it is done, we will generate your captions and email your pack—usually within about 15 minutes.
+
+"""
+        body = body.rstrip() + "\n\n" + _account_history_notice_upcoming_plain().strip() + "\n\nLumo 22\n"
+        html_body = _captions_intake_reminder_email_html(
+            intake_url, business_name=business_name or None, variant="subscription_2h"
+        )
+        ok = notif.send_email(email, subject, body, html_body=html_body)
+        if ok:
+            if order_service.set_intake_early_reminder_sent(order["id"]):
+                sent += 1
+            else:
+                errors.append(f"Order {order.get('id')}: could not record intake_early_reminder_sent_at")
+                skipped += 1
+        else:
+            errors.append(f"Order {order.get('id')}: subscription intake reminder send failed")
+            skipped += 1
+
+    return {"sent": sent, "skipped": skipped, "errors": errors}
 
 
 def run_reminders() -> Dict[str, Any]:
@@ -250,6 +376,10 @@ Lumo 22
         for order in awaiting_orders:
             status = (order.get("status") or "").strip().lower()
             if status != "awaiting_intake":
+                continue
+            # Subscriptions use run_subscription_awaiting_intake_early_reminder (~2h); skip this 24–48h block.
+            if (order.get("stripe_subscription_id") or "").strip():
+                skipped += 1
                 continue
             if _has_other_ready_or_completed_orders(order_service, order):
                 skipped += 1

@@ -1241,9 +1241,15 @@ def _intake_link_email_html(
     return _email_wrapper(content)
 
 
-def _captions_intake_reminder_email_html(intake_url: str, business_name: Optional[str] = None) -> str:
-    """Branded HTML for one-off intake reminder (customer hasn't completed form yet)."""
+def _captions_intake_reminder_email_html(
+    intake_url: str,
+    business_name: Optional[str] = None,
+    *,
+    variant: str = "default",
+) -> str:
+    """Branded HTML for intake reminder (customer hasn't completed form yet). variant=subscription_2h for new subs."""
     import html
+
     intake_url = (intake_url or "").strip()
     if not intake_url or not intake_url.startswith("http"):
         intake_url = ""
@@ -1252,10 +1258,15 @@ def _captions_intake_reminder_email_html(intake_url: str, business_name: Optiona
     safe_business = _sanitize_email_value(business_name or "")
     if safe_business:
         business_line = f"<p style=\"margin:0 0 16px;\"><strong>Business:</strong> {safe_business}</p>"
+    if variant == "subscription_2h":
+        thanks_block = """<p style="margin:0 0 16px;">Thanks for subscribing to 30 Days of Social Media Captions.</p>
+<p style="margin:0 0 16px;">It has been a couple of hours and we have not received your intake form yet. We need it before we can generate your first pack.</p>"""
+    else:
+        thanks_block = """<p style="margin:0 0 16px;">Thanks for your order of 30 Days of Social Media Captions.</p>
+<p style="margin:0 0 16px;">Before we can start writing, we need a few details about your business, audience, and voice.</p>"""
     content = f"""<p style="margin:0 0 16px;">Hi,</p>
 {business_line}
-<p style="margin:0 0 16px;">Thanks for your order of 30 Days of Social Media Captions.</p>
-<p style="margin:0 0 16px;">Before we can start writing, we need a few details about your business, audience, and voice.</p>
+{thanks_block}
 <p style="margin:0 0 12px;">Complete this short form so we can create your pack:</p>
 <p style="margin:0 0 24px;"><a href="{safe_url}" style="display:inline-block; padding:14px 28px; background:{BRAND_GOLD}; color:{BRAND_BLACK}; text-decoration:none; border-radius:10px; font-weight:600;">Complete your form</a></p>
 <p style="margin:0 0 8px; font-size:14px; color:{BRAND_MUTED};">Or copy and paste this link into your browser:</p>

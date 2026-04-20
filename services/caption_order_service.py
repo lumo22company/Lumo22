@@ -986,9 +986,16 @@ class CaptionOrderService:
     def get_awaiting_intake_orders(self) -> list:
         """Get recent orders that are still awaiting intake (for one-off intake reminders)."""
         result = self.client.table(self.table).select(
-            "id, token, customer_email, status, created_at, stripe_subscription_id, intake, captions_md"
+            "id, token, customer_email, status, created_at, stripe_subscription_id, intake, captions_md, intake_early_reminder_sent_at"
         ).eq("status", "awaiting_intake").execute()
         return result.data or []
+
+    def set_intake_early_reminder_sent(self, order_id: str) -> bool:
+        """Record that we sent the ~2h subscription intake reminder (idempotent)."""
+        if not order_id:
+            return False
+        now_iso = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+        return self.update(order_id, {"intake_early_reminder_sent_at": now_iso})
 
     def get_by_stripe_subscription_id(self, stripe_subscription_id: str) -> Optional[Dict[str, Any]]:
         """Get order by Stripe subscription id. Prefer newest row if duplicates exist (undefined order otherwise)."""

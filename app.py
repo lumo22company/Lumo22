@@ -276,6 +276,20 @@ def _start_captions_reminder_scheduler():
                 except Exception as e:
                     print(f"[Captions reminder] error: {e}")
 
+        def run_subscription_intake_2h_job():
+            with app.app_context():
+                try:
+                    from services.caption_reminder_service import run_subscription_awaiting_intake_early_reminder
+
+                    r = run_subscription_awaiting_intake_early_reminder()
+                    if r.get("sent") or r.get("errors"):
+                        print(
+                            f"[Captions sub intake 2h] sent={r.get('sent', 0)} skipped={r.get('skipped', 0)} "
+                            f"errors={r.get('errors', [])}"
+                        )
+                except Exception as e:
+                    print(f"[Captions sub intake 2h] error: {e}")
+
         def run_stuck_delivery_job():
             """Retry first-pack generation when intake succeeded but email/PDF never landed."""
             with app.app_context():
@@ -299,6 +313,14 @@ def _start_captions_reminder_scheduler():
 
         sched = BackgroundScheduler(daemon=True)
         sched.add_job(run_reminders_job, CronTrigger(hour=9, minute=0, timezone="UTC"))
+        # New subscribers still on awaiting_intake: one email ~2h after checkout (requires intake_early_reminder_sent_at migration).
+        sched.add_job(
+            run_subscription_intake_2h_job,
+            IntervalTrigger(minutes=30, timezone="UTC"),
+            next_run_time=datetime.now(timezone.utc) + timedelta(seconds=90),
+            id="captions_sub_intake_2h_reminder",
+            replace_existing=True,
+        )
         # Heal stuck orders (background thread died, SendGrid fail, etc.) without waiting for manual cron
         sched.add_job(
             run_stuck_delivery_job,
@@ -308,7 +330,10 @@ def _start_captions_reminder_scheduler():
             replace_existing=True,
         )
         sched.start()
-        print("[Captions reminder] scheduler started (daily 9am UTC + stuck-delivery recovery every 10 min)")
+        print(
+            "[Captions reminder] scheduler started (daily 9am UTC + sub intake 2h every 30 min + "
+            "stuck-delivery recovery every 10 min)"
+        )
     except Exception as e:
         print(f"[Captions reminder] scheduler not started: {e}")
 
