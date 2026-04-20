@@ -27,7 +27,7 @@
       flex-direction: column;
       align-items: stretch;
       gap: 0.75rem;
-      margin-top: 1.5rem;
+      margin-top: 0.25rem;
     }
     .thankyou-cta-stack .thankyou-cta-swipe {
       width: 100%;
@@ -121,7 +121,18 @@
       <h1>30 Days of Social Media Captions</h1>
       <p id="thankyou-message" role="status" aria-live="polite"><span class="thankyou-spinner" aria-hidden="true"></span> We've received your payment. We're preparing your secure form link — this usually takes a few seconds.</p>
       <div id="thankyou-form-link" style="display: none;" aria-hidden="true">
-        <p id="thankyou-email-msg" style="margin-bottom: 0.75rem;"></p>
+        <div id="thankyou-next-step-wrap" class="thankyou-next-step-wrap" style="display: none;" aria-hidden="true">
+          <p id="thankyou-next-step-title" class="thankyou-next-step-title">Next step</p>
+        </div>
+        <p id="thankyou-subscription-redirect-notice" class="thankyou-subscription-redirect-notice" style="display: none; margin: 0 0 0.85rem; font-size: 0.9rem; line-height: 1.55; color: var(--lum-text-muted); max-width: 36rem;" role="status" aria-live="polite">
+          <span id="thankyou-subscription-redirect-msg"></span><button type="button" id="thankyou-cancel-subscription-redirect" class="thankyou-link-later" style="margin-left: 0.35rem;">Stay on this page</button>
+        </p>
+        <div class="thankyou-cta-stack">
+          <p id="thankyou-subscription-cta-line" class="thankyou-subscription-cta-line" style="display: none; margin: 0 0 0.65rem; font-size: 0.95rem; line-height: 1.55; color: var(--lum-text-muted); text-align: center; max-width: 34rem; align-self: center;"></p>
+          <a href="#" id="intake-link" class="thankyou-cta-swipe" aria-disabled="true">Fill out my form</a>
+          <p id="thankyou-later-hint" style="display: none; margin: 0.75rem 0 0; font-size: 0.85rem; line-height: 1.45; color: var(--lum-text-muted); max-width: 34rem;"></p>
+        </div>
+        <p id="thankyou-email-msg" style="margin: 1.25rem 0 0.75rem;"></p>
         <p id="thankyou-product-nudge" class="thankyou-product-nudge" style="display: none; margin: 0 0 1.25rem; font-size: 0.92rem; line-height: 1.55; color: var(--lum-text-muted); max-width: 36rem;"></p>
         <div id="thankyou-wrong-email-wrap" style="display: none; margin: 0.25rem 0 1.25rem;">
           <button type="button" id="thankyou-wrong-email-toggle" class="thankyou-link-wrong-email">Wrong email?</button>
@@ -134,17 +145,6 @@
             <p id="thankyou-update-email-error" style="display:none; margin:0.65rem 0 0; font-size:0.9rem; color:#f99;"></p>
             <p id="thankyou-update-email-success" style="display:none; margin:0.65rem 0 0; font-size:0.9rem; color:#8c8;">Updated. We sent your intake link to the new email.</p>
           </div>
-        </div>
-        <div id="thankyou-next-step-wrap" class="thankyou-next-step-wrap" style="display: none;" aria-hidden="true">
-          <p id="thankyou-next-step-title" class="thankyou-next-step-title">Next step</p>
-        </div>
-        <p id="thankyou-subscription-redirect-notice" class="thankyou-subscription-redirect-notice" style="display: none; margin: 0 0 0.85rem; font-size: 0.9rem; line-height: 1.55; color: var(--lum-text-muted); max-width: 36rem;" role="status" aria-live="polite">
-          <span id="thankyou-subscription-redirect-msg"></span><button type="button" id="thankyou-cancel-subscription-redirect" class="thankyou-link-later" style="margin-left: 0.35rem;">Stay on this page</button>
-        </p>
-        <div class="thankyou-cta-stack">
-          <p id="thankyou-subscription-cta-line" class="thankyou-subscription-cta-line" style="display: none; margin: 0 0 0.65rem; font-size: 0.95rem; line-height: 1.55; color: var(--lum-text-muted); text-align: center; max-width: 34rem; align-self: center;"></p>
-          <a href="#" id="intake-link" class="thankyou-cta-swipe" aria-disabled="true">Fill out my form</a>
-          <p id="thankyou-later-hint" style="display: none; margin: 0.75rem 0 0; font-size: 0.85rem; line-height: 1.45; color: var(--lum-text-muted); max-width: 34rem;"></p>
         </div>
         <p id="thankyou-oneoff-account-hint" style="display:none; margin: 1rem 0 0; font-size: 0.95rem; line-height: 1.5; color: var(--lum-text-muted);">You already have a Lumo 22 account for this email. <a id="thankyou-oneoff-login-link" href="/login" style="color: var(--lum-gold); font-weight: 600; text-decoration: none; border-bottom: 1px solid var(--lum-gold);">Log in</a> to access captions in your dashboard when they are ready.</p>
         <p id="thankyou-oneoff-signup-wrap" style="display:none; margin: 1rem 0 0; font-size: 0.95rem; line-height: 1.5; color: var(--lum-text-muted);">Optional: <a id="thankyou-oneoff-signup-link" href="/signup" style="color: var(--lum-gold); font-weight: 600; text-decoration: none; border-bottom: 1px solid var(--lum-gold);">Sign up</a> with this email prefilled, then open the form link above (or from your inbox).</p>
