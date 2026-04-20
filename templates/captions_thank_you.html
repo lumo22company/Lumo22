@@ -86,6 +86,18 @@
     .thankyou-link-later:hover {
       color: var(--lum-text);
     }
+    .thankyou-next-step-wrap {
+      margin: 0 0 0.65rem;
+    }
+    .thankyou-next-step-title {
+      margin: 0;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--lum-text-muted);
+      line-height: 1.35;
+    }
   </style>
 </head>
 <body class="lumo-landing" data-current-customer="{{ 'true' if current_customer else 'false' }}">
@@ -122,8 +134,11 @@
             <p id="thankyou-update-email-success" style="display:none; margin:0.65rem 0 0; font-size:0.9rem; color:#8c8;">Updated. We sent your intake link to the new email.</p>
           </div>
         </div>
+        <div id="thankyou-next-step-wrap" class="thankyou-next-step-wrap" style="display: none;" aria-hidden="true">
+          <p id="thankyou-next-step-title" class="thankyou-next-step-title">Next step</p>
+        </div>
         <div class="thankyou-cta-stack">
-          <a href="#" id="intake-link" class="thankyou-cta-swipe" aria-disabled="true">Fill out form now</a>
+          <a href="#" id="intake-link" class="thankyou-cta-swipe" aria-disabled="true">Fill out my form</a>
           <p class="thankyou-link-later-wrap">
             <a href="{% if current_customer %}/account{% else %}/{% endif %}" id="later-link" class="thankyou-link-later">I'll do it later</a>
           </p>
@@ -376,7 +391,12 @@
         }
         intakeLinkEl.href = url;
         intakeLinkEl.removeAttribute('aria-disabled');
-        intakeLinkEl.textContent = isPrefilledFromOneoff ? 'Review your form' : (isLoggedIn ? 'Open form' : 'Fill out form now');
+        intakeLinkEl.textContent = isPrefilledFromOneoff ? 'Review your form' : (isLoggedIn ? 'Open your form' : 'Fill out my form');
+        var nextStepWrap = document.getElementById('thankyou-next-step-wrap');
+        if (nextStepWrap) {
+          nextStepWrap.style.display = 'block';
+          nextStepWrap.setAttribute('aria-hidden', 'false');
+        }
         formLinkEl.style.display = 'block';
         formLinkEl.setAttribute('aria-hidden', 'false');
         if (wrongEmailWrapEl) {
