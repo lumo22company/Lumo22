@@ -572,6 +572,7 @@ def compute_intake_pack_day1_anchor(
 
     Returns (anchor_date, source, display_str) where source is one of:
     pack_sooner, scheduled_first_pack, stripe_renewal, calendar_fallback, today_fallback.
+    (stripe_renewal branch uses Stripe current_period_start — the calendar start of the current paid period, i.e. aligned with the charge that opened that period—not current_period_end.)
     """
     from datetime import datetime, timezone
     from services.caption_generator import launch_window_start_for_intake_validation
@@ -604,9 +605,11 @@ def compute_intake_pack_day1_anchor(
 
             stripe.api_key = Config.STRIPE_SECRET_KEY.strip()
             sub = stripe.Subscription.retrieve(sub_id)
+            ps = sub.get("current_period_start")
             pe = sub.get("current_period_end")
-            if pe is not None:
-                d = datetime.utcfromtimestamp(int(pe)).date()
+            ts = ps if ps is not None else pe
+            if ts is not None:
+                d = datetime.utcfromtimestamp(int(ts)).date()
                 if d < today:
                     d = today
                 return (d, "stripe_renewal", disp(d))
@@ -633,11 +636,11 @@ def intake_pack_day1_explainer_for_source(source: str) -> str:
         )
     if source == "stripe_renewal":
         return (
-            "This matches your next Stripe subscription renewal (when your monthly pack is generated). Use it when choosing dates below."
+            "This matches the start of your current Stripe billing period (from your subscription charge date). Use it when choosing dates below."
         )
     if source == "calendar_fallback":
         return (
-            "We use this as the first day of the 30-day window for validating dates below when we do not yet have a renewal date from Stripe."
+            "We use this as the first day of the 30-day window for validating dates below when we could not read your live subscription dates from Stripe."
         )
     return "We use this as Day 1 for the 30-day window when checking the dates you list below."
 
@@ -697,8 +700,8 @@ def resolve_pack_start_date_for_generation(order_row: Optional[Dict[str, Any]]) 
     Uses pack_start_date saved with the last intake submit when set (same anchor as launch-date validation);
     stale persisted dates before today bump forward via launch_window_start_for_intake_validation.
     Subscription rows with no pack_start_date (cleared in set_delivered after a pack ships) use
-    compute_intake_pack_day1_anchor so renewals follow Stripe current_period_end instead of
-    defaulting to "today" and duplicating the previous pack's calendar window on renewal day.
+    compute_intake_pack_day1_anchor (Stripe current_period_start) instead of defaulting to "today"
+    and duplicating the previous pack's calendar window on renewal day.
     """
     from datetime import datetime
     from services.caption_generator import launch_window_start_for_intake_validation

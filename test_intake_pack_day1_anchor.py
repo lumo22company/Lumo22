@@ -27,12 +27,12 @@ def test_scheduled_first_pack_when_future():
     assert "June" in disp or "2030" in disp
 
 
-def test_stripe_renewal_uses_current_period_end():
+def test_stripe_renewal_uses_current_period_start():
     from api.captions_routes import compute_intake_pack_day1_anchor
 
-    period_end = int(datetime(2031, 3, 15, 0, 0, 0, tzinfo=timezone.utc).timestamp())
+    period_start = int(datetime(2031, 3, 15, 0, 0, 0, tzinfo=timezone.utc).timestamp())
     sub = MagicMock()
-    sub.get = lambda k, d=None: period_end if k == "current_period_end" else d
+    sub.get = lambda k, d=None: period_start if k == "current_period_start" else d
 
     order = {"stripe_subscription_id": "sub_test123", "pack_start_date": "2026-04-01"}
     with patch("api.captions_routes.Config.STRIPE_SECRET_KEY", "sk_test_fake"):
@@ -46,7 +46,7 @@ def test_explainer_stripe_renewal():
     from api.captions_routes import intake_pack_day1_explainer_for_source
 
     s = intake_pack_day1_explainer_for_source("stripe_renewal")
-    assert "Stripe" in s or "renewal" in s.lower()
+    assert "Stripe" in s and "charge" in s.lower()
 
 
 def test_resolve_generation_uses_future_stored_anchor():
@@ -78,15 +78,15 @@ def test_resolve_generation_empty_row_is_today():
     assert resolve_pack_start_date_for_generation({}) == today
 
 
-def test_resolve_generation_subscription_empty_pack_uses_stripe_period_end():
-    """After delivery clears pack_start_date, renewals must not default to 'today' only (duplicate window)."""
+def test_resolve_generation_subscription_empty_pack_uses_stripe_period_start():
+    """After delivery clears pack_start_date, renewals re-read Stripe (current_period_start), not bare 'today'."""
     from unittest.mock import MagicMock, patch
 
     from api.captions_routes import resolve_pack_start_date_for_generation
 
-    period_end = int(datetime(2031, 7, 20, 12, 0, 0, tzinfo=timezone.utc).timestamp())
+    period_start = int(datetime(2031, 7, 20, 12, 0, 0, tzinfo=timezone.utc).timestamp())
     sub = MagicMock()
-    sub.get = lambda k, d=None: period_end if k == "current_period_end" else d
+    sub.get = lambda k, d=None: period_start if k == "current_period_start" else d
 
     order = {"stripe_subscription_id": "sub_renew123", "pack_start_date": ""}
     with patch("api.captions_routes.Config.STRIPE_SECRET_KEY", "sk_test_fake"):
