@@ -1776,7 +1776,13 @@ def _run_generation_and_deliver(
         order_service.set_generating(order_id)
         pack_start_date = resolve_pack_start_date_for_generation(row)
         gen = CaptionGenerator()
-        print(f"[Captions] Calling AI (provider={Config.AI_PROVIDER}) for order {order_id} (Day 1 = {pack_start_date})")
+        if row.get("stripe_subscription_id"):
+            print(
+                f"[Captions] Subscription pack order_id={order_id} sub={(row.get('stripe_subscription_id') or '')[:20]}… "
+                f"Day1_for_generation={pack_start_date} force_redeliver={force_redeliver}"
+            )
+        else:
+            print(f"[Captions] Calling AI (provider={Config.AI_PROVIDER}) for order {order_id} (Day 1 = {pack_start_date})")
         stories_generation_failed = False
         stories_generation_status = "ok"
         if force_captions_only and intake.get("include_stories"):
@@ -1916,7 +1922,11 @@ def _run_generation_and_deliver(
                     "We've delivered your captions now so you can start posting.\n\n"
                 )
         if has_sub:
-            body += "Deleting this email or the PDF does not cancel your subscription. To cancel, go to your account → Manage subscription.\n\n"
+            body += (
+                "Billing vs PDF dates: Stripe controls when your subscription renews and you are charged. "
+                "The dates beside each day in the PDF are the posting window for this pack when we built it—not the same as your invoice line-by-line.\n\n"
+                "Deleting this email or the PDF does not cancel your subscription. To cancel, go to your account → Manage subscription.\n\n"
+            )
         body += "If attachments don't appear in your inbox, use your backup download link(s):\n"
         body += f"For your security, these backup links expire within {_public_download_expiry_hours()} hour(s).\n"
         body += backup_captions_url + "\n"
@@ -3058,7 +3068,11 @@ def captions_resend_delivery():
                 + _account_history_notice_delivery_plain()
             )
         if has_sub:
-            body += "Deleting this email or the PDF does not cancel your subscription. To cancel, go to your account → Manage subscription.\n\n"
+            body += (
+                "Billing vs PDF dates: Stripe controls when your subscription renews and you are charged. "
+                "The dates beside each day in the PDF are the posting window for this pack when we built it—not the same as your invoice line-by-line.\n\n"
+                "Deleting this email or the PDF does not cancel your subscription. To cancel, go to your account → Manage subscription.\n\n"
+            )
         body += "If attachments don't appear in your inbox, use your backup download link(s):\n"
         body += f"For your security, these backup links expire within {_public_download_expiry_hours()} hour(s).\n"
         body += backup_captions_url + "\n"

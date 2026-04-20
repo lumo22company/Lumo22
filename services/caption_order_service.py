@@ -654,7 +654,9 @@ class CaptionOrderService:
             "delivered_at": now_iso,
             "delivery_failure_count": 0,
             "delivery_last_error": None,
-            # Next renewal/generation should not reuse this pack's anchor unless the customer saves intake again.
+            # Clear anchor so the next subscription renewal run does not reuse this pack's Day 1–30 window.
+            # Renewals resolve a fresh pack_start_date at generation time (see resolve_pack_start_date_for_generation);
+            # Stripe billing dates are not updated here—only the DB snapshot moves forward.
             "pack_start_date": None,
         }
         if did_archive_prior_pack:

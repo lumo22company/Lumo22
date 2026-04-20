@@ -47,6 +47,17 @@ Story ideas use the **same before/during/after phasing** as captions when `launc
 
 Both `_generate_stories` and `_generate_stories_aligned` receive `KEY_DATE_EVENTS` and the explicit day mapping (e.g. "key date falls on Day 7") so Suggested wording uses the correct dates from DATE_CONTEXT—not invented ones. Regression test: `test_story_key_date_phasing.py`.
 
+## Subscriptions — Stripe billing vs PDF calendar (Option A)
+
+**Two different clocks** (we document this for support and customers; behaviour stays billing-aligned in Stripe):
+
+| What | Who owns it |
+|------|----------------|
+| **When the customer is charged / renews** | **Stripe** — subscription created at Checkout, renewals on `invoice.paid` (`subscription_cycle`), plan changes via portal or `Subscription.modify` where applicable. |
+| **Dates beside Day 1–30 in the PDF** | **Lumo** — `pack_start_date` + `resolve_pack_start_date_for_generation()` at **each** generation run, and `compute_intake_pack_day1_anchor()` when intake is saved. First pack often reads Stripe `current_period_end` as an anchor input; **delivering a pack does not move Stripe billing** (`set_delivered` only clears `pack_start_date` on the order for the next run). |
+
+So: **Stripe renewal date is not “updated because the first pack was generated.”** PDF posting dates are the window for **that** generated pack. Marketing and emails should not imply the PDF’s Day 1 is always the calendar day after the previous pack’s Day 30 unless we implement that explicitly later.
+
 ## Related
 
 - **Key date → day number:** See prompt and `_parse_key_date_from_text()` — the key date from intake is parsed and the AI is told exactly which day number is "launch day" so phasing is correct.
