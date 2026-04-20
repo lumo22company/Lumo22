@@ -1223,7 +1223,7 @@ def _intake_link_email_html(
         timing_tip = f"""<p style="margin:0 0 16px; font-size:14px; line-height:1.55; color:{BRAND_BLACK};">We generate your first pack <strong>after</strong> you submit the form—the sooner you send it, the sooner it reaches your inbox. Pack dates follow your billing cycle, so a few minutes now avoids waiting on this step. <strong>Billing vs PDF:</strong> Stripe sets when you are charged; the dates beside each day in each PDF are the posting window for that pack when we build it—not the same clock.</p>
 """
     else:
-        timing_tip = f"""<p style="margin:0 0 16px; font-size:14px; line-height:1.55; color:{BRAND_BLACK};">For <strong>one-off</strong> packs, your 30-day caption calendar starts when you submit the form, not the day you paid. If you can, take a few minutes now so the month you have in mind lines up with your captions.</p>
+        timing_tip = f"""<p style="margin:0 0 16px; font-size:14px; line-height:1.55; color:{BRAND_BLACK};">For <strong>one-off</strong> packs, your 30-day caption calendar starts when you submit the form, not the day you paid.</p>
 """
     content = f"""<p style="margin:0 0 16px;">Hi,</p>
 {business_line}
@@ -2114,10 +2114,7 @@ If you didn't request this, you can ignore this email. Your email address will s
                 "Billing vs PDF: Stripe sets when you are charged; the dates beside each day in each PDF are the posting window for that pack when we build it—not the same clock.\n\n"
             )
         else:
-            body += (
-                "For one-off packs, your 30-day caption calendar starts when you submit the form, not the day you paid. "
-                "If you can, take a few minutes now so the month you have in mind lines up with your captions.\n\n"
-            )
+            body += "For one-off packs, your 30-day caption calendar starts when you submit the form, not the day you paid.\n\n"
         base = (Config.BASE_URL or "").strip().rstrip("/")
         login_url = f"{base}/login" if base and base.startswith("http") else "https://www.lumo22.com/login"
         body += "For security: If you already have a Lumo 22 account, log in first (" + login_url + "), then use the link below to open your form.\n\n"
