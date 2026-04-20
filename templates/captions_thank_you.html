@@ -127,6 +127,8 @@
             <a href="{% if current_customer %}/account{% else %}/{% endif %}" id="later-link" class="thankyou-link-later">I'll do it later</a>
           </p>
         </div>
+        <p id="thankyou-oneoff-account-hint" style="display:none; margin: 1rem 0 0; font-size: 0.95rem; line-height: 1.5; color: var(--lum-text-muted);">You already have a Lumo 22 account for this email. <a id="thankyou-oneoff-login-link" href="/login" style="color: var(--lum-gold); font-weight: 600; text-decoration: none; border-bottom: 1px solid var(--lum-gold);">Log in</a> to access captions in your dashboard when they are ready.</p>
+        <p id="thankyou-oneoff-signup-wrap" style="display:none; margin: 1rem 0 0; font-size: 0.95rem; line-height: 1.5; color: var(--lum-text-muted);">Optional: <a id="thankyou-oneoff-signup-link" href="/signup" style="color: var(--lum-gold); font-weight: 600; text-decoration: none; border-bottom: 1px solid var(--lum-gold);">Sign up</a> with this email prefilled, then open the form link above (or from your inbox).</p>
         <div id="thankyou-create-account" style="display: none; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.15);">
           <h2 style="font-size: 1.15rem; margin: 0 0 0.5rem;">Create your account</h2>
           <p style="font-size: 0.95rem; color: var(--lum-text-muted); margin: 0 0 1rem; line-height: 1.5;">Set a password (at least 12 characters and 1 number) so you can log in and manage your subscription. We'll send a verification link to your email to confirm your address.</p>
@@ -214,7 +216,7 @@
                 if (data && data.status === 'ok' && data.intake_url) {
                   noSessionEl.style.display = 'none';
                   if (emailFallbackNoSession) emailFallbackNoSession.style.display = 'none';
-                  showIntakeWithAuth(data.intake_url, data.customer_email || null, !!data.is_subscription, !!data.is_prefilled_from_oneoff, data.email_recovery_token || '', !!data.subscription_first_pack_immediate);
+                  showIntakeWithAuth(data.intake_url, data.customer_email || null, !!data.is_subscription, !!data.is_prefilled_from_oneoff, data.email_recovery_token || '', !!data.subscription_first_pack_immediate, !!data.customer_has_account);
                   formLinkEl.style.display = 'block';
                 } else {
                   if (emailError) { emailError.textContent = data && data.error ? data.error : 'No order found for this email.'; emailError.style.display = 'block'; }
@@ -232,7 +234,17 @@
         return;
       }
 
-      function showIntake(url, customerEmail, isSubscription, isPrefilledFromOneoff, emailRecoveryToken, firstPackImmediate, mePayload) {
+      function pathAndQueryFromUrl(u) {
+        try {
+          var parsed = new URL(u, window.location.origin);
+          return parsed.pathname + parsed.search;
+        } catch (e) {
+          return (u && u.indexOf('/') === 0) ? u : '/account';
+        }
+      }
+
+      function showIntake(url, customerEmail, isSubscription, isPrefilledFromOneoff, emailRecoveryToken, firstPackImmediate, mePayload, customerHasAccount) {
+        customerHasAccount = !!customerHasAccount;
         recoveryToken = (emailRecoveryToken || recoveryToken || '');
         firstPackImmediate = !!firstPackImmediate;
         var thankyouBox = document.getElementById('thankyou-box');
@@ -288,9 +300,7 @@
           if (isSubscription && !isLoggedIn) {
             accountSuffix = ' Create your account below (set a password) so you can log in and manage your subscription. We\'ll send a verification link to your email.';
           } else if (!isSubscription) {
-            accountSuffix = isLoggedIn
-              ? ''
-              : ' On the form you can also create an account to access your captions in one place.';
+            accountSuffix = '';
           }
         } else {
           if (isLoggedIn && !isSubscription) {
@@ -309,7 +319,7 @@
             if (isSubscription && !isLoggedIn) {
               accountSuffix = ' Create your account below (set a password) so you can log in and manage your subscription. We\'ll send a verification link to your email.';
             } else if (!isSubscription) {
-              accountSuffix = ' On the form you can also create an account to access your captions in one place.';
+              accountSuffix = '';
             }
           }
           leadText = customerEmail
@@ -363,30 +373,48 @@
           }
         }
         var thankyouLoginLink = document.getElementById('thankyou-login-link');
+        var nextPath = window.location.pathname + window.location.search;
+        if (!nextPath || nextPath === '/') {
+          nextPath = '/captions-thank-you';
+        }
+        var loginHrefBase = '/login?next=' + encodeURIComponent(nextPath);
+        if (customerEmail && customerEmail.indexOf('@') !== -1) {
+          loginHrefBase += '&email=' + encodeURIComponent(String(customerEmail).trim());
+        }
         if (thankyouLoginLink) {
-          var nextPath = window.location.pathname + window.location.search;
-          if (!nextPath || nextPath === '/') {
-            nextPath = '/captions-thank-you';
+          thankyouLoginLink.href = loginHrefBase;
+        }
+        var oneoffLogin = document.getElementById('thankyou-oneoff-login-link');
+        if (oneoffLogin) {
+          oneoffLogin.href = loginHrefBase;
+        }
+        var acctHint = document.getElementById('thankyou-oneoff-account-hint');
+        var signupWrap = document.getElementById('thankyou-oneoff-signup-wrap');
+        var signupA = document.getElementById('thankyou-oneoff-signup-link');
+        if (acctHint) acctHint.style.display = 'none';
+        if (signupWrap) signupWrap.style.display = 'none';
+        if (!isSubscription && customerEmail && customerEmail.indexOf('@') !== -1) {
+          if (customerHasAccount && !isLoggedIn) {
+            if (acctHint) acctHint.style.display = 'block';
+          } else if (!customerHasAccount && !isLoggedIn && signupA && signupWrap) {
+            var intakeNext = pathAndQueryFromUrl(url);
+            signupA.href = '/signup?email=' + encodeURIComponent(String(customerEmail).trim()) + '&next=' + encodeURIComponent(intakeNext);
+            signupWrap.style.display = 'block';
           }
-          var loginHref = '/login?next=' + encodeURIComponent(nextPath);
-          if (customerEmail && customerEmail.indexOf('@') !== -1) {
-            loginHref += '&email=' + encodeURIComponent(String(customerEmail).trim());
-          }
-          thankyouLoginLink.href = loginHref;
         }
       }
 
-      function showIntakeWithAuth(url, customerEmail, isSubscription, isPrefilledFromOneoff, emailRecoveryToken, firstPackImmediate) {
+      function showIntakeWithAuth(url, customerEmail, isSubscription, isPrefilledFromOneoff, emailRecoveryToken, firstPackImmediate, customerHasAccount) {
         fetch('/api/auth/me', { credentials: 'same-origin' })
           .then(function(r) {
             if (!r.ok) return null;
             return r.json();
           })
           .then(function(me) {
-            showIntake(url, customerEmail, isSubscription, isPrefilledFromOneoff, emailRecoveryToken, firstPackImmediate, me);
+            showIntake(url, customerEmail, isSubscription, isPrefilledFromOneoff, emailRecoveryToken, firstPackImmediate, me, customerHasAccount);
           })
           .catch(function() {
-            showIntake(url, customerEmail, isSubscription, isPrefilledFromOneoff, emailRecoveryToken, firstPackImmediate, null);
+            showIntake(url, customerEmail, isSubscription, isPrefilledFromOneoff, emailRecoveryToken, firstPackImmediate, null, customerHasAccount);
           });
       }
 
@@ -400,7 +428,7 @@
       function onResponse(data) {
         if (data && data.status === 'ok' && data.intake_url) {
           intakeShown = true;
-          showIntakeWithAuth(data.intake_url, data.customer_email || null, !!data.is_subscription, !!data.is_prefilled_from_oneoff, data.email_recovery_token || '', !!data.subscription_first_pack_immediate);
+          showIntakeWithAuth(data.intake_url, data.customer_email || null, !!data.is_subscription, !!data.is_prefilled_from_oneoff, data.email_recovery_token || '', !!data.subscription_first_pack_immediate, !!data.customer_has_account);
           return true;
         }
         return false;
@@ -447,7 +475,7 @@
               .then(function(data) {
                 if (data && data.status === 'ok' && data.intake_url) {
                   intakeShown = true;
-                  showIntakeWithAuth(data.intake_url, data.customer_email || null, !!data.is_subscription, !!data.is_prefilled_from_oneoff, data.email_recovery_token || '', !!data.subscription_first_pack_immediate);
+                  showIntakeWithAuth(data.intake_url, data.customer_email || null, !!data.is_subscription, !!data.is_prefilled_from_oneoff, data.email_recovery_token || '', !!data.subscription_first_pack_immediate, !!data.customer_has_account);
                   if (emailFallback) emailFallback.style.display = 'none';
                 } else {
                   if (emailError) { emailError.textContent = data && data.error ? data.error : 'No order found for this email.'; emailError.style.display = 'block'; }
@@ -585,7 +613,7 @@
           .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
           .then(function(res) {
             if (res.ok && res.data && res.data.status === 'ok') {
-              showIntakeWithAuth((res.data && res.data.intake_url) || intakeLinkEl.href, email, !!res.data.is_subscription, !!res.data.is_prefilled_from_oneoff, (res.data && res.data.email_recovery_token) || '', !!(res.data && res.data.subscription_first_pack_immediate));
+              showIntakeWithAuth((res.data && res.data.intake_url) || intakeLinkEl.href, email, !!res.data.is_subscription, !!res.data.is_prefilled_from_oneoff, (res.data && res.data.email_recovery_token) || '', !!(res.data && res.data.subscription_first_pack_immediate), !!(res.data && res.data.customer_has_account));
               if (wrongEmailSuccessEl) wrongEmailSuccessEl.style.display = 'block';
               if (wrongEmailFormEl) wrongEmailFormEl.style.display = 'none';
             } else {

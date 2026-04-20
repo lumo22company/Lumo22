@@ -75,6 +75,19 @@ def _parse_currency(request) -> str:
     return "gbp"
 
 
+def _order_email_has_customer_account(customer_email: Optional[str]) -> bool:
+    """True when a Lumo customer account exists for this order email (thank-you / intake copy)."""
+    em = (customer_email or "").strip().lower()
+    if not em or "@" not in em:
+        return False
+    try:
+        from services.customer_auth_service import CustomerAuthService
+
+        return CustomerAuthService().get_by_email(em) is not None
+    except Exception:
+        return False
+
+
 def _parse_checkout_email(request):
     """
     Parse checkout email fields from query params.
@@ -975,6 +988,7 @@ def captions_correct_email():
             "is_subscription": is_sub,
             "is_prefilled_from_oneoff": is_pref,
             "subscription_first_pack_immediate": subscription_first_pack_immediate,
+            "customer_has_account": _order_email_has_customer_account(new_email),
         }), 200
     except Exception as e:
         print(f"[captions-correct-email] Failed to update/resend: {e!r}")
@@ -1495,6 +1509,7 @@ def captions_intake_link():
         "is_subscription": is_subscription,
         "is_prefilled_from_oneoff": is_prefilled_from_oneoff,
         "subscription_first_pack_immediate": subscription_first_pack_immediate,
+        "customer_has_account": _order_email_has_customer_account(customer_email),
     }), 200
 
 
@@ -1563,6 +1578,7 @@ def captions_intake_link_by_email():
         "is_subscription": is_subscription,
         "is_prefilled_from_oneoff": is_prefilled_from_oneoff,
         "subscription_first_pack_immediate": subscription_first_pack_immediate,
+        "customer_has_account": _order_email_has_customer_account(email),
     }), 200
 
 
