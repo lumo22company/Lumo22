@@ -1498,7 +1498,7 @@ a.lumo-nav-login:hover::before {
   transform: scaleX(1);
 }
 
-/* Thank-you page: primary intake CTA / I'll do it later — yellow text, yellow outline, swipe on hover */
+/* Thank-you page: primary intake CTA — yellow text, yellow outline, swipe on hover */
 .thankyou-cta-swipe {
   display: inline-flex;
   align-items: center;
