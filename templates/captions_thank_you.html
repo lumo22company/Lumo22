@@ -98,6 +98,9 @@
       color: var(--lum-text-muted);
       line-height: 1.35;
     }
+    .thankyou-subscription-redirect-notice button.thankyou-link-later {
+      vertical-align: baseline;
+    }
   </style>
 </head>
 <body class="lumo-landing" data-current-customer="{{ 'true' if current_customer else 'false' }}">
@@ -137,6 +140,9 @@
         <div id="thankyou-next-step-wrap" class="thankyou-next-step-wrap" style="display: none;" aria-hidden="true">
           <p id="thankyou-next-step-title" class="thankyou-next-step-title">Next step</p>
         </div>
+        <p id="thankyou-subscription-redirect-notice" class="thankyou-subscription-redirect-notice" style="display: none; margin: 0 0 0.85rem; font-size: 0.9rem; line-height: 1.55; color: var(--lum-text-muted); max-width: 36rem;" role="status" aria-live="polite">
+          <span id="thankyou-subscription-redirect-msg"></span><button type="button" id="thankyou-cancel-subscription-redirect" class="thankyou-link-later" style="margin-left: 0.35rem;">Stay on this page</button>
+        </p>
         <div class="thankyou-cta-stack">
           <a href="#" id="intake-link" class="thankyou-cta-swipe" aria-disabled="true">Fill out my form</a>
           <p class="thankyou-link-later-wrap">
@@ -260,7 +266,45 @@
         }
       }
 
+      /* Second step only: Stripe still lands customers on this thank-you page first; we optionally send them on to intake. */
+      var subscriptionIntakeRedirectTimer = null;
+      var subscriptionIntakeRedirectTarget = null;
+
+      function clearSubscriptionIntakeRedirect() {
+        if (subscriptionIntakeRedirectTimer) {
+          clearTimeout(subscriptionIntakeRedirectTimer);
+          subscriptionIntakeRedirectTimer = null;
+        }
+        subscriptionIntakeRedirectTarget = null;
+        var notice = document.getElementById('thankyou-subscription-redirect-notice');
+        var msg = document.getElementById('thankyou-subscription-redirect-msg');
+        if (notice) notice.style.display = 'none';
+        if (msg) msg.textContent = '';
+      }
+
+      function scheduleIntakeRedirectAfterThankYou(url, isSubscription, isLoggedIn, customerEmail) {
+        clearSubscriptionIntakeRedirect();
+        if (!isSubscription || !url) return;
+        var guestNeedsAccountBlock = !!(isSubscription && !isLoggedIn && customerEmail);
+        var delayMs = guestNeedsAccountBlock ? 15000 : 5000;
+        var notice = document.getElementById('thankyou-subscription-redirect-notice');
+        var msg = document.getElementById('thankyou-subscription-redirect-msg');
+        if (!notice || !msg) return;
+        subscriptionIntakeRedirectTarget = url;
+        msg.textContent = guestNeedsAccountBlock
+          ? 'Your payment is complete—you\u2019re on the right page. In a few more seconds we\u2019ll open your intake form as the next step (you can still use \u201cCreate your account\u201d below first). '
+          : 'Your payment is complete—you\u2019re on the right page. In a few seconds we\u2019ll open your intake form as the next step. ';
+        notice.style.display = 'block';
+        subscriptionIntakeRedirectTimer = setTimeout(function() {
+          subscriptionIntakeRedirectTimer = null;
+          var target = subscriptionIntakeRedirectTarget;
+          subscriptionIntakeRedirectTarget = null;
+          if (target) window.location.href = target;
+        }, delayMs);
+      }
+
       function showIntake(url, customerEmail, isSubscription, isPrefilledFromOneoff, emailRecoveryToken, firstPackImmediate, mePayload, customerHasAccount) {
+        clearSubscriptionIntakeRedirect();
         customerHasAccount = !!customerHasAccount;
         recoveryToken = (emailRecoveryToken || recoveryToken || '');
         firstPackImmediate = !!firstPackImmediate;
@@ -453,6 +497,26 @@
             signupA.href = '/signup?email=' + encodeURIComponent(String(customerEmail).trim()) + '&next=' + encodeURIComponent(intakeNext);
             signupWrap.style.display = 'block';
           }
+        }
+
+        scheduleIntakeRedirectAfterThankYou(url, isSubscription, isLoggedIn, customerEmail);
+
+        var cancelSubRedirect = document.getElementById('thankyou-cancel-subscription-redirect');
+        if (cancelSubRedirect) {
+          cancelSubRedirect.onclick = function() {
+            clearSubscriptionIntakeRedirect();
+          };
+        }
+        if (intakeLinkEl) {
+          intakeLinkEl.onclick = function() {
+            clearSubscriptionIntakeRedirect();
+          };
+        }
+        var laterLinkEl = document.getElementById('later-link');
+        if (laterLinkEl) {
+          laterLinkEl.onclick = function() {
+            clearSubscriptionIntakeRedirect();
+          };
         }
       }
 
