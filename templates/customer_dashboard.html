@@ -689,10 +689,6 @@
           {% endfor %}
             </select>
         </div>
-          <div id="upgrade-intake-summary-wrap" class="account-upgrade-intake-summary" style="margin-bottom: 1.25rem; padding: 0.85rem 1rem; background: rgba(255,255,255,0.06); border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); display: none;" aria-live="polite">
-            <p style="font-size: 0.95rem; font-weight: 600; color: #fff; margin: 0 0 0.5rem;">Your form answers</p>
-            <div id="upgrade-intake-summary-body" style="font-size: 0.88rem; color: rgba(255,255,255,0.92); line-height: 1.45;"></div>
-          </div>
           <div style="margin-bottom: 1.25rem;">
             <label for="upgrade-platforms" class="account-settings-label" style="display: block; font-size: 0.95rem; font-weight: 600; color: #fff; margin-bottom: 0.5rem;">Number of platforms</label>
             <select id="upgrade-platforms" class="account-upgrade-select account-upgrade-select--styled" style="width: 100%; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); color: #1a1a1a; font-size: 1rem;">
@@ -744,7 +740,6 @@
       <script>
       (function() {
         var prices = {{ captions_prices|tojson }};
-        var intakeSummaryByToken = {{ (upgrade_pack_intake_summary_by_token or {})|tojson }};
         var prefillSelect = document.getElementById('upgrade-prefill-select');
         var platformsSelect = document.getElementById('upgrade-platforms');
         var whichWrap = document.getElementById('upgrade-which-wrap');
@@ -786,45 +781,6 @@
             storiesCb.checked = !!storiesDefaultFromPrefill;
           }
         }
-        function renderUpgradeIntakeSummary(token) {
-          var wrap = document.getElementById('upgrade-intake-summary-wrap');
-          var body = document.getElementById('upgrade-intake-summary-body');
-          if (!wrap || !body) return;
-          var t = (token || '').trim();
-          if (!t) {
-            wrap.style.display = 'none';
-            body.textContent = '';
-            return;
-          }
-          var rows = (intakeSummaryByToken && intakeSummaryByToken[t]) ? intakeSummaryByToken[t] : [];
-          body.textContent = '';
-          wrap.style.display = 'block';
-          if (!rows.length) {
-            var emptyP = document.createElement('p');
-            emptyP.style.margin = '0';
-            emptyP.style.color = 'rgba(255,255,255,0.85)';
-            emptyP.style.fontStyle = 'italic';
-            emptyP.textContent = "We don't have written form answers on file for this pack yet. Use Edit form below to add your details before checkout.";
-            body.appendChild(emptyP);
-            return;
-          }
-          for (var si = 0; si < rows.length; si++) {
-            var row = rows[si];
-            var block = document.createElement('div');
-            block.style.marginBottom = '0.65rem';
-            var labEl = document.createElement('div');
-            labEl.style.fontWeight = '600';
-            labEl.style.color = '#fff';
-            labEl.style.fontSize = '0.82rem';
-            labEl.textContent = row.label || '';
-            var valEl = document.createElement('div');
-            valEl.style.whiteSpace = 'pre-wrap';
-            valEl.textContent = row.value || '';
-            block.appendChild(labEl);
-            block.appendChild(valEl);
-            body.appendChild(block);
-          }
-        }
         function syncFromPrefill() {
           if (!prefillSelect) return;
           var opt = prefillSelect.options[prefillSelect.selectedIndex];
@@ -846,7 +802,6 @@
               getPackTodayHelp.textContent = "You'll be charged at checkout and we'll send your first subscription pack right away. Leave unchecked to be charged when your first pack is ready (30 days after your one-off delivery date).";
             }
             syncUpgradeStoriesAddon();
-            renderUpgradeIntakeSummary('');
             updatePrice();
             return;
           }
@@ -877,7 +832,6 @@
               : "Available after your one-off pack is delivered. For now, leave this unchecked and your subscription will start 30 days after your one-off delivery.";
           }
           syncUpgradeStoriesAddon(storiesDefaultFromPrefill);
-          renderUpgradeIntakeSummary(prefillSelect.value);
           updatePrice();
         }
         function updateUpgradePlatformLabels() {

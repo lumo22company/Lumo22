@@ -1437,42 +1437,6 @@ def _one_off_eligible_for_upgrade_base_dropdown(o: dict) -> bool:
     return True
 
 
-_UPGRADE_HUB_INTAKE_SUMMARY_FIELDS = (
-    ("business_name", "Business name"),
-    ("business_type", "Business type"),
-    ("offer_one_line", "What you offer"),
-    ("audience_cares", "What your audience cares about"),
-    ("goal", "Goal"),
-    ("usual_topics", "Usual topics"),
-    ("voice_words", "Tone / voice"),
-    ("audience", "Audience"),
-    ("launch_event_description", "Launches & key dates"),
-    ("caption_language", "Caption language"),
-    ("operating_hours", "Hours / availability"),
-    ("platform_habits", "Platform habits"),
-    ("voice_avoid", "Voice to avoid"),
-    ("caption_examples", "Example captions"),
-    ("facts_guardrails", "Facts & guardrails"),
-)
-
-
-def _upgrade_hub_intake_summary_by_token(orders: list) -> dict:
-    """Account upgrade hub: order token -> [{label, value}, ...] for read-only brief preview (JSON to template)."""
-    out = {}
-    for o in orders or []:
-        tok = (o.get("token") or "").strip()
-        if not tok:
-            continue
-        intake = o.get("intake") if isinstance(o.get("intake"), dict) else {}
-        rows = []
-        for key, label in _UPGRADE_HUB_INTAKE_SUMMARY_FIELDS:
-            v = str(intake.get(key) or "").strip()
-            if v:
-                rows.append({"label": label, "value": v})
-        out[tok] = rows
-    return out
-
-
 def _edit_form_pdf_delivered_sort_ts(o: dict) -> str:
     """Timestamp string for sorting by last captions PDF delivery; empty if not delivered yet."""
     t = (o.get("delivered_at") or "").strip()
@@ -1804,7 +1768,6 @@ def _account_context_fallback(customer: dict, exc=None) -> dict:
         "subscribe_business_name": None,
         "one_off_orders": [],
         "one_off_upgrade_options": [],
-        "upgrade_pack_intake_summary_by_token": {},
         "edit_form_orders": [],
         "edit_form_has_subscriptions": False,
         "edit_form_has_oneoffs": False,
@@ -2287,7 +2250,6 @@ def _account_context_build(customer: dict, section: Optional[str] = None) -> dic
         "subscribe_business_name": subscribe_business_name,
         "one_off_orders": one_off_orders,
         "one_off_upgrade_options": one_off_upgrade_options,
-        "upgrade_pack_intake_summary_by_token": _upgrade_hub_intake_summary_by_token(one_off_upgrade_options),
         "edit_form_orders": edit_form_orders,
         "edit_form_has_subscriptions": edit_form_has_subscriptions,
         "edit_form_has_oneoffs": edit_form_has_oneoffs,
