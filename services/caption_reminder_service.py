@@ -58,24 +58,15 @@ def _safe_base_url() -> str:
 
 
 def _build_one_off_upgrade_url(order: Dict[str, Any]) -> str:
-    """Build subscription checkout URL with copy_from and order options (same as account subscribe_options)."""
+    """Build URL to review/update the one-off intake, then upgrade (subscribe_url on that page goes to checkout).
+
+    Direct checkout omitted the brief step and often omitted ?selected= so the order summary looked empty.
+    """
     base = _safe_base_url()
     token = (order.get("token") or "").strip()
     if not token:
         return ""
-    platforms_count = max(1, int(order.get("platforms_count", 1)))
-    selected_platforms = (order.get("selected_platforms") or "").strip() or ""
-    stories_paid = bool(order.get("include_stories"))
-    currency = (order.get("currency") or "gbp").strip().lower()
-    if currency not in ("gbp", "usd", "eur"):
-        currency = "gbp"
-    params = {"copy_from": token, "platforms": platforms_count}
-    if selected_platforms:
-        params["selected"] = selected_platforms
-    if stories_paid:
-        params["stories"] = "1"
-    params["currency"] = currency
-    return f"{base}/captions-checkout-subscription?{urlencode(params)}"
+    return f"{base}/captions-intake?" + urlencode({"t": token, "edit": "1"})
 
 
 def _should_send_reminder(order: Dict[str, Any], period_end_ts: int) -> bool:

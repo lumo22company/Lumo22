@@ -684,9 +684,14 @@ def captions_intake_page():
         intake_add_stories_text = "+{symbol}{stories_oneoff} one-off / +{symbol}{stories_sub} monthly".format(symbol=p["symbol"], stories_oneoff=p["stories_oneoff"], stories_sub=p["stories_sub"])
     if token and is_oneoff:
         from urllib.parse import urlencode
+        sub_selected = (selected_platforms or "").strip()
+        if not sub_selected and isinstance(existing_intake, dict):
+            sub_selected = (existing_intake.get("platform") or "").strip()
+        if not sub_selected and platforms_count == 1:
+            sub_selected = "Instagram & Facebook"
         sub_params = {"copy_from": token, "platforms": platforms_count}
-        if selected_platforms:
-            sub_params["selected"] = selected_platforms
+        if sub_selected:
+            sub_params["selected"] = sub_selected
         if stories_paid:
             sub_params["stories"] = "1"
         if order_currency in ("gbp", "usd", "eur"):
@@ -893,20 +898,7 @@ def captions_checkout_subscription_page():
     if currency not in CAPTIONS_DISPLAY_PRICES:
         currency = "gbp"
     prices = CAPTIONS_DISPLAY_PRICES[currency]
-    selected_count = len([p.strip() for p in selected.split(",") if p.strip()]) if selected else 0
-    platforms_invalid = platforms > 1 and selected_count != platforms
-    params = {"platforms": platforms, "currency": currency}
-    if selected:
-        params["selected"] = selected
-    if stories:
-        params["stories"] = "1"
-    if reminders_on:
-        params["form_reminders"] = "1"
-    else:
-        params["form_reminders"] = "0"
     ref = (request.args.get("ref") or "").strip()
-    if ref:
-        params["ref"] = ref
     business_name = (request.args.get("business_name") or "").strip()
     business_key = (request.args.get("business_key") or "").strip()
     first_charge_date_str = None
@@ -925,7 +917,24 @@ def captions_checkout_subscription_page():
                     one_off = None
             if one_off:
                 valid_copy_from_order = True
-                params["copy_from"] = copy_from
+                if not (request.args.get("currency") or "").strip():
+                    c = (one_off.get("currency") or "").strip().lower()
+                    if c in CAPTIONS_DISPLAY_PRICES:
+                        currency = c
+                        prices = CAPTIONS_DISPLAY_PRICES[currency]
+                if not selected:
+                    sp = (one_off.get("selected_platforms") or "").strip()
+                    if sp:
+                        selected = sp
+                    else:
+                        intake_o = one_off.get("intake") if isinstance(one_off.get("intake"), dict) else {}
+                        pl = (intake_o.get("platform") or "").strip()
+                        if pl:
+                            selected = pl
+                if not selected and platforms == 1:
+                    selected = "Instagram & Facebook"
+                if not stories and bool(one_off.get("include_stories")):
+                    stories = True
                 if not business_name:
                     intake = one_off.get("intake") if isinstance(one_off.get("intake"), dict) else {}
                     business_name = (intake.get("business_name") or "").strip() or business_name
@@ -939,6 +948,21 @@ def captions_checkout_subscription_page():
                     first_charge_date_str = (dt + timedelta(days=30)).strftime("%d %B %Y")
         except Exception:
             pass
+    selected_count = len([p.strip() for p in selected.split(",") if p.strip()]) if selected else 0
+    platforms_invalid = platforms > 1 and selected_count != platforms
+    params = {"platforms": platforms, "currency": currency}
+    if selected:
+        params["selected"] = selected
+    if stories:
+        params["stories"] = "1"
+    if reminders_on:
+        params["form_reminders"] = "1"
+    else:
+        params["form_reminders"] = "0"
+    if ref:
+        params["ref"] = ref
+    if valid_copy_from_order:
+        params["copy_from"] = copy_from
     if business_name:
         params["business_name"] = business_name
     if business_key:
@@ -2140,19 +2164,30 @@ def _account_context_build(customer: dict, section: Optional[str] = None) -> dic
             platforms_count = max(1, _safe_int(o.get("platforms_count"), 1))
             selected_platforms = (o.get("selected_platforms") or "").strip() or ""
             stories_paid = bool(o.get("include_stories"))
+            sub_selected = (selected_platforms or "").strip()
+            if not sub_selected and isinstance(intake, dict):
+                sub_selected = (intake.get("platform") or "").strip()
+            if not sub_selected and platforms_count == 1:
+                sub_selected = "Instagram & Facebook"
             sub_params = {"copy_from": token, "platforms": platforms_count}
-            if selected_platforms:
-                sub_params["selected"] = selected_platforms
+            if sub_selected:
+                sub_params["selected"] = sub_selected
             if stories_paid:
                 sub_params["stories"] = "1"
             currency = (o.get("currency") or "gbp").strip().lower()
             if currency in ("gbp", "usd", "eur"):
                 sub_params["currency"] = currency
-            url = "/captions-checkout-subscription?" + urlencode(sub_params)
+            is_resub = _order_is_former_subscription_row(o)
+            # One-off → subscription: review/update brief on intake first (matches upgrade reminder email).
+            # Cancelled-subscription resubscribe: keep direct checkout (different row semantics).
+            if is_resub:
+                url = "/captions-checkout-subscription?" + urlencode(sub_params)
+            else:
+                url = "/captions-intake?" + urlencode({"t": token, "edit": "1"})
             subscribe_options.append({
                 "url": url,
                 "business_name": business_name,
-                "is_resubscribe": _order_is_former_subscription_row(o),
+                "is_resubscribe": is_resub,
                 "cancelled_on_display": _cancelled_on_display_for_order(o),
                 "order_token": token,
             })

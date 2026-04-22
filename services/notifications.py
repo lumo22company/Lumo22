@@ -1288,8 +1288,8 @@ def _one_off_upgrade_reminder_email_html(upgrade_url: str, unsubscribe_url: str,
         intro = f"Your 30 days of captions for {html.escape(business_name)} are almost up."
     content = f"""<p style="margin:0 0 16px;">Hi,</p>
 <p style="margin:0 0 16px;">{intro} Want a new pack every month? Upgrade to a subscription and your next pack will be delivered 30 days after your current one—continuous content, no overlap.</p>
-<p style="margin:0 0 12px;">You'll need to log in or create an account first; then you can complete the upgrade. Your form answers will be prefilled so checkout is quick—you can edit your form anytime in your account after you subscribe.</p>
-<p style="margin:0 0 24px;"><a href="{safe_upgrade}" style="display:inline-block; padding:14px 28px; background:{BRAND_GOLD}; color:{BRAND_BLACK}; text-decoration:none; border-radius:10px; font-weight:600;">Upgrade to subscription</a></p>
+<p style="margin:0 0 12px;">Open your intake form to review or update your answers, then continue to subscription checkout (log in or create an account when asked). Your plan (platforms, Story Ideas, currency) carries through from your one-off pack. You can edit your form anytime in your account after you subscribe.</p>
+<p style="margin:0 0 24px;"><a href="{safe_upgrade}" style="display:inline-block; padding:14px 28px; background:{BRAND_GOLD}; color:{BRAND_BLACK}; text-decoration:none; border-radius:10px; font-weight:600;">Review your form &amp; upgrade</a></p>
 <p style="margin:0 0 8px; font-size:14px; color:{BRAND_MUTED};">Or copy and paste this link into your browser:</p>
 <p style="margin:0 0 24px; font-size:13px; word-break:break-all; color:#333;">{html.escape(upgrade_url or '')}</p>
 <p style="margin:0 0 24px; font-size:13px; color:{BRAND_MUTED};"><a href="{safe_unsub}" style="color:{BRAND_MUTED}; text-decoration:underline;">Unsubscribe from upgrade reminders</a></p>
@@ -2244,7 +2244,7 @@ If you have any questions, just reply to this email.
 
 {intro} Want a new pack every month? Upgrade to a subscription and your next pack will be delivered 30 days after your current one—continuous content, no overlap.
 
-You'll need to log in or create an account first; then you can complete the upgrade. Your form answers will be prefilled so checkout is quick—you can edit your form anytime in your account after you subscribe.
+Use the link below to open your intake form: you can review or update your answers, then continue to subscription checkout (log in or create an account when asked). Your plan (platforms, Story Ideas, currency) carries through from your one-off pack. You can edit your form anytime in your account after you subscribe.
 
 {upgrade_url}
 
