@@ -33,6 +33,12 @@ def _is_generating_stuck_notice_column_missing(exc: Exception) -> bool:
     return "PGRST204" in s and "generating_stuck_customer_notified_at" in s
 
 
+def _is_one_off_intake_reminder_column_missing(exc: Exception) -> bool:
+    """PostgREST when caption_orders.one_off_intake_reminder_sent_at was never migrated."""
+    s = str(exc)
+    return "PGRST204" in s and "one_off_intake_reminder_sent_at" in s
+
+
 def _is_unique_stripe_session_violation(exc: Exception) -> bool:
     """True if insert failed because stripe_session_id already exists (PostgREST / Postgres)."""
     s = str(exc).lower()
@@ -556,6 +562,53 @@ class CaptionOrderService:
             print(f"[CaptionOrderService] try_claim_generating_stuck_customer_notice (non-fatal): {e!r}")
             return False
 
+    def try_claim_one_off_intake_reminder_sent(self, order_id: str) -> bool:
+        """
+        Atomically set one_off_intake_reminder_sent_at if still null.
+        Returns True if this caller should send the one-off 24–48h intake reminder; False if already claimed/sent.
+        """
+        if not order_id:
+            return False
+        now_iso = datetime.now(timezone.utc).isoformat()
+        try:
+            result = (
+                self.client.table(self.table)
+                .update(
+                    {"one_off_intake_reminder_sent_at": now_iso},
+                    count=CountMethod.exact,
+                )
+                .eq("id", order_id)
+                .is_("one_off_intake_reminder_sent_at", "null")
+                .execute()
+            )
+            if result.data and len(result.data) > 0:
+                return True
+            c = getattr(result, "count", None)
+            if isinstance(c, int) and c > 0:
+                return True
+            return False
+        except Exception as e:
+            if _is_one_off_intake_reminder_column_missing(e):
+                print(
+                    "[CaptionOrderService] one_off_intake_reminder_sent_at column missing — run "
+                    "database_caption_orders_one_off_intake_reminder_sent_at.sql in Supabase; "
+                    "one-off intake reminder dedupe disabled until then."
+                )
+                return True
+            print(f"[CaptionOrderService] try_claim_one_off_intake_reminder_sent (non-fatal): {e!r}")
+            return True
+
+    def release_one_off_intake_reminder_claim(self, order_id: str) -> None:
+        """Clear claim after a failed send so the next reminder run can retry."""
+        if not order_id:
+            return
+        try:
+            self.client.table(self.table).update({"one_off_intake_reminder_sent_at": None}).eq("id", order_id).execute()
+        except Exception as e:
+            if _is_one_off_intake_reminder_column_missing(e):
+                return
+            print(f"[CaptionOrderService] release_one_off_intake_reminder_claim (non-fatal): {e!r}")
+
     def release_checkout_confirmation_email_claim(self, order_id: str) -> None:
         """Clear claim so a failed send can be retried (e.g. SendGrid error)."""
         if not order_id:
@@ -986,7 +1039,8 @@ class CaptionOrderService:
     def get_awaiting_intake_orders(self) -> list:
         """Get recent orders that are still awaiting intake (for one-off intake reminders)."""
         result = self.client.table(self.table).select(
-            "id, token, customer_email, status, created_at, stripe_subscription_id, intake, captions_md, intake_early_reminder_sent_at"
+            "id, token, customer_email, status, created_at, stripe_subscription_id, intake, captions_md, "
+            "intake_early_reminder_sent_at, one_off_intake_reminder_sent_at"
         ).eq("status", "awaiting_intake").execute()
         return result.data or []
 

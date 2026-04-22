@@ -9,6 +9,10 @@ delivery), email one-off customers to offer subscription upgrade.
 New subscribers: `run_subscription_awaiting_intake_early_reminder` emails once if intake is still
 awaiting ~2+ hours after checkout (scheduled every 30 minutes in production; requires DB column
 intake_early_reminder_sent_at).
+
+One-off awaiting_intake: `run_reminders` sends a 24–48h gentle reminder once per order using an
+atomic DB claim (`one_off_intake_reminder_sent_at`) so overlapping jobs (e.g. daily scheduler + cron)
+cannot double-send.
 """
 import re
 from datetime import datetime, timezone
@@ -411,21 +415,13 @@ Lumo 22
             if age_hours < 24.0 or age_hours >= 48.0:
                 skipped += 1
                 continue
-            # For subscription-origin awaiting orders, don't remind if subscription was canceled/paused.
-            sub_id = (order.get("stripe_subscription_id") or "").strip()
-            if sub_id:
-                try:
-                    from api.stripe_utils import is_valid_stripe_subscription_id
-                    if not is_valid_stripe_subscription_id(sub_id):
-                        skipped += 1
-                        continue
-                    sub = stripe.Subscription.retrieve(sub_id)
-                    if not _is_subscription_reminder_eligible(sub):
-                        skipped += 1
-                        continue
-                except Exception:
-                    skipped += 1
-                    continue
+            if order.get("one_off_intake_reminder_sent_at"):
+                skipped += 1
+                continue
+            oid = str(order.get("id") or "").strip()
+            if not oid:
+                skipped += 1
+                continue
             intake_url = f"{base}/captions-intake?t={token}"
             subject = "Complete your form to get your captions"
             intake = order.get("intake") if isinstance(order.get("intake"), dict) else {}
@@ -449,10 +445,20 @@ This takes about 5–10 minutes. Once it's done, we'll generate your captions an
 """
             body = body.rstrip() + "\n\n" + _account_history_notice_upcoming_plain().strip() + "\n\nLumo 22\n"
             html_body = _captions_intake_reminder_email_html(intake_url, business_name=business_name or None)
-            ok = notif.send_email(email, subject, body, html_body=html_body)
+            if not order_service.try_claim_one_off_intake_reminder_sent(oid):
+                skipped += 1
+                continue
+            try:
+                ok = notif.send_email(email, subject, body, html_body=html_body)
+            except Exception as e:
+                order_service.release_one_off_intake_reminder_claim(oid)
+                errors.append(f"Order {order.get('id')}: intake reminder send error: {e!r}")
+                skipped += 1
+                continue
             if ok:
                 sent += 1
             else:
+                order_service.release_one_off_intake_reminder_claim(oid)
                 errors.append(f"Order {order.get('id')}: intake reminder email send failed")
                 skipped += 1
     except Exception as e:
