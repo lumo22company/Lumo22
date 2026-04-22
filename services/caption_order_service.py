@@ -1112,6 +1112,46 @@ class CaptionOrderService:
         now_iso = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
         return self.update(order_id, {"upgrade_reminder_sent_at": now_iso})
 
+    def try_claim_upgrade_reminder_sent(self, order_id: str) -> bool:
+        """
+        Atomically set upgrade_reminder_sent_at if still null (delivered one-off only).
+        Returns True if this caller should send the upgrade reminder; False if already claimed/sent.
+        """
+        if not order_id:
+            return False
+        now_iso = datetime.now(timezone.utc).isoformat()
+        try:
+            result = (
+                self.client.table(self.table)
+                .update(
+                    {"upgrade_reminder_sent_at": now_iso},
+                    count=CountMethod.exact,
+                )
+                .eq("id", order_id)
+                .eq("status", "delivered")
+                .is_("stripe_subscription_id", "null")
+                .is_("upgrade_reminder_sent_at", "null")
+                .execute()
+            )
+            if result.data and len(result.data) > 0:
+                return True
+            c = getattr(result, "count", None)
+            if isinstance(c, int) and c > 0:
+                return True
+            return False
+        except Exception as e:
+            print(f"[CaptionOrderService] try_claim_upgrade_reminder_sent (non-fatal): {e!r}")
+            return True
+
+    def release_upgrade_reminder_claim(self, order_id: str) -> None:
+        """Clear upgrade_reminder_sent_at after a failed send so a later run can retry."""
+        if not order_id:
+            return
+        try:
+            self.client.table(self.table).update({"upgrade_reminder_sent_at": None}).eq("id", order_id).execute()
+        except Exception as e:
+            print(f"[CaptionOrderService] release_upgrade_reminder_claim (non-fatal): {e!r}")
+
     def set_upgrade_reminder_opt_out_by_token(self, token: str) -> bool:
         """Opt out of one-off upgrade reminders (unsubscribe). Returns True if order was found and updated."""
         order = self.get_by_token(token)

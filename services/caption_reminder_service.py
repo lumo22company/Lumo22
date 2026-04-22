@@ -4,7 +4,8 @@ Sends email ~5 days before each billing period ends, inviting customers to updat
 Opt-out by default (reminder_opt_out=false means reminders are ON).
 
 Also sends one-off upgrade reminders: a few days before "day 30" (e.g. 25 or 27 days after
-delivery), email one-off customers to offer subscription upgrade.
+delivery), email one-off customers to offer subscription upgrade. Uses an atomic DB claim on
+`upgrade_reminder_sent_at` before send so parallel reminder jobs cannot double-send.
 
 New subscribers: `run_subscription_awaiting_intake_early_reminder` emails once if intake is still
 awaiting ~2+ hours after checkout (scheduled every 30 minutes in production; requires DB column
@@ -488,17 +489,30 @@ This takes about 5–10 minutes. Once it's done, we'll generate your captions an
             unsubscribe_url = f"{base}/api/captions-upgrade-reminder-unsubscribe?t={quote(token)}"
             intake = order.get("intake") or {}
             business_name = (intake.get("business_name") or "").strip() or None
-            ok = notif.send_one_off_upgrade_reminder_email(
-                to_email=email,
-                upgrade_url=upgrade_url,
-                unsubscribe_url=unsubscribe_url,
-                business_name=business_name,
-            )
+            oid = str(order.get("id") or "").strip()
+            if not oid:
+                skipped += 1
+                continue
+            if not order_service.try_claim_upgrade_reminder_sent(oid):
+                skipped += 1
+                continue
+            try:
+                ok = notif.send_one_off_upgrade_reminder_email(
+                    to_email=email,
+                    upgrade_url=upgrade_url,
+                    unsubscribe_url=unsubscribe_url,
+                    business_name=business_name,
+                )
+            except Exception as e:
+                order_service.release_upgrade_reminder_claim(oid)
+                errors.append(f"Order {order.get('id')}: one-off upgrade reminder send error: {e!r}")
+                skipped += 1
+                continue
             if ok:
-                order_service.set_upgrade_reminder_sent(order["id"])
                 one_off_upgrade_sent += 1
                 sent += 1
             else:
+                order_service.release_upgrade_reminder_claim(oid)
                 errors.append(f"Order {order.get('id')}: one-off upgrade email send failed")
                 skipped += 1
     except Exception as e:
