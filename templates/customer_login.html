@@ -220,6 +220,17 @@
             var next = window.__LUMO_LOGIN_NEXT__ || '/account';
             if (typeof next === 'string' && next.indexOf('/') === 0 && next.indexOf('//') !== 0) {
               window.location.href = next;
+            } else if (typeof next === 'string' && (next.indexOf('http://') === 0 || next.indexOf('https://') === 0)) {
+              try {
+                var nu = new URL(next);
+                if (nu.origin === window.location.origin) {
+                  window.location.href = next;
+                } else {
+                  window.location.href = '/account';
+                }
+              } catch (e) {
+                window.location.href = '/account';
+              }
             } else {
               window.location.href = '/account';
             }
