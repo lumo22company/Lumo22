@@ -157,7 +157,7 @@
             <input type="email" id="thankyou-new-email-confirm" placeholder="Re-enter your email" style="width: 100%; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: #ffffff; color: #1a1a1a; font-size: 1rem; margin-bottom: 0.65rem;">
             <button type="button" id="thankyou-update-email-btn" class="lumo-btn-primary btn-cta-account-style" style="padding: 0.6rem 1.25rem;">Update email & resend link</button>
             <p id="thankyou-update-email-error" style="display:none; margin:0.65rem 0 0; font-size:0.9rem; color:#f99;"></p>
-            <p id="thankyou-update-email-success" style="display:none; margin:0.65rem 0 0; font-size:0.9rem; color:#8c8;">Updated. We sent your intake link to the new email.</p>
+            <p id="thankyou-update-email-success" style="display:none; margin:0.65rem 0 0; font-size:0.9rem; color:#8c8;">Updated. We sent your form link to the new email.</p>
           </div>
         </div>
         <p id="thankyou-oneoff-account-hint" style="display:none; margin: 1rem 0 0; font-size: 0.95rem; line-height: 1.5; color: var(--lum-text-muted);">You already have a Lumo 22 account for this email. <a id="thankyou-oneoff-login-link" href="/login" style="color: var(--lum-gold); font-weight: 600; text-decoration: none; border-bottom: 1px solid var(--lum-gold);">Log in</a> to access captions in your dashboard when they are ready.</p>
@@ -405,8 +405,8 @@
             }
           }
           leadText = customerEmail
-            ? 'We also sent your intake link to <strong>' + escapeHtml(customerEmail) + '</strong>.'
-            : 'We also sent your intake link by email.';
+            ? 'We also sent your form link to <strong>' + escapeHtml(customerEmail) + '</strong>.'
+            : 'We also sent your form link by email.';
         }
 
         if (firstPackImmediate && isSubscription && isPrefilledFromOneoff) {
