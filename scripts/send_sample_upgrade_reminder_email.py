@@ -49,7 +49,13 @@ def main() -> int:
         pass
     hub = {"base": token}
     if purchase_email and "@" in purchase_email:
-        hub["email"] = purchase_email
+        from services.account_prefill_token import sign_prefill_email
+
+        se = sign_prefill_email(purchase_email)
+        if se:
+            hub["eph"] = se
+        else:
+            hub["email"] = purchase_email
     upgrade_url = f"{base}/account/upgrade?" + urlencode(hub)
     unsubscribe_url = f"{base}/api/captions-upgrade-reminder-unsubscribe?t={quote(args.token.strip(), safe='')}"
 

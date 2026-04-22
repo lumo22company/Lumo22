@@ -21,6 +21,7 @@ from typing import List, Dict, Any
 from urllib.parse import urlencode, quote
 from config import Config
 from services.caption_order_service import CaptionOrderService
+from services.account_prefill_token import sign_prefill_email
 from services.notifications import (
     NotificationService,
     _account_history_notice_upcoming_plain,
@@ -71,7 +72,11 @@ def _build_one_off_upgrade_url(order: Dict[str, Any]) -> str:
     params: Dict[str, Any] = {"base": token}
     em = (order.get("customer_email") or "").strip().lower()
     if em and "@" in em:
-        params["email"] = em
+        eph = sign_prefill_email(em)
+        if eph:
+            params["eph"] = eph
+        else:
+            params["email"] = em
     return f"{base}/account/upgrade?" + urlencode(params)
 
 

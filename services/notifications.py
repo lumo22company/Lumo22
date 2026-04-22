@@ -1288,7 +1288,7 @@ def _one_off_upgrade_reminder_email_html(upgrade_url: str, unsubscribe_url: str,
         intro = f"Your 30 days of captions for {html.escape(business_name)} are almost up."
     content = f"""<p style="margin:0 0 16px;">Hi,</p>
 <p style="margin:0 0 16px;">{intro} Want a new pack every month? Upgrade to a subscription and your next pack will be delivered 30 days after your current one—continuous content, no overlap.</p>
-<p style="margin:0 0 12px;">Use the link below to open the <strong>upgrade</strong> page (sign in or create an account when asked—we’ll pre-fill your email so it matches your purchase). Your one-off pack is pre-selected there with platforms, Story Ideas, and currency carried through—you can adjust anything, then continue to your order summary and checkout. You can update your form from that page or anytime under <strong>Edit form</strong> after you subscribe.</p>
+<p style="margin:0 0 12px;">Use the link below to open the <strong>upgrade</strong> page (sign in or create an account when asked—the link carries a short signed hint so we can pre-fill your email to match your purchase). Your one-off pack is pre-selected there with platforms, Story Ideas, and currency carried through—you can adjust anything, then continue to your order summary and checkout. You can update your form from that page or anytime under <strong>Edit form</strong> after you subscribe.</p>
 <p style="margin:0 0 24px;"><a href="{safe_upgrade}" style="display:inline-block; padding:14px 28px; background:{BRAND_GOLD}; color:{BRAND_BLACK}; text-decoration:none; border-radius:10px; font-weight:600;">Open upgrade page</a></p>
 <p style="margin:0 0 8px; font-size:14px; color:{BRAND_MUTED};">Or copy and paste this link into your browser:</p>
 <p style="margin:0 0 24px; font-size:13px; word-break:break-all; color:#333;">{html.escape(upgrade_url or '')}</p>
@@ -2244,7 +2244,7 @@ If you have any questions, just reply to this email.
 
 {intro} Want a new pack every month? Upgrade to a subscription and your next pack will be delivered 30 days after your current one—continuous content, no overlap.
 
-Use the link below to open the upgrade page (sign in or create an account when asked—we pre-fill your email so it matches your purchase). Your one-off pack is pre-selected with platforms, Story Ideas, and currency carried through—you can adjust anything, then continue to checkout. You can update your form from there or anytime under Edit form after you subscribe.
+Use the link below to open the upgrade page (sign in or create an account when asked—the link includes a short signed hint so we can pre-fill your email to match your purchase). Your one-off pack is pre-selected with platforms, Story Ideas, and currency carried through—you can adjust anything, then continue to checkout. You can update your form from there or anytime under Edit form after you subscribe.
 
 {upgrade_url}
 

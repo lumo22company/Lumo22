@@ -2691,8 +2691,19 @@ def _captions_intake_submit_impl(data):
             base = (Config.BASE_URL or request.url_root or "").strip().rstrip("/")
             if base and not base.startswith("http"):
                 base = "https://" + base
-            qtok = quote(token, safe="")
-            upgrade_account_url = f"{base}/account/upgrade?base={qtok}" if base else f"/account/upgrade?base={qtok}"
+            from urllib.parse import urlencode
+            from services.account_prefill_token import sign_prefill_email
+
+            hub = {"base": token}
+            uem = (order.get("customer_email") or "").strip().lower()
+            if uem and "@" in uem:
+                se = sign_prefill_email(uem)
+                if se:
+                    hub["eph"] = se
+                else:
+                    hub["email"] = uem
+            q = urlencode(hub)
+            upgrade_account_url = f"{base}/account/upgrade?{q}" if base else f"/account/upgrade?{q}"
             return jsonify({
                 "error": (
                     "This page is the link for your one-off pack, which is already complete. "

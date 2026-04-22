@@ -484,6 +484,21 @@ def _normalize_next_url(raw_next: str | None) -> str | None:
     return decoded
 
 
+def _prefill_email_and_eph_from_request() -> tuple:
+    """(prefilled_email, prefill_eph) for login/signup. Decodes ?eph=; falls back to legacy ?email=."""
+    from services.account_prefill_token import unsign_prefill_email
+
+    eph_raw = (request.values.get("eph") or "").strip()
+    if eph_raw:
+        decoded = unsign_prefill_email(eph_raw)
+        if decoded:
+            return (decoded, eph_raw)
+    em = (request.values.get("email") or "").strip()
+    if em and "@" in em:
+        return (em, None)
+    return (None, None)
+
+
 def _intake_missing_substantive_brief_fields(intake: dict | None) -> bool:
     """True when intake is empty or only checkout-seeded (e.g. business_name) without real brief answers.
     Used so one-off → subscription upgrade still pre-fills the full one-off brief when Stripe only stored a name."""
@@ -731,10 +746,16 @@ def captions_intake_page():
     from urllib.parse import urlencode as _up_urlencode
 
     if token and is_oneoff and not oneoff_consumed_by_subscription:
+        from services.account_prefill_token import sign_prefill_email
+
         _uq = {"base": token}
         _uem = (order.get("customer_email") or "").strip().lower() if order else ""
         if _uem and "@" in _uem:
-            _uq["email"] = _uem
+            _eph = sign_prefill_email(_uem)
+            if _eph:
+                _uq["eph"] = _eph
+            else:
+                _uq["email"] = _uem
         account_upgrade_base_url = "/account/upgrade?" + _up_urlencode(_uq)
     else:
         account_upgrade_base_url = ""
@@ -892,7 +913,20 @@ def captions_checkout_subscription_page():
     copy_from = (request.args.get("copy_from") or "").strip()
     current_customer = get_current_customer()
     if not current_customer:
-        signup_url = url_for("customer_signup_page") + "?next=" + quote(request.full_path or "/captions-checkout-subscription", safe="")
+        signup_qs = {"next": request.full_path or "/captions-checkout-subscription"}
+        if copy_from:
+            try:
+                from services.caption_order_service import CaptionOrderService
+                from services.account_prefill_token import sign_prefill_email
+
+                _co = CaptionOrderService().get_by_token(copy_from)
+                if _co:
+                    _se = sign_prefill_email(_co.get("customer_email") or "")
+                    if _se:
+                        signup_qs["eph"] = _se
+            except Exception:
+                pass
+        signup_url = url_for("customer_signup_page") + "?" + urlencode(signup_qs)
         return redirect(signup_url)
     platforms = _parse_platforms_from_request()
     selected = (request.args.get("selected") or request.args.get("selected_platforms") or "").strip()
@@ -1086,12 +1120,16 @@ def customer_login_required(f):
                 # Render the page in this response so session cookie is set here (no second request needed)
                 return f(*args, **kwargs)
         if not customer:
-            from urllib.parse import quote, urlencode
+            from urllib.parse import urlencode
 
             login_qs = {"next": request.url}
-            em = (request.args.get("email") or "").strip()
-            if em and "@" in em:
-                login_qs["email"] = em
+            eph = (request.args.get("eph") or "").strip()
+            if eph:
+                login_qs["eph"] = eph
+            else:
+                em = (request.args.get("email") or "").strip()
+                if em and "@" in em:
+                    login_qs["email"] = em
             return redirect(url_for("customer_login_page") + "?" + urlencode(login_qs))
         return f(*args, **kwargs)
     return decorated
@@ -1177,14 +1215,15 @@ def captions_upgrade_page():
 
 @app.route('/signup')
 def customer_signup_page():
-    """Signup for Lumo 22 customers (Captions). Accepts next= and email= for upgrade flow."""
+    """Signup for Lumo 22 customers (Captions). Accepts next=, legacy email=, or signed eph= for upgrade flow."""
     next_url = _normalize_next_url(request.args.get('next')) or None
-    prefilled_email = (request.args.get('email') or '').strip() or None
+    prefilled_email, prefill_eph = _prefill_email_and_eph_from_request()
     signup_referral = (request.args.get('ref') or '').strip() or None
     return render_template(
         'customer_signup.html',
         next_url=next_url,
         prefilled_email=prefilled_email,
+        prefill_eph=prefill_eph,
         signup_referral=signup_referral,
     )
 
@@ -1197,12 +1236,14 @@ def customer_login_page():
         password = (request.form.get('password') or '').strip()
         next_url = _normalize_next_url(request.form.get('next') or request.args.get('next')) or '/account'
         client_ip = (request.headers.get("X-Forwarded-For") or request.remote_addr or "").split(",")[0].strip()
+        prefill_eph = (request.form.get("eph") or "").strip() or None
         if not email or not password:
             return render_template(
                 'customer_login.html',
                 login_error='Please enter your email and password.',
                 next_url=next_url,
                 prefilled_email=email or None,
+                prefill_eph=prefill_eph,
             )
         is_locked, retry_after = check_locked(email, client_ip)
         if is_locked:
@@ -1212,6 +1253,7 @@ def customer_login_page():
                 login_error=f'Too many failed attempts. Try again in about {mins} minute(s).',
                 next_url=next_url,
                 prefilled_email=email or None,
+                prefill_eph=prefill_eph,
             )
         try:
             from services.customer_auth_service import CustomerAuthService
@@ -1224,6 +1266,7 @@ def customer_login_page():
                     login_error='Invalid email or password.',
                     next_url=next_url,
                     prefilled_email=email or None,
+                    prefill_eph=prefill_eph,
                 )
             if not customer.get('email_verified', True):
                 return render_template(
@@ -1233,6 +1276,7 @@ def customer_login_page():
                     verification_email=email,
                     next_url=next_url,
                     prefilled_email=email or None,
+                    prefill_eph=prefill_eph,
                 )
             svc.update_last_login(customer['id'])
             clear_failures(email, client_ip)
@@ -1251,9 +1295,10 @@ def customer_login_page():
                 login_error='Something went wrong. Please try again.',
                 next_url=next_url,
                 prefilled_email=email or None,
+                prefill_eph=prefill_eph,
             )
     next_url = _normalize_next_url(request.args.get('next')) or '/account'
-    prefilled_email = (request.args.get('email') or '').strip() or None
+    prefilled_email, prefill_eph = _prefill_email_and_eph_from_request()
     oauth_error_message = None
     oe = (request.args.get('oauth_error') or '').strip()
     if oe:
@@ -1276,6 +1321,7 @@ def customer_login_page():
         'customer_login.html',
         next_url=next_url,
         prefilled_email=prefilled_email,
+        prefill_eph=prefill_eph,
         oauth_error_message=oauth_error_message,
     )
 
@@ -2191,6 +2237,8 @@ def _account_context_build(customer: dict, section: Optional[str] = None) -> dic
     one_off_upgrade_options = [o for o in one_off_upgrade_options if not _order_resubscribe_prompt_dismissed(o)]
     if one_off_upgrade_options:
         from urllib.parse import urlencode
+        from services.account_prefill_token import sign_prefill_email
+
         for o in one_off_upgrade_options:
             token = (o.get("token") or "").strip()
             if not token:
@@ -2223,7 +2271,11 @@ def _account_context_build(customer: dict, section: Optional[str] = None) -> dic
                 hub_q = {"base": token}
                 uem = (o.get("customer_email") or "").strip().lower()
                 if uem and "@" in uem:
-                    hub_q["email"] = uem
+                    _eph = sign_prefill_email(uem)
+                    if _eph:
+                        hub_q["eph"] = _eph
+                    else:
+                        hub_q["email"] = uem
                 url = "/account/upgrade?" + urlencode(hub_q)
             subscribe_options.append({
                 "url": url,

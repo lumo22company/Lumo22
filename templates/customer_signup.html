@@ -136,7 +136,8 @@
       <a href="/captions" class="lumo-nav-link">Captions</a>
     </div>
     {% set _next_login = (next_url or request.args.get('next', ''))|trim %}
-    <a href="/login{% if _next_login %}?next={{ _next_login|urlencode }}{% if prefilled_email %}&amp;email={{ prefilled_email|urlencode }}{% endif %}{% elif prefilled_email %}?email={{ prefilled_email|urlencode }}{% endif %}" class="lumo-nav-cta lumo-nav-login">Log in</a>
+    {% set _eph = prefill_eph|default('', true)|trim %}
+    <a href="/login{% if _next_login or _eph or prefilled_email %}?{% endif %}{% if _next_login %}next={{ _next_login|urlencode }}{% endif %}{% if _eph %}{% if _next_login %}&amp;{% endif %}eph={{ _eph|urlencode }}{% elif prefilled_email %}{% if _next_login %}&amp;{% endif %}email={{ prefilled_email|urlencode }}{% endif %}" class="lumo-nav-cta lumo-nav-login">Log in</a>
   </nav>
 
   <main class="auth-page">
@@ -184,14 +185,15 @@
       <p class="signup-verify-card__hint">If you don’t see it within a few minutes, check your spam or promotions folder.</p>
       <div id="signup-success-upgrade" class="signup-verify-card__upgrade" style="display: none;"></div>
       <p class="signup-verify-card__actions" id="signup-success-login-wrap">
-        <a href="/login{% if _next_login %}?next={{ _next_login|urlencode }}{% if prefilled_email %}&amp;email={{ prefilled_email|urlencode }}{% endif %}{% elif prefilled_email %}?email={{ prefilled_email|urlencode }}{% endif %}" id="signup-success-login-link">Log in</a> — after you’ve verified your email
+        <a href="/login{% if _next_login or _eph or prefilled_email %}?{% endif %}{% if _next_login %}next={{ _next_login|urlencode }}{% endif %}{% if _eph %}{% if _next_login %}&amp;{% endif %}eph={{ _eph|urlencode }}{% elif prefilled_email %}{% if _next_login %}&amp;{% endif %}email={{ prefilled_email|urlencode }}{% endif %}" id="signup-success-login-link">Log in</a> — after you’ve verified your email
       </p>
     </div>
 
-    <p class="link" id="signup-footer-links">Already have an account? <a href="/login{% if _next_login %}?next={{ _next_login|urlencode }}{% if prefilled_email %}&amp;email={{ prefilled_email|urlencode }}{% endif %}{% elif prefilled_email %}?email={{ prefilled_email|urlencode }}{% endif %}">Log in</a></p>
+    <p class="link" id="signup-footer-links">Already have an account? <a href="/login{% if _next_login or _eph or prefilled_email %}?{% endif %}{% if _next_login %}next={{ _next_login|urlencode }}{% endif %}{% if _eph %}{% if _next_login %}&amp;{% endif %}eph={{ _eph|urlencode }}{% elif prefilled_email %}{% if _next_login %}&amp;{% endif %}email={{ prefilled_email|urlencode }}{% endif %}">Log in</a></p>
     <p class="link" id="signup-footer-back"><a href="/captions" id="back-link">← Back</a></p>
   </main>
 
+  <script>window.__SIGNUP_PREFILL_EPH__ = {{ (prefill_eph or '')|tojson }};</script>
   <script>
     (function() {
       var ref = (new URLSearchParams(window.location.search).get('ref') || '').trim();
@@ -289,15 +291,19 @@
             if (loginLink) {
               var loginHref = '/login';
               var q = [];
-              if (email) q.push('email=' + encodeURIComponent(email));
               if (nextVal && nextVal !== '/account') q.push('next=' + encodeURIComponent(nextVal));
+              var phEph = (typeof window.__SIGNUP_PREFILL_EPH__ === 'string' && window.__SIGNUP_PREFILL_EPH__) ? window.__SIGNUP_PREFILL_EPH__ : '';
+              if (phEph) q.push('eph=' + encodeURIComponent(phEph));
+              else if (email) q.push('email=' + encodeURIComponent(email));
               if (q.length) loginHref += '?' + q.join('&');
               loginLink.href = loginHref;
             }
             if (upgradeEl) {
               if (nextVal && nextVal.indexOf('captions-checkout') !== -1) {
                 var loginNext = encodeURIComponent(nextVal);
-                upgradeEl.innerHTML = 'When you’ve verified your email, <a href="/login?next=' + loginNext + (email ? '&email=' + encodeURIComponent(email) : '') + '">log in here</a> to continue your checkout.';
+                var phEph2 = (typeof window.__SIGNUP_PREFILL_EPH__ === 'string' && window.__SIGNUP_PREFILL_EPH__) ? window.__SIGNUP_PREFILL_EPH__ : '';
+                var loginQs = 'next=' + loginNext + (phEph2 ? '&eph=' + encodeURIComponent(phEph2) : (email ? '&email=' + encodeURIComponent(email) : ''));
+                upgradeEl.innerHTML = 'When you’ve verified your email, <a href="/login?' + loginQs + '">log in here</a> to continue your checkout.';
                 upgradeEl.style.display = 'block';
               } else {
                 upgradeEl.style.display = 'none';

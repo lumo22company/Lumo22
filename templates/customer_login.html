@@ -88,7 +88,7 @@
       <a href="/" class="lumo-nav-logo">Lumo 22</a>
       <a href="/captions" class="lumo-nav-link">Captions</a>
     </div>
-    <a href="/signup{% if (next_url and next_url != '/account') or prefilled_email %}?{% if next_url and next_url != '/account' %}next={{ next_url|urlencode }}{% if prefilled_email %}&amp;{% endif %}{% endif %}{% if prefilled_email %}email={{ prefilled_email|urlencode }}{% endif %}{% endif %}" class="lumo-nav-cta lumo-nav-signup">Sign up</a>
+    <a href="/signup{% if (next_url and next_url != '/account') or (prefill_eph|default('', true))|trim or prefilled_email %}?{% if next_url and next_url != '/account' %}next={{ next_url|urlencode }}{% endif %}{% if (prefill_eph|default('', true))|trim %}{% if next_url and next_url != '/account' %}&amp;{% endif %}eph={{ (prefill_eph|default('', true))|urlencode }}{% elif prefilled_email %}{% if next_url and next_url != '/account' %}&amp;{% endif %}email={{ prefilled_email|urlencode }}{% endif %}" class="lumo-nav-cta lumo-nav-signup">Sign up</a>
   </nav>
 
   <main id="main-content">
@@ -98,7 +98,7 @@
         <p class="block-label">Your account</p>
         <h1 class="block-title">Log in</h1>
         <p class="block-desc">Access your Captions in one place.</p>
-        {% if prefilled_email and next_url and '/account/upgrade' in next_url %}
+        {% if (prefilled_email or (prefill_eph|default('', true))|trim) and next_url and '/account/upgrade' in next_url %}
         <p class="block-desc" style="margin-top: -0.35rem; margin-bottom: 1.25rem; font-size: 0.9rem; max-width: 26rem; line-height: 1.45;">New here? Use <strong>Sign up</strong> (nav or below) with the email we’ve filled in—the same one you used for your one-off—then you’ll return to finish your upgrade.</p>
         {% endif %}
 
@@ -115,6 +115,7 @@
 
         <form id="login-form" action="/login" method="post">
           <input type="hidden" name="next" value="{{ next_url|default(request.args.get('next', '/account'))|e }}">
+          <input type="hidden" name="eph" value="{{ prefill_eph|default('', true)|e }}">
           <label for="email">Email</label>
           <input type="email" id="email" name="email" required autocomplete="email" placeholder="you@example.com" value="{{ request.form.get('email', '') or prefilled_email|default('', true) }}">
 
@@ -141,7 +142,7 @@
           <p><button type="button" id="resend-verify-btn" style="background:none;border:none;padding:0;color:var(--lum-gold);cursor:pointer;font-size:0.9rem;font-family:inherit;">Resend verification email</button></p>
           {% endif %}
           <p><a href="/forgot-password">Forgot password?</a></p>
-          <p class="auth-muted">Don't have an account? <a href="/signup{% if (next_url and next_url != '/account') or prefilled_email %}?{% if next_url and next_url != '/account' %}next={{ next_url|urlencode }}{% if prefilled_email %}&amp;{% endif %}{% endif %}{% if prefilled_email %}email={{ prefilled_email|urlencode }}{% endif %}{% endif %}" class="auth-signup-link">Sign up</a></p>
+          <p class="auth-muted">Don't have an account? <a href="/signup{% if (next_url and next_url != '/account') or (prefill_eph|default('', true))|trim or prefilled_email %}?{% if next_url and next_url != '/account' %}next={{ next_url|urlencode }}{% endif %}{% if (prefill_eph|default('', true))|trim %}{% if next_url and next_url != '/account' %}&amp;{% endif %}eph={{ (prefill_eph|default('', true))|urlencode }}{% elif prefilled_email %}{% if next_url and next_url != '/account' %}&amp;{% endif %}email={{ prefilled_email|urlencode }}{% endif %}" class="auth-signup-link">Sign up</a></p>
           <p class="auth-muted"><a href="/">← Back to Lumo 22</a></p>
         </div>
       </div>
