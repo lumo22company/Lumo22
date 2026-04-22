@@ -58,7 +58,7 @@ def _safe_base_url() -> str:
 
 
 def _build_one_off_upgrade_url(order: Dict[str, Any]) -> str:
-    """Build URL to review/update the one-off intake, then upgrade (subscribe_url on that page goes to checkout).
+    """Build URL to review/update the one-off form, then upgrade (subscribe_url on that page goes to checkout).
 
     Direct checkout omitted the brief step and often omitted ?selected= so the order summary looked empty.
     """
@@ -222,7 +222,7 @@ def run_subscription_awaiting_intake_early_reminder() -> Dict[str, Any]:
 
 {f"Business: {business_name}\n" if business_name else ""}Thanks for subscribing to 30 Days of Social Media Captions.
 
-It has been a couple of hours and we have not received your intake form yet. We need it before we can generate your first pack.
+It has been a couple of hours and we have not received your form yet. We need it before we can generate your first pack.
 
 Complete your form now: {intake_url}
 
@@ -317,7 +317,7 @@ def run_reminders() -> Dict[str, Any]:
             intake_url = f"{base}/captions-intake?t={token}"
             intake = order.get("intake") if isinstance(order.get("intake"), dict) else {}
             business_name = (intake.get("business_name") or "").strip() if intake else ""
-            # Subscribers must log in first; link goes to login with next=intake so after login they land on the form
+            # Subscribers must log in first; link goes to login with next=form URL so after login they land on the form
             from urllib.parse import quote
             login_url = f"{base}/login?next={quote(intake_url, safe='')}"
             account_url = f"{base}/account"

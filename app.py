@@ -2178,7 +2178,7 @@ def _account_context_build(customer: dict, section: Optional[str] = None) -> dic
             if currency in ("gbp", "usd", "eur"):
                 sub_params["currency"] = currency
             is_resub = _order_is_former_subscription_row(o)
-            # One-off → subscription: review/update brief on intake first (matches upgrade reminder email).
+            # One-off → subscription: review/update brief on the form first (matches upgrade reminder email).
             # Cancelled-subscription resubscribe: keep direct checkout (different row semantics).
             if is_resub:
                 url = "/captions-checkout-subscription?" + urlencode(sub_params)

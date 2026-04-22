@@ -1041,7 +1041,7 @@ def _order_receipt_email_html(
     content = f"""<p style="margin:0 0 16px;">Hi,</p>
 {business_line}
 <p style="margin:0 0 16px;">Thanks for your order. We've received your payment for 30 Days of Social Media Captions.</p>
-{receipt_block}<p style="margin:0 0 16px;">Complete your short intake form (about 2 minutes) when you're ready. Once you submit, we'll generate your captions and send them to you by email within a few minutes.</p>
+{receipt_block}<p style="margin:0 0 16px;">Complete your short form (about 2 minutes) when you're ready. Once you submit, we'll generate your captions and send them to you by email within a few minutes.</p>
 {_account_history_notice_upcoming_html()}<p style="margin:0 0 16px;">If you need the form link again, check your inbox for your order confirmation or reply to this email.</p>
 <p style="margin:0;">— Lumo 22</p>"""
     return _email_wrapper(content)
@@ -1260,7 +1260,7 @@ def _captions_intake_reminder_email_html(
         business_line = f"<p style=\"margin:0 0 16px;\"><strong>Business:</strong> {safe_business}</p>"
     if variant == "subscription_2h":
         thanks_block = """<p style="margin:0 0 16px;">Thanks for subscribing to 30 Days of Social Media Captions.</p>
-<p style="margin:0 0 16px;">It has been a couple of hours and we have not received your intake form yet. We need it before we can generate your first pack.</p>"""
+<p style="margin:0 0 16px;">It has been a couple of hours and we have not received your form yet. We need it before we can generate your first pack.</p>"""
     else:
         thanks_block = """<p style="margin:0 0 16px;">Thanks for your order of 30 Days of Social Media Captions.</p>
 <p style="margin:0 0 16px;">Before we can start writing, we need a few details about your business, audience, and voice.</p>"""
@@ -1288,7 +1288,7 @@ def _one_off_upgrade_reminder_email_html(upgrade_url: str, unsubscribe_url: str,
         intro = f"Your 30 days of captions for {html.escape(business_name)} are almost up."
     content = f"""<p style="margin:0 0 16px;">Hi,</p>
 <p style="margin:0 0 16px;">{intro} Want a new pack every month? Upgrade to a subscription and your next pack will be delivered 30 days after your current one—continuous content, no overlap.</p>
-<p style="margin:0 0 12px;">Open your intake form to review or update your answers, then continue to subscription checkout (log in or create an account when asked). Your plan (platforms, Story Ideas, currency) carries through from your one-off pack. You can edit your form anytime in your account after you subscribe.</p>
+<p style="margin:0 0 12px;">Open your form to review or update your answers, then continue to subscription checkout (log in or create an account when asked). Your plan (platforms, Story Ideas, currency) carries through from your one-off pack. You can edit your form anytime in your account after you subscribe.</p>
 <p style="margin:0 0 24px;"><a href="{safe_upgrade}" style="display:inline-block; padding:14px 28px; background:{BRAND_GOLD}; color:{BRAND_BLACK}; text-decoration:none; border-radius:10px; font-weight:600;">Review your form &amp; upgrade</a></p>
 <p style="margin:0 0 8px; font-size:14px; color:{BRAND_MUTED};">Or copy and paste this link into your browser:</p>
 <p style="margin:0 0 24px; font-size:13px; word-break:break-all; color:#333;">{html.escape(upgrade_url or '')}</p>
@@ -1593,7 +1593,7 @@ This is an automated notification from your lead capture system.
 Order ID: {(order_id or '').strip() or '(none)'}
 Order token: {(order_token or '').strip() or '(none)'}
 Customer email: {(customer_email or '').strip() or '(none)'}
-Business name (intake): {(business_name or '').strip() or '(none)'}
+Business name (form): {(business_name or '').strip() or '(none)'}
 Stripe subscription: {(stripe_subscription_id or '').strip() or '(none)'}
 Stripe customer: {(stripe_customer_id or '').strip() or '(none)'}
 """
@@ -2044,7 +2044,7 @@ If you didn't request this, you can ignore this email. Your email address will s
             body_lines.append(f"Amount paid: {amount_paid}")
             body_lines.extend(["", ""])
         body_lines.extend([
-            "Complete your short intake form (about 2 minutes) when you're ready. "
+            "Complete your short form (about 2 minutes) when you're ready. "
             "Once you submit, we'll generate your captions and send them to you by email within a few minutes.",
             "",
         ])
@@ -2244,7 +2244,7 @@ If you have any questions, just reply to this email.
 
 {intro} Want a new pack every month? Upgrade to a subscription and your next pack will be delivered 30 days after your current one—continuous content, no overlap.
 
-Use the link below to open your intake form: you can review or update your answers, then continue to subscription checkout (log in or create an account when asked). Your plan (platforms, Story Ideas, currency) carries through from your one-off pack. You can edit your form anytime in your account after you subscribe.
+Use the link below to open your form: you can review or update your answers, then continue to subscription checkout (log in or create an account when asked). Your plan (platforms, Story Ideas, currency) carries through from your one-off pack. You can edit your form anytime in your account after you subscribe.
 
 {upgrade_url}
 
