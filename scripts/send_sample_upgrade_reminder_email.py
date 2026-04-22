@@ -37,7 +37,7 @@ def main() -> int:
     base = (getattr(Config, "BASE_URL", None) or "").strip().rstrip("/")
     if not base or not base.startswith("http"):
         base = "https://www.lumo22.com"
-    upgrade_url = f"{base}/captions-intake?" + urlencode({"t": args.token.strip(), "edit": "1"})
+    upgrade_url = f"{base}/account/upgrade?" + urlencode({"base": args.token.strip()})
     unsubscribe_url = f"{base}/api/captions-upgrade-reminder-unsubscribe?t={quote(args.token.strip(), safe='')}"
 
     notif = NotificationService()

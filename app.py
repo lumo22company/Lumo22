@@ -1082,7 +1082,9 @@ def customer_login_required(f):
                 # Render the page in this response so session cookie is set here (no second request needed)
                 return f(*args, **kwargs)
         if not customer:
-            return redirect(url_for('customer_login_page') + '?next=' + request.url)
+            from urllib.parse import quote
+
+            return redirect(url_for("customer_login_page") + "?next=" + quote(request.url, safe=""))
         return f(*args, **kwargs)
     return decorated
 
@@ -2178,12 +2180,12 @@ def _account_context_build(customer: dict, section: Optional[str] = None) -> dic
             if currency in ("gbp", "usd", "eur"):
                 sub_params["currency"] = currency
             is_resub = _order_is_former_subscription_row(o)
-            # One-off → subscription: review/update brief on the form first (matches upgrade reminder email).
+            # One-off → subscription: account upgrade hub (prefill pack + plan); matches upgrade reminder email.
             # Cancelled-subscription resubscribe: keep direct checkout (different row semantics).
             if is_resub:
                 url = "/captions-checkout-subscription?" + urlencode(sub_params)
             else:
-                url = "/captions-intake?" + urlencode({"t": token, "edit": "1"})
+                url = "/account/upgrade?" + urlencode({"base": token})
             subscribe_options.append({
                 "url": url,
                 "business_name": business_name,

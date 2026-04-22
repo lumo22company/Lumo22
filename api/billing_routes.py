@@ -6,6 +6,7 @@ All `stripe.Subscription.modify` calls for plan/item changes use `proration_beha
 does not create proration invoice lines (no mid-cycle unused-time credits/debits for plan changes).
 """
 from typing import Optional
+from urllib.parse import quote
 
 from flask import Blueprint, request, jsonify, redirect, url_for
 from config import Config
@@ -544,7 +545,7 @@ def billing_portal():
     """
     customer, email, orders = _caption_orders_for_portal_customer()
     if customer is None:
-        return redirect(url_for("customer_login_page") + "?next=" + request.url)
+        return redirect(url_for("customer_login_page") + "?next=" + quote(request.url, safe=""))
     if not email:
         return jsonify({"ok": False, "error": "Invalid customer"}), 400
 
@@ -604,7 +605,7 @@ def billing_portal_cancel_subscription():
     """
     customer, email, orders = _caption_orders_for_portal_customer()
     if customer is None:
-        return redirect(url_for("customer_login_page") + "?next=" + request.url)
+        return redirect(url_for("customer_login_page") + "?next=" + quote(request.url, safe=""))
     if not email:
         return jsonify({"ok": False, "error": "Invalid customer"}), 400
 

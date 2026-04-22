@@ -58,15 +58,16 @@ def _safe_base_url() -> str:
 
 
 def _build_one_off_upgrade_url(order: Dict[str, Any]) -> str:
-    """Build URL to review/update the one-off form, then upgrade (subscribe_url on that page goes to checkout).
+    """Account upgrade hub: same page as Upgrade in the dashboard, with this one-off pre-selected (?base=).
 
-    Direct checkout omitted the brief step and often omitted ?selected= so the order summary looked empty.
+    Customer adjusts platforms / Story Ideas / currency there; checkout gets copy_from + selected + platforms.
+    Sign-in is required; unauthenticated clicks go to /login with next= (encoded) to return here.
     """
     base = _safe_base_url()
     token = (order.get("token") or "").strip()
     if not token:
         return ""
-    return f"{base}/captions-intake?" + urlencode({"t": token, "edit": "1"})
+    return f"{base}/account/upgrade?" + urlencode({"base": token})
 
 
 def _should_send_reminder(order: Dict[str, Any], period_end_ts: int) -> bool:
