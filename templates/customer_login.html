@@ -88,7 +88,7 @@
       <a href="/" class="lumo-nav-logo">Lumo 22</a>
       <a href="/captions" class="lumo-nav-link">Captions</a>
     </div>
-    <a href="/signup" class="lumo-nav-cta lumo-nav-signup">Sign up</a>
+    <a href="/signup{% if (next_url and next_url != '/account') or prefilled_email %}?{% if next_url and next_url != '/account' %}next={{ next_url|urlencode }}{% if prefilled_email %}&amp;{% endif %}{% endif %}{% if prefilled_email %}email={{ prefilled_email|urlencode }}{% endif %}{% endif %}" class="lumo-nav-cta lumo-nav-signup">Sign up</a>
   </nav>
 
   <main id="main-content">
@@ -98,6 +98,9 @@
         <p class="block-label">Your account</p>
         <h1 class="block-title">Log in</h1>
         <p class="block-desc">Access your Captions in one place.</p>
+        {% if prefilled_email and next_url and '/account/upgrade' in next_url %}
+        <p class="block-desc" style="margin-top: -0.35rem; margin-bottom: 1.25rem; font-size: 0.9rem; max-width: 26rem; line-height: 1.45;">New here? Use <strong>Sign up</strong> (nav or below) with the email we’ve filled in—the same one you used for your one-off—then you’ll return to finish your upgrade.</p>
+        {% endif %}
 
         {% if oauth_error_message|default('') %}
         <div class="auth-msg error" style="display: block; margin-bottom: 1rem;">{{ oauth_error_message }}</div>

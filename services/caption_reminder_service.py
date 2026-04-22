@@ -62,12 +62,17 @@ def _build_one_off_upgrade_url(order: Dict[str, Any]) -> str:
 
     Customer adjusts platforms / Story Ideas / currency there; checkout gets copy_from + selected + platforms.
     Sign-in is required; unauthenticated clicks go to /login with next= (encoded) to return here.
+    Optional ?email= pre-fills login/sign-up with the same address used for the one-off purchase.
     """
     base = _safe_base_url()
     token = (order.get("token") or "").strip()
     if not token:
         return ""
-    return f"{base}/account/upgrade?" + urlencode({"base": token})
+    params: Dict[str, Any] = {"base": token}
+    em = (order.get("customer_email") or "").strip().lower()
+    if em and "@" in em:
+        params["email"] = em
+    return f"{base}/account/upgrade?" + urlencode(params)
 
 
 def _should_send_reminder(order: Dict[str, Any], period_end_ts: int) -> bool:

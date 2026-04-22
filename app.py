@@ -728,12 +728,16 @@ def captions_intake_page():
         and is_oneoff
         and not pending_oneoff_intake
     )
-    from urllib.parse import quote as _url_quote
-    account_upgrade_base_url = (
-        "/account/upgrade?base=" + _url_quote(token, safe="")
-        if token and is_oneoff and not oneoff_consumed_by_subscription
-        else ""
-    )
+    from urllib.parse import urlencode as _up_urlencode
+
+    if token and is_oneoff and not oneoff_consumed_by_subscription:
+        _uq = {"base": token}
+        _uem = (order.get("customer_email") or "").strip().lower() if order else ""
+        if _uem and "@" in _uem:
+            _uq["email"] = _uem
+        account_upgrade_base_url = "/account/upgrade?" + _up_urlencode(_uq)
+    else:
+        account_upgrade_base_url = ""
     intake_pack_cover_line = None
     if order:
         from api.captions_routes import compute_intake_pack_day1_anchor, format_pack_cover_line_ordinal_utc
@@ -1082,9 +1086,13 @@ def customer_login_required(f):
                 # Render the page in this response so session cookie is set here (no second request needed)
                 return f(*args, **kwargs)
         if not customer:
-            from urllib.parse import quote
+            from urllib.parse import quote, urlencode
 
-            return redirect(url_for("customer_login_page") + "?next=" + quote(request.url, safe=""))
+            login_qs = {"next": request.url}
+            em = (request.args.get("email") or "").strip()
+            if em and "@" in em:
+                login_qs["email"] = em
+            return redirect(url_for("customer_login_page") + "?" + urlencode(login_qs))
         return f(*args, **kwargs)
     return decorated
 
@@ -1190,20 +1198,42 @@ def customer_login_page():
         next_url = _normalize_next_url(request.form.get('next') or request.args.get('next')) or '/account'
         client_ip = (request.headers.get("X-Forwarded-For") or request.remote_addr or "").split(",")[0].strip()
         if not email or not password:
-            return render_template('customer_login.html', login_error='Please enter your email and password.', next_url=next_url)
+            return render_template(
+                'customer_login.html',
+                login_error='Please enter your email and password.',
+                next_url=next_url,
+                prefilled_email=email or None,
+            )
         is_locked, retry_after = check_locked(email, client_ip)
         if is_locked:
             mins = max(1, int((retry_after + 59) // 60))
-            return render_template('customer_login.html', login_error=f'Too many failed attempts. Try again in about {mins} minute(s).', next_url=next_url)
+            return render_template(
+                'customer_login.html',
+                login_error=f'Too many failed attempts. Try again in about {mins} minute(s).',
+                next_url=next_url,
+                prefilled_email=email or None,
+            )
         try:
             from services.customer_auth_service import CustomerAuthService
             svc = CustomerAuthService()
             customer = svc.get_by_email(email)
             if not customer or not svc.verify_password(customer, password):
                 record_failure(email, client_ip)
-                return render_template('customer_login.html', login_error='Invalid email or password.', next_url=next_url)
+                return render_template(
+                    'customer_login.html',
+                    login_error='Invalid email or password.',
+                    next_url=next_url,
+                    prefilled_email=email or None,
+                )
             if not customer.get('email_verified', True):
-                return render_template('customer_login.html', login_error='Please verify your email before logging in. Check your inbox or request a new verification link.', needs_verification=True, verification_email=email, next_url=next_url)
+                return render_template(
+                    'customer_login.html',
+                    login_error='Please verify your email before logging in. Check your inbox or request a new verification link.',
+                    needs_verification=True,
+                    verification_email=email,
+                    next_url=next_url,
+                    prefilled_email=email or None,
+                )
             svc.update_last_login(customer['id'])
             clear_failures(email, client_ip)
             set_customer_session(customer)
@@ -1216,7 +1246,12 @@ def customer_login_page():
                 redirect_url = next_url if next_url.startswith(('http://', 'https://')) else (request.url_root.rstrip('/') + next_url)
             return render_template('login_success.html', next_url=redirect_url)
         except Exception:
-            return render_template('customer_login.html', login_error='Something went wrong. Please try again.', next_url=next_url)
+            return render_template(
+                'customer_login.html',
+                login_error='Something went wrong. Please try again.',
+                next_url=next_url,
+                prefilled_email=email or None,
+            )
     next_url = _normalize_next_url(request.args.get('next')) or '/account'
     prefilled_email = (request.args.get('email') or '').strip() or None
     oauth_error_message = None
@@ -2185,7 +2220,11 @@ def _account_context_build(customer: dict, section: Optional[str] = None) -> dic
             if is_resub:
                 url = "/captions-checkout-subscription?" + urlencode(sub_params)
             else:
-                url = "/account/upgrade?" + urlencode({"base": token})
+                hub_q = {"base": token}
+                uem = (o.get("customer_email") or "").strip().lower()
+                if uem and "@" in uem:
+                    hub_q["email"] = uem
+                url = "/account/upgrade?" + urlencode(hub_q)
             subscribe_options.append({
                 "url": url,
                 "business_name": business_name,

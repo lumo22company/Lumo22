@@ -37,7 +37,20 @@ def main() -> int:
     base = (getattr(Config, "BASE_URL", None) or "").strip().rstrip("/")
     if not base or not base.startswith("http"):
         base = "https://www.lumo22.com"
-    upgrade_url = f"{base}/account/upgrade?" + urlencode({"base": args.token.strip()})
+    token = args.token.strip()
+    purchase_email = ""
+    try:
+        from services.caption_order_service import CaptionOrderService
+
+        row = CaptionOrderService().get_by_token(token)
+        if row:
+            purchase_email = (row.get("customer_email") or "").strip().lower()
+    except Exception:
+        pass
+    hub = {"base": token}
+    if purchase_email and "@" in purchase_email:
+        hub["email"] = purchase_email
+    upgrade_url = f"{base}/account/upgrade?" + urlencode(hub)
     unsubscribe_url = f"{base}/api/captions-upgrade-reminder-unsubscribe?t={quote(args.token.strip(), safe='')}"
 
     notif = NotificationService()
