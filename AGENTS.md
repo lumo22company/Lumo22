@@ -5,3 +5,16 @@
 **Railway:** **`railway up --no-gitignore`** from the **project root** for CLI upload / redeploy; use **with** Git commit + push unless they want CLI-only.
 
 **Cursor** (`alwaysApply: true`): **`.cursor/rules/railway-deploy.mdc`** (canonical). See **`docs/RAILWAY_DEPLOY.md`** for GitHub ↔ Railway and CLI notes.
+
+## Captions reminder / email dedupe (Supabase SQL)
+
+After pulling changes that mention duplicate emails or reminder jobs, confirm these have been run in the **Supabase SQL editor** for production (order matters only where noted):
+
+1. **`database_caption_orders_checkout_email_dedupe.sql`** — `checkout_confirmation_email_sent_at` (order confirmation + form link dedupe across webhook/API).
+2. **`database_caption_reminder.sql`** — `reminder_sent_period_end`, `reminder_opt_out` (pre-pack subscription reminders).
+3. **`database_caption_orders_intake_early_reminder_sent_at.sql`** — subscription ~2h form nudge dedupe.
+4. **`database_caption_orders_one_off_intake_reminder_sent_at.sql`** — one-off 24–48h form reminder dedupe.
+5. **`database_caption_orders_upgrade_reminder.sql`** — one-off upgrade reminder (`upgrade_reminder_sent_at` / opt-out).
+6. **`database_caption_orders_claim_pre_pack_reminder.sql`** — RPC `claim_pre_pack_reminder` (atomic pre-pack reminder when cron and in-app scheduler overlap).
+
+If a migration is missing, logs usually mention the column or function name; run the matching file and redeploy.
