@@ -918,6 +918,12 @@ def _send_captions_subscription_cancelled_confirmation(sub_id: str, sub_obj: dic
         print(f"[Stripe webhook] cancel confirmation: invalid email for sub {sub_id[:20]}...")
         return order
 
+    claimed_cancel = False
+    if order and order.get("id"):
+        if not order_service.try_claim_cancel_confirmation_sent(str(order["id"])):
+            return order
+        claimed_cancel = True
+
     try:
         sym, amt = _subscription_monthly_price(currency, platforms, stories)
         plan_parts = [f"30 Days Captions, {platforms} platform{'s' if platforms != 1 else ''}"]
@@ -935,21 +941,16 @@ def _send_captions_subscription_cancelled_confirmation(sub_id: str, sub_obj: dic
         )
         if ok:
             print(f"[Stripe webhook] cancel confirmation email sent → {customer_email} (sub …{sub_id[-8:]})")
-            # Dedupe: subscription.updated (schedule/immediate) + subscription.deleted both fire — only one email
-            if order and order.get("id"):
-                from datetime import datetime
-
-                ts = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
-                try:
-                    order_service.update(str(order["id"]), {"cancel_confirmation_sent_at": ts})
-                except Exception as ex:
-                    print(f"[Stripe webhook] cancel_confirmation_sent_at update failed: {ex}")
         else:
             print(
                 f"[Stripe webhook] cancel confirmation email NOT sent (send_email returned False) → {customer_email}"
             )
+            if claimed_cancel:
+                order_service.release_cancel_confirmation_claim(str(order["id"]))
     except Exception as e:
         print(f"[Stripe webhook] cancel confirmation email exception: {e}")
+        if claimed_cancel:
+            order_service.release_cancel_confirmation_claim(str(order["id"]))
 
     return order
 

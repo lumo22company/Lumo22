@@ -212,6 +212,14 @@ def run_subscription_awaiting_intake_early_reminder() -> Dict[str, Any]:
             skipped += 1
             continue
 
+        oid_sub = str(order.get("id") or "").strip()
+        if not oid_sub:
+            skipped += 1
+            continue
+        if not order_service.try_claim_intake_early_reminder_sent(oid_sub):
+            skipped += 1
+            continue
+
         intake_url = f"{base}/captions-intake?t={token}"
         intake = order.get("intake") if isinstance(order.get("intake"), dict) else {}
         business_name = (intake.get("business_name") or "").strip() if intake else ""
@@ -237,14 +245,17 @@ This takes about 5–10 minutes. Once it is done, we will generate your captions
         html_body = _captions_intake_reminder_email_html(
             intake_url, business_name=business_name or None, variant="subscription_2h"
         )
-        ok = notif.send_email(email, subject, body, html_body=html_body)
+        try:
+            ok = notif.send_email(email, subject, body, html_body=html_body)
+        except Exception as e:
+            order_service.release_intake_early_reminder_claim(oid_sub)
+            errors.append(f"Order {order.get('id')}: subscription early reminder send error: {e!r}")
+            skipped += 1
+            continue
         if ok:
-            if order_service.set_intake_early_reminder_sent(order["id"]):
-                sent += 1
-            else:
-                errors.append(f"Order {order.get('id')}: could not record intake_early_reminder_sent_at")
-                skipped += 1
+            sent += 1
         else:
+            order_service.release_intake_early_reminder_claim(oid_sub)
             errors.append(f"Order {order.get('id')}: subscription intake reminder send failed")
             skipped += 1
 
@@ -304,6 +315,13 @@ def run_reminders() -> Dict[str, Any]:
                 skipped += 1
                 continue
 
+            period_end_iso = datetime.utcfromtimestamp(period_end_ts).strftime("%Y-%m-%dT%H:%M:%SZ")
+            old_reminder_sent = order.get("reminder_sent_period_end")
+            claim_pre = order_service.try_claim_pre_pack_reminder_sent(str(order["id"]), period_end_iso)
+            if claim_pre is False:
+                skipped += 1
+                continue
+
             token = (order.get("token") or "").strip()
             email = (order.get("customer_email") or "").strip()
             if not token or not email or "@" not in email:
@@ -352,15 +370,23 @@ Lumo 22
                 business_name=business_name or None,
                 next_pack_cover_line=cover_line,
             )
-            ok = notif.send_email(email, subject, body, html_body=html_body)
+            try:
+                ok = notif.send_email(email, subject, body, html_body=html_body)
+            except Exception as e:
+                errors.append(f"Order {order.get('id')}: pre-pack reminder send error: {e!r}")
+                skipped += 1
+                if claim_pre is True:
+                    order_service.restore_reminder_sent_period_end(str(order["id"]), old_reminder_sent)
+                continue
             if ok:
-                # Store period end as ISO for TIMESTAMPTZ (Postgres)
-                period_end_iso = datetime.utcfromtimestamp(period_end_ts).strftime("%Y-%m-%dT%H:%M:%SZ")
-                order_service.set_reminder_sent(order["id"], period_end_iso)
                 sent += 1
+                if claim_pre is None:
+                    order_service.set_reminder_sent(order["id"], period_end_iso)
             else:
                 errors.append(f"Order {order.get('id')}: email send failed")
                 skipped += 1
+                if claim_pre is True:
+                    order_service.restore_reminder_sent_period_end(str(order["id"]), old_reminder_sent)
         except Exception as e:
             errors.append(f"Order {order.get('id')} sub {sub_id[:20]}...: {e}")
             skipped += 1

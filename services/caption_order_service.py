@@ -39,6 +39,18 @@ def _is_one_off_intake_reminder_column_missing(exc: Exception) -> bool:
     return "PGRST204" in s and "one_off_intake_reminder_sent_at" in s
 
 
+def _is_cancel_confirmation_sent_at_column_missing(exc: Exception) -> bool:
+    """PostgREST when caption_orders.cancel_confirmation_sent_at was never migrated."""
+    s = str(exc)
+    return "PGRST204" in s and "cancel_confirmation_sent_at" in s
+
+
+def _is_intake_early_reminder_column_missing(exc: Exception) -> bool:
+    """PostgREST when caption_orders.intake_early_reminder_sent_at was never migrated."""
+    s = str(exc)
+    return "PGRST204" in s and "intake_early_reminder_sent_at" in s
+
+
 def _is_unique_stripe_session_violation(exc: Exception) -> bool:
     """True if insert failed because stripe_session_id already exists (PostgREST / Postgres)."""
     s = str(exc).lower()
@@ -608,6 +620,144 @@ class CaptionOrderService:
             if _is_one_off_intake_reminder_column_missing(e):
                 return
             print(f"[CaptionOrderService] release_one_off_intake_reminder_claim (non-fatal): {e!r}")
+
+    def try_claim_intake_early_reminder_sent(self, order_id: str) -> bool:
+        """
+        Atomically set intake_early_reminder_sent_at if still null (subscription awaiting_intake nudge).
+        Returns True if this caller should send the ~2h reminder; False if already claimed/sent.
+        """
+        if not order_id:
+            return False
+        now_iso = datetime.now(timezone.utc).isoformat()
+        try:
+            result = (
+                self.client.table(self.table)
+                .update(
+                    {"intake_early_reminder_sent_at": now_iso},
+                    count=CountMethod.exact,
+                )
+                .eq("id", order_id)
+                .is_("intake_early_reminder_sent_at", "null")
+                .execute()
+            )
+            if result.data and len(result.data) > 0:
+                return True
+            c = getattr(result, "count", None)
+            if isinstance(c, int) and c > 0:
+                return True
+            return False
+        except Exception as e:
+            if _is_intake_early_reminder_column_missing(e):
+                print(
+                    "[CaptionOrderService] intake_early_reminder_sent_at column missing — run "
+                    "database_caption_orders_intake_early_reminder_sent_at.sql in Supabase; "
+                    "subscription 2h reminder dedupe disabled until then."
+                )
+                return True
+            print(f"[CaptionOrderService] try_claim_intake_early_reminder_sent (non-fatal): {e!r}")
+            return True
+
+    def release_intake_early_reminder_claim(self, order_id: str) -> None:
+        """Clear intake_early_reminder_sent_at after a failed send so a later run can retry."""
+        if not order_id:
+            return
+        try:
+            self.client.table(self.table).update({"intake_early_reminder_sent_at": None}).eq("id", order_id).execute()
+        except Exception as e:
+            if _is_intake_early_reminder_column_missing(e):
+                return
+            print(f"[CaptionOrderService] release_intake_early_reminder_claim (non-fatal): {e!r}")
+
+    def try_claim_cancel_confirmation_sent(self, order_id: str) -> bool:
+        """
+        Atomically set cancel_confirmation_sent_at if still null.
+        Returns True if this caller should send the subscription cancelled email; False if already sent/claimed.
+        """
+        if not order_id:
+            return False
+        now_iso = datetime.now(timezone.utc).isoformat()
+        try:
+            result = (
+                self.client.table(self.table)
+                .update(
+                    {"cancel_confirmation_sent_at": now_iso},
+                    count=CountMethod.exact,
+                )
+                .eq("id", order_id)
+                .is_("cancel_confirmation_sent_at", "null")
+                .execute()
+            )
+            if result.data and len(result.data) > 0:
+                return True
+            c = getattr(result, "count", None)
+            if isinstance(c, int) and c > 0:
+                return True
+            return False
+        except Exception as e:
+            if _is_cancel_confirmation_sent_at_column_missing(e):
+                print(
+                    "[CaptionOrderService] cancel_confirmation_sent_at column missing — "
+                    "cancel confirmation dedupe disabled until migration."
+                )
+                return True
+            print(f"[CaptionOrderService] try_claim_cancel_confirmation_sent (non-fatal): {e!r}")
+            return True
+
+    def release_cancel_confirmation_claim(self, order_id: str) -> None:
+        """Clear cancel_confirmation_sent_at after a failed send so a retry can email again."""
+        if not order_id:
+            return
+        try:
+            self.client.table(self.table).update({"cancel_confirmation_sent_at": None}).eq("id", order_id).execute()
+        except Exception as e:
+            if _is_cancel_confirmation_sent_at_column_missing(e):
+                return
+            print(f"[CaptionOrderService] release_cancel_confirmation_claim (non-fatal): {e!r}")
+
+    def try_claim_pre_pack_reminder_sent(self, order_id: str, period_end_iso: str) -> Optional[bool]:
+        """
+        Atomically record reminder_sent_period_end for this Stripe period anchor (pre-pack reminder).
+        Returns True if this worker should send, False if another worker already recorded this period,
+        None if claim_pre_pack_reminder RPC is not migrated (caller may fall back to legacy behaviour).
+        """
+        if not order_id or not (period_end_iso or "").strip():
+            return False
+        try:
+            result = self.client.rpc(
+                "claim_pre_pack_reminder",
+                {"p_order_id": order_id, "p_period_end": period_end_iso.strip()},
+            ).execute()
+            data = result.data
+            if data is True:
+                return True
+            if data is False:
+                return False
+            if isinstance(data, list) and len(data) == 1:
+                v = data[0]
+                if isinstance(v, dict) and len(v) == 1:
+                    v = next(iter(v.values()))
+                return bool(v)
+            return bool(data)
+        except Exception as e:
+            s = str(e).lower()
+            if "claim_pre_pack_reminder" in s or "pgrst202" in s or "42883" in s:
+                print(
+                    "[CaptionOrderService] claim_pre_pack_reminder RPC missing — run "
+                    "database_caption_orders_claim_pre_pack_reminder.sql in Supabase; "
+                    "pre-pack reminder dedupe falls back to non-atomic check only."
+                )
+                return None
+            print(f"[CaptionOrderService] try_claim_pre_pack_reminder_sent (non-fatal): {e!r}")
+            return None
+
+    def restore_reminder_sent_period_end(self, order_id: str, previous_value) -> None:
+        """Restore reminder_sent_period_end after a failed pre-pack email send (previous_value may be None)."""
+        if not order_id:
+            return
+        try:
+            self.update(str(order_id), {"reminder_sent_period_end": previous_value})
+        except Exception as e:
+            print(f"[CaptionOrderService] restore_reminder_sent_period_end (non-fatal): {e!r}")
 
     def release_checkout_confirmation_email_claim(self, order_id: str) -> None:
         """Clear claim so a failed send can be retried (e.g. SendGrid error)."""
