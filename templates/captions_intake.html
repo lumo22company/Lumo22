@@ -282,8 +282,15 @@
     .intake-page label input[type="checkbox"] { flex-shrink: 0; vertical-align: middle; align-self: center; margin: 0; }
     .intake-add-platform-link { color: var(--lum-gold, #c9a227); font-weight: 600; text-decoration: none; }
     .intake-add-platform-link:hover { text-decoration: underline; }
-    .intake-page a.intake-buy-oneoff-link { color: var(--lum-gold, #fff200) !important; font-weight: 600; text-decoration: none; }
-    .intake-page a.intake-buy-oneoff-link:hover { color: #000 !important; text-decoration: underline; }
+    /* Banner is gold-tint on cream; gold text failed contrast — keep CTA readable like other banner links */
+    .intake-view-only-banner a.intake-buy-oneoff-link {
+      color: #111 !important;
+      font-weight: 600;
+      text-decoration: underline;
+      text-underline-offset: 0.15em;
+      text-decoration-thickness: 1px;
+    }
+    .intake-view-only-banner a.intake-buy-oneoff-link:hover { color: #000 !important; }
     .intake-add-platform-note { color: var(--lum-text-muted, #666); }
     .intake-page-body .lumo-nav { background: #000; border-bottom: 1px solid rgba(255,255,255,0.06); box-shadow: 0 4px 24px rgba(0,0,0,0.2); }
   </style>
