@@ -143,7 +143,11 @@
   <main class="auth-page">
     <div id="signup-flow-wrap">
     <h1>Create your account</h1>
+    {% if next_url and '/account/upgrade' in next_url %}
+    <p class="sub">Use the <strong>same email as your pack order</strong>. After you verify your email and log in, you will return to finish upgrading to a monthly subscription.</p>
+    {% else %}
     <p class="sub">One account for your Captions.</p>
+    {% endif %}
 
     {% if oauth_google_enabled|default(false) %}
     <div class="auth-oauth-row" role="group" aria-label="Sign up with Google">
@@ -299,11 +303,16 @@
               loginLink.href = loginHref;
             }
             if (upgradeEl) {
-              if (nextVal && nextVal.indexOf('captions-checkout') !== -1) {
+              var isSubCheckout = nextVal && nextVal.indexOf('captions-checkout') !== -1;
+              var isUpgradeHub = nextVal && nextVal.indexOf('/account/upgrade') !== -1;
+              if (isSubCheckout || isUpgradeHub) {
                 var loginNext = encodeURIComponent(nextVal);
                 var phEph2 = (typeof window.__SIGNUP_PREFILL_EPH__ === 'string' && window.__SIGNUP_PREFILL_EPH__) ? window.__SIGNUP_PREFILL_EPH__ : '';
                 var loginQs = 'next=' + loginNext + (phEph2 ? '&eph=' + encodeURIComponent(phEph2) : (email ? '&email=' + encodeURIComponent(email) : ''));
-                upgradeEl.innerHTML = 'When you’ve verified your email, <a href="/login?' + loginQs + '">log in here</a> to continue your checkout.';
+                var afterVerify = isUpgradeHub
+                  ? 'When you’ve verified your email, <a href="/login?' + loginQs + '">log in here</a> to return to your upgrade.'
+                  : 'When you’ve verified your email, <a href="/login?' + loginQs + '">log in here</a> to continue your checkout.';
+                upgradeEl.innerHTML = afterVerify;
                 upgradeEl.style.display = 'block';
               } else {
                 upgradeEl.style.display = 'none';

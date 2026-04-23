@@ -80,6 +80,19 @@
     .auth-oauth-btn:hover { transform: translateY(-2px); }
     .auth-oauth-or { text-align: center; font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--lum-text-muted); margin: 0 0 1rem; }
     .auth-oauth-or span { display: inline-block; padding: 0 0.5rem; }
+    .auth-upgrade-callout {
+      margin: 0 0 1.35rem;
+      padding: 1rem 1.15rem;
+      border-radius: var(--radius-btn, 8px);
+      border: 1px solid rgba(255,255,255,0.18);
+      background: rgba(255,255,255,0.04);
+      font-size: 0.9rem;
+      line-height: 1.55;
+      color: var(--lum-text-muted);
+      font-family: var(--font-body);
+    }
+    .auth-upgrade-callout p { margin: 0; }
+    .auth-upgrade-callout strong { color: var(--lum-text); font-weight: 600; }
   </style>
 </head>
 <body class="lumo-landing">
@@ -97,9 +110,12 @@
       <div class="block-inner auth-form-wrap">
         <p class="block-label">Your account</p>
         <h1 class="block-title">Log in</h1>
+        {% if next_url and '/account/upgrade' in next_url %}
+        <div class="auth-upgrade-callout" role="region" aria-label="Continue your pack upgrade">
+          <p>You are here to finish upgrading from your pack to a monthly subscription. <strong>Sign in</strong> below if you already have an account. New? Use <strong>Sign up</strong> (top or below) with the <strong>same email you used for your pack</strong>—after you verify your email and log in, we bring you back to complete the upgrade.</p>
+        </div>
+        {% else %}
         <p class="block-desc">Access your Captions in one place.</p>
-        {% if (prefilled_email or (prefill_eph|default('', true))|trim) and next_url and '/account/upgrade' in next_url %}
-        <p class="block-desc" style="margin-top: -0.35rem; margin-bottom: 1.25rem; font-size: 0.9rem; max-width: 26rem; line-height: 1.45;">New here? Use <strong>Sign up</strong> (nav or below) with the email we’ve filled in—the same one you used for your one-off—then you’ll return to finish your upgrade.</p>
         {% endif %}
 
         {% if oauth_error_message|default('') %}
