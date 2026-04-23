@@ -2323,9 +2323,20 @@ def _account_context_build(customer: dict, section: Optional[str] = None) -> dic
     _n_sub_opts = len(subscribe_options)
     _n_resub_opts = sum(1 for x in subscribe_options if x.get("is_resubscribe"))
     account_resubscribe_mode = _n_sub_opts > 0 and _n_resub_opts == _n_sub_opts
-    history_delivered_orders = _history_delivered_orders(caption_orders)
-    history_delivered_entries = _history_delivered_entries(caption_orders)
-    history_storage = _history_archive_storage_flags(caption_orders)
+    # History-only: building entries walks every order + full delivery_archive per row (O(orders × archive)).
+    # Other sections never read these keys — skip to keep e.g. Edit form fast for test accounts with many orders.
+    sec = (section or "").strip()
+    if sec == "history":
+        history_delivered_orders = _history_delivered_orders(caption_orders)
+        history_delivered_entries = _history_delivered_entries(caption_orders)
+        history_storage = _history_archive_storage_flags(caption_orders)
+    else:
+        history_delivered_orders = []
+        history_delivered_entries = []
+        history_storage = {
+            "history_delivery_archive_max": DELIVERY_ARCHIVE_MAX,
+            "history_near_archive_limit": False,
+        }
     return {
         "customer": customer,
         "caption_orders": caption_orders,
@@ -2356,6 +2367,7 @@ def _account_context_build(customer: dict, section: Optional[str] = None) -> dic
         "account_resubscribe_mode": account_resubscribe_mode,
         "account_load_error": False,
         "defer_stripe_billing": DEFER_ACCOUNT_STRIPE_BILLING,
+        **history_storage,
     }
 
 
