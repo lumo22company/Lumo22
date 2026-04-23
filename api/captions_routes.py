@@ -2869,7 +2869,15 @@ def captions_download():
 
     customer = get_current_customer()
     if not customer:
-        return redirect("/login?next=/account"), 302
+        # Preserve this URL through login so "View captions" in a new tab (or a shared link) returns here after sign-in.
+        from urllib.parse import quote
+
+        path = request.path or ""
+        qs = (request.query_string or b"").decode()
+        next_dl = path + (f"?{qs}" if qs else "")
+        if not next_dl.startswith("/"):
+            next_dl = "/account"
+        return redirect("/login?next=" + quote(next_dl, safe="")), 302
     email = (customer.get("email") or "").strip().lower()
     if not email or "@" not in email:
         return jsonify({"error": "Invalid customer"}), 400
