@@ -11,7 +11,7 @@ import threading
 import hmac
 import hashlib
 import base64
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
 from flask import Blueprint, request, jsonify, redirect, Response, url_for
 from urllib.parse import quote
@@ -575,10 +575,9 @@ def compute_intake_pack_day1_anchor(
     pack_sooner, scheduled_first_pack, stripe_renewal, calendar_fallback, today_fallback.
     (stripe_renewal branch uses Stripe current_period_start — the calendar start of the current paid period, i.e. aligned with the charge that opened that period—not current_period_end.)
     """
-    from datetime import datetime, timezone
     from services.caption_generator import launch_window_start_for_intake_validation
 
-    today = datetime.utcnow().date()
+    today = datetime.now(timezone.utc).date()
     disp = lambda d: d.strftime("%A %d %B %Y")
 
     if not order:
@@ -610,7 +609,7 @@ def compute_intake_pack_day1_anchor(
             pe = sub.get("current_period_end")
             ts = ps if ps is not None else pe
             if ts is not None:
-                d = datetime.utcfromtimestamp(int(ts)).date()
+                d = datetime.fromtimestamp(int(ts), tz=timezone.utc).date()
                 if d < today:
                     d = today
                 return (d, "stripe_renewal", disp(d))
@@ -704,10 +703,9 @@ def resolve_pack_start_date_for_generation(order_row: Optional[Dict[str, Any]]) 
     compute_intake_pack_day1_anchor (Stripe current_period_start) instead of defaulting to "today"
     and duplicating the previous pack's calendar window on renewal day.
     """
-    from datetime import datetime
     from services.caption_generator import launch_window_start_for_intake_validation
 
-    today = datetime.utcnow().date()
+    today = datetime.now(timezone.utc).date()
     raw = ""
     if order_row and isinstance(order_row, dict):
         raw = (order_row.get("pack_start_date") or "").strip()
@@ -736,7 +734,7 @@ def _validate_launch_event_window(launch_desc: str, pack_start_date: str) -> Opt
 
     start_raw = (pack_start_date or "").strip()
     if not start_raw:
-        start_raw = datetime.utcnow().strftime("%Y-%m-%d")
+        start_raw = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     try:
         start = datetime.strptime(start_raw[:10], "%Y-%m-%d").date()
     except ValueError:
@@ -2068,7 +2066,7 @@ def _run_generation_and_deliver(
     pack_sooner_receipt: optional dict from get-pack-sooner webhook with amount_paid_display, ongoing_monthly_display;
     prepends payment + plan summary to the delivery email (single combined message)."""
     import traceback
-    from datetime import datetime
+    from datetime import datetime, timezone
 
     from services.caption_order_service import CaptionOrderService
     from services.caption_delivery_recovery import (
@@ -2284,7 +2282,7 @@ def _run_generation_and_deliver(
                 if st != "canceled" or sub_nb.get("cancel_at_period_end"):
                     cpe = sub_nb.get("current_period_end")
                     if cpe is not None:
-                        dt_nb = datetime.utcfromtimestamp(int(cpe))
+                        dt_nb = datetime.fromtimestamp(int(cpe), tz=timezone.utc)
                         next_billing_display = dt_nb.strftime("%d %B %Y")
                         next_billing_plain = f"Your next billing date is {next_billing_display}.\n\n"
             except Exception:
@@ -2397,7 +2395,7 @@ def _run_generation_and_deliver(
         if row.get("stripe_subscription_id"):
             day_categories = extract_day_categories_from_captions_md(captions_md)
             if day_categories and any(day_categories):
-                month_str = datetime.utcnow().strftime("%Y-%m")
+                month_str = datetime.now(timezone.utc).strftime("%Y-%m")
                 order_service.append_pack_history(order_id, month_str, day_categories)
         print(f"[Captions] Delivery email sent for order {order_id} to {customer_email}")
         return (True, None)
@@ -3165,7 +3163,6 @@ def captions_download():
     ?archive=N → subscription past pack (delivery_archive index); omit for current month.
     """
     from api.auth_routes import get_current_customer
-    from datetime import datetime
 
     customer = get_current_customer()
     if not customer:
@@ -3216,7 +3213,7 @@ def captions_download():
         return jsonify({"error": "Captions file not found"}), 404
     date_str = (payload.get("date_str") or "").strip()[:10]
     if not date_str:
-        date_str = (order.get("created_at") or "")[:10] if order.get("created_at") else datetime.utcnow().strftime("%Y-%m-%d")
+        date_str = (order.get("created_at") or "")[:10] if order.get("created_at") else datetime.now(timezone.utc).strftime("%Y-%m-%d")
     intake = order.get("intake") or {}
     biz_raw = (intake.get("business_name") or "").strip()
 
@@ -3316,11 +3313,10 @@ def captions_download_public():
     captions_md = order.get("captions_md")
     if not captions_md:
         return jsonify({"error": "Captions file not found"}), 404
-    from datetime import datetime
 
     date_str = (order.get("delivered_at") or order.get("created_at") or "")[:10]
     if not date_str:
-        date_str = datetime.utcnow().strftime("%Y-%m-%d")
+        date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     intake = order.get("intake") or {}
     biz_raw = (intake.get("business_name") or "").strip()
     if download_type == "stories":
@@ -3561,7 +3557,7 @@ def _pause_info_from_subscription(sub) -> dict:
         resumes_ts = pc.get("resumes_at")
         if resumes_ts:
             try:
-                dt = datetime.utcfromtimestamp(resumes_ts)
+                dt = datetime.fromtimestamp(int(resumes_ts), tz=timezone.utc)
                 out["paused"] = True
                 out["resumes_at"] = dt.strftime("%d %b %Y")
             except (TypeError, ValueError, OSError):
@@ -3573,7 +3569,7 @@ def _pause_info_from_subscription(sub) -> dict:
         cancel_ts = sub.get("cancel_at") or sub.get("current_period_end")
         if cancel_ts:
             try:
-                dt = datetime.utcfromtimestamp(cancel_ts)
+                dt = datetime.fromtimestamp(int(cancel_ts), tz=timezone.utc)
                 out["ends_at"] = dt.strftime("%d %b %Y")
             except (TypeError, ValueError, OSError):
                 pass
@@ -3582,7 +3578,7 @@ def _pause_info_from_subscription(sub) -> dict:
         ended_ts = sub.get("ended_at") or sub.get("canceled_at") or sub.get("cancel_at")
         if ended_ts:
             try:
-                dt = datetime.utcfromtimestamp(ended_ts)
+                dt = datetime.fromtimestamp(int(ended_ts), tz=timezone.utc)
                 out["ends_at"] = dt.strftime("%d %b %Y")
             except (TypeError, ValueError, OSError):
                 pass
@@ -3590,7 +3586,7 @@ def _pause_info_from_subscription(sub) -> dict:
         cpe = sub.get("current_period_end")
         if cpe is not None:
             try:
-                dt_end = datetime.utcfromtimestamp(int(cpe))
+                dt_end = datetime.fromtimestamp(int(cpe), tz=timezone.utc)
                 out["next_pack_due"] = dt_end.strftime("%d %b %Y")
             except (TypeError, ValueError, OSError):
                 pass
@@ -3662,12 +3658,12 @@ def captions_pause_subscription():
                 "resumes_at": pc.get("resumes_at"),
             }), 400
 
-        resumes_at = int((datetime.utcnow() + timedelta(days=30)).timestamp())
+        resumes_at = int((datetime.now(timezone.utc) + timedelta(days=30)).timestamp())
         stripe.Subscription.modify(
             sub_id,
             pause_collection={"behavior": "void", "resumes_at": resumes_at},
         )
-        resumes_date = datetime.utcfromtimestamp(resumes_at).strftime("%d %b %Y")
+        resumes_date = datetime.fromtimestamp(resumes_at, tz=timezone.utc).strftime("%d %b %Y")
         return jsonify({
             "ok": True,
             "resumes_at": resumes_date,

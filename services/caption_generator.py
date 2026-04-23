@@ -5,7 +5,7 @@ Uses the product framework: Authority, Educational, Brand Personality, Soft Prom
 from typing import Dict, Any, Optional, Tuple, List, Set
 from config import Config
 from services.ai_provider import chat_completion
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta, date, timezone
 import re
 from difflib import SequenceMatcher
 
@@ -910,7 +910,7 @@ def _build_user_prompt(
     """Build user prompt. If day_start/day_end are not 1–30, generate full doc; else generate only that range.
     pack_start_date: YYYY-MM-DD so Day 1 = this date; used for date context and key-date alignment."""
     from datetime import datetime
-    start_str = (pack_start_date or "").strip() or datetime.utcnow().strftime("%Y-%m-%d")
+    start_str = (pack_start_date or "").strip() or datetime.now(timezone.utc).strftime("%Y-%m-%d")
     month_year = datetime.strptime(start_str[:10], "%Y-%m-%d").strftime("%B %Y")
     include_hashtags = intake.get("include_hashtags", True)
     if isinstance(include_hashtags, str) and include_hashtags.lower() in ("false", "0", "no", "off"):
@@ -1145,13 +1145,13 @@ def _build_doc_header(intake: Dict[str, Any], pack_start_date: Optional[str] = N
     from services.caption_pdf import pack_month_range_label
 
     n = _normalize_intake_case
-    start_str = (pack_start_date or "").strip() or datetime.utcnow().strftime("%Y-%m-%d")
+    start_str = (pack_start_date or "").strip() or datetime.now(timezone.utc).strftime("%Y-%m-%d")
     month_year = pack_month_range_label(start_str)
     if not month_year:
         try:
             month_year = datetime.strptime(start_str[:10], "%Y-%m-%d").strftime("%B %Y")
         except ValueError:
-            month_year = datetime.utcnow().strftime("%B %Y")
+            month_year = datetime.now(timezone.utc).strftime("%B %Y")
     business = n((intake.get("business_name") or "").strip(), sentence_case=False) or "Client"
     audience = n(intake.get("audience") or "", sentence_case=False) or "Not specified"
     voice = n((intake.get("voice_words") or intake.get("voice_avoid") or "").strip(), sentence_case=False) or "Not specified"
@@ -2311,7 +2311,7 @@ class CaptionGenerator:
         pack_start_date: YYYY-MM-DD so Day 1 = this date (default: today UTC). Ensures key-date phasing aligns.
         Raises on API error.
         """
-        start_str = (pack_start_date or "").strip() or datetime.utcnow().strftime("%Y-%m-%d")
+        start_str = (pack_start_date or "").strip() or datetime.now(timezone.utc).strftime("%Y-%m-%d")
         include_hashtags = intake.get("include_hashtags", True)
         if isinstance(include_hashtags, str) and include_hashtags.lower() in ("false", "0", "no", "off"):
             include_hashtags = False
@@ -2603,8 +2603,8 @@ class CaptionGenerator:
         lang_instruction = LANGUAGE_INSTRUCTIONS.get(lang, LANGUAGE_INSTRUCTIONS["English (UK)"])
         n = _normalize_intake_case
         business = n((intake.get("business_name") or "").strip(), sentence_case=False) or "Client"
-        month_year = datetime.utcnow().strftime("%B %Y")
-        start_str = (pack_start_date or "").strip() or datetime.utcnow().strftime("%Y-%m-%d")
+        month_year = datetime.now(timezone.utc).strftime("%B %Y")
+        start_str = (pack_start_date or "").strip() or datetime.now(timezone.utc).strftime("%Y-%m-%d")
         date_context = _build_date_context(start_str)
         date_block = ""
         if date_context:
@@ -2718,8 +2718,8 @@ Use the exact labels "Idea:", "Suggested wording:", and "Story hashtags:" on eve
         lang_instruction = LANGUAGE_INSTRUCTIONS.get(lang, LANGUAGE_INSTRUCTIONS["English (UK)"])
         n = _normalize_intake_case
         business = n((intake.get("business_name") or "").strip(), sentence_case=False) or "Client"
-        month_year = datetime.utcnow().strftime("%B %Y")
-        start_str = (pack_start_date or "").strip() or datetime.utcnow().strftime("%Y-%m-%d")
+        month_year = datetime.now(timezone.utc).strftime("%B %Y")
+        start_str = (pack_start_date or "").strip() or datetime.now(timezone.utc).strftime("%Y-%m-%d")
         date_context = _build_date_context(start_str)
         date_block = ""
         if date_context:

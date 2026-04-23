@@ -1,7 +1,7 @@
 """
 Business model - represents a small business that signed up for your SaaS system.
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Dict, Any, List
 import json
 import uuid
@@ -30,7 +30,7 @@ class Business:
         self.service_types = service_types or []
         self.status = status  # active, paused, cancelled
         self.subscription_tier = subscription_tier  # starter, pro, enterprise
-        self.created_at = created_at or datetime.utcnow()
+        self.created_at = created_at or datetime.now(timezone.utc)
         self.api_key = api_key or self._generate_api_key()
         self.last_login = None
         

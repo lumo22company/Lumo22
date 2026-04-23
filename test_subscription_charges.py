@@ -131,7 +131,6 @@ def test_scenario_amounts():
             s["currency"], s["platforms"], s["stories"]
         ), f"Scenario {s}: amount mismatch"
     print(f"OK: {len(scenarios)} scenarios have correct positive amounts.")
-    return scenarios
 
 
 def test_trial_first_charge_equals_one_month():

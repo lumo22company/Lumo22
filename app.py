@@ -220,10 +220,10 @@ def redirect_bare_domain_to_www():
 
 @app.context_processor
 def inject_asset_version():
-    from datetime import datetime
+    from datetime import datetime, timezone
     _tok = _main_css_mtime_token()
     out = {'asset_version': f"{_asset_version}-{_tok}" if _tok != "0" else _asset_version}
-    out['today_str'] = datetime.utcnow().strftime('%d %B %Y')
+    out['today_str'] = datetime.now(timezone.utc).strftime('%d %B %Y')
     try:
         out['current_customer'] = get_template_current_customer()
     except Exception:
@@ -522,7 +522,7 @@ def captions_intake_page():
     """Intake form for 30 Days Captions (sent to client after payment). Token in ?t= links form to order.
     Subscription orders require login; one-off and no-token access unchanged.
     Supports copy_from=TOKEN to pre-fill from another order (e.g. one-off → subscription)."""
-    from datetime import datetime
+    from datetime import datetime, timezone
     from api.auth_routes import get_current_customer
     token = request.args.get('t', '').strip()
     copy_from = request.args.get('copy_from', '').strip()
@@ -685,7 +685,7 @@ def captions_intake_page():
     prefilled_primary = prefilled_platform.split(",")[0].strip() if prefilled_platform else ""
     if prefilled_primary in ("Instagram", "Facebook"):
         prefilled_primary = "Instagram & Facebook"
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     subscribe_url = None
     order_currency = "gbp"
     intake_add_platform_text = "+£29 one-off / +£19 monthly"

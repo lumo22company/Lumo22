@@ -6,7 +6,7 @@ import re
 import secrets
 from typing import Dict, Any, Optional, Tuple
 from supabase import create_client, Client
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from werkzeug.security import generate_password_hash, check_password_hash
 from config import Config
 
@@ -107,7 +107,7 @@ class CustomerAuthService:
         try:
             self.client.table(self.table).update({
                 "google_sub": google_sub.strip(),
-                "updated_at": datetime.utcnow().isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
             }).eq("id", str(customer_id)).execute()
             return True
         except Exception:
@@ -180,7 +180,7 @@ class CustomerAuthService:
         try:
             self.client.table(self.table).update({
                 "referral_code": code,
-                "updated_at": datetime.utcnow().isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
             }).eq("id", customer_id).execute()
             if stripe_promotion_sync:
                 self._sync_stripe_referral_promotion(customer_id)
@@ -207,7 +207,7 @@ class CustomerAuthService:
             self.client.table(self.table).update(
                 {
                     "stripe_referral_promotion_code_id": promotion_code_id.strip(),
-                    "updated_at": datetime.utcnow().isoformat(),
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
                 }
             ).eq("id", str(customer_id)).execute()
             return True
@@ -222,7 +222,7 @@ class CustomerAuthService:
             self.client.table(self.table).update(
                 {
                     "stripe_referral_promotion_code_id": None,
-                    "updated_at": datetime.utcnow().isoformat(),
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
                 }
             ).eq("id", str(customer_id)).execute()
             return True
@@ -275,8 +275,8 @@ class CustomerAuthService:
     def update_last_login(self, customer_id: str) -> None:
         """Update last_login_at."""
         self.client.table(self.table).update({
-            "last_login_at": datetime.utcnow().isoformat(),
-            "updated_at": datetime.utcnow().isoformat(),
+            "last_login_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
         }).eq("id", customer_id).execute()
 
     def update_marketing_opt_in(self, customer_id: str, opt_in: bool) -> bool:
@@ -284,7 +284,7 @@ class CustomerAuthService:
         try:
             self.client.table(self.table).update({
                 "marketing_opt_in": opt_in,
-                "updated_at": datetime.utcnow().isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
             }).eq("id", customer_id).execute()
             return True
         except Exception:
@@ -299,7 +299,7 @@ class CustomerAuthService:
             current = int(cust.get("referral_discount_credits") or 0)
             self.client.table(self.table).update({
                 "referral_discount_credits": current + 1,
-                "updated_at": datetime.utcnow().isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
             }).eq("id", customer_id).execute()
             return True
         except Exception:
@@ -316,7 +316,7 @@ class CustomerAuthService:
                 return False
             self.client.table(self.table).update({
                 "referral_discount_credits": current - 1,
-                "updated_at": datetime.utcnow().isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
             }).eq("id", customer_id).execute()
             return True
         except Exception:
@@ -327,12 +327,12 @@ class CustomerAuthService:
         if not customer_id:
             return None
         token = secrets.token_urlsafe(32)
-        expires = datetime.utcnow() + timedelta(hours=24)
+        expires = datetime.now(timezone.utc) + timedelta(hours=24)
         try:
             self.client.table(self.table).update({
                 "email_verification_token": token,
                 "email_verification_expires": expires.isoformat(),
-                "updated_at": datetime.utcnow().isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
             }).eq("id", customer_id).execute()
             return token
         except Exception:
@@ -356,7 +356,9 @@ class CustomerAuthService:
             try:
                 exp_str = str(expires).replace("Z", "")[:19]
                 exp_dt = datetime.fromisoformat(exp_str)
-                if datetime.utcnow() > exp_dt:
+                if exp_dt.tzinfo is None:
+                    exp_dt = exp_dt.replace(tzinfo=timezone.utc)
+                if datetime.now(timezone.utc) > exp_dt:
                     return None
             except (TypeError, ValueError):
                 return None
@@ -372,7 +374,7 @@ class CustomerAuthService:
                 "email_verified": True,
                 "email_verification_token": None,
                 "email_verification_expires": None,
-                "updated_at": datetime.utcnow().isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
             }).eq("id", customer["id"]).execute()
             customer["email_verified"] = True
             return (True, customer, None)
@@ -389,12 +391,12 @@ class CustomerAuthService:
             return (True, None)  # Don't reveal if email exists
 
         token = secrets.token_urlsafe(32)
-        expires = datetime.utcnow() + timedelta(hours=1)
+        expires = datetime.now(timezone.utc) + timedelta(hours=1)
         try:
             self.client.table(self.table).update({
                 "password_reset_token": token,
                 "password_reset_expires": expires.isoformat(),
-                "updated_at": datetime.utcnow().isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
             }).eq("id", customer["id"]).execute()
             return (True, token)
         except Exception as e:
@@ -415,7 +417,9 @@ class CustomerAuthService:
             try:
                 exp_str = expires.replace("Z", "")[:19]
                 exp_dt = datetime.fromisoformat(exp_str)
-                if datetime.utcnow() > exp_dt:
+                if exp_dt.tzinfo is None:
+                    exp_dt = exp_dt.replace(tzinfo=timezone.utc)
+                if datetime.now(timezone.utc) > exp_dt:
                     return None
             except (TypeError, ValueError):
                 return None
@@ -442,7 +446,7 @@ class CustomerAuthService:
                 "password_reset_token": None,
                 "password_reset_expires": None,
                 "auth_version": new_ver,
-                "updated_at": datetime.utcnow().isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
             }).eq("id", customer["id"]).execute()
             return (True, None)
         except Exception as e:
@@ -475,7 +479,7 @@ class CustomerAuthService:
                 "password_reset_token": None,
                 "password_reset_expires": None,
                 "auth_version": new_ver,
-                "updated_at": datetime.utcnow().isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
             }).eq("id", str(customer_id)).execute()
             return (True, None)
         except Exception as e:
@@ -502,13 +506,13 @@ class CustomerAuthService:
         if self.get_by_email(new_email):
             return (False, "An account with this email already exists")
         token = secrets.token_urlsafe(32)
-        expires = datetime.utcnow() + timedelta(hours=1)
+        expires = datetime.now(timezone.utc) + timedelta(hours=1)
         try:
             self.client.table(self.table).update({
                 "email_change_token": token,
                 "email_change_new_email": new_email,
                 "email_change_expires": expires.isoformat(),
-                "updated_at": datetime.utcnow().isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
             }).eq("id", customer_id).execute()
             return (True, token)
         except Exception as e:
@@ -529,7 +533,9 @@ class CustomerAuthService:
             try:
                 exp_str = expires.replace("Z", "")[:19] if isinstance(expires, str) else str(expires)[:19]
                 exp_dt = datetime.fromisoformat(exp_str.replace("Z", ""))
-                if datetime.utcnow() > exp_dt:
+                if exp_dt.tzinfo is None:
+                    exp_dt = exp_dt.replace(tzinfo=timezone.utc)
+                if datetime.now(timezone.utc) > exp_dt:
                     return None
             except (TypeError, ValueError):
                 return None
@@ -559,7 +565,7 @@ class CustomerAuthService:
                 "email_change_token": None,
                 "email_change_new_email": None,
                 "email_change_expires": None,
-                "updated_at": datetime.utcnow().isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
             }).eq("id", customer_id).execute()
             return (True, new_email, old_email, None)
         except Exception as e:

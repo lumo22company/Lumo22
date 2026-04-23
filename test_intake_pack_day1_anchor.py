@@ -11,7 +11,7 @@ def test_pack_sooner_session_uses_today():
     order = {"stripe_subscription_id": "sub_x", "pack_start_date": "2026-04-01"}
     d, src, _disp = compute_intake_pack_day1_anchor(order, is_pack_sooner_edit_session=True)
     assert src == "pack_sooner"
-    assert d == datetime.utcnow().date()
+    assert d == datetime.now(timezone.utc).date()
 
 
 def test_scheduled_first_pack_when_future():
@@ -54,7 +54,7 @@ def test_resolve_generation_uses_future_stored_anchor():
 
     from api.captions_routes import resolve_pack_start_date_for_generation
 
-    future = (datetime.utcnow().date() + timedelta(days=12)).strftime("%Y-%m-%d")
+    future = (datetime.now(timezone.utc).date() + timedelta(days=12)).strftime("%Y-%m-%d")
     assert resolve_pack_start_date_for_generation({"pack_start_date": future}) == future
 
 
@@ -63,8 +63,8 @@ def test_resolve_generation_bumps_stale_persisted_anchor_to_today():
 
     from api.captions_routes import resolve_pack_start_date_for_generation
 
-    past = (datetime.utcnow().date() - timedelta(days=6)).strftime("%Y-%m-%d")
-    today = datetime.utcnow().date().strftime("%Y-%m-%d")
+    past = (datetime.now(timezone.utc).date() - timedelta(days=6)).strftime("%Y-%m-%d")
+    today = datetime.now(timezone.utc).date().strftime("%Y-%m-%d")
     assert resolve_pack_start_date_for_generation({"pack_start_date": past}) == today
 
 
@@ -73,7 +73,7 @@ def test_resolve_generation_empty_row_is_today():
 
     from api.captions_routes import resolve_pack_start_date_for_generation
 
-    today = datetime.utcnow().date().strftime("%Y-%m-%d")
+    today = datetime.now(timezone.utc).date().strftime("%Y-%m-%d")
     assert resolve_pack_start_date_for_generation(None) == today
     assert resolve_pack_start_date_for_generation({}) == today
 
@@ -99,7 +99,7 @@ def test_resolve_generation_subscription_empty_pack_no_stripe_key_falls_back_to_
 
     from api.captions_routes import resolve_pack_start_date_for_generation
 
-    today = datetime.utcnow().date().strftime("%Y-%m-%d")
+    today = datetime.now(timezone.utc).date().strftime("%Y-%m-%d")
     order = {"stripe_subscription_id": "sub_x", "pack_start_date": ""}
     with patch("api.captions_routes.Config.STRIPE_SECRET_KEY", ""):
         assert resolve_pack_start_date_for_generation(order) == today

@@ -87,6 +87,19 @@ def main():
     if not has_cta_instruction:
         print("  WARNING: Goal is 'More inquiries / leads'; expected CTA/next-step hint.")
 
+    prompt_failures = []
+    if not has_voice_override:
+        prompt_failures.append("system missing client voice/avoid override language")
+    if not (has_voice_intake and has_voice_instruction):
+        prompt_failures.append("user prompt missing voice in INTAKE or VOICE instruction block")
+    if not has_avoid_intake:
+        prompt_failures.append("user prompt missing Words/style to avoid from intake")
+    if not has_cta_instruction:
+        prompt_failures.append("user prompt missing CTA/next-step hint for goal (leads/inquiries)")
+    if prompt_failures:
+        print("\nFAIL — prompt checks:\n  - " + "\n  - ".join(prompt_failures))
+        sys.exit(1)
+
     # Show relevant snippets
     print("\n--- System (tone line only) ---")
     for line in system.splitlines():
@@ -101,7 +114,7 @@ def main():
         print("\n" + "=" * 60)
         print("Run with --live to call the API and check one caption for voice/CTA.")
         print("=" * 60)
-        return
+        sys.exit(0)
 
     print("\n" + "=" * 60)
     print("2. LIVE RUN (one chunk: days 1–10)")
@@ -113,16 +126,16 @@ def main():
     provider = (getattr(Config, "AI_PROVIDER", None) or "openai").strip().lower()
     if provider == "anthropic" and not getattr(Config, "ANTHROPIC_API_KEY", None):
         print("ANTHROPIC_API_KEY not set. Skipping live run.")
-        return
+        sys.exit(0)
     if provider != "anthropic" and not getattr(Config, "OPENAI_API_KEY", None):
         print("OPENAI_API_KEY not set. Skipping live run.")
-        return
+        sys.exit(0)
 
     header = _build_doc_header(intake, pack_start_date=_today_utc())
     content = ai_chat(system=system, user=user, temperature=0.6, max_tokens=6000)
     if not content:
         print("API returned empty content.")
-        return
+        sys.exit(1)
 
     full_chunk = content
     # Find first **Caption:** block (may be \n\n after label)
@@ -155,6 +168,7 @@ def main():
         print("  CTA behaviour: OK (caption includes a next step).")
     else:
         print("  Note: CTA may appear in later captions or Soft Promotion days.")
+    sys.exit(0)
 
 
 if __name__ == "__main__":

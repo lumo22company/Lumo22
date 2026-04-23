@@ -14,13 +14,11 @@ def test_imports():
     """Test that required packages are installed."""
     print("Testing imports...")
     try:
-        import flask
-        import supabase
-        print("✅ All packages imported successfully")
-        return True
+        import flask  # noqa: F401
+        import supabase  # noqa: F401
     except ImportError as e:
-        print(f"❌ Import error: {e}")
-        return False
+        raise AssertionError(f"Import error: {e}") from e
+    print("✅ All packages imported successfully")
 
 
 def test_config():
@@ -40,11 +38,7 @@ def test_config():
     else:
         print("✅ Supabase key configured")
 
-    if issues:
-        print(f"\n⚠️  Configuration issues: {', '.join(issues)}")
-        return False
-
-    return True
+    assert not issues, f"Configuration issues: {', '.join(issues)}"
 
 
 def test_supabase():
@@ -57,13 +51,11 @@ def test_supabase():
         # Light query that doesn't depend on existing data
         orders = svc.get_awaiting_intake_orders()
         print(f"✅ Supabase connected! (caption_orders accessible, {len(orders)} awaiting intake)")
-        return True
     except Exception as e:
-        print(f"❌ Supabase test failed: {e}")
-        print("   Make sure:")
-        print("   1. SUPABASE_URL and SUPABASE_KEY are correct")
-        print("   2. The caption_orders table exists")
-        return False
+        raise AssertionError(
+            f"Supabase test failed: {e}. Ensure SUPABASE_URL and SUPABASE_KEY are correct and "
+            "caption_orders exists."
+        ) from e
 
 
 def main():
@@ -85,8 +77,11 @@ def main():
     results = []
     for name, test_func in tests:
         try:
-            result = test_func()
-            results.append((name, result))
+            test_func()
+            results.append((name, True))
+        except AssertionError as e:
+            print(f"❌ {name}: {e}")
+            results.append((name, False))
         except Exception as e:
             print(f"❌ {name} test crashed: {e}")
             results.append((name, False))

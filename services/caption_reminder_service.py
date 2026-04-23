@@ -326,7 +326,9 @@ def run_reminders() -> Dict[str, Any]:
                 skipped += 1
                 continue
 
-            period_end_iso = datetime.utcfromtimestamp(period_end_ts).strftime("%Y-%m-%dT%H:%M:%SZ")
+            period_end_iso = datetime.fromtimestamp(
+                period_end_ts, tz=timezone.utc
+            ).strftime("%Y-%m-%dT%H:%M:%SZ")
             old_reminder_sent = order.get("reminder_sent_period_end")
             claim_pre = order_service.try_claim_pre_pack_reminder_sent(str(order["id"]), period_end_iso)
             if claim_pre is False:

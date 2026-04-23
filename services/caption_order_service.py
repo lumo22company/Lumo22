@@ -550,7 +550,7 @@ class CaptionOrderService:
         """
         if not order_id:
             return False
-        now_iso = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+        now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         try:
             result = (
                 self.client.table(self.table)
@@ -834,7 +834,7 @@ class CaptionOrderService:
 
     def update(self, order_id: str, updates: Dict[str, Any]) -> bool:
         """Update order (status, intake, captions_md)."""
-        updates["updated_at"] = datetime.utcnow().isoformat()
+        updates["updated_at"] = datetime.now(timezone.utc).isoformat()
         result = self.client.table(self.table).update(updates).eq("id", order_id).execute()
         return bool(result.data)
 
@@ -863,7 +863,7 @@ class CaptionOrderService:
         return self.update(order_id, updates)
 
     def set_generating(self, order_id: str) -> bool:
-        now_iso = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+        now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         return self.update(
             order_id,
             {"status": "generating", "delivery_last_attempt_at": now_iso},
@@ -881,7 +881,7 @@ class CaptionOrderService:
         delivery_archive before overwriting — subscriptions and one-offs — so Account → History can list
         past deliveries until the user removes the order from History."""
         row = self.get_by_id(order_id) or {}
-        now_iso = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+        now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         delivery_archive = coerce_json_list(row.get("delivery_archive"))
         prev_delivered = (row.get("delivered_at") or "").strip()
         prev_md = (row.get("captions_md") or "").strip()
@@ -989,7 +989,7 @@ class CaptionOrderService:
         err = (error_message or "").strip()
         if len(err) > max_error_len:
             err = err[: max_error_len - 3] + "..."
-        now_iso = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+        now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         ok = self.update(
             order_id,
             {
@@ -1147,7 +1147,7 @@ class CaptionOrderService:
         try:
             self.client.table(self.table).update({
                 "customer_email": new_email.strip().lower(),
-                "updated_at": datetime.utcnow().isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
             }).eq("customer_email", old_email.strip().lower()).execute()
             return True
         except Exception:
@@ -1260,7 +1260,7 @@ class CaptionOrderService:
         """Record that we sent the ~2h subscription intake reminder (idempotent)."""
         if not order_id:
             return False
-        now_iso = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+        now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         return self.update(order_id, {"intake_early_reminder_sent_at": now_iso})
 
     def get_by_stripe_subscription_id(self, stripe_subscription_id: str) -> Optional[Dict[str, Any]]:
@@ -1342,7 +1342,7 @@ class CaptionOrderService:
 
     def set_upgrade_reminder_sent(self, order_id: str) -> bool:
         """Record that we sent the one-off upgrade reminder for this order."""
-        now_iso = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+        now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         return self.update(order_id, {"upgrade_reminder_sent_at": now_iso})
 
     def try_claim_upgrade_reminder_sent(self, order_id: str) -> bool:

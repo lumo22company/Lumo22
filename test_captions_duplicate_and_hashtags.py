@@ -16,11 +16,8 @@ def test_hashtag_prompt():
         "**Hashtags:**",
     ]
     missing = [r for r in required if r not in prompt]
-    if missing:
-        print(f"FAIL: Hashtag prompt missing: {missing}")
-        return False
+    assert not missing, f"Hashtag prompt missing: {missing}"
     print("OK: Hashtag prompt contains required language")
-    return True
 
 
 def test_duplicate_guard():
@@ -34,22 +31,20 @@ def test_duplicate_guard():
         "skipping duplicate",
     ]
     missing = [r for r in required if r not in source]
-    if missing:
-        print(f"FAIL: Duplicate guard missing: {missing}")
-        return False
+    assert not missing, f"Duplicate guard missing: {missing}"
     print("OK: Duplicate delivery guard in place")
-    return True
 
 
 def main():
-    ok1 = test_hashtag_prompt()
-    ok2 = test_duplicate_guard()
     print("-" * 50)
-    if ok1 and ok2:
-        print("All verification checks passed.")
-        sys.exit(0)
-    print("Some checks failed.")
-    sys.exit(1)
+    try:
+        test_hashtag_prompt()
+        test_duplicate_guard()
+    except AssertionError as e:
+        print(f"Some checks failed: {e}")
+        sys.exit(1)
+    print("All verification checks passed.")
+    sys.exit(0)
 
 
 if __name__ == "__main__":

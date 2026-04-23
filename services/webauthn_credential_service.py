@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import base64
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from supabase import create_client, Client
@@ -84,7 +84,7 @@ class WebAuthnCredentialService:
             "sign_count": int(sign_count),
             "transports": transports,
             "friendly_name": (friendly_name or "").strip() or None,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
         }
         try:
             self.client.table(self.table).insert(row).execute()
