@@ -1030,28 +1030,33 @@ def captions_checkout_subscription_page():
     else:
         add_stories_url = None
     add_platforms_url = ("/captions" + captions_prefill) if platforms < 4 else None
-    return render_template(
-        'captions_checkout_subscription.html',
-        platforms=platforms,
-        selected=selected,
-        stories=stories,
-        api_url=api_url,
-        total_sub=total,
-        referral_discount_applies=False,
-        sub_first_month_display=None,
-        sub_thereafter_display=None,
-        currency_symbol=sym,
-        platforms_invalid=platforms_invalid,
-        add_stories_url=add_stories_url,
-        add_platforms_url=add_platforms_url,
-        back_to_captions_url=back_to_captions_url,
-        is_upgrade_from_oneoff=valid_copy_from_order,
-        first_charge_date=first_charge_date_str,
-        can_get_pack_now=can_get_pack_now,
-        get_pack_now_preselected=get_pack_now_preselected,
-        form_reminders_on=reminders_on,
-        checkout_business_name=business_name,
+    r = make_response(
+        render_template(
+            "captions_checkout_subscription.html",
+            platforms=platforms,
+            selected=selected,
+            stories=stories,
+            api_url=api_url,
+            total_sub=total,
+            referral_discount_applies=False,
+            sub_first_month_display=None,
+            sub_thereafter_display=None,
+            currency_symbol=sym,
+            platforms_invalid=platforms_invalid,
+            add_stories_url=add_stories_url,
+            add_platforms_url=add_platforms_url,
+            back_to_captions_url=back_to_captions_url,
+            is_upgrade_from_oneoff=valid_copy_from_order,
+            first_charge_date=first_charge_date_str,
+            can_get_pack_now=can_get_pack_now,
+            get_pack_now_preselected=get_pack_now_preselected,
+            form_reminders_on=reminders_on,
+            checkout_business_name=business_name,
+        )
     )
+    r.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    r.headers["Pragma"] = "no-cache"
+    return r
 
 
 @app.route('/privacy')
