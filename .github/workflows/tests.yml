@@ -1,4 +1,4 @@
-# Run fast, no-secrets tests on every push/PR to main.
+# Run pytest (no real secrets) on every push/PR to main — full suite with placeholder Supabase.
 name: Tests
 
 on:
@@ -21,10 +21,10 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt pytest
 
-      - name: Run marketing + auth guard tests
+      - name: Run full pytest suite
         env:
-          # Same pattern as test_remediation_security.py — app loads without real Supabase
+          # Placeholder Supabase — real client init is mocked in tests that need it (see test_referral_code_check).
           SUPABASE_URL: https://example.supabase.co
           SUPABASE_KEY: ci-placeholder-key
         run: |
-          pytest test_marketing_opt_in.py test_remediation_security.py -v
+          pytest . --ignore=scripts -v --tb=short
