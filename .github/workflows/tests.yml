@@ -10,19 +10,19 @@ on:
 jobs:
   pytest:
     runs-on: ubuntu-latest
-    env:
-      # Use Node 24 for JS-based actions (checkout/setup-python) before runner removes Node 20.
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
+        id: setup-py
         with:
           python-version: "3.12"
           cache: pip
 
       - name: Install dependencies
-        run: pip install -r requirements.txt pytest
+        run: |
+          "${{ steps.setup-py.outputs.python-path }}" -m pip install --upgrade pip
+          "${{ steps.setup-py.outputs.python-path }}" -m pip install -r requirements.txt pytest
 
       - name: Run full pytest suite
         env:
@@ -30,4 +30,4 @@ jobs:
           SUPABASE_URL: https://example.supabase.co
           SUPABASE_KEY: ci-placeholder-key
         run: |
-          python -m pytest . --ignore=scripts -v --tb=short
+          "${{ steps.setup-py.outputs.python-path }}" -m pytest . --ignore=scripts -v --tb=short
