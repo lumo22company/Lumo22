@@ -253,7 +253,7 @@
                 if (data && data.status === 'ok' && data.intake_url) {
                   noSessionEl.style.display = 'none';
                   if (emailFallbackNoSession) emailFallbackNoSession.style.display = 'none';
-                  showIntakeWithAuth(data.intake_url, data.customer_email || null, !!data.is_subscription, !!data.is_prefilled_from_oneoff, data.email_recovery_token || '', !!data.subscription_first_pack_immediate, !!data.customer_has_account);
+                  showIntakeWithAuth(data.intake_url, data.customer_email || null, !!data.is_subscription, !!data.is_prefilled_from_oneoff, data.email_recovery_token || '', !!data.subscription_first_pack_immediate, !!data.customer_has_account, data.include_stories !== false);
                   formLinkEl.style.display = 'block';
                 } else {
                   if (emailError) { emailError.textContent = data && data.error ? data.error : 'No order found for this email.'; emailError.style.display = 'block'; }
@@ -366,10 +366,12 @@
         }, delayMs);
       }
 
-      function showIntake(url, customerEmail, isSubscription, isPrefilledFromOneoff, emailRecoveryToken, firstPackImmediate, mePayload, customerHasAccount) {
+      function showIntake(url, customerEmail, isSubscription, isPrefilledFromOneoff, emailRecoveryToken, firstPackImmediate, mePayload, customerHasAccount, includeStories) {
         clearSubscriptionIntakeRedirect();
         url = intakeUrlWithCheckoutFlag(url, isSubscription);
         customerHasAccount = !!customerHasAccount;
+        /* API omits include_stories on older deploys — treat as true so we do not under-promise Story Ideas. */
+        var hasStoryIdeas = includeStories !== false;
         recoveryToken = (emailRecoveryToken || recoveryToken || '');
         firstPackImmediate = !!firstPackImmediate;
         var thankyouBox = document.getElementById('thankyou-box');
@@ -491,8 +493,12 @@
           var epFirst = 'margin:1rem 0 0;font-size:0.95rem;line-height:1.55;color:var(--lum-text-muted);max-width:36rem;';
           var leadWhite = 'margin:0 0 0.65rem;font-size:1.08rem;line-height:1.55;color:#ffffff;max-width:34rem;';
           var pDetails = 'Your details are carried over from your one-off pack — open the form to tell us what\'s happening in the month ahead or edit anytime. Edits are free and help keep your next packs aligned with your brand.';
-          var pAcct = 'You can add or remove platforms and Story Ideas and manage your subscription from your account.';
-          var pRead = 'We recommend reading through all of your captions and Story Ideas before you start posting, to review and tweak them if you need to.';
+          var pAcct = hasStoryIdeas
+            ? 'You can add or remove platforms and Story Ideas and manage your subscription from your account.'
+            : 'You can add or remove platforms and manage your subscription from your account.';
+          var pRead = hasStoryIdeas
+            ? 'We recommend reading through all of your captions and Story Ideas before you start posting, to review and tweak them if you need to.'
+            : 'We recommend reading through all of your captions before you start posting, to review and tweak them if you need to.';
           /* #thankyou-email-msg is a <p>; use a div for the lead so we do not nest <p> inside <p>. */
           emailMsgEl.innerHTML = '<div class="thankyou-subscription-active-lead" style="' + leadWhite + '">' + leadText + accountSuffix + '</div>'
             + '<p style="' + epFirst + '">' + pDetails + '</p>'
@@ -639,17 +645,17 @@
         }
       }
 
-      function showIntakeWithAuth(url, customerEmail, isSubscription, isPrefilledFromOneoff, emailRecoveryToken, firstPackImmediate, customerHasAccount) {
+      function showIntakeWithAuth(url, customerEmail, isSubscription, isPrefilledFromOneoff, emailRecoveryToken, firstPackImmediate, customerHasAccount, includeStories) {
         fetch('/api/auth/me', { credentials: 'same-origin' })
           .then(function(r) {
             if (!r.ok) return null;
             return r.json();
           })
           .then(function(me) {
-            showIntake(url, customerEmail, isSubscription, isPrefilledFromOneoff, emailRecoveryToken, firstPackImmediate, me, customerHasAccount);
+            showIntake(url, customerEmail, isSubscription, isPrefilledFromOneoff, emailRecoveryToken, firstPackImmediate, me, customerHasAccount, includeStories);
           })
           .catch(function() {
-            showIntake(url, customerEmail, isSubscription, isPrefilledFromOneoff, emailRecoveryToken, firstPackImmediate, null, customerHasAccount);
+            showIntake(url, customerEmail, isSubscription, isPrefilledFromOneoff, emailRecoveryToken, firstPackImmediate, null, customerHasAccount, includeStories);
           });
       }
 
@@ -663,7 +669,7 @@
       function onResponse(data) {
         if (data && data.status === 'ok' && data.intake_url) {
           intakeShown = true;
-          showIntakeWithAuth(data.intake_url, data.customer_email || null, !!data.is_subscription, !!data.is_prefilled_from_oneoff, data.email_recovery_token || '', !!data.subscription_first_pack_immediate, !!data.customer_has_account);
+          showIntakeWithAuth(data.intake_url, data.customer_email || null, !!data.is_subscription, !!data.is_prefilled_from_oneoff, data.email_recovery_token || '', !!data.subscription_first_pack_immediate, !!data.customer_has_account, data.include_stories !== false);
           return true;
         }
         return false;
@@ -710,7 +716,7 @@
               .then(function(data) {
                 if (data && data.status === 'ok' && data.intake_url) {
                   intakeShown = true;
-                  showIntakeWithAuth(data.intake_url, data.customer_email || null, !!data.is_subscription, !!data.is_prefilled_from_oneoff, data.email_recovery_token || '', !!data.subscription_first_pack_immediate, !!data.customer_has_account);
+                  showIntakeWithAuth(data.intake_url, data.customer_email || null, !!data.is_subscription, !!data.is_prefilled_from_oneoff, data.email_recovery_token || '', !!data.subscription_first_pack_immediate, !!data.customer_has_account, data.include_stories !== false);
                   if (emailFallback) emailFallback.style.display = 'none';
                 } else {
                   if (emailError) { emailError.textContent = data && data.error ? data.error : 'No order found for this email.'; emailError.style.display = 'block'; }
@@ -848,7 +854,7 @@
           .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
           .then(function(res) {
             if (res.ok && res.data && res.data.status === 'ok') {
-              showIntakeWithAuth((res.data && res.data.intake_url) || intakeLinkEl.href, email, !!res.data.is_subscription, !!res.data.is_prefilled_from_oneoff, (res.data && res.data.email_recovery_token) || '', !!(res.data && res.data.subscription_first_pack_immediate), !!(res.data && res.data.customer_has_account));
+              showIntakeWithAuth((res.data && res.data.intake_url) || intakeLinkEl.href, email, !!res.data.is_subscription, !!res.data.is_prefilled_from_oneoff, (res.data && res.data.email_recovery_token) || '', !!(res.data && res.data.subscription_first_pack_immediate), !!(res.data && res.data.customer_has_account), (res.data && res.data.include_stories) !== false);
               if (wrongEmailSuccessEl) wrongEmailSuccessEl.style.display = 'block';
               if (wrongEmailFormEl) wrongEmailFormEl.style.display = 'none';
             } else {

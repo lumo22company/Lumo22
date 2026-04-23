@@ -934,7 +934,7 @@ def captions_correct_email():
         return jsonify({"status": "error", "error": "Email addresses do not match."}), 400
     try:
         import stripe
-        from services.caption_order_service import CaptionOrderService
+        from services.caption_order_service import CaptionOrderService, order_includes_stories_addon
     except Exception:
         return jsonify({"status": "error", "error": "Service unavailable."}), 503
     order_service = CaptionOrderService()
@@ -993,6 +993,7 @@ def captions_correct_email():
             "is_subscription": is_sub,
             "is_prefilled_from_oneoff": is_pref,
             "subscription_first_pack_immediate": subscription_first_pack_immediate,
+            "include_stories": order_includes_stories_addon(updated),
             "customer_has_account": _order_email_has_customer_account(new_email),
         }), 200
     except Exception as e:
@@ -1524,7 +1525,7 @@ def captions_intake_link():
     if not session_id:
         return jsonify({"error": "Missing session_id"}), 400
     try:
-        from services.caption_order_service import CaptionOrderService
+        from services.caption_order_service import CaptionOrderService, order_includes_stories_addon
         order_service = CaptionOrderService()
     except Exception:
         return jsonify({"error": "Service unavailable"}), 503
@@ -1695,6 +1696,7 @@ def captions_intake_link():
         "is_subscription": is_subscription,
         "is_prefilled_from_oneoff": is_prefilled_from_oneoff,
         "subscription_first_pack_immediate": subscription_first_pack_immediate,
+        "include_stories": order_includes_stories_addon(order),
         "customer_has_account": _order_email_has_customer_account(customer_email),
     }), 200
 
@@ -1720,7 +1722,7 @@ def captions_intake_link_by_email():
     if email != customer_email:
         return jsonify({"status": "error", "error": "This email does not match your account."}), 403
     try:
-        from services.caption_order_service import CaptionOrderService
+        from services.caption_order_service import CaptionOrderService, order_includes_stories_addon
         order_service = CaptionOrderService()
     except Exception:
         return jsonify({"error": "Service unavailable"}), 503
@@ -1764,6 +1766,7 @@ def captions_intake_link_by_email():
         "is_subscription": is_subscription,
         "is_prefilled_from_oneoff": is_prefilled_from_oneoff,
         "subscription_first_pack_immediate": subscription_first_pack_immediate,
+        "include_stories": order_includes_stories_addon(order),
         "customer_has_account": _order_email_has_customer_account(email),
     }), 200
 
