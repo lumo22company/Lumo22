@@ -29,6 +29,7 @@ def _account_url():
 
 
 def _send_plan_change_confirmation_with_webhook_dedupe(
+    order_id: str,
     subscription_id: str,
     customer_email: str,
     new_platforms: int,
@@ -42,26 +43,28 @@ def _send_plan_change_confirmation_with_webhook_dedupe(
     pack_sooner_next_checkout_note: bool = False,
 ) -> None:
     """
-    Send plan-change confirmation and record the same dedupe key Stripe webhooks use.
-    Avoids duplicate emails when subscription.updated arrives around the same time as this API response.
+    Send plan-change confirmation using the same DB dedupe as Stripe subscription.updated.
+    Avoids duplicate emails when the webhook and this API run close together (any worker).
     """
-    from api.webhooks import (
-        _mark_plan_change_email_sent,
-        _plan_change_dedupe_key,
-        _plan_change_email_recently_sent,
-    )
+    from api.webhooks import _plan_change_dedupe_key
+    from services.caption_order_service import CaptionOrderService
     from services.notifications import NotificationService
 
+    oid = (order_id or "").strip()
     sid = (subscription_id or "").strip()
     em = (customer_email or "").strip()
     if not sid or not em or "@" not in em:
         return
     key = _plan_change_dedupe_key(sid, em, int(new_platforms), bool(new_stories))
-    if _plan_change_email_recently_sent(key):
-        print(f"[billing] plan-change email deduped (recent send or webhook) sub={sid[:18]}...")
+    co = CaptionOrderService()
+    claim = co.try_claim_plan_change_confirmation_sent(oid, key) if oid else None
+    if claim is False:
+        print(f"[billing] plan-change email deduped (DB) sub={sid[:18]}...")
         return
+    if claim is None and oid:
+        print(f"[billing] plan-change dedupe RPC unavailable; sending anyway order={oid[:8]}...")
     try:
-        NotificationService().send_plan_change_confirmation_email(
+        ok = NotificationService().send_plan_change_confirmation_email(
             em,
             change_summary=change_summary,
             when_effective=when_effective,
@@ -72,8 +75,11 @@ def _send_plan_change_confirmation_with_webhook_dedupe(
             pack_sooner_next_checkout_note=pack_sooner_next_checkout_note,
             include_stories_in_pack=new_stories,
         )
-        _mark_plan_change_email_sent(key)
+        if not ok and claim is True and oid:
+            co.release_plan_change_confirmation_claim(oid)
     except Exception as e:
+        if claim is True and oid:
+            co.release_plan_change_confirmation_claim(oid)
         print(f"[billing] Plan change confirmation email failed: {e}")
 
 
@@ -454,6 +460,7 @@ def apply_pack_sooner_paid_plan_and_anchor(
             old_sym, old_amt = _subscription_monthly_price(currency, order_platforms, order_has_stories)
             new_sym, new_amt = _subscription_monthly_price(currency, new_platforms, new_stories)
             _send_plan_change_confirmation_with_webhook_dedupe(
+                str(order["id"]),
                 subscription_id,
                 customer_email,
                 new_platforms,
@@ -828,6 +835,7 @@ def add_stories_to_subscription():
             old_sym, old_amt = _subscription_monthly_price(currency, platforms, False)
             new_sym, new_amt = _subscription_monthly_price(currency, platforms, True)
             _send_plan_change_confirmation_with_webhook_dedupe(
+                str(order["id"]),
                 subscription_id,
                 customer_email,
                 platforms,
@@ -991,6 +999,7 @@ def reduce_subscription():
         old_sym, old_amt = _subscription_monthly_price(currency, order_platforms, order_has_stories)
         new_sym, new_amt = _subscription_monthly_price(currency, new_platforms, new_stories)
         _send_plan_change_confirmation_with_webhook_dedupe(
+            str(order["id"]),
             subscription_id,
             customer_email,
             new_platforms,
@@ -1176,6 +1185,7 @@ def change_subscription_plan():
         old_sym, old_amt = _subscription_monthly_price(currency, order_platforms, order_has_stories)
         new_sym, new_amt = _subscription_monthly_price(currency, new_platforms, new_stories)
         _send_plan_change_confirmation_with_webhook_dedupe(
+            str(order["id"]),
             subscription_id,
             customer_email,
             new_platforms,

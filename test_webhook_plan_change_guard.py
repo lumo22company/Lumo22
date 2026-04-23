@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 """Regression tests for Stripe subscription.updated plan-change email guard."""
 
+from unittest.mock import MagicMock
+
 from api.webhooks import (
-    _mark_plan_change_email_sent,
     _plan_change_dedupe_key,
-    _plan_change_email_dedupe,
-    _plan_change_email_recently_sent,
     _should_send_plan_change_email,
 )
 
@@ -31,28 +30,15 @@ def test_plan_change_email_dedupe_key_is_stable():
     assert key == "sub_123|user@example.com|3|0"
 
 
-def test_plan_change_email_dedupe_ttl_window():
-    _plan_change_email_dedupe.clear()
-    key = _plan_change_dedupe_key("sub_123", "user@example.com", 2, True)
-    assert _plan_change_email_recently_sent(key, now_ts=1000.0) is False
-    _mark_plan_change_email_sent(key, now_ts=1000.0)
-    assert _plan_change_email_recently_sent(key, now_ts=1200.0) is True
-    # After TTL (1 hour), it should no longer dedupe.
-    assert _plan_change_email_recently_sent(key, now_ts=5000.0) is False
-
-
-def test_billing_plan_change_helper_respects_webhook_dedupe(monkeypatch):
-    """After webhook marks dedupe, billing must not send a second identical plan-change email."""
-    import time
-
+def test_billing_plan_change_helper_skips_when_db_claim_false(monkeypatch):
+    """When try_claim_plan_change_confirmation_sent returns False, do not send email."""
     from api import billing_routes
     from services.notifications import NotificationService
 
-    _plan_change_email_dedupe.clear()
-    key = _plan_change_dedupe_key("sub_abcd", "client@example.com", 2, False)
-    # Use a current unix time so TTL cleanup does not drop the entry before the helper runs.
-    now = time.time()
-    _mark_plan_change_email_sent(key, now_ts=now)
+    co_mock = MagicMock()
+    co_mock.try_claim_plan_change_confirmation_sent.return_value = False
+
+    monkeypatch.setattr("services.caption_order_service.CaptionOrderService", lambda: co_mock)
     sent = []
 
     def _fake_send(self, customer_email, **kwargs):
@@ -60,6 +46,7 @@ def test_billing_plan_change_helper_respects_webhook_dedupe(monkeypatch):
 
     monkeypatch.setattr(NotificationService, "send_plan_change_confirmation_email", _fake_send)
     billing_routes._send_plan_change_confirmation_with_webhook_dedupe(
+        "11111111-1111-1111-1111-111111111111",
         "sub_abcd",
         "client@example.com",
         2,
@@ -71,3 +58,35 @@ def test_billing_plan_change_helper_respects_webhook_dedupe(monkeypatch):
         business_name="Biz",
     )
     assert sent == []
+    co_mock.try_claim_plan_change_confirmation_sent.assert_called_once()
+
+
+def test_billing_releases_plan_change_claim_when_send_returns_false(monkeypatch):
+    """Failed SendGrid send clears DB claim so a later retry can email."""
+    from api import billing_routes
+    from services.notifications import NotificationService
+
+    co_mock = MagicMock()
+    co_mock.try_claim_plan_change_confirmation_sent.return_value = True
+    released = []
+
+    def _release(oid):
+        released.append(oid)
+
+    co_mock.release_plan_change_confirmation_claim.side_effect = _release
+    monkeypatch.setattr("services.caption_order_service.CaptionOrderService", lambda: co_mock)
+    monkeypatch.setattr(NotificationService, "send_plan_change_confirmation_email", lambda *a, **k: False)
+
+    billing_routes._send_plan_change_confirmation_with_webhook_dedupe(
+        "22222222-2222-2222-2222-222222222222",
+        "sub_test",
+        "x@y.com",
+        2,
+        True,
+        change_summary="What changed: test.",
+        when_effective="Next pack.",
+        new_price_display="£1",
+        old_price_display="£2",
+        business_name=None,
+    )
+    assert released == ["22222222-2222-2222-2222-222222222222"]

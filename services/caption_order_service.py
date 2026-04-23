@@ -51,6 +51,12 @@ def _is_intake_early_reminder_column_missing(exc: Exception) -> bool:
     return "PGRST204" in s and "intake_early_reminder_sent_at" in s
 
 
+def _is_plan_change_confirmation_columns_missing(exc: Exception) -> bool:
+    """PostgREST when plan_change_confirmation_* columns were never migrated."""
+    s = str(exc)
+    return "PGRST204" in s and "plan_change_confirmation" in s
+
+
 def _is_unique_stripe_session_violation(exc: Exception) -> bool:
     """True if insert failed because stripe_session_id already exists (PostgREST / Postgres)."""
     s = str(exc).lower()
@@ -749,6 +755,62 @@ class CaptionOrderService:
                 return None
             print(f"[CaptionOrderService] try_claim_pre_pack_reminder_sent (non-fatal): {e!r}")
             return None
+
+    def try_claim_plan_change_confirmation_sent(self, order_id: str, signature: str) -> Optional[bool]:
+        """
+        Atomically record plan-change confirmation dedupe for this order + signature (1-hour window).
+        Returns True if this caller should send, False if duplicate within TTL, None if RPC/columns missing.
+        """
+        if not order_id or not (signature or "").strip():
+            return False
+        try:
+            result = self.client.rpc(
+                "claim_plan_change_confirmation",
+                {"p_order_id": order_id, "p_signature": (signature or "").strip()},
+            ).execute()
+            data = result.data
+            if data is True:
+                return True
+            if data is False:
+                return False
+            if isinstance(data, list) and len(data) == 1:
+                v = data[0]
+                if isinstance(v, dict) and len(v) == 1:
+                    v = next(iter(v.values()))
+                return bool(v)
+            return bool(data)
+        except Exception as e:
+            s = str(e).lower()
+            if "claim_plan_change_confirmation" in s or "pgrst202" in s or "42883" in s:
+                print(
+                    "[CaptionOrderService] claim_plan_change_confirmation RPC missing — run "
+                    "database_caption_orders_plan_change_confirmation_dedupe.sql in Supabase."
+                )
+                return None
+            if _is_plan_change_confirmation_columns_missing(e):
+                print(
+                    "[CaptionOrderService] plan_change_confirmation columns missing — run "
+                    "database_caption_orders_plan_change_confirmation_dedupe.sql in Supabase."
+                )
+                return None
+            print(f"[CaptionOrderService] try_claim_plan_change_confirmation_sent (non-fatal): {e!r}")
+            return None
+
+    def release_plan_change_confirmation_claim(self, order_id: str) -> None:
+        """Clear plan-change confirmation claim after a failed send so Stripe retry / user action can retry."""
+        if not order_id:
+            return
+        try:
+            self.client.table(self.table).update(
+                {
+                    "plan_change_confirmation_signature": None,
+                    "plan_change_confirmation_sent_at": None,
+                }
+            ).eq("id", order_id).execute()
+        except Exception as e:
+            if _is_plan_change_confirmation_columns_missing(e):
+                return
+            print(f"[CaptionOrderService] release_plan_change_confirmation_claim (non-fatal): {e!r}")
 
     def restore_reminder_sent_period_end(self, order_id: str, previous_value) -> None:
         """Restore reminder_sent_period_end after a failed pre-pack email send (previous_value may be None)."""

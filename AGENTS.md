@@ -16,5 +16,6 @@ After pulling changes that mention duplicate emails or reminder jobs, confirm th
 4. **`database_caption_orders_one_off_intake_reminder_sent_at.sql`** — one-off 24–48h form reminder dedupe.
 5. **`database_caption_orders_upgrade_reminder.sql`** — one-off upgrade reminder (`upgrade_reminder_sent_at` / opt-out).
 6. **`database_caption_orders_claim_pre_pack_reminder.sql`** — RPC `claim_pre_pack_reminder` (atomic pre-pack reminder when cron and in-app scheduler overlap).
+7. **`database_caption_orders_plan_change_confirmation_dedupe.sql`** — `plan_change_confirmation_*` + RPC `claim_plan_change_confirmation` (atomic plan-change confirmation when Stripe webhooks and billing API overlap).
 
 If a migration is missing, logs usually mention the column or function name; run the matching file and redeploy.

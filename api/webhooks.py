@@ -3,7 +3,6 @@ Webhook handlers for third-party integrations.
 Allows external services to send leads to the system.
 """
 import re
-import time
 from typing import Any, Dict, Optional
 
 from flask import Blueprint, request, jsonify, current_app
@@ -12,8 +11,7 @@ webhook_bp = Blueprint('webhooks', __name__, url_prefix='/webhooks')
 
 # --- Stripe (30 Days Captions) ---
 CAPTIONS_AMOUNT_PENCE = 9700  # £97
-_plan_change_email_dedupe = {}
-_PLAN_CHANGE_DEDUPE_TTL_SECONDS = 60 * 60  # 1 hour
+
 
 def _sanitize_base_url(raw: str) -> str:
     """Remove non-printable ASCII (e.g. newline from env) so URLs are valid."""
@@ -114,25 +112,8 @@ def _should_send_plan_change_email(
 
 
 def _plan_change_dedupe_key(sub_id: str, email: str, new_platforms: int, new_stories: bool) -> str:
-    """Stable key for webhook plan-change confirmation dedupe."""
+    """Stable key for plan-change confirmation dedupe (DB RPC + billing API)."""
     return f"{(sub_id or '').strip().lower()}|{(email or '').strip().lower()}|{int(new_platforms)}|{1 if new_stories else 0}"
-
-
-def _plan_change_email_recently_sent(dedupe_key: str, now_ts: float | None = None) -> bool:
-    """True when this plan-change email key was sent recently in this process."""
-    now = float(now_ts if now_ts is not None else time.time())
-    # Opportunistic cleanup to keep dict bounded.
-    stale_before = now - _PLAN_CHANGE_DEDUPE_TTL_SECONDS
-    stale = [k for k, sent_at in _plan_change_email_dedupe.items() if sent_at < stale_before]
-    for k in stale:
-        _plan_change_email_dedupe.pop(k, None)
-    sent_at = _plan_change_email_dedupe.get(dedupe_key)
-    return bool(sent_at and (now - sent_at) < _PLAN_CHANGE_DEDUPE_TTL_SECONDS)
-
-
-def _mark_plan_change_email_sent(dedupe_key: str, now_ts: float | None = None) -> None:
-    """Record this plan-change key as sent for TTL-based dedupe."""
-    _plan_change_email_dedupe[dedupe_key] = float(now_ts if now_ts is not None else time.time())
 
 
 def _checkout_session_metadata(session) -> dict:
@@ -1259,8 +1240,6 @@ def stripe_webhook():
                 merge_platform_list_with_stripe_count,
                 subscription_platforms_and_stories_from_stripe,
             )
-            from services.caption_order_service import CaptionOrderService
-            order_service = CaptionOrderService()
             if customer_email and "@" in customer_email:
                 account_url = base + "/account"
                 try:
@@ -1314,23 +1293,41 @@ def stripe_webhook():
                     new_sym, new_amt = _subscription_monthly_price(currency, new_platforms, new_stories)
                     notif = NotificationService()
                     dedupe_key = _plan_change_dedupe_key(sub_id, customer_email, new_platforms, new_stories)
-                    if _plan_change_email_recently_sent(dedupe_key):
+                    oid = str(order.get("id") or "").strip()
+                    claim = (
+                        order_service.try_claim_plan_change_confirmation_sent(oid, dedupe_key)
+                        if oid
+                        else None
+                    )
+                    if claim is False:
                         print(
-                            f"[Stripe webhook] subscription.updated: plan-change email deduped for {sub_id[:20]}... "
-                            f"({new_platforms} platforms, stories={1 if new_stories else 0})"
+                            f"[Stripe webhook] subscription.updated: plan-change email deduped (DB) for "
+                            f"{sub_id[:20]}... ({new_platforms} platforms, stories={1 if new_stories else 0})"
                         )
                         return jsonify({"received": True}), 200
-                    notif.send_plan_change_confirmation_email(
-                        customer_email,
-                        change_summary=change_summary,
-                        when_effective=when_effective,
-                        account_url=account_url,
-                        new_price_display=f"{new_sym}{new_amt}",
-                        old_price_display=f"{old_sym}{old_amt}",
-                        business_name=((order.get("intake") or {}).get("business_name") if isinstance(order, dict) else None),
-                    )
-                    _mark_plan_change_email_sent(dedupe_key)
-                    print(f"[Stripe webhook] Plan change confirmation sent to {customer_email}")
+                    if claim is None and oid:
+                        print(
+                            f"[Stripe webhook] subscription.updated: plan-change dedupe RPC unavailable; "
+                            f"sending anyway for order {oid[:8]}..."
+                        )
+                    try:
+                        ok = notif.send_plan_change_confirmation_email(
+                            customer_email,
+                            change_summary=change_summary,
+                            when_effective=when_effective,
+                            account_url=account_url,
+                            new_price_display=f"{new_sym}{new_amt}",
+                            old_price_display=f"{old_sym}{old_amt}",
+                            business_name=((order.get("intake") or {}).get("business_name") if isinstance(order, dict) else None),
+                        )
+                        if not ok and claim is True and oid:
+                            order_service.release_plan_change_confirmation_claim(oid)
+                        if ok:
+                            print(f"[Stripe webhook] Plan change confirmation sent to {customer_email}")
+                    except Exception as send_exc:
+                        if claim is True and oid:
+                            order_service.release_plan_change_confirmation_claim(oid)
+                        raise send_exc
                 except Exception as e:
                     print(f"[Stripe webhook] Plan change confirmation email failed: {e}")
             return jsonify({"received": True}), 200
