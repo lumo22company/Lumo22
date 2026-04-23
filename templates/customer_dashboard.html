@@ -856,7 +856,8 @@
           if (editFormFirstLink) {
             if (copyFrom) {
               var upgradeStories = (storiesCb && storiesCb.checked) ? '1' : '0';
-              var editParams = 't=' + encodeURIComponent(copyFrom) + '&return_url=' + encodeURIComponent('/account/upgrade') + '&edit=1&upgrade_stories=' + upgradeStories + '&platforms=' + encodeURIComponent(String(n)) + '&currency=' + encodeURIComponent(currency);
+              var upgradeReturn = '/account/upgrade' + (getPackToday ? '?get_pack_now=1' : '');
+              var editParams = 't=' + encodeURIComponent(copyFrom) + '&return_url=' + encodeURIComponent(upgradeReturn) + '&edit=1&upgrade_stories=' + upgradeStories + '&platforms=' + encodeURIComponent(String(n)) + '&currency=' + encodeURIComponent(currency);
               if (selected) editParams += '&selected=' + encodeURIComponent(selected);
               if (getPackToday) editParams += '&get_pack_now=1';
               editFormFirstLink.href = '/captions-intake?' + editParams;
@@ -945,6 +946,17 @@
           }
         }
         syncFromPrefill();
+        (function applyGetPackNowFromUrl() {
+          try {
+            var gp = (new URLSearchParams(window.location.search).get('get_pack_now') || '').toLowerCase();
+            if (gp === '1' || gp === 'true' || gp === 'yes' || gp === 'on') {
+              if (getPackTodayCb && !getPackTodayCb.disabled) {
+                getPackTodayCb.checked = true;
+                updatePrice();
+              }
+            }
+          } catch (e) {}
+        })();
       })();
       </script>
       {% endif %}

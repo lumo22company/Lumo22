@@ -1005,6 +1005,11 @@ def captions_checkout_subscription_page():
         params["business_name"] = business_name
     if business_key:
         params["business_key"] = business_key
+    # Hub links with get_pack_now=1; must pass through to summary api_url and checkbox (was dropped here before).
+    get_pack_now_arg = request.args.get("get_pack_now", "").strip().lower() in ("1", "true", "yes", "on")
+    get_pack_now_preselected = bool(valid_copy_from_order and can_get_pack_now and get_pack_now_arg)
+    if get_pack_now_preselected:
+        params["get_pack_now"] = "1"
     q = urlencode(params)
     api_url = f"/api/captions-checkout-subscription?{q}" if not platforms_invalid else None
     total = prices["sub"] + (platforms - 1) * prices["extra_sub"] + (prices["stories_sub"] if stories else 0)
@@ -1043,6 +1048,7 @@ def captions_checkout_subscription_page():
         is_upgrade_from_oneoff=valid_copy_from_order,
         first_charge_date=first_charge_date_str,
         can_get_pack_now=can_get_pack_now,
+        get_pack_now_preselected=get_pack_now_preselected,
         form_reminders_on=reminders_on,
         checkout_business_name=business_name,
     )

@@ -104,7 +104,7 @@
       {% if can_get_pack_now|default(false) %}
       <div id="get-pack-now-option" style="margin: 1rem 0 1rem; padding: 1rem; background: rgba(255,242,0,0.08); border: 1px solid rgba(255,242,0,0.35); border-radius: 8px;">
         <label style="display: flex; align-items: flex-start; gap: 0.75rem; cursor: pointer;">
-          <input type="checkbox" id="get-pack-now-checkbox" name="get_pack_now" value="1" style="margin-top: 0.2rem;">
+          <input type="checkbox" id="get-pack-now-checkbox" name="get_pack_now" value="1" style="margin-top: 0.2rem;"{% if get_pack_now_preselected|default(false) %} checked{% endif %}>
           <span style="color: #fff;">
             <strong>Get your first pack now</strong> — charged today; first pack sent right away. Next bill in 30 days.
           </span>
