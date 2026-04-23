@@ -214,6 +214,59 @@ def test_no_infer_two_oneoffs_before_sub_without_name():
     assert "tok-b" not in out
 
 
+def test_oneoff_not_blocked_when_only_cancelled_empty_upgrade_shell():
+    """Cancelled upgrade row that never delivered must not hide the delivered base one-off from account lists."""
+    from app import _oneoff_base_blocked_by_living_upgrade
+
+    tok = "tok-kk-oneoff"
+    orders = [
+        {"token": tok, "status": "delivered", "delivered_at": "2026-01-01", "stripe_subscription_id": None},
+        {
+            "token": "tok-bad-sub",
+            "status": "awaiting_intake",
+            "stripe_subscription_id": None,
+            "subscription_cancelled_at": "2026-04-01T00:00:00Z",
+            "upgraded_from_token": tok,
+        },
+    ]
+    assert _oneoff_base_blocked_by_living_upgrade(orders, tok) is False
+
+
+def test_oneoff_blocked_when_active_subscription_references_token():
+    from app import _oneoff_base_blocked_by_living_upgrade
+
+    tok = "tok-kk-oneoff"
+    orders = [
+        {"token": tok, "status": "delivered", "stripe_subscription_id": None},
+        {
+            "token": "tok-sub",
+            "status": "awaiting_intake",
+            "stripe_subscription_id": "sub_live123",
+            "subscription_cancelled_at": None,
+            "upgraded_from_token": tok,
+        },
+    ]
+    assert _oneoff_base_blocked_by_living_upgrade(orders, tok) is True
+
+
+def test_oneoff_blocked_when_delivered_subscription_references_token():
+    from app import _oneoff_base_blocked_by_living_upgrade
+
+    tok = "tok-kk-oneoff"
+    orders = [
+        {"token": tok, "status": "delivered", "stripe_subscription_id": None},
+        {
+            "token": "tok-sub",
+            "status": "delivered",
+            "delivered_at": "2026-05-01",
+            "stripe_subscription_id": None,
+            "subscription_cancelled_at": "2026-06-01",
+            "upgraded_from_token": tok,
+        },
+    ]
+    assert _oneoff_base_blocked_by_living_upgrade(orders, tok) is True
+
+
 if __name__ == "__main__":
     test_infer_when_sub_row_has_no_business_name_in_db()
     test_infer_ampersand_matches_and_in_business_name()
@@ -223,4 +276,7 @@ if __name__ == "__main__":
     test_no_infer_when_second_oneoff_between()
     test_no_infer_two_oneoffs_before_sub_without_name()
     test_one_off_eligible_former_sub_even_if_awaiting_intake()
+    test_oneoff_not_blocked_when_only_cancelled_empty_upgrade_shell()
+    test_oneoff_blocked_when_active_subscription_references_token()
+    test_oneoff_blocked_when_delivered_subscription_references_token()
     print("OK")

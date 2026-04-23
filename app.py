@@ -2091,6 +2091,28 @@ def _infer_consumed_oneoff_tokens(caption_orders: list, upgraded_from_tokens: se
     return inferred
 
 
+def _oneoff_base_blocked_by_living_upgrade(caption_orders: list, oneoff_token: str) -> bool:
+    """
+    True when some order row references this one-off token via upgraded_from_token and that
+    upgrade still "counts": an active Stripe subscription and/or a delivered subscription pack.
+
+    If the only referencing rows are cancelled or awaiting_intake shells that never delivered,
+    return False so the customer still sees their delivered one-off under Upgrade and Edit form
+    (they can upgrade again or contact support).
+    """
+    tok = (oneoff_token or "").strip()
+    if not tok:
+        return False
+    for r in caption_orders or []:
+        if (r.get("upgraded_from_token") or "").strip() != tok:
+            continue
+        if _order_has_active_stripe_subscription(r):
+            return True
+        if (r.get("status") or "").strip().lower() == "delivered" or bool(r.get("delivered_at")):
+            return True
+    return False
+
+
 def _account_attach_orders_linked_by_oneoff_upgrade(email: str, caption_orders: list, co_svc) -> None:
     """
     Append caption_orders rows that list upgraded_from_token pointing at an order already in this list,
@@ -2364,12 +2386,17 @@ def _account_context_build(customer: dict, section: Optional[str] = None) -> dic
     # Hide one-off rows whose token was consumed as an upgrade base—but never hide former
     # subscription rows: a newer order may set upgraded_from_token to a cancelled sub’s token,
     # and that cancelled row must still appear under Cancelled subscriptions / resubscribe.
+    # Also: if the only subscription row(s) pointing at this token never went live (cancelled
+    # before delivery, awaiting_intake shell), keep showing the delivered one-off for Upgrade/Edit.
     one_off_orders = [
         o
         for o in one_off_orders
         if (
             (o.get("token") or "").strip() not in upgraded_from_tokens
             or _order_is_former_subscription_row(o)
+            or not _oneoff_base_blocked_by_living_upgrade(
+                caption_orders, (o.get("token") or "").strip()
+            )
         )
         and not _order_hidden_from_account(o)
     ]
