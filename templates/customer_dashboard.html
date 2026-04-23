@@ -119,22 +119,11 @@
               <button type="button" class="account-billing-portal-link account-btn-swipe-light" id="passkey-add-btn">Add passkey</button>
             </div>
           </div>
-          <div class="account-info-row{% if request.args.get('billing') == 'no_sub' %} account-info-row--no-divider-below{% endif %}">
-            <div>
-              <span class="account-info-label">Manage Billing</span>
-              <div class="account-info-value">Edit payment method, download invoices, cancel subscription.</div>
-            </div>
-            <div class="account-info-actions">
-              {% if billing_accounts and billing_accounts[0].order_token %}
-              <a href="/api/billing/portal?order_token={{ billing_accounts[0].order_token }}" class="account-billing-portal-link account-btn-swipe-light">Manage billing</a>
-            {% else %}
-              <a href="/api/billing/portal" class="account-billing-portal-link account-btn-swipe-light">Manage billing</a>
-            {% endif %}
-            </div>
-          </div>
     {% if request.args.get('billing') == 'no_sub' %}
-          <div class="account-billing-no-sub-box">
-            No subscription found. If you're on the monthly plan, use the link in your order emails to manage billing.
+          <div class="account-info-row account-info-row--no-divider-below">
+            <div class="account-billing-no-sub-box">
+            No subscription found. If you're on the monthly plan, use the link in your order emails to manage billing, or open <strong>Manage subscription</strong> and use <strong>Manage billing</strong> on your pack.
+            </div>
           </div>
     {% endif %}
           <div class="account-info-row account-info-row--marketing">
