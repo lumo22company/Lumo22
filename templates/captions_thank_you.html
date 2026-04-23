@@ -384,6 +384,7 @@
           emailMatchesSession = Boolean(sessEm && orderEm && sessEm === orderEm);
         }
         var isLoggedIn = bodyLoggedIn || emailMatchesSession;
+        var subPackTodayLineHidden = !!(firstPackImmediate && isSubscription && isPrefilledFromOneoff);
         var prefilledEditLine = '';
         var timingPart = '';
         var accountSuffix = '';
@@ -395,11 +396,7 @@
           leadText = customerEmail
             ? 'Your subscription is active. Your first pack is on the way — we\'ll email <strong>' + escapeHtml(customerEmail) + '</strong> shortly (usually within a few minutes).'
             : 'Your subscription is active. Your first pack is on the way — we\'ll email you shortly (usually within a few minutes).';
-          if (isLoggedIn) {
-            prefilledEditLine = ' Your details are carried over from your one-off pack — open the form to review or edit anytime, and manage your subscription from your account.';
-          } else {
-            prefilledEditLine = ' Your details are carried over from your one-off pack. If you are not signed in, use Log in below with the email you used at checkout, then open the form to review or edit.';
-          }
+          prefilledEditLine = '';
         } else if (isPrefilledFromOneoff) {
           if (isSubscription && isLoggedIn) {
             leadText = customerEmail
@@ -456,7 +453,6 @@
           }
         }
 
-        var subPackTodayLineHidden = !!(firstPackImmediate && isSubscription && isPrefilledFromOneoff);
         if (isSubscription && !subPackTodayLineHidden) {
           timingPart = '';
         }
@@ -486,14 +482,25 @@
           sectionTitle.textContent = 'Your first pack is on the way';
         }
 
-        emailMsgEl.innerHTML = leadText + accountSuffix;
+        if (subPackTodayLineHidden) {
+          var epBody = 'margin:0.85rem 0 0;font-size:0.95rem;line-height:1.55;color:var(--lum-text-muted);max-width:36rem;';
+          var epFirst = 'margin:1rem 0 0;font-size:0.95rem;line-height:1.55;color:var(--lum-text-muted);max-width:36rem;';
+          var pDetails = 'Your details are carried over from your one-off pack — open the form to tell us what\'s happening in the month ahead or edit anytime. Edits are free and help keep your next packs aligned with your brand.';
+          var pAcct = 'You can add or remove platforms and Story Ideas and manage your subscription from your account.';
+          var pRead = 'We recommend reading through all of your captions and Story Ideas before you start posting, to review and tweak them if you need to.';
+          emailMsgEl.innerHTML = leadText + accountSuffix
+            + '<p style="' + epFirst + '">' + pDetails + '</p>'
+            + '<p style="' + epBody + '">' + pAcct + '</p>'
+            + '<p style="' + epBody + '">' + pRead + '</p>';
+        } else {
+          emailMsgEl.innerHTML = leadText + accountSuffix;
+        }
         var productNudgeEl = document.getElementById('thankyou-product-nudge');
         if (productNudgeEl) {
           productNudgeEl.innerHTML = '';
           productNudgeEl.style.display = 'none';
-          if (firstPackImmediate && isSubscription && isPrefilledFromOneoff) {
-            productNudgeEl.innerHTML = 'When you have a moment, open your form to <strong>review or tweak</strong> your details—edits are free and help keep your next packs aligned with your brand.';
-            productNudgeEl.style.display = 'block';
+          if (subPackTodayLineHidden) {
+            /* Copy merged into thankyou-email-msg for this path. */
           } else if (isSubscription) {
             productNudgeEl.innerHTML = 'For <strong>subscriptions</strong>, finishing this form <strong>soon after payment</strong> helps your first 30-day caption calendar match your <strong>Stripe billing period</strong>. If you come back much later, you still get <strong>30 forward-looking postable days</strong> from when you submit—but the dates may no longer line up with the start of the period you already paid for.';
             productNudgeEl.style.display = 'block';
@@ -506,9 +513,8 @@
         if (laterHintEl) {
           laterHintEl.style.display = 'none';
           laterHintEl.textContent = '';
-          if (firstPackImmediate && isSubscription && isPrefilledFromOneoff) {
-            laterHintEl.textContent = 'We will email this link again. Reviewing your form soon helps keep future packs on-brand.';
-            laterHintEl.style.display = 'block';
+          if (subPackTodayLineHidden) {
+            /* Hint covered in main copy for get-pack-today upgrade thank-you. */
           } else if (isSubscription) {
             laterHintEl.textContent = 'We will email this link again. Your first pack is only sent after you submit the form—waiting does not start delivery, and waiting can shift your caption dates away from your billing anchor.';
             laterHintEl.style.display = 'block';
@@ -533,11 +539,21 @@
         }
         var nextStepWrap = document.getElementById('thankyou-next-step-wrap');
         if (nextStepWrap) {
-          nextStepWrap.style.display = 'block';
-          nextStepWrap.setAttribute('aria-hidden', 'false');
+          if (subPackTodayLineHidden) {
+            nextStepWrap.style.display = 'none';
+            nextStepWrap.setAttribute('aria-hidden', 'true');
+          } else {
+            nextStepWrap.style.display = 'block';
+            nextStepWrap.setAttribute('aria-hidden', 'false');
+          }
         }
         formLinkEl.style.display = 'block';
         formLinkEl.setAttribute('aria-hidden', 'false');
+        if (subPackTodayLineHidden && thankyouBox && emailMsgEl && formLinkEl && formLinkEl.parentNode === thankyouBox) {
+          try {
+            thankyouBox.insertBefore(emailMsgEl, formLinkEl);
+          } catch (e) {}
+        }
         if (wrongEmailWrapEl) {
           wrongEmailWrapEl.style.display = (customerEmail && recoveryToken) ? 'block' : 'none';
           if (wrongEmailFormEl) wrongEmailFormEl.style.display = 'none';
