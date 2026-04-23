@@ -163,9 +163,10 @@
         <p id="thankyou-oneoff-account-hint" style="display:none; margin: 1rem 0 0; font-size: 0.95rem; line-height: 1.5; color: var(--lum-text-muted);">You already have a Lumo 22 account for this email. <a id="thankyou-oneoff-login-link" href="/login" style="color: var(--lum-gold); font-weight: 600; text-decoration: none; border-bottom: 1px solid var(--lum-gold);">Log in</a> to access captions in your dashboard when they are ready.</p>
         <p id="thankyou-oneoff-signup-wrap" style="display:none; margin: 1rem 0 0; font-size: 0.95rem; line-height: 1.5; color: var(--lum-text-muted);">Optional: <a id="thankyou-oneoff-signup-link" href="/signup" style="color: var(--lum-gold); font-weight: 600; text-decoration: none; border-bottom: 1px solid var(--lum-gold);">Sign up</a> with this email prefilled, then open the form link above (or from your inbox).</p>
         <div id="thankyou-create-account" style="display: none; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.15);">
-          <h2 style="font-size: 1.15rem; margin: 0 0 0.5rem;">Create your account</h2>
-          <p style="font-size: 0.95rem; color: var(--lum-text-muted); margin: 0 0 1rem; line-height: 1.5;">Set a password (at least 12 characters and 1 number) so you can log in and manage your subscription. We'll send a verification link to your email to confirm your address.</p>
+          <h2 id="thankyou-account-heading" style="font-size: 1.15rem; margin: 0 0 0.5rem;">Create your account</h2>
+          <p id="thankyou-account-lead" style="font-size: 0.95rem; color: var(--lum-text-muted); margin: 0 0 1rem; line-height: 1.5;">Set a password (at least 12 characters and 1 number) so you can log in and manage your subscription. We'll send a verification link to your email to confirm your address.</p>
           <p id="thankyou-login-hint" style="font-size: 0.9rem; color: var(--lum-text-muted); margin: 0 0 1rem; line-height: 1.5;">Already have an account? <a id="thankyou-login-link" href="/login" style="color: var(--lum-gold); font-weight: 600; text-decoration: none; border-bottom: 1px solid var(--lum-gold);">Log in</a> to manage your subscription—you won’t need to create a second account.</p>
+          <p id="thankyou-signup-fallback-caption" style="display: none; font-size: 0.85rem; color: var(--lum-text-muted); margin: 0 0 0.75rem; line-height: 1.45;">Only if you still need to set a Lumo password for this email:</p>
           <div id="signup-form-wrap" style="max-width: 320px;">
             <label for="signup-email" style="display:block; font-size: 0.9rem; margin-bottom: 0.25rem;">Email</label>
             <input type="email" id="signup-email" style="width: 100%; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: #ffffff; color: #1a1a1a; font-size: 1rem; margin-bottom: 0.75rem;" placeholder="your@email.com">
@@ -302,6 +303,41 @@
         }
       }
 
+      var THANKYOU_ACCT_PANEL_DEFAULTS = null;
+      function captureThankyouAcctPanelDefaultsOnce() {
+        if (THANKYOU_ACCT_PANEL_DEFAULTS) return;
+        var h = document.getElementById('thankyou-account-heading');
+        var lead = document.getElementById('thankyou-account-lead');
+        var hint = document.getElementById('thankyou-login-hint');
+        if (h && lead && hint) {
+          THANKYOU_ACCT_PANEL_DEFAULTS = {
+            heading: h.textContent,
+            leadHtml: lead.innerHTML,
+            hintHtml: hint.innerHTML
+          };
+        }
+      }
+      function applyThankyouAcctPanelUpgradeRecovery(showRecovery) {
+        captureThankyouAcctPanelDefaultsOnce();
+        var h = document.getElementById('thankyou-account-heading');
+        var lead = document.getElementById('thankyou-account-lead');
+        var hint = document.getElementById('thankyou-login-hint');
+        var cap = document.getElementById('thankyou-signup-fallback-caption');
+        var d = THANKYOU_ACCT_PANEL_DEFAULTS;
+        if (!h || !lead || !hint || !d) return;
+        if (showRecovery) {
+          h.textContent = 'Sign in to continue';
+          lead.innerHTML = 'You already used your Lumo account to subscribe. If this page does not show you as signed in, log in with the <strong>same email as your order</strong>, then open <strong>Review your form</strong> below.';
+          hint.innerHTML = '<a id="thankyou-login-link" href="/login" style="color: var(--lum-gold); font-weight: 600; text-decoration: none; border-bottom: 1px solid var(--lum-gold);">Log in</a> with that email first. If you are already signed in elsewhere, try refreshing this page.';
+          if (cap) cap.style.display = 'block';
+        } else {
+          h.textContent = d.heading;
+          lead.innerHTML = d.leadHtml;
+          hint.innerHTML = d.hintHtml;
+          if (cap) cap.style.display = 'none';
+        }
+      }
+
       function scheduleIntakeRedirectAfterThankYou(url, isSubscription, isLoggedIn, customerEmail, isPrefilledFromOneoff) {
         clearSubscriptionIntakeRedirect();
         if (!isSubscription || !url) return;
@@ -353,6 +389,8 @@
         var accountSuffix = '';
         var leadText = '';
 
+        var upgradeGuestRecoverySuffix = ' If this page does not show you as signed in, use <strong>Log in</strong> below with the same email you used at checkout, then open your form. <strong>Create your account</strong> there is only if you still need to set a password for that email.';
+
         if (firstPackImmediate && isSubscription && isPrefilledFromOneoff) {
           leadText = customerEmail
             ? 'Your subscription is active. Your first pack is on the way — we\'ll email <strong>' + escapeHtml(customerEmail) + '</strong> shortly (usually within a few minutes).'
@@ -360,7 +398,7 @@
           if (isLoggedIn) {
             prefilledEditLine = ' Your details are carried over from your one-off pack — open the form to review or edit anytime, and manage your subscription from your account.';
           } else {
-            prefilledEditLine = ' Your details are carried over from your one-off pack. Log in or create your account below, then open the form to review or edit.';
+            prefilledEditLine = ' Your details are carried over from your one-off pack. If you are not signed in, use Log in below with the email you used at checkout, then open the form to review or edit.';
           }
         } else if (isPrefilledFromOneoff) {
           if (isSubscription && isLoggedIn) {
@@ -383,7 +421,7 @@
           }
           timingPart = '';
           if (isSubscription && !isLoggedIn) {
-            accountSuffix = ' Create your account below (set a password) so you can log in and manage your subscription. We\'ll send a verification link to your email.';
+            accountSuffix = upgradeGuestRecoverySuffix;
           } else if (!isSubscription) {
             accountSuffix = '';
           }
@@ -414,7 +452,7 @@
 
         if (firstPackImmediate && isSubscription && isPrefilledFromOneoff) {
           if (isSubscription && !isLoggedIn) {
-            accountSuffix = ' Create your account below (set a password) so you can log in and manage your subscription. We\'ll send a verification link to your email.';
+            accountSuffix = upgradeGuestRecoverySuffix;
           }
         }
 
@@ -513,6 +551,7 @@
         if (createAccountEl) {
           if (isSubscription && !isLoggedIn && customerEmail) {
             createAccountEl.style.display = 'block';
+            applyThankyouAcctPanelUpgradeRecovery(!!(isPrefilledFromOneoff && isSubscription));
             var signupEmail = document.getElementById('signup-email');
             var signupEmailConfirm = document.getElementById('signup-email-confirm');
             if (signupEmail) signupEmail.value = customerEmail;
@@ -523,6 +562,7 @@
             if (signupError) { signupError.style.display = 'none'; signupError.textContent = ''; }
           } else {
             createAccountEl.style.display = 'none';
+            applyThankyouAcctPanelUpgradeRecovery(false);
           }
         }
         var thankyouLoginLink = document.getElementById('thankyou-login-link');
