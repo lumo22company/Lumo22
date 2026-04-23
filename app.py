@@ -2106,10 +2106,26 @@ def _account_attach_orders_linked_by_oneoff_upgrade(email: str, caption_orders: 
     tokens = {(o.get("token") or "").strip() for o in caption_orders if (o.get("token") or "").strip()}
     if not tokens:
         return
+    covered_uft = set()
+    for o in caption_orders:
+        uft = (o.get("upgraded_from_token") or "").strip()
+        if uft and (o.get("stripe_subscription_id") or "").strip():
+            covered_uft.add(uft)
+    extras = list(co_svc.get_by_upgraded_from_tokens(list(tokens)) or [])
+    extras.sort(
+        key=lambda r: (
+            0 if (r.get("stripe_subscription_id") or "").strip() else 1,
+            -_account_order_created_sort_key(r),
+        )
+    )
     before = len(caption_orders)
-    for row in co_svc.get_by_upgraded_from_tokens(list(tokens)) or []:
+    for row in extras:
         rid = row.get("id")
         if not rid or rid in seen_ids:
+            continue
+        uft = (row.get("upgraded_from_token") or "").strip()
+        rsid = (row.get("stripe_subscription_id") or "").strip()
+        if uft and not rsid and uft in covered_uft:
             continue
         remail = (row.get("customer_email") or "").strip().lower()
         rcus = (row.get("stripe_customer_id") or "").strip()
@@ -2117,8 +2133,38 @@ def _account_attach_orders_linked_by_oneoff_upgrade(email: str, caption_orders: 
             continue
         seen_ids.add(rid)
         caption_orders.append(row)
+        if uft and rsid:
+            covered_uft.add(uft)
     if len(caption_orders) > before:
         caption_orders.sort(key=_account_order_created_sort_key, reverse=True)
+
+
+def _account_prune_phantom_upgrade_shells(caption_orders: list) -> None:
+    """
+    Drop duplicate upgrade checkout shells: same upgraded_from_token as another row that has a
+    Stripe subscription id, but this row has no subscription id and is still awaiting_intake.
+    """
+    from collections import defaultdict
+
+    by_uft = defaultdict(list)
+    for i, o in enumerate(caption_orders):
+        uft = (o.get("upgraded_from_token") or "").strip()
+        if uft:
+            by_uft[uft].append(i)
+    to_pop: list = []
+    for idxs in by_uft.values():
+        if len(idxs) < 2:
+            continue
+        if not any((caption_orders[i].get("stripe_subscription_id") or "").strip() for i in idxs):
+            continue
+        for i in idxs:
+            o = caption_orders[i]
+            if (o.get("stripe_subscription_id") or "").strip():
+                continue
+            if (o.get("status") or "").strip().lower() == "awaiting_intake":
+                to_pop.append(i)
+    for i in sorted(set(to_pop), reverse=True):
+        caption_orders.pop(i)
 
 
 def _account_fetch_merged_orders_and_stripe_billing(customer: dict):
@@ -2129,6 +2175,7 @@ def _account_fetch_merged_orders_and_stripe_billing(customer: dict):
     co_svc = CaptionOrderService()
     caption_orders = co_svc.get_by_customer_email_including_stripe_customer(email)
     _account_attach_orders_linked_by_oneoff_upgrade(email, caption_orders, co_svc)
+    _account_prune_phantom_upgrade_shells(caption_orders)
     _account_merge_order_rows(caption_orders)
     subscription_billing = _load_account_stripe_subscription_data(caption_orders)
     return caption_orders, subscription_billing
@@ -2149,6 +2196,7 @@ def _account_context_build(customer: dict, section: Optional[str] = None) -> dic
         co_svc = CaptionOrderService()
         caption_orders = co_svc.get_by_customer_email_including_stripe_customer(email)
         _account_attach_orders_linked_by_oneoff_upgrade(email, caption_orders, co_svc)
+        _account_prune_phantom_upgrade_shells(caption_orders)
         if defer:
             _init_subscription_pause_placeholders(caption_orders)
             with ThreadPoolExecutor(max_workers=1) as pool:

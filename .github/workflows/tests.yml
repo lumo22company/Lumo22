@@ -10,6 +10,9 @@ on:
 jobs:
   pytest:
     runs-on: ubuntu-latest
+    env:
+      # Use Node 24 for JS-based actions (checkout/setup-python) before runner removes Node 20.
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - uses: actions/checkout@v4
 
@@ -27,4 +30,4 @@ jobs:
           SUPABASE_URL: https://example.supabase.co
           SUPABASE_KEY: ci-placeholder-key
         run: |
-          pytest . --ignore=scripts -v --tb=short
+          python -m pytest . --ignore=scripts -v --tb=short
