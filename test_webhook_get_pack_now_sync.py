@@ -12,7 +12,7 @@ def test_get_pack_now_copies_intake_with_subscription_overrides():
     subscription_order = {
         "id": "sub-order-1",
         "stripe_subscription_id": "sub_123",
-        "stripe_checkout_session_id": session_id,
+        "stripe_session_id": session_id,
         "selected_platforms": "LinkedIn, Pinterest",
         "include_stories": False,
     }
@@ -29,6 +29,11 @@ def test_get_pack_now_copies_intake_with_subscription_overrides():
     class FakeOrderService:
         last_saved = None
 
+        def get_by_id(self, oid):
+            if str(subscription_order.get("id")) == str(oid):
+                return subscription_order
+            return None
+
         def get_by_stripe_session_id(self, sid):
             return subscription_order if sid == session_id else None
 
@@ -44,6 +49,9 @@ def test_get_pack_now_copies_intake_with_subscription_overrides():
         "data": {
             "object": {
                 "id": session_id,
+                "mode": "subscription",
+                "subscription": "sub_123",
+                "payment_status": "paid",
                 "amount_total": 15300,
                 "metadata": {
                     "product": "captions_subscription",

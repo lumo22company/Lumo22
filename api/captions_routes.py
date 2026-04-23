@@ -1656,6 +1656,28 @@ def captions_intake_link():
     )
     if not intake_url:
         return jsonify({"status": "pending"}), 200
+    # Upgrade + get pack now: thank-you polls here when webhooks are missed (e.g. stripe listen not running).
+    # Same intake copy + delivery thread as checkout.session.completed.
+    if subscription_first_pack_immediate:
+        st_ord = (order.get("status") or "").strip().lower()
+        if st_ord != "delivered" and (getattr(Config, "STRIPE_SECRET_KEY", None) or "").strip():
+            try:
+                import stripe
+
+                stripe.api_key = Config.STRIPE_SECRET_KEY.strip()
+                full = stripe.checkout.Session.retrieve(
+                    session_id,
+                    expand=["line_items", "customer_details", "customer"],
+                )
+                sess_d = full.to_dict() if hasattr(full, "to_dict") else dict(full)
+                try_schedule_upgrade_get_pack_now_delivery(
+                    order_service,
+                    order,
+                    sess_d,
+                    log_prefix="[captions-intake-link] get_pack_now",
+                )
+            except Exception as e:
+                print(f"[captions-intake-link] get_pack_now reconcile failed: {e!r}")
     customer_email = (order.get("customer_email") or "").strip()
     # Only send intake email when WE created the order (fallback); if order existed, webhook already sent
     print(f"[captions-intake-link] Returning intake_url for session_id={session_id[:20]}...")
@@ -1791,6 +1813,125 @@ def _subscription_pack_delivery_recent_duplicate(order_id: str) -> bool:
 def _subscription_pack_delivery_register(order_id: str) -> None:
     with _SUB_PACK_DELIVERY_DEDUPE_LOCK:
         _SUB_PACK_DELIVERY_DEDUPE[order_id] = time.monotonic()
+
+
+def _checkout_session_dict(session: Any) -> dict:
+    """Stripe Checkout Session as plain dict for upgrade delivery helpers."""
+    if isinstance(session, dict):
+        return session
+    if session is not None and hasattr(session, "to_dict"):
+        try:
+            return session.to_dict()
+        except Exception:
+            pass
+    try:
+        return dict(session)
+    except Exception:
+        return {}
+
+
+def _checkout_session_metadata_dict(session: dict) -> dict:
+    m = session.get("metadata") if isinstance(session, dict) else None
+    if isinstance(m, dict):
+        return m
+    if m is not None and hasattr(m, "to_dict"):
+        try:
+            return m.to_dict()
+        except Exception:
+            pass
+    try:
+        return dict(m) if m is not None else {}
+    except Exception:
+        return {}
+
+
+def try_schedule_upgrade_get_pack_now_delivery(
+    order_service: Any,
+    order: dict,
+    session: Any,
+    *,
+    log_prefix: str = "[get_pack_now]",
+) -> None:
+    """
+    Subscription upgrade with get_pack_now=1: copy intake from one-off onto the subscription row and
+    start the same background delivery as checkout.session.completed (mirrors api/webhooks.py).
+
+    Safe to call repeatedly: skips if not this flow, already delivered, or dedupe window claims a run.
+    Used from the Stripe webhook and from /api/captions-intake-link when the webhook was missed (common in local testing).
+    """
+    sess = _checkout_session_dict(session)
+    meta = _checkout_session_metadata_dict(sess)
+    if (meta.get("product") or "").strip() != "captions_subscription":
+        return
+    if str(meta.get("get_pack_now") or "").strip().lower() not in ("1", "true", "yes", "on"):
+        return
+    copy_from = (meta.get("copy_from") or "").strip()
+    if not copy_from:
+        return
+    ps = (sess.get("payment_status") or "").strip().lower()
+    if ps not in ("paid", "no_payment_required"):
+        print(f"{log_prefix} payment_status={ps!r}; skip immediate delivery")
+        return
+
+    oid = str(order.get("id") or "").strip()
+    if not oid:
+        return
+    fresh = order_service.get_by_id(oid) or order
+    order = fresh
+    status = (order.get("status") or "").strip().lower()
+    if status == "delivered":
+        return
+
+    s_cs = (sess.get("id") or "").strip()
+    s_sub = (sess.get("subscription") or "").strip()
+    if isinstance(s_sub, dict):
+        s_sub = (s_sub.get("id") or "").strip()
+    o_cs = (order.get("stripe_session_id") or "").strip()
+    o_sub = (order.get("stripe_subscription_id") or "").strip()
+    bind_ok = False
+    if s_cs and o_cs and s_cs == o_cs:
+        bind_ok = True
+    elif s_sub and o_sub and s_sub == o_sub:
+        bind_ok = True
+    elif s_cs and not o_cs and s_sub and o_sub and s_sub == o_sub:
+        # Row may not have stripe_session_id yet; subscription id match is enough.
+        bind_ok = True
+    if not bind_ok:
+        print(
+            f"{log_prefix} session/order bind failed (session={s_cs[:16] if s_cs else ''}… "
+            f"order_cs={o_cs[:16] if o_cs else ''}… sub_match={bool(s_sub and o_sub and s_sub == o_sub)}); skip"
+        )
+        return
+
+    one_off = order_service.get_by_token(copy_from)
+    if not order or not one_off:
+        print(f"{log_prefix} order or one-off not found (copy_from={copy_from[:12]}…); skip immediate delivery")
+        return
+    intake = one_off.get("intake") if isinstance(one_off.get("intake"), dict) else None
+    if not intake:
+        print(f"{log_prefix} one-off order has no intake, skipping immediate delivery")
+        return
+
+    try:
+        synced_intake = dict(intake)
+        selected = (order.get("selected_platforms") or "").strip()
+        if selected:
+            synced_intake["platform"] = selected
+        synced_intake["include_stories"] = bool(order.get("include_stories"))
+        order_service.save_intake(order["id"], synced_intake)
+        if _subscription_pack_delivery_recent_duplicate(str(order["id"])):
+            print(f"{log_prefix} delivery dedupe window active for order {order['id']}; skip duplicate thread")
+            return
+        _subscription_pack_delivery_register(str(order["id"]))
+        thread = threading.Thread(target=_run_generation_and_deliver, args=(str(order["id"]),))
+        thread.daemon = False
+        thread.start()
+        print(f"{log_prefix} copied intake, delivery started for order {order['id']}")
+    except Exception as e:
+        import traceback
+
+        print(f"{log_prefix} delivery schedule failed: {e!r}")
+        traceback.print_exc()
 
 
 def _run_generation_and_deliver(

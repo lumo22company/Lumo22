@@ -1453,38 +1453,26 @@ def stripe_webhook():
                     detail = (str(e) or repr(e))[:400]
                     detail = "".join(c for c in detail if ord(c) < 128)
                     return jsonify({"error": "Handler failed", "detail": detail or "Unknown error"}), 500
-                # Upgrade + get pack now: one charge (subscription). Copy intake from one-off and deliver immediately; next pack in 30 days.
+                # Upgrade + get pack now: same path as thank-you reconcile (dedupe + bind checks in helper).
                 if is_captions_sub and (meta.get("get_pack_now") == "1") and (meta.get("copy_from") or "").strip():
-                    try:
-                        from services.caption_order_service import CaptionOrderService
-                        from api.captions_routes import _run_generation_and_deliver
-                        import threading
-                        session_id = session.get("id") if isinstance(session, dict) else getattr(session, "id", None)
-                        copy_from = (meta.get("copy_from") or "").strip()
-                        order_service = CaptionOrderService()
-                        order = order_service.get_by_stripe_session_id(session_id) if session_id else None
-                        one_off = order_service.get_by_token(copy_from) if copy_from else None
-                        if order and one_off:
-                            intake = one_off.get("intake") if isinstance(one_off.get("intake"), dict) else None
-                            if intake:
-                                synced_intake = dict(intake)
-                                selected = (order.get("selected_platforms") or "").strip()
-                                if selected:
-                                    synced_intake["platform"] = selected
-                                synced_intake["include_stories"] = bool(order.get("include_stories"))
-                                order_service.save_intake(order["id"], synced_intake)
-                                thread = threading.Thread(target=_run_generation_and_deliver, args=(order["id"],))
-                                thread.daemon = False
-                                thread.start()
-                                print(f"[Stripe webhook] get_pack_now: copied intake, delivery started for order {order['id']}")
-                            else:
-                                print(f"[Stripe webhook] get_pack_now: one-off order has no intake, skipping immediate delivery")
-                        else:
-                            print(f"[Stripe webhook] get_pack_now: order or one-off not found, skipping immediate delivery")
-                    except Exception as e:
-                        import traceback
-                        print(f"[Stripe webhook] get_pack_now delivery failed (non-fatal): {e}")
-                        traceback.print_exc()
+                    from services.caption_order_service import CaptionOrderService
+                    from api.captions_routes import try_schedule_upgrade_get_pack_now_delivery
+
+                    sid_gp = (session.get("id") or "").strip() if isinstance(session, dict) else ""
+                    order_service_gp = CaptionOrderService()
+                    order_gp = order_service_gp.get_by_stripe_session_id(sid_gp) if sid_gp else None
+                    if not order_gp:
+                        print(
+                            "[Stripe webhook] get_pack_now: no caption_orders row after checkout handler — "
+                            "returning 500 so Stripe retries (webhook race or missing email on session)."
+                        )
+                        return jsonify({"error": "caption order missing for get_pack_now checkout"}), 500
+                    try_schedule_upgrade_get_pack_now_delivery(
+                        order_service_gp,
+                        order_gp,
+                        session,
+                        log_prefix="[Stripe webhook] get_pack_now",
+                    )
             else:
                 print("[Stripe webhook] Not a captions payment; no action.")
 
