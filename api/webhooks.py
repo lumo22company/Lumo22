@@ -376,15 +376,33 @@ def _handle_captions_payment(session):
             "(e.g. thank-you API created it first); will still send checkout email if not claimed yet"
         )
         order = existing
-        if stripe_customer_id or stripe_subscription_id:
-            updates = {}
-            if stripe_customer_id and not existing.get("stripe_customer_id"):
-                updates["stripe_customer_id"] = stripe_customer_id
-            if stripe_subscription_id and not existing.get("stripe_subscription_id"):
-                updates["stripe_subscription_id"] = stripe_subscription_id
-            if updates:
-                order_service.update(existing["id"], updates)
-                order = {**existing, **updates}
+        updates = {}
+        if stripe_customer_id and not existing.get("stripe_customer_id"):
+            updates["stripe_customer_id"] = stripe_customer_id
+        if stripe_subscription_id and not existing.get("stripe_subscription_id"):
+            updates["stripe_subscription_id"] = stripe_subscription_id
+        copy_from_meta = (
+            (meta.get("copy_from") or "").strip()
+            if isinstance(meta, dict)
+            else str(getattr(meta, "copy_from", "") or "").strip()
+        )
+        copy_from_meta = copy_from_meta or None
+        session_mode = (
+            (session.get("mode") or "").strip().lower()
+            if isinstance(session, dict)
+            else str(getattr(session, "mode", "") or "").strip().lower()
+        )
+        is_sub_checkout = bool(stripe_subscription_id) or session_mode == "subscription"
+        if (
+            copy_from_meta
+            and is_sub_checkout
+            and stripe_subscription_id
+            and not (existing.get("upgraded_from_token") or "").strip()
+        ):
+            updates["upgraded_from_token"] = copy_from_meta
+        if updates:
+            order_service.update(existing["id"], updates)
+            order = {**existing, **updates}
         if stripe_subscription_id and isinstance(meta, dict) and "reminder_opt_out" in meta:
             try:
                 order_service.update(order["id"], {"reminder_opt_out": bool(reminder_opt_out)})
@@ -395,6 +413,12 @@ def _handle_captions_payment(session):
         try:
             copy_from = (meta.get("copy_from") or "").strip() if isinstance(meta, dict) else getattr(meta, "copy_from", None) or ""
             copy_from = str(copy_from).strip() if copy_from else None
+            session_mode = (
+                (session.get("mode") or "").strip().lower()
+                if isinstance(session, dict)
+                else str(getattr(session, "mode", "") or "").strip().lower()
+            )
+            is_sub_checkout = bool(stripe_subscription_id) or session_mode == "subscription"
             order = order_service.create_order(
                 customer_email=customer_email,
                 stripe_session_id=session_id,
@@ -404,7 +428,7 @@ def _handle_captions_payment(session):
                 selected_platforms=selected_platforms,
                 include_stories=include_stories,
                 currency=currency,
-                upgraded_from_token=copy_from if stripe_subscription_id else None,
+                upgraded_from_token=(copy_from if copy_from and is_sub_checkout else None),
             )
         except Exception as e:
             print(f"[Stripe webhook] Failed to create order in Supabase: {e}")

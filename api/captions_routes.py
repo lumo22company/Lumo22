@@ -983,13 +983,8 @@ def captions_correct_email():
         )
         updated = order_service.get_by_id(order_id) or updated
         _send_intake_email_for_order(updated, skip_checkout_confirmation_dedupe=True)
-        intake_url = _build_intake_url(updated)
-        is_sub = bool((updated.get("stripe_subscription_id") or "").strip())
-        is_pref = bool((updated.get("upgraded_from_token") or "").strip())
-        subscription_first_pack_immediate = (
-            is_sub
-            and is_pref
-            and _stripe_checkout_get_pack_now(session_id)
+        intake_url, is_sub, is_pref, subscription_first_pack_immediate = _thank_you_intake_fields(
+            updated, session_id, order_service
         )
         return jsonify({
             "status": "ok",
@@ -1296,22 +1291,94 @@ def _get_session_attr(session, key, default=None):
     return getattr(session, key, default)
 
 
-def _stripe_checkout_get_pack_now(session_id: Optional[str]) -> bool:
+def _stripe_checkout_session_thankyou_context(session_id: Optional[str]) -> Dict[str, Any]:
     """
-    True when Checkout Session metadata has get_pack_now (upgrade: charge today + first subscription pack generated now).
-    Used on thank-you page so copy can confirm the first pack is on the way vs deferred billing.
+    Single Stripe Checkout Session read for thank-you / intake-link JSON.
+    Used when the DB row is still partial (thank-you poll vs webhook race).
     """
+    empty: Dict[str, Any] = {
+        "get_pack_now": False,
+        "copy_from": None,
+        "stripe_subscription_id": None,
+        "mode": "",
+    }
     if not session_id or not (getattr(Config, "STRIPE_SECRET_KEY", None) or "").strip():
-        return False
+        return empty
     try:
         import stripe
         stripe.api_key = Config.STRIPE_SECRET_KEY.strip()
         session = stripe.checkout.Session.retrieve(session_id)
         meta = _get_session_attr(session, "metadata") or {}
-        v = meta.get("get_pack_now", "") if hasattr(meta, "get") else getattr(meta, "get_pack_now", "") or ""
-        return str(v).strip().lower() in ("1", "true", "yes", "on")
+        if hasattr(meta, "get"):
+            raw_pack = meta.get("get_pack_now", "") or ""
+            raw_cf = meta.get("copy_from", "") or ""
+        else:
+            raw_pack = getattr(meta, "get_pack_now", "") or ""
+            raw_cf = getattr(meta, "copy_from", "") or ""
+        cf = str(raw_cf).strip() or None
+        mode = str(_get_session_attr(session, "mode") or "").strip().lower()
+        sub = (_get_session_attr(session, "subscription") or "").strip() or None
+        return {
+            "get_pack_now": str(raw_pack).strip().lower() in ("1", "true", "yes", "on"),
+            "copy_from": cf,
+            "stripe_subscription_id": sub,
+            "mode": mode,
+        }
     except Exception:
-        return False
+        return empty
+
+
+def _stripe_checkout_get_pack_now(session_id: Optional[str]) -> bool:
+    """
+    True when Checkout Session metadata has get_pack_now (upgrade: charge today + first subscription pack generated now).
+    Used on thank-you page so copy can confirm the first pack is on the way vs deferred billing.
+    """
+    return bool(_stripe_checkout_session_thankyou_context(session_id).get("get_pack_now"))
+
+
+def _thank_you_intake_fields(
+    order: Dict[str, Any],
+    session_id: str,
+    order_service: Any,
+) -> tuple[str, bool, bool, bool]:
+    """
+    Intake URL + flags for captions thank-you UI. Merges Stripe session metadata when the order row
+    was created before subscription id / upgraded_from_token were persisted.
+    """
+    ctx = _stripe_checkout_session_thankyou_context((session_id or "").strip())
+    order_sub = (order.get("stripe_subscription_id") or "").strip()
+    order_up = (order.get("upgraded_from_token") or "").strip()
+    sess_sub = (ctx.get("stripe_subscription_id") or "").strip()
+    mode = (ctx.get("mode") or "").strip().lower()
+    meta_cf = (ctx.get("copy_from") or "").strip() or None
+
+    is_subscription = bool(order_sub or sess_sub or mode == "subscription")
+    is_prefilled_from_oneoff = bool(order_up or (meta_cf and is_subscription))
+    get_pack = bool(ctx.get("get_pack_now"))
+    subscription_first_pack_immediate = bool(
+        is_subscription and is_prefilled_from_oneoff and get_pack
+    )
+
+    if (
+        meta_cf
+        and not order_up
+        and is_subscription
+        and order_service is not None
+        and (order.get("id") if isinstance(order, dict) else None)
+    ):
+        try:
+            order_service.update(str(order["id"]), {"upgraded_from_token": meta_cf})
+            order = {**order, "upgraded_from_token": meta_cf}
+            order_up = meta_cf
+        except Exception as e:
+            print(f"[_thank_you_intake_fields] backfill upgraded_from_token failed: {e!r}")
+
+    intake_url = _build_intake_url(order)
+    if intake_url and meta_cf and "copy_from=" not in intake_url:
+        sep = "&" if "?" in intake_url else "?"
+        intake_url += sep + "copy_from=" + quote(meta_cf, safe="")
+
+    return intake_url, is_subscription, is_prefilled_from_oneoff, subscription_first_pack_immediate
 
 
 def _build_intake_url(order: dict) -> str:
@@ -1471,7 +1538,9 @@ def captions_intake_link():
                     currency = "gbp"
                 stripe_customer_id = (_get_session_attr(session, "customer") or "").strip() or None
                 stripe_subscription_id = (_get_session_attr(session, "subscription") or "").strip() or None
-                upgraded_from = copy_from if stripe_subscription_id else None
+                session_mode = str(_get_session_attr(session, "mode") or "").strip().lower()
+                is_sub_checkout = bool(stripe_subscription_id) or session_mode == "subscription"
+                upgraded_from = (copy_from if (copy_from and is_sub_checkout) else None)
                 order = order_service.create_order(
                     customer_email=customer_email,
                     stripe_session_id=session_id,
@@ -1499,18 +1568,13 @@ def captions_intake_link():
                 return jsonify({"status": "pending"}), 200
     if not order:
         return jsonify({"status": "pending"}), 200
-    intake_url = _build_intake_url(order)
+    intake_url, is_subscription, is_prefilled_from_oneoff, subscription_first_pack_immediate = (
+        _thank_you_intake_fields(order, session_id, order_service)
+    )
     if not intake_url:
         return jsonify({"status": "pending"}), 200
     customer_email = (order.get("customer_email") or "").strip()
     # Only send intake email when WE created the order (fallback); if order existed, webhook already sent
-    is_subscription = bool((order.get("stripe_subscription_id") or "").strip())
-    is_prefilled_from_oneoff = bool((order.get("upgraded_from_token") or "").strip())
-    subscription_first_pack_immediate = (
-        is_subscription
-        and is_prefilled_from_oneoff
-        and _stripe_checkout_get_pack_now(session_id)
-    )
     print(f"[captions-intake-link] Returning intake_url for session_id={session_id[:20]}...")
     return jsonify({
         "status": "ok",
@@ -1573,15 +1637,15 @@ def captions_intake_link_by_email():
     # the webhook confirmation when users hit "Get form link" after checkout.
     if (order.get("status") or "").strip().lower() == "awaiting_intake" and order.get("id"):
         _send_intake_email_for_order(order)
-    is_subscription = bool((order.get("stripe_subscription_id") or "").strip())
-    is_prefilled_from_oneoff = bool((order.get("upgraded_from_token") or "").strip())
     sid = (order.get("stripe_session_id") or "").strip()
-    subscription_first_pack_immediate = (
-        bool(sid)
-        and is_subscription
-        and is_prefilled_from_oneoff
-        and _stripe_checkout_get_pack_now(sid)
-    )
+    if sid:
+        intake_url, is_subscription, is_prefilled_from_oneoff, subscription_first_pack_immediate = _thank_you_intake_fields(
+            order, sid, order_service
+        )
+    else:
+        is_subscription = bool((order.get("stripe_subscription_id") or "").strip())
+        is_prefilled_from_oneoff = bool((order.get("upgraded_from_token") or "").strip())
+        subscription_first_pack_immediate = False
     return jsonify({
         "status": "ok",
         "intake_url": intake_url,
