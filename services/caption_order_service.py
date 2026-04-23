@@ -1279,6 +1279,27 @@ class CaptionOrderService:
             return result.data[0]
         return None
 
+    def get_by_upgraded_from_tokens(self, tokens: List[str]) -> list:
+        """
+        Orders whose upgraded_from_token is one of the given one-off tokens.
+        Used by account load to attach subscription rows that did not appear under the login email
+        or Stripe customer merge alone (checkout email mismatch, missing stripe_customer_id on row).
+        """
+        cleaned = sorted({(t or "").strip() for t in (tokens or []) if (t or "").strip()})
+        if not cleaned:
+            return []
+        try:
+            result = (
+                self.client.table(self.table)
+                .select("*")
+                .in_("upgraded_from_token", cleaned)
+                .order("created_at", desc=True)
+                .execute()
+            )
+            return list(result.data or [])
+        except Exception:
+            return []
+
     def set_reminder_sent(self, order_id: str, period_end_ts: str) -> bool:
         """Record that we sent a reminder for this billing period."""
         return self.update(order_id, {"reminder_sent_period_end": period_end_ts})

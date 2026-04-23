@@ -2091,6 +2091,36 @@ def _infer_consumed_oneoff_tokens(caption_orders: list, upgraded_from_tokens: se
     return inferred
 
 
+def _account_attach_orders_linked_by_oneoff_upgrade(email: str, caption_orders: list, co_svc) -> None:
+    """
+    Append caption_orders rows that list upgraded_from_token pointing at an order already in this list,
+    but were missing from get_by_customer_email_including_stripe_customer (checkout email typo,
+    missing stripe_customer_id on the subscription row while one-off row has the customer id, etc.).
+    Only attaches when the extra row matches the login email or a Stripe customer id already on the list.
+    """
+    em = (email or "").strip().lower()
+    if not em or not caption_orders:
+        return
+    seen_ids = {o.get("id") for o in caption_orders if o.get("id")}
+    known_cus = {(o.get("stripe_customer_id") or "").strip() for o in caption_orders if (o.get("stripe_customer_id") or "").strip()}
+    tokens = {(o.get("token") or "").strip() for o in caption_orders if (o.get("token") or "").strip()}
+    if not tokens:
+        return
+    before = len(caption_orders)
+    for row in co_svc.get_by_upgraded_from_tokens(list(tokens)) or []:
+        rid = row.get("id")
+        if not rid or rid in seen_ids:
+            continue
+        remail = (row.get("customer_email") or "").strip().lower()
+        rcus = (row.get("stripe_customer_id") or "").strip()
+        if remail != em and (not rcus or rcus not in known_cus):
+            continue
+        seen_ids.add(rid)
+        caption_orders.append(row)
+    if len(caption_orders) > before:
+        caption_orders.sort(key=_account_order_created_sort_key, reverse=True)
+
+
 def _account_fetch_merged_orders_and_stripe_billing(customer: dict):
     """Load orders, merge rows, run Stripe — used by /api/account/billing-data."""
     email = (customer.get("email") or "").strip()
@@ -2098,6 +2128,7 @@ def _account_fetch_merged_orders_and_stripe_billing(customer: dict):
 
     co_svc = CaptionOrderService()
     caption_orders = co_svc.get_by_customer_email_including_stripe_customer(email)
+    _account_attach_orders_linked_by_oneoff_upgrade(email, caption_orders, co_svc)
     _account_merge_order_rows(caption_orders)
     subscription_billing = _load_account_stripe_subscription_data(caption_orders)
     return caption_orders, subscription_billing
@@ -2117,6 +2148,7 @@ def _account_context_build(customer: dict, section: Optional[str] = None) -> dic
 
         co_svc = CaptionOrderService()
         caption_orders = co_svc.get_by_customer_email_including_stripe_customer(email)
+        _account_attach_orders_linked_by_oneoff_upgrade(email, caption_orders, co_svc)
         if defer:
             _init_subscription_pause_placeholders(caption_orders)
             with ThreadPoolExecutor(max_workers=1) as pool:
