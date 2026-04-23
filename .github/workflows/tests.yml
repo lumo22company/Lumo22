@@ -29,5 +29,11 @@ jobs:
           # Placeholder Supabase — real client init is mocked in tests that need it (see test_referral_code_check).
           SUPABASE_URL: https://example.supabase.co
           SUPABASE_KEY: ci-placeholder-key
+          # Stripe / OpenAI placeholders so checkout routes and CaptionGenerator init succeed; Session.create is mocked in tests.
+          STRIPE_SECRET_KEY: sk_test_ci_placeholder_not_for_live_stripe_00000000000000
+          STRIPE_CAPTIONS_PRICE_ID: price_ci_placeholder_gbp
+          STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID: price_ci_placeholder_subscription_gbp
+          # Story / caption prompt tests construct CaptionGenerator (no real API calls when chat_completion is patched).
+          OPENAI_API_KEY: sk-ci-openai-placeholder-not-used-in-unit-tests
         run: |
           "${{ steps.setup-py.outputs.python-path }}" -m pytest . --ignore=scripts -v --tb=short

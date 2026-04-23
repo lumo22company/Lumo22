@@ -2,17 +2,25 @@
 Test that Extra platform Stripe product and prices are configured correctly
 (name "Extra platform", expected description). Requires STRIPE_SECRET_KEY and
 the two STRIPE_CAPTIONS_EXTRA_PLATFORM_* price IDs in .env.
+
+Skipped in GitHub Actions: needs live Stripe price IDs and a real secret (CI uses placeholders only).
 """
 import os
 import sys
 
+import pytest
 from dotenv import load_dotenv
+
 load_dotenv()
 
 EXPECTED_NAME = "Extra platform"
 EXPECTED_DESCRIPTION = "Extra platform for your 30 Days Captions pack. Content delivered with your next pack."
 
 
+@pytest.mark.skipif(
+    os.getenv("GITHUB_ACTIONS") == "true",
+    reason="Live Stripe Price.retrieve for extra-platform prices; CI has no real price IDs.",
+)
 def test_extra_platform_stripe_setup():
     stripe_key = os.getenv("STRIPE_SECRET_KEY", "").strip()
     price_id = os.getenv("STRIPE_CAPTIONS_EXTRA_PLATFORM_PRICE_ID", "").strip()
