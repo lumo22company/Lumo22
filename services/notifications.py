@@ -1601,7 +1601,7 @@ Stripe customer: {(stripe_customer_id or '').strip() or '(none)'}
     def _caption_ops_mail_footer(self) -> str:
         return """— — —
 WHERE TO LOOK (same for all Captions ops alerts)
-• Railway logs: [Captions], [Captions recovery], DELIVERY_FAILED, [Stripe webhook] pack sooner
+• Railway logs: [Captions], [Captions recovery], DELIVERY_FAILED, [Stripe webhook] pack sooner, get_pack_now
 • Supabase: caption_orders — use Order ID above
 • Repo: scripts/generate_caption_delivery_troubleshoot_pdf.py — operator reference PDF
 
@@ -1797,6 +1797,56 @@ Detail:
 {(detail or '').strip()[:2000] or '(none)'}
 
 Search Stripe Dashboard for the session id, then Railway for [Stripe webhook] pack sooner.
+
+{self._caption_ops_mail_footer()}"""
+        return self._send_ops_alert_email(subj, body)
+
+    def send_caption_upgrade_get_pack_now_blocked_alert(
+        self,
+        *,
+        reason: str,
+        session_id: str,
+        order_id: str,
+        customer_email: str,
+        order_token: str,
+        copy_from: str,
+        stripe_subscription_id: str = "",
+        detail: str,
+    ) -> bool:
+        """
+        Notify ops when upgrade checkout has get_pack_now=1 but immediate pack delivery was not started
+        (missing row, bind failure, one-off without intake, schedule exception, thank-you reconcile error).
+        """
+        oid = (order_id or "").strip()
+        subj = self._caption_ops_subject(f"Upgrade get pack now — {reason.strip()[:32]}", oid or None)
+        order_blk = self._caption_ops_order_block(
+            order_id=oid or "(unknown)",
+            order_token=(order_token or "").strip(),
+            customer_email=(customer_email or "").strip(),
+            business_name="",
+            stripe_subscription_id=(stripe_subscription_id or "").strip(),
+            stripe_customer_id="",
+        )
+        body = f"""WHAT HAPPENED
+—
+Subscription upgrade with Get pack now did not start (or could not complete) automatic first-pack delivery.
+
+{order_blk}
+STRIPE / CONTEXT
+—
+Reason code: {(reason or '').strip()}
+Stripe Checkout Session ID: {(session_id or '').strip() or '(none)'}
+copy_from (one-off token): {(copy_from or '').strip() or '(none)'}
+
+Detail:
+{(detail or '').strip()[:2000] or '(none)'}
+
+NEXT STEPS
+—
+• Stripe: open the Checkout Session above; confirm metadata get_pack_now=1 and copy_from.
+• Supabase: caption_orders by stripe_session_id or order id; check upgraded_from_token and intake.
+• Recovery: scripts/repair_get_pack_now_upgrade_delivery.py --session-id … (--send-email / --deliver)
+• Logs: Railway — search get_pack_now, captions-intake-link get_pack_now, Stripe webhook get_pack_now
 
 {self._caption_ops_mail_footer()}"""
         return self._send_ops_alert_email(subj, body)

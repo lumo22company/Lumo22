@@ -1678,6 +1678,14 @@ def captions_intake_link():
                 )
             except Exception as e:
                 print(f"[captions-intake-link] get_pack_now reconcile failed: {e!r}")
+                notify_ops_upgrade_get_pack_now_blocked(
+                    "thank_you_intake_link_stripe_error",
+                    session_id=session_id,
+                    order=order,
+                    copy_from=(order.get("upgraded_from_token") or "").strip(),
+                    detail=str(e)[:1500],
+                    session=None,
+                )
     customer_email = (order.get("customer_email") or "").strip()
     # Only send intake email when WE created the order (fallback); if order existed, webhook already sent
     print(f"[captions-intake-link] Returning intake_url for session_id={session_id[:20]}...")
@@ -1845,6 +1853,76 @@ def _checkout_session_metadata_dict(session: dict) -> dict:
         return {}
 
 
+_GPN_UPGRADE_OPS_ALERT: dict[str, float] = {}
+_GPN_UPGRADE_OPS_ALERT_LOCK = threading.Lock()
+_GPN_UPGRADE_OPS_ALERT_TTL_SEC = 7200.0
+
+
+def _upgrade_get_pack_now_ops_alert_send_once(dedupe_key: str) -> bool:
+    """Return True if this dedupe_key has not been alerted within TTL (limits noise from Stripe webhook retries)."""
+    now = time.monotonic()
+    with _GPN_UPGRADE_OPS_ALERT_LOCK:
+        stale = [
+            k
+            for k, t in _GPN_UPGRADE_OPS_ALERT.items()
+            if now - t > _GPN_UPGRADE_OPS_ALERT_TTL_SEC * 2
+        ]
+        for k in stale:
+            _GPN_UPGRADE_OPS_ALERT.pop(k, None)
+        if dedupe_key in _GPN_UPGRADE_OPS_ALERT:
+            if now - _GPN_UPGRADE_OPS_ALERT[dedupe_key] < _GPN_UPGRADE_OPS_ALERT_TTL_SEC:
+                return False
+        _GPN_UPGRADE_OPS_ALERT[dedupe_key] = now
+        return True
+
+
+def notify_ops_upgrade_get_pack_now_blocked(
+    reason: str,
+    *,
+    session_id: str = "",
+    order: Optional[dict] = None,
+    copy_from: str = "",
+    detail: str = "",
+    session: Optional[dict] = None,
+) -> None:
+    """
+    Email INTERNAL_ALERT_EMAIL (deduped) when upgrade + get_pack_now immediate delivery cannot run.
+    Safe from webhook thank-you paths and try_schedule_upgrade_get_pack_now_delivery.
+    """
+    sess_d = _checkout_session_dict(session) if session else {}
+    sid = (session_id or "").strip() or (sess_d.get("id") or "").strip() or ((order or {}).get("stripe_session_id") or "").strip()
+    oid = str((order or {}).get("id") or "").strip()
+    dedupe_key = f"{reason}:{sid}" if sid else f"{reason}:oid:{oid or 'none'}"
+    if not _upgrade_get_pack_now_ops_alert_send_once(dedupe_key):
+        return
+    od = order or {}
+    em = str(od.get("customer_email") or "").strip()
+    if not em and sess_d:
+        em = _get_customer_email_from_stripe_session(sess_d)
+    sub_raw = sess_d.get("subscription") if sess_d else None
+    sub_from_sess = ""
+    if isinstance(sub_raw, dict):
+        sub_from_sess = (sub_raw.get("id") or "").strip()
+    elif isinstance(sub_raw, str):
+        sub_from_sess = sub_raw.strip()
+    stripe_sub = str(od.get("stripe_subscription_id") or "").strip() or sub_from_sess
+    try:
+        from services.notifications import NotificationService
+
+        NotificationService().send_caption_upgrade_get_pack_now_blocked_alert(
+            reason=reason,
+            session_id=sid,
+            order_id=oid,
+            customer_email=em,
+            order_token=str(od.get("token") or "").strip(),
+            copy_from=(copy_from or "").strip(),
+            stripe_subscription_id=stripe_sub,
+            detail=(detail or "").strip(),
+        )
+    except Exception as e:
+        print(f"[get_pack_now ops alert] send failed: {e!r}")
+
+
 def try_schedule_upgrade_get_pack_now_delivery(
     order_service: Any,
     order: dict,
@@ -1901,15 +1979,42 @@ def try_schedule_upgrade_get_pack_now_delivery(
             f"{log_prefix} session/order bind failed (session={s_cs[:16] if s_cs else ''}… "
             f"order_cs={o_cs[:16] if o_cs else ''}… sub_match={bool(s_sub and o_sub and s_sub == o_sub)}); skip"
         )
+        notify_ops_upgrade_get_pack_now_blocked(
+            "session_order_bind_failed",
+            session_id=s_cs,
+            order=order,
+            copy_from=copy_from,
+            detail=(
+                f"log_prefix={log_prefix} session_cs={s_cs!r} order_cs={o_cs!r} "
+                f"session_sub={s_sub!r} order_sub={o_sub!r}"
+            ),
+            session=sess,
+        )
         return
 
     one_off = order_service.get_by_token(copy_from)
     if not order or not one_off:
         print(f"{log_prefix} order or one-off not found (copy_from={copy_from[:12]}…); skip immediate delivery")
+        notify_ops_upgrade_get_pack_now_blocked(
+            "missing_order_or_one_off",
+            session_id=s_cs,
+            order=order if order else None,
+            copy_from=copy_from,
+            detail=f"log_prefix={log_prefix} has_order={bool(order)} has_one_off={bool(one_off)}",
+            session=sess,
+        )
         return
     intake = one_off.get("intake") if isinstance(one_off.get("intake"), dict) else None
     if not intake:
         print(f"{log_prefix} one-off order has no intake, skipping immediate delivery")
+        notify_ops_upgrade_get_pack_now_blocked(
+            "one_off_missing_intake",
+            session_id=s_cs,
+            order=order,
+            copy_from=copy_from,
+            detail=f"log_prefix={log_prefix} one_off_id={one_off.get('id')}",
+            session=sess,
+        )
         return
 
     try:
@@ -1932,6 +2037,17 @@ def try_schedule_upgrade_get_pack_now_delivery(
 
         print(f"{log_prefix} delivery schedule failed: {e!r}")
         traceback.print_exc()
+        tb = traceback.format_exc()
+        if len(tb) > 1800:
+            tb = tb[:1797] + "..."
+        notify_ops_upgrade_get_pack_now_blocked(
+            "schedule_save_or_thread_failed",
+            session_id=s_cs,
+            order=order,
+            copy_from=copy_from,
+            detail=f"{e!r}\n\n{tb}",
+            session=sess,
+        )
 
 
 def _run_generation_and_deliver(

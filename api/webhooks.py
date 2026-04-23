@@ -1466,6 +1466,22 @@ def stripe_webhook():
                             "[Stripe webhook] get_pack_now: no caption_orders row after checkout handler — "
                             "returning 500 so Stripe retries (webhook race or missing email on session)."
                         )
+                        try:
+                            from api.captions_routes import notify_ops_upgrade_get_pack_now_blocked
+
+                            notify_ops_upgrade_get_pack_now_blocked(
+                                "no_order_row_after_checkout_handler",
+                                session_id=sid_gp,
+                                order=None,
+                                copy_from=(meta.get("copy_from") or "").strip(),
+                                detail=(
+                                    "_handle_captions_payment completed without error but no caption_orders row "
+                                    "for this Checkout Session (get_pack_now=1). Check email on session and Supabase."
+                                ),
+                                session=session if isinstance(session, dict) else None,
+                            )
+                        except Exception as alert_err:
+                            print(f"[Stripe webhook] get_pack_now ops alert (non-fatal): {alert_err!r}")
                         return jsonify({"error": "caption order missing for get_pack_now checkout"}), 500
                     try_schedule_upgrade_get_pack_now_delivery(
                         order_service_gp,
