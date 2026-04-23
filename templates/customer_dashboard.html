@@ -124,16 +124,8 @@
               <span class="account-info-label">Manage Billing</span>
               <div class="account-info-value">Edit payment method, download invoices, cancel subscription.</div>
             </div>
-            <div class="account-info-actions" style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
-              {# Always Stripe Customer Portal — never /account/subscription (that page is plan/pause only). #}
-              {% if billing_accounts and billing_accounts|length > 1 %}
-              {% for ba in billing_accounts %}
-              {% set _tok = (ba.order_token or '')|trim %}
-              {% if _tok %}
-              <a href="/api/billing/portal?order_token={{ _tok }}" class="account-billing-portal-link account-btn-swipe-light">Manage billing{% if ba.label %} — {{ ba.label }}{% endif %}</a>
-              {% endif %}
-              {% endfor %}
-              {% elif billing_accounts and billing_accounts[0].order_token %}
+            <div class="account-info-actions">
+              {% if billing_accounts and billing_accounts[0].order_token %}
               <a href="/api/billing/portal?order_token={{ billing_accounts[0].order_token }}" class="account-billing-portal-link account-btn-swipe-light">Manage billing</a>
             {% else %}
               <a href="/api/billing/portal" class="account-billing-portal-link account-btn-swipe-light">Manage billing</a>
