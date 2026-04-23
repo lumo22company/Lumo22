@@ -309,7 +309,7 @@
         // Auto-redirect only for brand-new subscription checkout (empty form path).
         if (isPrefilledFromOneoff) return;
         var guestNeedsAccountBlock = !!(isSubscription && !isLoggedIn && customerEmail);
-        var delayMs = guestNeedsAccountBlock ? 11000 : 3500;
+        var delayMs = guestNeedsAccountBlock ? 16000 : 8500;
         var notice = document.getElementById('thankyou-subscription-redirect-notice');
         var msg = document.getElementById('thankyou-subscription-redirect-msg');
         if (!notice || !msg) return;
