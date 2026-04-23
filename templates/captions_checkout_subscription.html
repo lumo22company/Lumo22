@@ -100,16 +100,15 @@
       {% if add_platforms_url %}<p style="font-size: 0.9rem; color: var(--lum-text-muted); margin: 0.35rem 0 0;">Need more platforms? <a href="{{ add_platforms_url }}" style="color: var(--lum-gold); font-weight: 600;">Change your selection</a>.{% if not is_upgrade_from_oneoff|default(false) %} Extra platforms added later from your account ship with your <strong>next</strong> pack.{% endif %}</p>{% endif %}
       {% endif %}
       {% if is_upgrade_from_oneoff|default(false) %}
+      {% if get_pack_now_preselected|default(false) %}
+      <div id="get-pack-now-summary-readonly" style="margin: 1rem 0 1rem; padding: 1rem 1.1rem; background: rgba(255,242,0,0.08); border: 1px solid rgba(255,242,0,0.35); border-radius: 8px;">
+        <p style="margin: 0; color: #fff; font-size: 0.95rem; line-height: 1.55;"><strong>Get your first subscription pack now</strong> — you chose this on <strong>Upgrade</strong>. You&rsquo;ll pay at checkout and we&rsquo;ll send your first subscription pack right away; your next monthly bill is in 30 days. To switch to starting after your one-off window instead, go back to <a href="/account/upgrade" style="color: var(--lum-gold); font-weight: 600; text-decoration: none; border-bottom: 1px solid var(--lum-gold);">Upgrade</a> in your account, leave <strong>Get my first subscription pack today</strong> unchecked, then open this summary again.</p>
+      </div>
+      {% else %}
       <p style="font-size: 0.9rem; color: #fff; margin: 1.5rem 0 1rem; padding: 0.75rem 1rem; background: #000; border-radius: 8px; border: 2px solid #fff;">No charge today. <strong style="color: #fff;">{{ currency_symbol|default('£') }}{{ total_sub|default(79) }}/month</strong> starts when your first subscription pack will be ready{% if first_charge_date %} on {{ first_charge_date }} (30 days after your one-off pack){% else %} 30 days after your one-off pack is delivered{% endif %}. We use the answers you confirmed on your form for your subscription—you can edit them anytime in your account, including adding or removing platforms or Story Ideas.</p>
       {% if can_get_pack_now|default(false) %}
-      <div id="get-pack-now-option" style="margin: 1rem 0 1rem; padding: 1rem; background: rgba(255,242,0,0.08); border: 1px solid rgba(255,242,0,0.35); border-radius: 8px;">
-        <label style="display: flex; align-items: flex-start; gap: 0.75rem; cursor: pointer;">
-          <input type="checkbox" id="get-pack-now-checkbox" name="get_pack_now" value="1" style="margin-top: 0.2rem;"{% if get_pack_now_preselected|default(false) %} checked{% endif %}>
-          <span style="color: #fff;">
-            <strong>Get your first pack now</strong> — charged today; first pack sent right away. Next bill in 30 days.
-          </span>
-        </label>
-      </div>
+      <p style="font-size: 0.88rem; color: var(--lum-text-muted); margin: 0 0 1rem; line-height: 1.5; max-width: 36rem;">To pay today and receive your first subscription pack immediately, go to <a href="/account/upgrade" style="color: var(--lum-gold); font-weight: 600; text-decoration: none; border-bottom: 1px solid var(--lum-gold);">Upgrade</a> in your account, turn on <strong>Get my first subscription pack today</strong>, then use <strong>Continue to order summary</strong> again.</p>
+      {% endif %}
       {% endif %}
       {% endif %}
       <div class="checkout-reminder-optin">
@@ -138,7 +137,7 @@
         {% if platforms_invalid|default(false) %}
         <a href="/captions#pricing" class="lumo-btn-primary btn-cta-account-style">Back to select platforms</a>
         {% else %}
-        <a href="{{ api_url|default('/api/captions-checkout-subscription?platforms=1') }}" id="btn-continue" class="lumo-btn-primary js-terms-checkout btn-cta-account-style" data-api-url="{{ api_url|default('/api/captions-checkout-subscription?platforms=1') }}">Next step — read &amp; accept terms</a>
+        <a href="{{ api_url|default('/api/captions-checkout-subscription?platforms=1') }}" id="btn-continue" class="lumo-btn-primary js-terms-checkout btn-cta-account-style" data-api-url="{{ api_url|default('/api/captions-checkout-subscription?platforms=1') }}" data-get-pack-now-from-hub="{% if get_pack_now_preselected|default(false) %}1{% else %}0{% endif %}">Next step — read &amp; accept terms</a>
         {% endif %}
       </div>
     </div>
@@ -153,7 +152,7 @@
     (function() {
       var btn = document.getElementById('btn-continue');
       if (!btn) return;
-      var getPackNowCheckbox = document.getElementById('get-pack-now-checkbox');
+      var getPackNowFromHub = (btn.getAttribute('data-get-pack-now-from-hub') || '') === '1';
       var remindersCheckbox = document.getElementById('form-reminders-checkbox');
       var businessInput = document.getElementById('checkout-business-name');
       var apiUrl = (btn.getAttribute('data-api-url') || '')
@@ -180,7 +179,7 @@
       }
       function updateLink() {
         var parts = [];
-        if (getPackNowCheckbox && getPackNowCheckbox.checked) parts.push('get_pack_now=1');
+        if (getPackNowFromHub) parts.push('get_pack_now=1');
         if (remindersCheckbox && remindersCheckbox.checked) {
           parts.push('form_reminders=1');
         } else {
@@ -192,7 +191,6 @@
         u = mergeStoredReferralRef(u);
         btn.href = u;
       }
-      if (getPackNowCheckbox) getPackNowCheckbox.addEventListener('change', updateLink);
       if (remindersCheckbox) remindersCheckbox.addEventListener('change', updateLink);
       if (businessInput) {
         businessInput.addEventListener('input', updateLink);
