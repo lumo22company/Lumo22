@@ -1077,14 +1077,14 @@ def _subscription_welcome_monthly_review_line_html(include_stories: bool) -> str
     if include_stories:
         return (
             f'<p style="margin:0 0 16px; font-size:14px; color:#555;">Each month when your pack arrives by email, '
-            f"read through your captions and Story Ideas and edit anything so it fits your brand, your voice, and any "
-            f"rules that apply to you before you start posting.</p>"
+            f"we recommend reading through your captions and Story Ideas so you're aware of anything you need to "
+            f"tweak before you start posting.</p>"
             + hist
         )
     return (
         f'<p style="margin:0 0 16px; font-size:14px; color:#555;">Each month when your pack arrives by email, '
-        f"read through your captions and edit anything so it fits your brand, your voice, and any rules that apply to "
-        f"you before you start posting.</p>"
+        f"we recommend reading through your captions so you're aware of anything you need to tweak before you start "
+        f"posting.</p>"
         + hist
     )
 
@@ -1097,13 +1097,13 @@ def _subscription_welcome_monthly_review_line_plain(include_stories: bool) -> st
     )
     if include_stories:
         return (
-            "\nEach month when your pack arrives by email, read through your captions and Story Ideas and edit "
-            "anything so it fits your brand, your voice, and any rules that apply to you before you start posting."
+            "\nEach month when your pack arrives by email, we recommend reading through your captions and Story "
+            "Ideas so you're aware of anything you need to tweak before you start posting."
             + hist
         )
     return (
-        "\nEach month when your pack arrives by email, read through your captions and edit anything so it fits your "
-        "brand, your voice, and any rules that apply to you before you start posting."
+        "\nEach month when your pack arrives by email, we recommend reading through your captions so you're aware of "
+        "anything you need to tweak before you start posting."
         + hist
     )
 
@@ -1135,7 +1135,7 @@ def _subscription_welcome_prefilled_email_html(
 <p style="margin:0 0 24px;"><a href="{safe_login}" style="display:inline-block; padding:14px 28px; background:{BRAND_GOLD}; color:{BRAND_BLACK}; text-decoration:none; border-radius:10px; font-weight:600;">Log in to your account</a></p>
 <p style="margin:0 0 12px;">Open your form (prefilled); you can edit it anytime in your account:</p>
 <p style="margin:0 0 24px;"><a href="{safe_intake}" style="display:inline-block; padding:12px 24px; background:#f0f0f0; color:{BRAND_BLACK}; text-decoration:none; border-radius:10px; font-weight:600;">Open your form</a></p>
-<p style="margin:0 0 16px;">If you have any questions, just reply to this email.</p>
+<p style="margin:0 0 16px;">Thanks for subscribing!</p>
 <p style="margin:0;">— Lumo 22</p>"""
     return _email_wrapper(content)
 
@@ -2156,7 +2156,7 @@ Log in to your account: """ + login_url + """
 
 Open your form (prefilled); you can edit it anytime in your account: """ + (intake_url or "") + """
 
-If you have any questions, just reply to this email.
+Thanks for subscribing!
 
 — Lumo 22
 """
