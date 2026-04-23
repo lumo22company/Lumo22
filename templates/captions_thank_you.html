@@ -101,6 +101,10 @@
       font-size: 0.95rem;
       line-height: 1.5;
     }
+    /* Get pack now upgrade: main confirmation line (inside #thankyou-email-msg) */
+    .thankyou-card #thankyou-email-msg .thankyou-subscription-active-lead {
+      color: #ffffff !important;
+    }
     /* Override .thankyou-card p (muted) — same element, higher specificity */
     .thankyou-card p.thankyou-action-hint {
       margin: 0 0 0.65rem;
@@ -485,10 +489,12 @@
         if (subPackTodayLineHidden) {
           var epBody = 'margin:0.85rem 0 0;font-size:0.95rem;line-height:1.55;color:var(--lum-text-muted);max-width:36rem;';
           var epFirst = 'margin:1rem 0 0;font-size:0.95rem;line-height:1.55;color:var(--lum-text-muted);max-width:36rem;';
+          var leadWhite = 'margin:0 0 0.65rem;font-size:1.08rem;line-height:1.55;color:#ffffff;max-width:34rem;';
           var pDetails = 'Your details are carried over from your one-off pack — open the form to tell us what\'s happening in the month ahead or edit anytime. Edits are free and help keep your next packs aligned with your brand.';
           var pAcct = 'You can add or remove platforms and Story Ideas and manage your subscription from your account.';
           var pRead = 'We recommend reading through all of your captions and Story Ideas before you start posting, to review and tweak them if you need to.';
-          emailMsgEl.innerHTML = leadText + accountSuffix
+          /* #thankyou-email-msg is a <p>; use a div for the lead so we do not nest <p> inside <p>. */
+          emailMsgEl.innerHTML = '<div class="thankyou-subscription-active-lead" style="' + leadWhite + '">' + leadText + accountSuffix + '</div>'
             + '<p style="' + epFirst + '">' + pDetails + '</p>'
             + '<p style="' + epBody + '">' + pAcct + '</p>'
             + '<p style="' + epBody + '">' + pRead + '</p>';
