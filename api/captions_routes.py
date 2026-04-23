@@ -1494,16 +1494,56 @@ def captions_intake_link():
             if not session:
                 return jsonify({"status": "pending"}), 200
             customer_email = _get_customer_email_from_stripe_session(session)
+            meta_early = _get_session_attr(session, "metadata") or {}
+            if hasattr(meta_early, "get"):
+                copy_from_meta = (meta_early.get("copy_from") or "").strip() or None
+            else:
+                copy_from_meta = (getattr(meta_early, "copy_from", None) or "").strip() or None
+            stripe_sub_from_session = (_get_session_attr(session, "subscription") or "").strip() or None
+            if stripe_sub_from_session:
+                order = order_service.get_by_stripe_subscription_id(stripe_sub_from_session)
+                if order:
+                    print(f"[captions-intake-link] Order found by Stripe subscription id")
             if customer_email and "@" in customer_email:
-                # Find order by checkout email (prefer one still awaiting intake) so user goes straight to buttons
                 orders = order_service.get_by_customer_email(customer_email)
-                for o in orders or []:
-                    if not (o.get("token") or "").strip():
-                        continue
-                    if (o.get("status") or "").strip().lower() == "awaiting_intake":
+                if not order:
+                    for o in orders or []:
+                        if not (o.get("token") or "").strip():
+                            continue
+                        if (o.get("stripe_session_id") or "").strip() == session_id:
+                            order = o
+                            print(f"[captions-intake-link] Order found by checkout email (stripe_session_id match)")
+                            break
+                if not order and copy_from_meta and stripe_sub_from_session:
+                    for o in orders or []:
+                        if not (o.get("token") or "").strip():
+                            continue
+                        if (o.get("upgraded_from_token") or "").strip() != copy_from_meta:
+                            continue
+                        if (o.get("stripe_subscription_id") or "").strip() != stripe_sub_from_session:
+                            continue
                         order = o
-                        print(f"[captions-intake-link] Order found by checkout email (awaiting_intake)")
+                        print(f"[captions-intake-link] Order found by checkout email (upgrade + subscription id)")
                         break
+                if not order and copy_from_meta:
+                    for o in orders or []:
+                        if not (o.get("token") or "").strip():
+                            continue
+                        if (o.get("status") or "").strip().lower() != "awaiting_intake":
+                            continue
+                        if (o.get("upgraded_from_token") or "").strip() != copy_from_meta:
+                            continue
+                        order = o
+                        print(f"[captions-intake-link] Order found by checkout email (awaiting_intake + upgrade copy_from)")
+                        break
+                if not order:
+                    for o in orders or []:
+                        if not (o.get("token") or "").strip():
+                            continue
+                        if (o.get("status") or "").strip().lower() == "awaiting_intake":
+                            order = o
+                            print(f"[captions-intake-link] Order found by checkout email (awaiting_intake)")
+                            break
                 if not order:
                     for o in orders or []:
                         if (o.get("token") or "").strip():
