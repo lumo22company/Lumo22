@@ -302,9 +302,12 @@
         }
       }
 
-      function scheduleIntakeRedirectAfterThankYou(url, isSubscription, isLoggedIn, customerEmail) {
+      function scheduleIntakeRedirectAfterThankYou(url, isSubscription, isLoggedIn, customerEmail, isPrefilledFromOneoff) {
         clearSubscriptionIntakeRedirect();
         if (!isSubscription || !url) return;
+        // One-off → subscription: form is already prefilled; let them read thank-you and open intake when ready.
+        // Auto-redirect only for brand-new subscription checkout (empty form path).
+        if (isPrefilledFromOneoff) return;
         var guestNeedsAccountBlock = !!(isSubscription && !isLoggedIn && customerEmail);
         var delayMs = guestNeedsAccountBlock ? 11000 : 3500;
         var notice = document.getElementById('thankyou-subscription-redirect-notice');
@@ -553,7 +556,7 @@
           }
         }
 
-        scheduleIntakeRedirectAfterThankYou(url, isSubscription, isLoggedIn, customerEmail);
+        scheduleIntakeRedirectAfterThankYou(url, isSubscription, isLoggedIn, customerEmail, isPrefilledFromOneoff);
 
         var cancelSubRedirect = document.getElementById('thankyou-cancel-subscription-redirect');
         if (cancelSubRedirect) {
