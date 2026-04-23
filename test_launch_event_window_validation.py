@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Regression tests for intake launch-event date window validation."""
 
+from datetime import date
 from unittest.mock import patch
 
 
@@ -29,9 +30,11 @@ def test_rejects_launch_date_outside_pack_window():
         "launch_event_description": "Product launch 15 March",
     }
 
+    anchor = (date(2026, 4, 1), "calendar_fallback", "Tuesday 1st April 2026")
     with app.test_client() as client:
         with patch("services.caption_order_service.CaptionOrderService", FakeOrderService):
-            r = client.post("/api/captions-intake", json=payload)
+            with patch("api.captions_routes.compute_intake_pack_day1_anchor", return_value=anchor):
+                r = client.post("/api/captions-intake", json=payload)
 
     assert r.status_code == 400
     msg = (r.get_json() or {}).get("error", "")
@@ -67,16 +70,18 @@ def test_rejects_any_date_outside_window_when_multi_dated():
         ),
     }
 
+    # Pin Day-1 anchor so the 30-day window in the error message does not depend on the runner's clock.
+    anchor = (date(2026, 4, 16), "calendar_fallback", "Thursday 16th April 2026")
     with app.test_client() as client:
         with patch("services.caption_order_service.CaptionOrderService", FakeOrderService):
-            r = client.post("/api/captions-intake", json=payload)
+            with patch("api.captions_routes.compute_intake_pack_day1_anchor", return_value=anchor):
+                r = client.post("/api/captions-intake", json=payload)
 
     assert r.status_code == 400
     msg = (r.get_json() or {}).get("error", "")
     assert "outside your next 30-day captions window" in msg
-    # Window start follows launch_window_start_for_intake_validation (may bump stale pack_start_date to today).
     assert "May 2026" in msg
-    assert "16 April" in msg or "17 April" in msg
+    assert "16 April" in msg
 
 
 def test_rejects_empty_voice_words():
@@ -104,9 +109,11 @@ def test_rejects_empty_voice_words():
         "goal": "More inquiries / leads",
     }
 
+    anchor = (date(2026, 4, 1), "calendar_fallback", "Tuesday 1st April 2026")
     with app.test_client() as client:
         with patch("services.caption_order_service.CaptionOrderService", FakeOrderService):
-            r = client.post("/api/captions-intake", json=payload)
+            with patch("api.captions_routes.compute_intake_pack_day1_anchor", return_value=anchor):
+                r = client.post("/api/captions-intake", json=payload)
 
     assert r.status_code == 400
     msg = (r.get_json() or {}).get("error", "")
