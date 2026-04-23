@@ -248,42 +248,11 @@
       {% endif %}
 
       {% if current_section == 'edit-form' %}
-      <section class="account-section-block">
-        <h2>Edit form</h2>
-        {# edit_form_orders: from server — hidden excluded; sort by last PDF time, else order created_at #}
-        {% if edit_form_orders %}
-        <p class="account-section-desc" style="margin: 0 0 1.25rem; line-height: 1.65; color: rgba(255,255,255,0.92);">
-          {% if edit_form_has_subscriptions|default(false) %}
-          <strong>Subscriptions:</strong> use <strong>Edit form</strong> below to change your form answers (voice, topics, etc.) for your <strong>next</strong> pack (not packs already delivered). Those content edits are free. Changing how many platforms you have or whether Story Ideas are on your plan may change what you pay—use <strong>Manage subscription</strong> → <strong>Change plan</strong> for that.
-          {% endif %}
-          {% if edit_form_has_oneoffs|default(false) %}
-          <span style="display: block; margin-top: {% if edit_form_has_subscriptions|default(false) %}0.65rem{% else %}0{% endif %};"><strong>One-off packs:</strong> use <strong>View form</strong> to read what we have on file. To <strong>change</strong> answers from your account, follow <strong>Upgrade to edit</strong> (subscription checkout—then you can edit anytime for each new pack). Want another 30 days without subscribing? <a href="/captions" style="color: #ffffff; font-weight: 600; text-decoration: underline; text-underline-offset: 0.15em; text-decoration-thickness: 1px;">Buy another one-off pack</a>.</span>
-          {% endif %}
-        </p>
-        {% if edit_form_has_subscriptions|default(false) %}
-        <ul class="account-section-desc" style="margin: 0 0 1.25rem; padding-left: 1.25rem; line-height: 1.7; color: #ffffff;">
-          <li>Update your voice, topics, and preferences.</li>
-          <li>Have a launch, sale, or event coming up? Add it in the Key date section and we'll tailor your next pack to match.</li>
-          <li>Changes are reflected in your <strong>next</strong> captions and stories pack, not in packs already delivered.</li>
-          <li>Edits to copy on the form are free; changing your <strong>subscription plan</strong> (platforms or Story Ideas) may change your monthly price.</li>
-          <li><strong>Plan (platforms &amp; Story Ideas):</strong> use <strong>Manage subscription</strong> → <strong>Change plan</strong> to add or remove platforms, choose which networks, or turn Story Ideas on or off. The Platform area on the form is <strong>read-only</strong>—billing changes are not made there.</li>
-          <li>Billed plan changes apply to your <strong>next</strong> pack.</li>
-        </ul>
-      {% endif %}
-        {% if edit_form_has_oneoffs|default(false) and not edit_form_has_subscriptions|default(false) %}
-        <ul class="account-section-desc" style="margin: 0 0 1.25rem; padding-left: 1.25rem; line-height: 1.7; color: #ffffff;">
-          <li><strong>View form</strong> is read-only for one-off orders.</li>
-          <li>Your delivered PDF does not change when you subscribe; new edits apply to future subscription packs.</li>
-        </ul>
-        {% endif %}
-        <ul class="account-edit-form-list" id="account-edit-form-list"{% if defer_stripe_billing|default(false) %} data-needs-billing-fetch="{{ '1' if edit_form_needs_deferred_billing|default(false) else '0' }}"{% endif %}>
-          {% for o in edit_form_orders %}
+      {% macro account_edit_form_row(o) %}
           {% set biz = ((o.get('intake') or {}).get('business_name') or '')|trim %}
           {% set is_sub_row = (o.get('stripe_subscription_id') or '')|trim %}
-          {# Match app _order_is_former_subscription_row: DB cancel, Stripe cancelled_now, or sub id cleared with upgraded_from_token #}
           {% set is_former_sub = o.get('subscription_cancelled_at') or (o.get('subscription_pause') or {}).get('cancelled_now') or (not is_sub_row and ((o.get('upgraded_from_token') or '')|trim)) %}
           {% set label = (biz|title) if biz else (o.created_at[:10] if o.created_at else ('Subscription' if is_sub_row else ('Former subscription' if is_former_sub else 'One-off'))) %}
-          {# Subscription: awaiting_intake + prefilled business_name (sync from one-off) → Edit form, not Complete. One-off: any awaiting_intake → Complete (checkout may still prefill business_name). #}
           {% set _needs_first_submit = o.status == 'awaiting_intake' and ((not is_sub_row) or (not biz)) %}
           {% set _edit_pause = (o.get('subscription_pause') or {}) %}
           {% set _edit_cancelled = _edit_pause.get('cancel_at_period_end') or _edit_pause.get('cancelled_now') %}
@@ -314,8 +283,38 @@
               {% endif %}
             </div>
           </li>
-          {% endfor %}
+      {% endmacro %}
+      <section class="account-section-block">
+        <h2>Edit form</h2>
+        {# edit_form_orders: from server — hidden excluded; sort by last PDF time, else order created_at #}
+        {% if edit_form_orders %}
+        <p class="account-section-desc" style="margin: 0 0 1.25rem; line-height: 1.65; color: rgba(255,255,255,0.92);">
+          {% if edit_form_has_subscriptions|default(false) %}
+          <strong>Subscriptions:</strong> use <strong>Edit form</strong> below to change your form answers (voice, topics, etc.) for your <strong>next</strong> pack (not packs already delivered). Those content edits are free. Changing how many platforms you have or whether Story Ideas are on your plan may change what you pay—use <strong>Manage subscription</strong> → <strong>Change plan</strong> for that.
+          {% endif %}
+          {% if edit_form_has_oneoffs|default(false) %}
+          <span style="display: block; margin-top: {% if edit_form_has_subscriptions|default(false) %}0.65rem{% else %}0{% endif %};"><strong>One-off packs:</strong> use <strong>View form</strong> to read what we have on file. To <strong>change</strong> answers from your account, follow <strong>Upgrade to edit</strong> (subscription checkout—then you can edit anytime for each new pack). Want another 30 days without subscribing? <a href="/captions" style="color: #ffffff; font-weight: 600; text-decoration: underline; text-underline-offset: 0.15em; text-decoration-thickness: 1px;">Buy another one-off pack</a>.</span>
+          {% endif %}
+        </p>
+        {% if edit_form_has_subscriptions|default(false) %}
+        <ul class="account-section-desc" style="margin: 0 0 1.25rem; padding-left: 1.25rem; line-height: 1.7; color: #ffffff;">
+          <li>Update your voice, topics, and preferences.</li>
+          <li>Have a launch, sale, or event coming up? Add it in the Key date section and we'll tailor your next pack to match.</li>
+          <li>Changes are reflected in your <strong>next</strong> captions and stories pack, not in packs already delivered.</li>
+          <li>Edits to copy on the form are free; changing your <strong>subscription plan</strong> (platforms or Story Ideas) may change your monthly price.</li>
+          <li><strong>Plan (platforms &amp; Story Ideas):</strong> use <strong>Manage subscription</strong> → <strong>Change plan</strong> to add or remove platforms, choose which networks, or turn Story Ideas on or off. The Platform area on the form is <strong>read-only</strong>—billing changes are not made there.</li>
+          <li>Billed plan changes apply to your <strong>next</strong> pack.</li>
         </ul>
+      {% endif %}
+        {% if edit_form_has_oneoffs|default(false) and not edit_form_has_subscriptions|default(false) %}
+        <ul class="account-section-desc" style="margin: 0 0 1.25rem; padding-left: 1.25rem; line-height: 1.7; color: #ffffff;">
+          <li><strong>View form</strong> is read-only for one-off orders.</li>
+          <li>Your delivered PDF does not change when you subscribe; new edits apply to future subscription packs.</li>
+        </ul>
+        {% endif %}
+        <div id="account-edit-form-list" class="account-edit-form-root"{% if defer_stripe_billing|default(false) %} data-needs-billing-fetch="{{ '1' if edit_form_needs_deferred_billing|default(false) else '0' }}"{% endif %}>
+          <ul class="account-edit-form-list">{% for o in edit_form_orders %}{{ account_edit_form_row(o) }}{% endfor %}</ul>
+        </div>
         {% elif subscribe_options %}
         <p class="account-section-desc">{% if _has_all_resubscribe %}We couldn’t find a form link for your order yet. Try the link in your order email, or resubscribe—your answers can be prefilled from your pack.{% elif _has_any_resubscribe %}We couldn’t find a form link for your order yet. Try the link in your order email, or go to <strong>Upgrade or resubscribe</strong> to start a monthly plan from a completed one-off or to restart after a cancelled subscription—your answers can be prefilled.{% else %}We couldn’t find a form link for your order yet. Try the link in your order email, or upgrade to a subscription—your answers can be prefilled from your one-off.{% endif %}</p>
         <p><a href="/account/upgrade" class="dfd-btn dfd-btn-secondary account-upgrade-subscription-btn">{{ _upgrade_flow_title }}</a></p>
@@ -3131,27 +3130,29 @@
       /** Edit form: if any row wraps actions onto a second line, stack every row the same way (desktop only). */
       var mqNarrow = window.matchMedia('(max-width: 768px)');
       function syncEditFormListStacked() {
-        var list = document.querySelector('.account-edit-form-list');
-        if (!list) return;
-        if (mqNarrow.matches) {
-          list.classList.remove('account-edit-form-list--stacked');
-          return;
-        }
-        list.classList.remove('account-edit-form-list--stacked');
-        void list.offsetWidth;
-        var rows = list.querySelectorAll('.account-edit-form-row');
-        var needStack = false;
-        for (var i = 0; i < rows.length; i++) {
-          var row = rows[i];
-          var meta = row.querySelector('.account-edit-form-meta');
-          var actions = row.querySelector('.account-edit-form-actions');
-          if (!meta || !actions) continue;
-          if (actions.offsetTop > meta.offsetTop) {
-            needStack = true;
-            break;
+        var lists = document.querySelectorAll('#account-edit-form-list .account-edit-form-list');
+        if (!lists.length) return;
+        lists.forEach(function(list) {
+          if (mqNarrow.matches) {
+            list.classList.remove('account-edit-form-list--stacked');
+            return;
           }
-        }
-        if (needStack) list.classList.add('account-edit-form-list--stacked');
+          list.classList.remove('account-edit-form-list--stacked');
+          void list.offsetWidth;
+          var rows = list.querySelectorAll('.account-edit-form-row');
+          var needStack = false;
+          for (var i = 0; i < rows.length; i++) {
+            var row = rows[i];
+            var meta = row.querySelector('.account-edit-form-meta');
+            var actions = row.querySelector('.account-edit-form-actions');
+            if (!meta || !actions) continue;
+            if (actions.offsetTop > meta.offsetTop) {
+              needStack = true;
+              break;
+            }
+          }
+          if (needStack) list.classList.add('account-edit-form-list--stacked');
+        });
       }
       function scheduleSync() {
         if (typeof window.requestAnimationFrame === 'function') {
@@ -3174,10 +3175,10 @@
       if (document.fonts && document.fonts.ready) {
         document.fonts.ready.then(scheduleSync).catch(function() { scheduleSync(); });
       }
-      var listEl = document.querySelector('.account-edit-form-list');
-      if (listEl && typeof ResizeObserver === 'function') {
+      var editFormRoot = document.getElementById('account-edit-form-list');
+      if (editFormRoot && typeof ResizeObserver === 'function') {
         var ro = new ResizeObserver(scheduleSync);
-        ro.observe(listEl);
+        ro.observe(editFormRoot);
         var main = document.querySelector('.account-main');
         if (main) ro.observe(main);
       }
