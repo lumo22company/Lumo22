@@ -2167,6 +2167,65 @@ def _account_prune_phantom_upgrade_shells(caption_orders: list) -> None:
         caption_orders.pop(i)
 
 
+def _account_attach_orders_for_stripe_customers_subscriptions(email: str, caption_orders: list, co_svc) -> None:
+    """
+    Attach caption_orders rows for Stripe subscriptions that belong to the same Stripe customer id(s)
+    as orders already loaded for this account. Catches rows whose customer_email does not match the
+    login address (checkout typo) but the subscription is still on the customer's Stripe account.
+    """
+    em = (email or "").strip().lower()
+    if not em or not caption_orders:
+        return
+    if not (getattr(Config, "STRIPE_SECRET_KEY", None) or "").strip():
+        return
+    from services.caption_order_service import _stripe_customer_ids_for_login_email
+    from api.stripe_utils import is_valid_stripe_subscription_id
+
+    seen_ids = {o.get("id") for o in caption_orders if o.get("id")}
+    known_sub_ids = {(o.get("stripe_subscription_id") or "").strip() for o in caption_orders if (o.get("stripe_subscription_id") or "").strip()}
+    cids_ordered: list = []
+    seen_c: set = set()
+    for o in caption_orders:
+        cid = (o.get("stripe_customer_id") or "").strip()
+        if cid and cid not in seen_c:
+            seen_c.add(cid)
+            cids_ordered.append(cid)
+    for cid in _stripe_customer_ids_for_login_email(em):
+        if cid and cid not in seen_c:
+            seen_c.add(cid)
+            cids_ordered.append(cid)
+    if not cids_ordered:
+        return
+    n_before = len(caption_orders)
+    try:
+        import stripe
+
+        stripe.api_key = Config.STRIPE_SECRET_KEY.strip()
+    except Exception:
+        return
+    for cid in cids_ordered:
+        try:
+            subs = stripe.Subscription.list(customer=cid, status="all", limit=50)
+        except Exception as e:
+            print(f"[_account_attach_stripe_subs] Subscription.list failed customer={cid[:14]}...: {e!r}")
+            continue
+        for sub in getattr(subs, "data", None) or []:
+            sid = getattr(sub, "id", None)
+            if sid is None and isinstance(sub, dict):
+                sid = sub.get("id")
+            sid = (str(sid) if sid is not None else "").strip()
+            if not sid or not is_valid_stripe_subscription_id(sid) or sid in known_sub_ids:
+                continue
+            row = co_svc.get_by_stripe_subscription_id(sid)
+            if not row or row.get("id") in seen_ids:
+                continue
+            seen_ids.add(row.get("id"))
+            known_sub_ids.add(sid)
+            caption_orders.append(row)
+    if len(caption_orders) > n_before:
+        caption_orders.sort(key=_account_order_created_sort_key, reverse=True)
+
+
 def _account_fetch_merged_orders_and_stripe_billing(customer: dict):
     """Load orders, merge rows, run Stripe — used by /api/account/billing-data."""
     email = (customer.get("email") or "").strip()
@@ -2175,6 +2234,7 @@ def _account_fetch_merged_orders_and_stripe_billing(customer: dict):
     co_svc = CaptionOrderService()
     caption_orders = co_svc.get_by_customer_email_including_stripe_customer(email)
     _account_attach_orders_linked_by_oneoff_upgrade(email, caption_orders, co_svc)
+    _account_attach_orders_for_stripe_customers_subscriptions(email, caption_orders, co_svc)
     _account_prune_phantom_upgrade_shells(caption_orders)
     _account_merge_order_rows(caption_orders)
     subscription_billing = _load_account_stripe_subscription_data(caption_orders)
@@ -2196,6 +2256,7 @@ def _account_context_build(customer: dict, section: Optional[str] = None) -> dic
         co_svc = CaptionOrderService()
         caption_orders = co_svc.get_by_customer_email_including_stripe_customer(email)
         _account_attach_orders_linked_by_oneoff_upgrade(email, caption_orders, co_svc)
+        _account_attach_orders_for_stripe_customers_subscriptions(email, caption_orders, co_svc)
         _account_prune_phantom_upgrade_shells(caption_orders)
         if defer:
             _init_subscription_pause_placeholders(caption_orders)
@@ -2688,9 +2749,10 @@ def _load_account_stripe_subscription_data(caption_orders):
             if sub is not None:
                 o["subscription_pause"] = _pause_info_from_subscription(sub)
             elif is_valid_stripe_subscription_id(sub_id):
-                # Retrieve failed or subscription object gone (deleted in Stripe) — treat as ended
-                # so Cancelled subscriptions / resubscribe lists match reality when DB still has sub_ id.
-                o["subscription_pause"] = dict(_ACCOUNT_SUB_PAUSE_CANCELLED_IN_DB)
+                # Retrieve failed (network / rate limit): do not mark cancelled — that would hide active
+                # subscriptions from Manage subscription. True canceled subs return a Stripe object with
+                # status=canceled, not None.
+                o["subscription_pause"] = dict(_ACCOUNT_SUB_PAUSE_FALLBACK)
 
         for sub_id in unique_sub_ids:
             sub = subs_by_id.get(sub_id)
