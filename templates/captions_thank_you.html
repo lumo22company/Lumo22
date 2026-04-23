@@ -331,7 +331,7 @@
         if (!h || !lead || !hint || !d) return;
         if (showRecovery) {
           h.textContent = 'Sign in to continue';
-          lead.innerHTML = 'You already used your Lumo account to subscribe. If this page does not show you as signed in, log in with the <strong>same email as your order</strong>, then open <strong>Review your form</strong> below.';
+          lead.innerHTML = 'You already used your Lumo account to subscribe. If this page does not show you as signed in, log in with the <strong>same email as your order</strong>, then use <strong>Your account</strong> below.';
           hint.innerHTML = '<a id="thankyou-login-link" href="/login" style="color: var(--lum-gold); font-weight: 600; text-decoration: none; border-bottom: 1px solid var(--lum-gold);">Log in</a> with that email first. If you are already signed in elsewhere, try refreshing this page.';
           if (cap) cap.style.display = 'block';
         } else {
@@ -528,6 +528,10 @@
         }
         intakeLinkEl.href = url;
         intakeLinkEl.removeAttribute('aria-disabled');
+        if (subPackTodayLineHidden) {
+          intakeLinkEl.href = '/account';
+          intakeLinkEl.textContent = 'Your account';
+        }
         var subCtaLine = document.getElementById('thankyou-subscription-cta-line');
         if (subCtaLine) {
           if (isSubscription && !subPackTodayLineHidden) {
@@ -538,10 +542,12 @@
             subCtaLine.innerHTML = '';
           }
         }
-        if (isSubscription && !subPackTodayLineHidden) {
-          intakeLinkEl.textContent = isPrefilledFromOneoff ? 'Review your form' : 'Start my form now';
-        } else {
-          intakeLinkEl.textContent = isPrefilledFromOneoff ? 'Review your form' : (isLoggedIn ? 'Open your form' : 'Fill out my form');
+        if (!subPackTodayLineHidden) {
+          if (isSubscription) {
+            intakeLinkEl.textContent = isPrefilledFromOneoff ? 'Review your form' : 'Start my form now';
+          } else {
+            intakeLinkEl.textContent = isPrefilledFromOneoff ? 'Review your form' : (isLoggedIn ? 'Open your form' : 'Fill out my form');
+          }
         }
         var nextStepWrap = document.getElementById('thankyou-next-step-wrap');
         if (nextStepWrap) {
