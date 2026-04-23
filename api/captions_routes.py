@@ -11,6 +11,7 @@ import threading
 import hmac
 import hashlib
 import base64
+from datetime import datetime
 from typing import Any, Dict, Optional
 from flask import Blueprint, request, jsonify, redirect, Response, url_for
 from urllib.parse import quote
@@ -1336,6 +1337,50 @@ def _stripe_checkout_get_pack_now(session_id: Optional[str]) -> bool:
     return bool(_stripe_checkout_session_thankyou_context(session_id).get("get_pack_now"))
 
 
+def _thank_you_should_backfill_upgraded_from(order_service: Any, order: dict, meta_cf: str) -> bool:
+    """
+    True when Stripe metadata copy_from can safely be stored as upgraded_from_token on this order.
+
+    Prevents impossible links (e.g. subscription shell row created weeks before the one-off token
+    existed) and copy_from pointing at a subscription row instead of a one-off.
+    """
+    meta_cf = (meta_cf or "").strip()
+    oid = str(order.get("id") or "").strip()
+    if not meta_cf or not oid or order_service is None:
+        return False
+    try:
+        base = order_service.get_by_token(meta_cf)
+    except Exception:
+        return False
+    if not base or str(base.get("id") or "") == oid:
+        return False
+    if (base.get("stripe_subscription_id") or "").strip():
+        return False
+
+    def _parse_created_ts(raw) -> Optional[datetime]:
+        if not raw:
+            return None
+        s = str(raw).strip()
+        if not s:
+            return None
+        try:
+            if "T" not in s and len(s) > 10 and s[10] == " ":
+                s = s[:10] + "T" + s[11:]
+            return datetime.fromisoformat(s.replace("Z", "+00:00"))
+        except Exception:
+            return None
+
+    bt = _parse_created_ts(base.get("created_at"))
+    ot = _parse_created_ts(order.get("created_at"))
+    if bt and ot and bt > ot:
+        print(
+            "[_thank_you_intake_fields] skip upgraded_from backfill: base one-off row is newer than "
+            f"this subscription row (order id …{oid[-8:]})"
+        )
+        return False
+    return True
+
+
 def _thank_you_intake_fields(
     order: Dict[str, Any],
     session_id: str,
@@ -1353,12 +1398,9 @@ def _thank_you_intake_fields(
     meta_cf = (ctx.get("copy_from") or "").strip() or None
 
     is_subscription = bool(order_sub or sess_sub or mode == "subscription")
-    is_prefilled_from_oneoff = bool(order_up or (meta_cf and is_subscription))
     get_pack = bool(ctx.get("get_pack_now"))
-    subscription_first_pack_immediate = bool(
-        is_subscription and is_prefilled_from_oneoff and get_pack
-    )
 
+    meta_cf_applied: Optional[str] = None
     if (
         meta_cf
         and not order_up
@@ -1366,17 +1408,26 @@ def _thank_you_intake_fields(
         and order_service is not None
         and (order.get("id") if isinstance(order, dict) else None)
     ):
-        try:
-            order_service.update(str(order["id"]), {"upgraded_from_token": meta_cf})
-            order = {**order, "upgraded_from_token": meta_cf}
-            order_up = meta_cf
-        except Exception as e:
-            print(f"[_thank_you_intake_fields] backfill upgraded_from_token failed: {e!r}")
+        if _thank_you_should_backfill_upgraded_from(order_service, order, meta_cf):
+            try:
+                order_service.update(str(order["id"]), {"upgraded_from_token": meta_cf})
+                order = {**order, "upgraded_from_token": meta_cf}
+                order_up = meta_cf
+                meta_cf_applied = meta_cf
+            except Exception as e:
+                print(f"[_thank_you_intake_fields] backfill upgraded_from_token failed: {e!r}")
+
+    order_up = (order.get("upgraded_from_token") or "").strip()
+    is_prefilled_from_oneoff = bool(order_up or (bool(meta_cf_applied) and is_subscription))
+    subscription_first_pack_immediate = bool(
+        is_subscription and is_prefilled_from_oneoff and get_pack
+    )
 
     intake_url = _build_intake_url(order)
-    if intake_url and meta_cf and "copy_from=" not in intake_url:
+    cf_for_url = (meta_cf_applied or order_up or "").strip()
+    if intake_url and cf_for_url and "copy_from=" not in intake_url:
         sep = "&" if "?" in intake_url else "?"
-        intake_url += sep + "copy_from=" + quote(meta_cf, safe="")
+        intake_url += sep + "copy_from=" + quote(cf_for_url, safe="")
 
     return intake_url, is_subscription, is_prefilled_from_oneoff, subscription_first_pack_immediate
 
@@ -1536,14 +1587,6 @@ def captions_intake_link():
                         order = o
                         print(f"[captions-intake-link] Order found by checkout email (awaiting_intake + upgrade copy_from)")
                         break
-                if not order:
-                    for o in orders or []:
-                        if not (o.get("token") or "").strip():
-                            continue
-                        if (o.get("status") or "").strip().lower() == "awaiting_intake":
-                            order = o
-                            print(f"[captions-intake-link] Order found by checkout email (awaiting_intake)")
-                            break
                 if not order:
                     for o in orders or []:
                         if (o.get("token") or "").strip():

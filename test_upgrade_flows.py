@@ -68,6 +68,45 @@ def test_webhook_single_checkout_email_with_session():
     print("OK: Webhook uses _send_intake_email_for_order with session (no separate receipt).")
 
 
+def test_thank_you_backfill_skips_newer_one_off_than_subscription_row():
+    """
+    upgraded_from_token must not point at a one-off row newer than the subscription shell row
+    (prevents impossible copy_from links from thank-you backfill).
+    """
+    from api.captions_routes import _thank_you_should_backfill_upgraded_from
+
+    class _FakeOS:
+        def __init__(self, base_row):
+            self._base = base_row
+
+        def get_by_token(self, token):
+            if token == "oneoff_tok":
+                return self._base
+            return None
+
+    sub_order = {
+        "id": "sub-uuid-1",
+        "created_at": "2026-04-02T17:06:16.889402+00:00",
+    }
+    newer_one_off = {
+        "id": "oneoff-uuid-2",
+        "created_at": "2026-04-20T12:17:40.71402+00:00",
+        "stripe_subscription_id": None,
+    }
+    assert not _thank_you_should_backfill_upgraded_from(_FakeOS(newer_one_off), sub_order, "oneoff_tok")
+
+    older_one_off = {
+        "id": "oneoff-uuid-2",
+        "created_at": "2026-04-01T12:00:00+00:00",
+        "stripe_subscription_id": None,
+    }
+    assert _thank_you_should_backfill_upgraded_from(_FakeOS(older_one_off), sub_order, "oneoff_tok")
+
+    sub_on_base = {**older_one_off, "stripe_subscription_id": "sub_123"}
+    assert not _thank_you_should_backfill_upgraded_from(_FakeOS(sub_on_base), sub_order, "oneoff_tok")
+    print("OK: thank-you upgraded_from backfill guards behave as expected.")
+
+
 def test_get_pack_today_edit_form_first_ui():
     """Option A: When 'Get my first subscription pack today' is selected, 'Edit form first' block exists and link uses return_url."""
     path = os.path.join(os.path.dirname(__file__), "templates", "customer_dashboard.html")
@@ -90,6 +129,7 @@ def run_all():
     test_invoice_paid_copies_intake()
     test_upgrade_confirmation_email_exists()
     test_webhook_single_checkout_email_with_session()
+    test_thank_you_backfill_skips_newer_one_off_than_subscription_row()
     print("\nAll upgrade-flow checks passed.")
 
 
