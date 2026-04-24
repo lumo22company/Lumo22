@@ -165,29 +165,6 @@
         </div>
         <p id="thankyou-oneoff-account-hint" style="display:none; margin: 1rem 0 0; font-size: 0.95rem; line-height: 1.5; color: var(--lum-text-muted);">You already have a Lumo 22 account for this email. <a id="thankyou-oneoff-login-link" href="/login" style="color: var(--lum-gold); font-weight: 600; text-decoration: none; border-bottom: 1px solid var(--lum-gold);">Log in</a> to access captions in your dashboard when they are ready.</p>
         <p id="thankyou-oneoff-signup-wrap" style="display:none; margin: 1rem 0 0; font-size: 0.95rem; line-height: 1.5; color: var(--lum-text-muted);">Optional: <a id="thankyou-oneoff-signup-link" href="/signup" style="color: var(--lum-gold); font-weight: 600; text-decoration: none; border-bottom: 1px solid var(--lum-gold);">Sign up</a> with this email prefilled, then open the form link above (or from your inbox).</p>
-        <div id="thankyou-create-account" style="display: none; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.15);">
-          <h2 id="thankyou-account-heading" style="font-size: 1.15rem; margin: 0 0 0.5rem;">Create your account</h2>
-          <p id="thankyou-account-lead" style="font-size: 0.95rem; color: var(--lum-text-muted); margin: 0 0 1rem; line-height: 1.5;">Set a password (at least 12 characters and 1 number) so you can log in and manage your subscription. We'll send a verification link to your email to confirm your address.</p>
-          <p id="thankyou-login-hint" style="font-size: 0.9rem; color: var(--lum-text-muted); margin: 0 0 1rem; line-height: 1.5;">Already have an account? <a id="thankyou-login-link" href="/login" style="color: var(--lum-gold); font-weight: 600; text-decoration: none; border-bottom: 1px solid var(--lum-gold);">Log in</a> to manage your subscription—you won’t need to create a second account.</p>
-          <p id="thankyou-signup-fallback-caption" style="display: none; font-size: 0.85rem; color: var(--lum-text-muted); margin: 0 0 0.75rem; line-height: 1.45;">Only if you still need to set a Lumo password for this email:</p>
-          <div id="signup-form-wrap" style="max-width: 320px;">
-            <label for="signup-email" style="display:block; font-size: 0.9rem; margin-bottom: 0.25rem;">Email</label>
-            <input type="email" id="signup-email" style="width: 100%; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: #ffffff; color: #1a1a1a; font-size: 1rem; margin-bottom: 0.75rem;" placeholder="your@email.com">
-            <label for="signup-email-confirm" style="display:block; font-size: 0.9rem; margin-bottom: 0.25rem;">Confirm email</label>
-            <input type="email" id="signup-email-confirm" style="width: 100%; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: #ffffff; color: #1a1a1a; font-size: 1rem; margin-bottom: 0.75rem;" placeholder="Re-enter your email">
-            <label for="signup-password" style="display:block; font-size: 0.9rem; margin-bottom: 0.25rem;">Password</label>
-            <input type="password" id="signup-password" style="width: 100%; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: #ffffff; color: #1a1a1a; font-size: 1rem; margin-bottom: 0.75rem;" placeholder="Choose a password">
-            <label for="signup-confirm" style="display:block; font-size: 0.9rem; margin-bottom: 0.25rem;">Confirm password</label>
-            <input type="password" id="signup-confirm" style="width: 100%; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: #ffffff; color: #1a1a1a; font-size: 1rem; margin-bottom: 0.5rem;" placeholder="Re-enter password" autocomplete="new-password">
-            <label style="display:flex;align-items:flex-start;gap:0.5rem;font-size:0.9rem;cursor:pointer;margin:0 0 0.75rem;line-height:1.45;color: var(--lum-text-muted);">
-              <input type="checkbox" id="thankyou-marketing-opt-in" style="margin-top:0.15rem;flex-shrink:0;">
-              <span>Email me tips, updates and offers (optional).</span>
-            </label>
-            <p id="signup-error" style="display: none; font-size: 0.9rem; color: #f99; margin-bottom: 0.5rem;"></p>
-            <button type="button" id="signup-btn" class="lumo-btn-primary btn-cta-account-style" style="padding: 0.6rem 1.25rem;">Create account</button>
-          </div>
-          <p id="signup-success" style="display: none; margin: 1rem 0 0; font-size: 0.95rem; color: #8c8;">Check your email to verify your account—then you can log in and manage your subscription.</p>
-        </div>
       </div>
       <p id="thankyou-no-session" style="display: none;">Check your email for a link to the short form. After you submit, we'll create your 30 captions and deliver by email.</p>
       <div id="thankyou-email-fallback" style="display: none; margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid rgba(255,255,255,0.12);">
@@ -306,59 +283,20 @@
         }
       }
 
-      var THANKYOU_ACCT_PANEL_DEFAULTS = null;
-      function captureThankyouAcctPanelDefaultsOnce() {
-        if (THANKYOU_ACCT_PANEL_DEFAULTS) return;
-        var h = document.getElementById('thankyou-account-heading');
-        var lead = document.getElementById('thankyou-account-lead');
-        var hint = document.getElementById('thankyou-login-hint');
-        if (h && lead && hint) {
-          THANKYOU_ACCT_PANEL_DEFAULTS = {
-            heading: h.textContent,
-            leadHtml: lead.innerHTML,
-            hintHtml: hint.innerHTML
-          };
-        }
-      }
-      function applyThankyouAcctPanelUpgradeRecovery(showRecovery) {
-        captureThankyouAcctPanelDefaultsOnce();
-        var h = document.getElementById('thankyou-account-heading');
-        var lead = document.getElementById('thankyou-account-lead');
-        var hint = document.getElementById('thankyou-login-hint');
-        var cap = document.getElementById('thankyou-signup-fallback-caption');
-        var d = THANKYOU_ACCT_PANEL_DEFAULTS;
-        if (!h || !lead || !hint || !d) return;
-        if (showRecovery) {
-          /* Primary action is the swipe "Log In" button in the card above — no second heading here. */
-          h.style.display = 'none';
-          h.setAttribute('aria-hidden', 'true');
-          lead.innerHTML = 'You already used your Lumo account to subscribe. Use the <strong>Log In</strong> button above with the <strong>same email as your order</strong>, then open your form.';
-          hint.innerHTML = 'If you are already signed in elsewhere, refresh this page.';
-          if (cap) cap.style.display = 'block';
-        } else {
-          h.style.display = '';
-          h.removeAttribute('aria-hidden');
-          h.textContent = d.heading;
-          lead.innerHTML = d.leadHtml;
-          hint.innerHTML = d.hintHtml;
-          if (cap) cap.style.display = 'none';
-        }
-      }
-
       function scheduleIntakeRedirectAfterThankYou(url, isSubscription, isLoggedIn, customerEmail, isPrefilledFromOneoff) {
         clearSubscriptionIntakeRedirect();
         if (!isSubscription || !url) return;
         // One-off → subscription: form is already prefilled; let them read thank-you and open intake when ready.
         // Auto-redirect only for brand-new subscription checkout (empty form path).
         if (isPrefilledFromOneoff) return;
-        var guestNeedsAccountBlock = !!(isSubscription && !isLoggedIn && customerEmail);
-        var delayMs = guestNeedsAccountBlock ? 16000 : 8500;
+        var guestNotSignedIn = !!(isSubscription && !isLoggedIn && customerEmail);
+        var delayMs = 8500;
         var notice = document.getElementById('thankyou-subscription-redirect-notice');
         var msg = document.getElementById('thankyou-subscription-redirect-msg');
         if (!notice || !msg) return;
         subscriptionIntakeRedirectTarget = url;
-        msg.textContent = guestNeedsAccountBlock
-          ? 'Your payment is complete—you\u2019re on the right page. In a few seconds we\u2019ll open your intake form so you can finish while it\u2019s fresh. Complete it soon so your 30 caption days line up with your subscription billing (you can still use \u201cCreate your account\u201d below first). '
+        msg.textContent = guestNotSignedIn
+          ? 'Your payment is complete—you\u2019re on the right page. In a few seconds we\u2019ll open your intake form so you can finish while it\u2019s fresh. Complete it soon so your 30 caption days line up with your subscription billing. '
           : 'Your payment is complete—you\u2019re on the right page. In a few seconds we\u2019ll open your intake form. Complete it soon so your posting dates line up with your subscription billing. ';
         notice.style.display = 'block';
         subscriptionIntakeRedirectTimer = setTimeout(function() {
@@ -452,7 +390,7 @@
               : ' Fill in the form to get started.';
             timingPart = ' Your captions are usually ready within 15 minutes.';
             if (isSubscription && !isLoggedIn) {
-              accountSuffix = ' Create your account below (set a password) so you can log in and manage your subscription. We\'ll send a verification link to your email.';
+              accountSuffix = '';
             } else if (!isSubscription) {
               accountSuffix = '';
             }
@@ -587,28 +525,6 @@
           if (wrongEmailErrorEl) { wrongEmailErrorEl.style.display = 'none'; wrongEmailErrorEl.textContent = ''; }
           if (wrongEmailSuccessEl) wrongEmailSuccessEl.style.display = 'none';
           if (wrongEmailBtnEl) { wrongEmailBtnEl.disabled = false; wrongEmailBtnEl.textContent = 'Update email & resend link'; }
-        }
-        var createAccountEl = document.getElementById('thankyou-create-account');
-        if (createAccountEl) {
-          if (isSubscription && !isLoggedIn && customerEmail) {
-            createAccountEl.style.display = 'block';
-            applyThankyouAcctPanelUpgradeRecovery(!!(isPrefilledFromOneoff && isSubscription));
-            var signupEmail = document.getElementById('signup-email');
-            var signupEmailConfirm = document.getElementById('signup-email-confirm');
-            if (signupEmail) signupEmail.value = customerEmail;
-            if (signupEmailConfirm) signupEmailConfirm.value = customerEmail;
-            var signupSuccess = document.getElementById('signup-success');
-            if (signupSuccess) signupSuccess.style.display = 'none';
-            var signupError = document.getElementById('signup-error');
-            if (signupError) { signupError.style.display = 'none'; signupError.textContent = ''; }
-          } else {
-            createAccountEl.style.display = 'none';
-            applyThankyouAcctPanelUpgradeRecovery(false);
-          }
-        }
-        var thankyouLoginLink = document.getElementById('thankyou-login-link');
-        if (thankyouLoginLink) {
-          thankyouLoginLink.href = loginHrefBase;
         }
         var oneoffLogin = document.getElementById('thankyou-oneoff-login-link');
         if (oneoffLogin) {
@@ -752,69 +668,6 @@
       }, 45000);
       // Keep polling ~90s; if link arrives after fallback, showIntake still reveals the primary CTAs
       setTimeout(function() { clearInterval(interval); }, 90000);
-
-      var signupBtn = document.getElementById('signup-btn');
-      if (signupBtn) {
-        signupBtn.addEventListener('click', function() {
-          var emailEl = document.getElementById('signup-email');
-          var emailConfirmEl = document.getElementById('signup-email-confirm');
-          var pwEl = document.getElementById('signup-password');
-          var confirmEl = document.getElementById('signup-confirm');
-          var errEl = document.getElementById('signup-error');
-          var successEl = document.getElementById('signup-success');
-          var email = (emailEl && emailEl.value || '').trim().toLowerCase();
-          var emailConfirm = (emailConfirmEl && emailConfirmEl.value || '').trim().toLowerCase();
-          var password = (pwEl && pwEl.value || '').trim();
-          var confirm = (confirmEl && confirmEl.value || '').trim();
-          if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
-          if (!email || email.indexOf('@') === -1) {
-            if (errEl) { errEl.textContent = 'Please enter a valid email.'; errEl.style.display = 'block'; }
-            return;
-          }
-          if (email !== emailConfirm) {
-            if (errEl) { errEl.textContent = 'Email addresses do not match.'; errEl.style.display = 'block'; }
-            return;
-          }
-          if (!password) {
-            if (errEl) { errEl.textContent = 'Please choose a password.'; errEl.style.display = 'block'; }
-            return;
-          }
-          if (password.length < 12 || !/\d/.test(password)) {
-            if (errEl) { errEl.textContent = 'Use at least 12 characters and include 1 number.'; errEl.style.display = 'block'; }
-            return;
-          }
-          if (password !== confirm) {
-            if (errEl) { errEl.textContent = 'Passwords do not match.'; errEl.style.display = 'block'; }
-            return;
-          }
-          signupBtn.disabled = true;
-          signupBtn.textContent = 'Creating…';
-          var tyMo = document.getElementById('thankyou-marketing-opt-in');
-          fetch('/api/auth/signup', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: email, email_confirm: emailConfirm, password: password, marketing_opt_in: !!(tyMo && tyMo.checked) })
-          })
-          .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
-          .then(function(res) {
-            if (res.ok && res.data && res.data.ok) {
-              if (successEl) successEl.style.display = 'block';
-              var formWrap = document.getElementById('signup-form-wrap');
-              if (formWrap) formWrap.style.display = 'none';
-              if (errEl) errEl.style.display = 'none';
-            } else {
-              if (errEl) { errEl.textContent = (res.data && res.data.error) || 'Something went wrong. Please try again.'; errEl.style.display = 'block'; }
-              signupBtn.disabled = false;
-              signupBtn.textContent = 'Create account';
-            }
-          })
-          .catch(function() {
-            if (errEl) { errEl.textContent = 'Something went wrong. Please try again.'; errEl.style.display = 'block'; }
-            signupBtn.disabled = false;
-            signupBtn.textContent = 'Create account';
-          });
-        });
-      }
 
       if (wrongEmailToggleEl && wrongEmailFormEl) {
         wrongEmailToggleEl.addEventListener('click', function() {
