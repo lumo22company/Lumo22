@@ -3613,6 +3613,7 @@ def _pause_info_from_subscription(sub) -> dict:
         "cancelled_now": False,
         "ends_at": None,
         "next_pack_due": None,
+        "stripe_cancel_unix": None,
     }
     pc = sub.get("pause_collection")
     if pc and isinstance(pc, dict):
@@ -3640,8 +3641,10 @@ def _pause_info_from_subscription(sub) -> dict:
         ended_ts = sub.get("ended_at") or sub.get("canceled_at") or sub.get("cancel_at")
         if ended_ts:
             try:
-                dt = datetime.fromtimestamp(int(ended_ts), tz=timezone.utc)
+                eu = int(ended_ts)
+                dt = datetime.fromtimestamp(eu, tz=timezone.utc)
                 out["ends_at"] = dt.strftime("%d %b %Y")
+                out["stripe_cancel_unix"] = eu
             except (TypeError, ValueError, OSError):
                 pass
     if not out["cancelled_now"]:

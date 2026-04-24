@@ -37,7 +37,17 @@ def test_billing_anchor_only_when_upgrader_no_get_pack_now():
     assert "subscription_data" in src and "billing_cycle_anchor" in src
     assert "proration_behavior" in src
     assert "copy_from and not get_pack_now and not resubscribe_restart_checkout_day" in src
+    assert "stripe_cancel_unix" in src
     print("OK: Billing anchor skips long-gap resubscribe restart.")
+
+
+def test_resubscribe_timing_fallbacks_documented():
+    """Long-gap resubscribe uses Stripe cancel unix or row updated_at when DB cancel missing."""
+    import services.resubscribe_timing as rt
+    src = open(rt.__file__, "r").read()
+    assert "stripe_cancel_unix" in src
+    assert "updated_at" in src
+    print("OK: resubscribe_timing documents fallbacks.")
 
 
 def test_invoice_paid_copies_intake():
@@ -126,6 +136,7 @@ def test_get_pack_today_edit_form_first_ui():
 def run_all():
     test_no_trial_in_templates()
     test_billing_anchor_only_when_upgrader_no_get_pack_now()
+    test_resubscribe_timing_fallbacks_documented()
     test_invoice_paid_copies_intake()
     test_upgrade_confirmation_email_exists()
     test_webhook_single_checkout_email_with_session()

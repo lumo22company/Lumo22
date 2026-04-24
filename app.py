@@ -1950,6 +1950,7 @@ _ACCOUNT_SUB_PAUSE_FALLBACK = {
     "cancelled_now": False,
     "ends_at": None,
     "next_pack_due": None,
+    "stripe_cancel_unix": None,
 }
 
 _ACCOUNT_SUB_PAUSE_CANCELLED_IN_DB = {
@@ -1959,6 +1960,7 @@ _ACCOUNT_SUB_PAUSE_CANCELLED_IN_DB = {
     "cancelled_now": True,
     "ends_at": None,
     "next_pack_due": None,
+    "stripe_cancel_unix": None,
 }
 
 
