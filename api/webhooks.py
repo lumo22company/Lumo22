@@ -379,6 +379,34 @@ def _resolve_customer_email_after_checkout_session(
     return ""
 
 
+def _stripe_expandable_id(value: Any) -> Optional[str]:
+    """
+    Checkout Session.retrieve(..., expand=['customer']) returns customer as a dict (or StripeObject),
+    not a string. Normalise to cus_xxx / sub_xxx for DB columns and downstream .strip() callers.
+    """
+    if value is None:
+        return None
+    if isinstance(value, str):
+        s = value.strip()
+        return s or None
+    if isinstance(value, dict):
+        rid = str(value.get("id") or "").strip()
+        return rid or None
+    rid = getattr(value, "id", None)
+    if rid is not None:
+        s = str(rid).strip()
+        return s or None
+    try:
+        if hasattr(value, "to_dict"):
+            d = value.to_dict()
+            if isinstance(d, dict):
+                rid = str(d.get("id") or "").strip()
+                return rid or None
+    except Exception:
+        pass
+    return None
+
+
 def _handle_captions_payment(session):
     """Create caption order and send intake-link email. Used for both one-off (£97) and subscription (£79/mo) captions.
     Idempotent: if we already have an order for this session, resend email and return."""
@@ -386,8 +414,10 @@ def _handle_captions_payment(session):
     from services.notifications import NotificationService
 
     session_id = session.get("id") if isinstance(session, dict) else getattr(session, "id", None)
-    stripe_customer_id = (session.get("customer") or "").strip() or None
-    stripe_subscription_id = (session.get("subscription") or "").strip() or None
+    cust_raw = session.get("customer") if isinstance(session, dict) else getattr(session, "customer", None)
+    sub_raw = session.get("subscription") if isinstance(session, dict) else getattr(session, "subscription", None)
+    stripe_customer_id = _stripe_expandable_id(cust_raw)
+    stripe_subscription_id = _stripe_expandable_id(sub_raw)
     customer_email = _get_customer_email_from_session(session)
     if not customer_email:
         customer_email = _resolve_customer_email_after_checkout_session(

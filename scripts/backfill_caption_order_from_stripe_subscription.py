@@ -58,6 +58,20 @@ def _customer_id_from_subscription(sub) -> str:
     return str(getattr(cust, "id", "") or "").strip()
 
 
+def _normalize_checkout_session_expandables(d: dict) -> dict:
+    """Session.retrieve(expand=['customer']) nests customer/subscription as dicts; coerce to id strings."""
+    if not isinstance(d, dict):
+        return d
+    out = dict(d)
+    c = out.get("customer")
+    if isinstance(c, dict) and (c.get("id") or "").strip():
+        out["customer"] = (c.get("id") or "").strip()
+    s = out.get("subscription")
+    if isinstance(s, dict) and (s.get("id") or "").strip():
+        out["subscription"] = (s.get("id") or "").strip()
+    return out
+
+
 def find_checkout_session_for_subscription(stripe_module, subscription_id: str):
     """Return expanded Checkout Session dict for subscription mode checkout that created this sub."""
     sub = stripe_module.Subscription.retrieve(subscription_id, expand=["customer"])
@@ -125,6 +139,8 @@ def main() -> None:
             )
             sys.exit(1)
         print(f"Found Checkout Session {(session_dict.get('id') or '')!r} for subscription {sub_id!r}")
+
+    session_dict = _normalize_checkout_session_expandables(session_dict)
 
     meta = session_dict.get("metadata") or {}
     print("metadata:", dict(meta) if isinstance(meta, dict) else meta)
