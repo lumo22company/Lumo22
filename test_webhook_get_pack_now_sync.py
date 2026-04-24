@@ -87,6 +87,65 @@ def test_get_pack_now_copies_intake_with_subscription_overrides():
     assert saved.get("include_stories") is False
 
 
+def test_captions_checkout_webhook_500_when_no_order_row_after_handler():
+    """
+    After checkout.session.completed runs _handle_captions_payment, a caption_orders row must exist
+    for that session (all upgrade / one-off paths). Missing row → 500 for Stripe retries + ops alert.
+    """
+    from app import app
+
+    session_id = "cs_test_missing_order_after_handler"
+
+    class FakeOrderServiceNoRow:
+        def get_by_stripe_session_id(self, sid):
+            return None
+
+    event = {
+        "type": "checkout.session.completed",
+        "data": {
+            "object": {
+                "id": session_id,
+                "mode": "subscription",
+                "subscription": "sub_guard_1",
+                "payment_status": "paid",
+                "amount_total": 7900,
+                "metadata": {"product": "captions_subscription"},
+            }
+        },
+    }
+
+    with app.test_client() as client:
+        with patch("api.webhooks.Config.STRIPE_WEBHOOK_SECRET", "whsec_test"):
+            with patch("api.webhooks.Config.STRIPE_SECRET_KEY", ""):
+                with patch("stripe.Webhook.construct_event", return_value=event):
+                    with patch("api.webhooks._is_captions_payment", return_value=False):
+                        with patch("api.webhooks._is_captions_subscription_payment", return_value=True):
+                            with patch("api.webhooks._handle_captions_payment", return_value=None):
+                                with patch(
+                                    "services.caption_order_service.CaptionOrderService",
+                                    FakeOrderServiceNoRow,
+                                ):
+                                    with patch(
+                                        "services.notifications.NotificationService.send_caption_checkout_webhook_missing_order_alert",
+                                        return_value=True,
+                                    ) as mock_alert:
+                                        resp = client.post(
+                                            "/webhooks/stripe",
+                                            data=b"{}",
+                                            headers={"Stripe-Signature": "t=1,v1=fake"},
+                                        )
+
+    assert resp.status_code == 500
+    data = resp.get_json()
+    assert data is not None
+    assert data.get("error") == "caption order missing after captions checkout"
+    mock_alert.assert_called_once()
+    call_kw = mock_alert.call_args.kwargs
+    assert call_kw.get("session_id") == session_id
+    assert call_kw.get("reason") == "no_row_after_handle_captions_payment"
+    assert call_kw.get("is_subscription_checkout") is True
+
+
 def test_coerce_platform_selection_fills_defaults_deterministically():
     """When selected list is shorter than paid count, defaults are appended in stable order."""
     from api.webhooks import _coerce_platform_selection
