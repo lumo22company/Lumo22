@@ -1483,7 +1483,33 @@ def _send_intake_email_for_order(
         if upgraded_from_oneoff:
             # Upgrade-from-one-off: prefilled form already exists, so we must not send the standard receipt copy
             # that says "complete your short intake form".
-            ok = notif.send_subscription_welcome_prefilled_email(customer_email, intake_url, order=order)
+            # Match webhook: include amount paid when we can read the Checkout Session (thank-you API often sends first).
+            amount_paid_arg = None
+            sess = checkout_session
+            if sess is None:
+                sid = (order.get("stripe_session_id") or "").strip()
+                if sid and (getattr(Config, "STRIPE_SECRET_KEY", None) or "").strip():
+                    try:
+                        import stripe
+
+                        stripe.api_key = Config.STRIPE_SECRET_KEY.strip()
+                        sess = stripe.checkout.Session.retrieve(sid)
+                    except Exception:
+                        sess = None
+            if sess is not None:
+                try:
+                    from api.webhooks import _format_paid_amount
+
+                    at = sess.get("amount_total") if isinstance(sess, dict) else getattr(sess, "amount_total", None)
+                    if at is not None:
+                        cur = ((order.get("currency") or "gbp") if isinstance(order, dict) else "gbp") or "gbp"
+                        cur = str(cur).strip().lower()
+                        amount_paid_arg = _format_paid_amount(at, cur)
+                except Exception:
+                    amount_paid_arg = None
+            ok = notif.send_subscription_welcome_prefilled_email(
+                customer_email, intake_url, order=order, amount_paid=amount_paid_arg
+            )
             if ok:
                 print(f"[captions-intake-link] Sent subscription welcome (prefilled) email to {customer_email}")
             else:

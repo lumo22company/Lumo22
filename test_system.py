@@ -5,6 +5,8 @@ Run this after setting up your API keys.
 """
 import sys
 import os
+
+import pytest
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -41,6 +43,11 @@ def test_config():
     assert not issues, f"Configuration issues: {', '.join(issues)}"
 
 
+@pytest.mark.skipif(
+    os.getenv("GITHUB_ACTIONS") == "true"
+    or (os.getenv("SUPABASE_KEY") or "").strip() == "ci-placeholder-key",
+    reason="GitHub Actions uses placeholder Supabase credentials; run this test locally with a real key.",
+)
 def test_supabase():
     """Test Supabase connection via caption order service."""
     print("\nTesting Supabase connection...")
