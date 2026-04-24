@@ -178,7 +178,7 @@
             <label for="signup-password" style="display:block; font-size: 0.9rem; margin-bottom: 0.25rem;">Password</label>
             <input type="password" id="signup-password" style="width: 100%; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: #ffffff; color: #1a1a1a; font-size: 1rem; margin-bottom: 0.75rem;" placeholder="Choose a password">
             <label for="signup-confirm" style="display:block; font-size: 0.9rem; margin-bottom: 0.25rem;">Confirm password</label>
-            <input type="password" id="signup-confirm" style="width: 100%; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: #ffffff; color: #1a1a1a; font-size: 1rem; margin-bottom: 0.5rem;" placeholder="Confirm password">
+            <input type="password" id="signup-confirm" style="width: 100%; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: #ffffff; color: #1a1a1a; font-size: 1rem; margin-bottom: 0.5rem;" placeholder="Re-enter password" autocomplete="new-password">
             <label style="display:flex;align-items:flex-start;gap:0.5rem;font-size:0.9rem;cursor:pointer;margin:0 0 0.75rem;line-height:1.45;color: var(--lum-text-muted);">
               <input type="checkbox" id="thankyou-marketing-opt-in" style="margin-top:0.15rem;flex-shrink:0;">
               <span>Email me tips, updates and offers (optional).</span>
@@ -329,11 +329,15 @@
         var d = THANKYOU_ACCT_PANEL_DEFAULTS;
         if (!h || !lead || !hint || !d) return;
         if (showRecovery) {
-          h.textContent = 'Log in';
-          lead.innerHTML = 'You already used your Lumo account to subscribe. Use the <strong>Log in</strong> button below with the <strong>same email as your order</strong>, then open your form.';
+          /* Primary action is the swipe "Log In" button in the card above — no second heading here. */
+          h.style.display = 'none';
+          h.setAttribute('aria-hidden', 'true');
+          lead.innerHTML = 'You already used your Lumo account to subscribe. Use the <strong>Log In</strong> button above with the <strong>same email as your order</strong>, then open your form.';
           hint.innerHTML = 'If you are already signed in elsewhere, refresh this page.';
           if (cap) cap.style.display = 'block';
         } else {
+          h.style.display = '';
+          h.removeAttribute('aria-hidden');
           h.textContent = d.heading;
           lead.innerHTML = d.leadHtml;
           hint.innerHTML = d.hintHtml;
