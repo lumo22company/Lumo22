@@ -31,13 +31,13 @@ def test_no_trial_in_templates():
 
 
 def test_billing_anchor_only_when_upgrader_no_get_pack_now():
-    """Subscription checkout only uses billing_cycle_anchor (no trial) when copy_from and not get_pack_now."""
+    """Subscription checkout only uses billing_cycle_anchor when copy_from, not get_pack_now, not long-gap resubscribe."""
     import api.captions_routes as m
     src = open(m.__file__, "r").read()
     assert "subscription_data" in src and "billing_cycle_anchor" in src
     assert "proration_behavior" in src
-    assert "copy_from and not get_pack_now" in src
-    print("OK: Billing anchor only for upgrader without get_pack_now.")
+    assert "copy_from and not get_pack_now and not resubscribe_restart_checkout_day" in src
+    print("OK: Billing anchor skips long-gap resubscribe restart.")
 
 
 def test_invoice_paid_copies_intake():

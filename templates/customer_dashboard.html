@@ -672,7 +672,7 @@
               {% for o in one_off_upgrade_options %}
               {% set biz = (o.get('intake') or {}).get('business_name', '')|trim %}
               {% set label = (biz|title) if biz else (o.created_at[:10] if o.created_at else 'Pack') %}
-              <option value="{{ o.get('token', '') }}" data-platforms="{{ o.get('platforms_count') or 1 }}" data-selected="{{ (o.get('selected_platforms') or '')|e }}" data-stories="{{ '1' if o.get('include_stories') else '0' }}" data-currency="{{ (o.get('currency') or 'gbp')|lower }}" data-delivered="{{ '1' if (o.get('status') == 'delivered' or o.get('delivered_at')) else '0' }}"{% if one_off_upgrade_options|length == 1 %} selected{% endif %}>{{ label }}</option>
+              <option value="{{ o.get('token', '') }}" data-platforms="{{ o.get('platforms_count') or 1 }}" data-selected="{{ (o.get('selected_platforms') or '')|e }}" data-stories="{{ '1' if o.get('include_stories') else '0' }}" data-currency="{{ (o.get('currency') or 'gbp')|lower }}" data-delivered="{{ '1' if (o.get('status') == 'delivered' or o.get('delivered_at')) else '0' }}" data-resubscribe-restart="{{ '1' if o.get('resubscribe_restart_checkout_day') else '0' }}"{% if one_off_upgrade_options|length == 1 %} selected{% endif %}>{{ label }}</option>
           {% endfor %}
             </select>
         </div>
@@ -699,7 +699,7 @@
               <input type="checkbox" id="upgrade-stories-cb" class="upgrade-stories-cb"> 30 Days Story Ideas <span id="upgrade-stories-price-wrap">(+£17 monthly)</span>
             </label>
           </div>
-          <div style="margin-bottom: 1.25rem;">
+          <div id="upgrade-get-pack-today-wrap" style="margin-bottom: 1.25rem;">
             <label class="account-upgrade-cb-label" style="display: inline-flex; align-items: flex-start; gap: 0.5rem; cursor: pointer; font-size: 0.95rem; color: #fff; font-weight: 600;">
               <input type="checkbox" id="upgrade-get-pack-today-cb" class="upgrade-get-pack-today-cb" style="margin-top: 0.2rem;"> Get my first subscription pack today
             </label>
@@ -744,6 +744,8 @@
         var storiesTouched = false;
         var currency = 'gbp';
         var getPackTodayHelpDeliveredMsg = "You'll be charged at checkout and we'll send your first subscription pack right away. Your next billing date will be 30 days from today. Leave unchecked to be charged when your first pack is ready (30 days after your one-off delivery date).";
+        var firstPackCopyResubscribeRestart = "You're restarting more than 30 days after cancellation: monthly billing starts at checkout, and your first subscription pack is produced after you submit your form so dates align with the billing period starting that day. There is no \"get pack today\" option for this restart.";
+        var firstPackCopyDeferredOneoff = "Your first subscription pack will be delivered 30 days after your one-off pack—continuous content, no overlap.";
         function hasInstaFb() {
           var cbs = document.querySelectorAll('.upgrade-which-cb:checked');
           for (var i = 0; i < cbs.length; i++) if (cbs[i].value === 'Instagram & Facebook') return true;
@@ -781,6 +783,8 @@
             });
             storiesDefaultFromPrefill = false;
             storiesTouched = false;
+            var gpwEmpty = document.getElementById('upgrade-get-pack-today-wrap');
+            if (gpwEmpty) gpwEmpty.style.display = '';
             if (getPackTodayCb) {
               getPackTodayCb.checked = false;
               getPackTodayCb.disabled = false;
@@ -809,14 +813,19 @@
           storiesDefaultFromPrefill = (opt.dataset.stories === '1');
           storiesTouched = false;
           var delivered = (opt.dataset.delivered === '1');
+          var resubscribeRestart = (opt.dataset.resubscribeRestart === '1');
+          var gpw = document.getElementById('upgrade-get-pack-today-wrap');
+          if (gpw) gpw.style.display = resubscribeRestart ? 'none' : '';
           if (getPackTodayCb) {
             getPackTodayCb.checked = false;
-            getPackTodayCb.disabled = !delivered;
+            getPackTodayCb.disabled = resubscribeRestart || !delivered;
           }
           if (getPackTodayHelp) {
-            getPackTodayHelp.textContent = delivered
+            getPackTodayHelp.textContent = resubscribeRestart
+              ? ""
+              : (delivered
               ? getPackTodayHelpDeliveredMsg
-              : "Available after your one-off pack is delivered. For now, leave this unchecked and your subscription will start 30 days after your one-off delivery.";
+              : "Available after your one-off pack is delivered. For now, leave this unchecked and your subscription will start 30 days after your one-off delivery.");
           }
           syncUpgradeStoriesAddon(storiesDefaultFromPrefill);
           updatePrice();
@@ -867,14 +876,20 @@
             }
           }
           if (firstPackCopyEl) {
+            var optCur = prefillSelect && prefillSelect.options[prefillSelect.selectedIndex];
+            var rsCur = optCur && optCur.dataset && optCur.dataset.resubscribeRestart === '1';
             if (getPackToday) {
               firstPackCopyEl.textContent = '';
               firstPackCopyEl.style.display = 'none';
               firstPackCopyEl.style.marginBottom = '0';
+            } else if (rsCur) {
+              firstPackCopyEl.style.display = '';
+              firstPackCopyEl.style.marginBottom = '1rem';
+              firstPackCopyEl.textContent = firstPackCopyResubscribeRestart;
             } else {
               firstPackCopyEl.style.display = '';
               firstPackCopyEl.style.marginBottom = '1rem';
-              firstPackCopyEl.textContent = 'Your first subscription pack will be delivered 30 days after your one-off pack—continuous content, no overlap.';
+              firstPackCopyEl.textContent = firstPackCopyDeferredOneoff;
             }
           }
           syncUpgradePlatformAtMax();
@@ -957,7 +972,9 @@
           try {
             var gp = (new URLSearchParams(window.location.search).get('get_pack_now') || '').toLowerCase();
             if (gp === '1' || gp === 'true' || gp === 'yes' || gp === 'on') {
-              if (getPackTodayCb && !getPackTodayCb.disabled) {
+              var optGp = prefillSelect && prefillSelect.options[prefillSelect.selectedIndex];
+              var rsGp = optGp && optGp.dataset && optGp.dataset.resubscribeRestart === '1';
+              if (getPackTodayCb && !getPackTodayCb.disabled && !rsGp) {
                 getPackTodayCb.checked = true;
                 updatePrice();
               }

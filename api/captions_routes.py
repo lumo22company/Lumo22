@@ -1007,6 +1007,7 @@ def captions_checkout_subscription():
     Create a Stripe Checkout Session for Captions subscription.
     Query: ?platforms=N (1–4), ?selected=..., ?stories=1, ?currency=gbp|usd|eur, ?get_pack_now=1 (upgrade only).
     When get_pack_now=1 and copy_from=TOKEN: one-time payment for first month + immediate pack; subscription created with trial so next pack in 30 days.
+    Resubscribe more than 30 days after recorded cancellation: no get_pack_now; billing from checkout (no deferred anchor).
     """
     from api.auth_routes import get_current_customer
     copy_from = (request.args.get("copy_from") or "").strip()
@@ -1048,6 +1049,7 @@ def captions_checkout_subscription():
     cancel_url = f"{base}/captions"
     metadata = {"product": "captions_subscription", "platforms": str(platforms), "include_stories": "1" if stories else "0"}
     metadata["reminder_opt_out"] = "0" if reminders_on else "1"
+    resubscribe_restart_checkout_day = False
     if selected:
         metadata["selected_platforms"] = selected
     if target_business_key.startswith("biz:"):
@@ -1065,6 +1067,9 @@ def captions_checkout_subscription():
         customer_email = (customer.get("email") or "").strip().lower()
         if not one_off_email or not customer_email or one_off_email != customer_email:
             return jsonify({"error": "You can only upgrade your own one-off order."}), 403
+        from services.resubscribe_timing import order_is_resubscribe_long_gap_after_cancel
+
+        resubscribe_restart_checkout_day = order_is_resubscribe_long_gap_after_cancel(one_off)
         # Upgrade URLs omit business_name; copy from the one-off intake so Stripe metadata
         # and webhook emails (subject, receipt, welcome) include the business name.
         if not (business_name_raw or "").strip():
@@ -1078,6 +1083,12 @@ def captions_checkout_subscription():
     if (business_name_raw or "").strip():
         metadata["business_name"] = business_name_raw[:120]
     if get_pack_now:
+        if resubscribe_restart_checkout_day:
+            return jsonify(
+                {
+                    "error": "This restart does not include “get pack today”. Your subscription and first pack follow the date you complete checkout—see the summary on the previous page."
+                }
+            ), 400
         # Safety guard: only allow immediate first subscription pack after the base one-off
         # has already been delivered, so customers are never charged twice for the same day.
         if not copy_from:
@@ -1089,8 +1100,9 @@ def captions_checkout_subscription():
         metadata["get_pack_now"] = "1"
 
     # Upgraders (copy_from) without get_pack_now: first charge on first pack date (billing_cycle_anchor), no “X days free” trial wording
+    # Long-gap resubscribe: skip anchor so Stripe bills from checkout (anchor in the past is invalid).
     subscription_data = None
-    if copy_from and not get_pack_now:
+    if copy_from and not get_pack_now and not resubscribe_restart_checkout_day:
         from datetime import datetime, timedelta, timezone
         try:
             if one_off:

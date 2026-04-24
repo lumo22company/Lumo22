@@ -100,7 +100,9 @@
       {% if add_platforms_url %}<p style="font-size: 0.9rem; color: var(--lum-text-muted); margin: 0.35rem 0 0;">Need more platforms? <a href="{{ add_platforms_url }}" style="color: var(--lum-gold); font-weight: 600;">Change your selection</a>.{% if not is_upgrade_from_oneoff|default(false) %} Extra platforms added later from your account ship with your <strong>next</strong> pack.{% endif %}</p>{% endif %}
       {% endif %}
       {% if is_upgrade_from_oneoff|default(false) %}
-      {% if get_pack_now_preselected|default(false) %}
+      {% if resubscribe_restart_checkout_day|default(false) %}
+      <p style="font-size: 0.9rem; color: #fff; margin: 1.5rem 0 1rem; padding: 0.75rem 1rem; background: #000; border-radius: 8px; border: 2px solid #fff;">You&rsquo;re restarting your subscription <strong>more than 30 days</strong> after it was cancelled. <strong style="color: #fff;">{{ currency_symbol|default('£') }}{{ total_sub|default(79) }}/month</strong> begins when you complete checkout (Stripe). Your <strong>first subscription pack</strong> is produced <strong>after you submit your intake form</strong>, with posting dates aligned to the billing period that starts on the day you complete checkout—so completing the form the same day keeps everything in step. There is <strong>no</strong> &ldquo;get my first pack today&rdquo; option for this restart. You can edit your answers anytime in your account.</p>
+      {% elif get_pack_now_preselected|default(false) %}
       <div id="get-pack-now-summary-readonly" style="margin: 1rem 0 1rem; padding: 1rem 1.1rem; background: transparent; border: 2px solid rgba(255,255,255,0.9); border-radius: 8px;">
         <p style="margin: 0; color: #fff; font-size: 0.95rem; line-height: 1.55;">You chose to get your first subscription pack now. You&rsquo;ll pay at checkout and we&rsquo;ll send your first subscription pack right away; your next monthly bill is in 30 days.</p>
       </div>
@@ -120,7 +122,7 @@
           </span>
         </label>
       </div>
-      <p class="price-note">Renews monthly until you cancel (Stripe customer portal).{% if not is_upgrade_from_oneoff|default(false) %} After payment you’ll complete a short form—captions ready in about 15 minutes after you submit it.{% endif %}</p>
+      <p class="price-note">Renews monthly until you cancel (Stripe customer portal).{% if resubscribe_restart_checkout_day|default(false) %} After payment you&rsquo;ll complete your form; captions are ready in about 15 minutes after you submit.{% elif not is_upgrade_from_oneoff|default(false) %} After payment you’ll complete a short form—captions ready in about 15 minutes after you submit it.{% endif %}</p>
       {% if not is_upgrade_from_oneoff|default(false) %}
       <p style="font-size: 0.9rem; color: var(--lum-text-muted); margin: 0.65rem 0 0; line-height: 1.5;">We send your first pack <strong style="color: rgba(255,255,255,0.92);">after</strong> that form is submitted; pack dates follow your billing cycle. If you can, take a few minutes right after payment so your first delivery is not waiting on this step.</p>
       {% endif %}

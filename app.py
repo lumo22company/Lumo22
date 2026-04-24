@@ -958,6 +958,7 @@ def captions_checkout_subscription_page():
     first_charge_date_str = None
     can_get_pack_now = False
     valid_copy_from_order = False
+    resubscribe_restart_checkout_day = False
     if copy_from:
         try:
             from services.caption_order_service import CaptionOrderService
@@ -971,6 +972,9 @@ def captions_checkout_subscription_page():
                     one_off = None
             if one_off:
                 valid_copy_from_order = True
+                from services.resubscribe_timing import order_is_resubscribe_long_gap_after_cancel
+
+                resubscribe_restart_checkout_day = order_is_resubscribe_long_gap_after_cancel(one_off)
                 if not (request.args.get("currency") or "").strip():
                     c = (one_off.get("currency") or "").strip().lower()
                     if c in CAPTIONS_DISPLAY_PRICES:
@@ -993,9 +997,9 @@ def captions_checkout_subscription_page():
                     intake = one_off.get("intake") if isinstance(one_off.get("intake"), dict) else {}
                     business_name = (intake.get("business_name") or "").strip() or business_name
                 is_delivered = bool(one_off.get("status") == "delivered" or one_off.get("delivered_at"))
-                can_get_pack_now = is_delivered
+                can_get_pack_now = bool(is_delivered and not resubscribe_restart_checkout_day)
                 raw = one_off.get("delivered_at") or one_off.get("updated_at") or one_off.get("created_at")
-                if is_delivered and raw:
+                if is_delivered and raw and not resubscribe_restart_checkout_day:
                     dt = datetime.fromisoformat(raw.replace("Z", "+00:00")) if isinstance(raw, str) else raw
                     if getattr(dt, "tzinfo", None) is None:
                         dt = dt.replace(tzinfo=timezone.utc)
@@ -1066,6 +1070,7 @@ def captions_checkout_subscription_page():
             first_charge_date=first_charge_date_str,
             can_get_pack_now=can_get_pack_now,
             get_pack_now_preselected=get_pack_now_preselected,
+            resubscribe_restart_checkout_day=resubscribe_restart_checkout_day,
             form_reminders_on=reminders_on,
             checkout_business_name=business_name,
         )
@@ -1600,13 +1605,9 @@ def _order_is_former_subscription_row(o: dict) -> bool:
     subscription_cancelled_at was not set but Stripe sub was cleared on the upgrade row
     (upgraded_from_token set — one-off→sub upgrade then cancel).
     """
-    if bool(o.get("subscription_cancelled_at")):
-        return True
-    if _subscription_pause_cancelled_in_stripe(o):
-        return True
-    if (o.get("stripe_subscription_id") or "").strip():
-        return False
-    return bool((o.get("upgraded_from_token") or "").strip())
+    from services.resubscribe_timing import is_former_subscription_order_row
+
+    return is_former_subscription_order_row(o)
 
 
 def _format_cancelled_on_display(raw) -> Optional[str]:
@@ -2430,6 +2431,10 @@ def _account_context_build(customer: dict, section: Optional[str] = None) -> dic
     one_off_upgrade_options = [o for o in one_off_orders if _one_off_eligible_for_upgrade_base_dropdown(o)]
     # Same list drives Upgrade → "Base subscription on" and subscribe_options; omit dismissed rows everywhere.
     one_off_upgrade_options = [o for o in one_off_upgrade_options if not _order_resubscribe_prompt_dismissed(o)]
+    from services.resubscribe_timing import order_is_resubscribe_long_gap_after_cancel
+
+    for _uo in one_off_upgrade_options:
+        _uo["resubscribe_restart_checkout_day"] = order_is_resubscribe_long_gap_after_cancel(_uo)
     if one_off_upgrade_options:
         from urllib.parse import urlencode
         from services.account_prefill_token import sign_prefill_email
