@@ -97,7 +97,8 @@
       font-weight: 600;
     }
     .thankyou-card #thankyou-email-msg,
-    .thankyou-card #thankyou-product-nudge {
+    .thankyou-card #thankyou-product-nudge,
+    .thankyou-card #thankyou-form-sent-line {
       font-size: 0.95rem;
       line-height: 1.5;
     }
@@ -151,6 +152,7 @@
           <a href="#" id="intake-link" class="thankyou-cta-swipe" aria-disabled="true">Fill out my form</a>
           <p id="thankyou-later-hint" style="display: none; margin: 0.75rem 0 0; font-size: 0.85rem; line-height: 1.45; color: var(--lum-text-muted); max-width: 34rem;"></p>
         </div>
+        <p id="thankyou-form-sent-line" class="thankyou-form-sent-line" style="display: none; margin: 0 0 0.75rem; font-size: 0.95rem; line-height: 1.55; color: var(--lum-text-muted); max-width: 36rem;"></p>
         <div id="thankyou-wrong-email-wrap" style="display: none; margin: 0.5rem 0 1.25rem;">
           <button type="button" id="thankyou-wrong-email-toggle" class="thankyou-link-wrong-email">Wrong email?</button>
           <div id="thankyou-wrong-email-form" style="display: none; margin-top: 0.75rem; max-width: 420px;">
@@ -404,12 +406,17 @@
           timingPart = '';
         }
 
+        var reorderOneOffLoggedIn = !isSubscription && isLoggedIn && !isPrefilledFromOneoff && !subPackTodayLineHidden;
+
         var actionHintEl = document.getElementById('thankyou-action-hint');
-        var actionHintText = [prefilledEditLine, timingPart]
-          .map(function(s) { return (s || '').replace(/\s+/g, ' ').trim(); })
-          .filter(Boolean)
-          .join(' ')
-          .trim();
+        var actionHintText = '';
+        if (!reorderOneOffLoggedIn) {
+          actionHintText = [prefilledEditLine, timingPart]
+            .map(function(s) { return (s || '').replace(/\s+/g, ' ').trim(); })
+            .filter(Boolean)
+            .join(' ')
+            .trim();
+        }
         if (actionHintEl) {
           if (actionHintText) {
             actionHintEl.textContent = actionHintText;
@@ -448,6 +455,13 @@
             + '<p style="' + epFirst + '">' + pDetails + '</p>'
             + '<p style="' + epBody + '">' + pAcct + '</p>'
             + '<p style="' + epBody + '">' + pRead + '</p>';
+        } else if (reorderOneOffLoggedIn) {
+          var introMerged = [prefilledEditLine, timingPart, accountSuffix]
+            .map(function(s) { return (s || '').replace(/\s+/g, ' ').trim(); })
+            .filter(Boolean)
+            .join(' ')
+            .trim();
+          emailMsgEl.innerHTML = '<p style="margin:0 0 1rem;font-size:0.95rem;line-height:1.55;color:var(--lum-text-muted);max-width:36rem;">' + introMerged + '</p>';
         } else {
           emailMsgEl.innerHTML = leadText + accountSuffix;
         }
@@ -463,6 +477,28 @@
           } else {
             productNudgeEl.innerHTML = 'For <strong>one-off</strong> packs, your 30-day caption calendar starts when you submit the form, not the day you paid.';
             productNudgeEl.style.display = 'block';
+          }
+        }
+        var formSentLineEl = document.getElementById('thankyou-form-sent-line');
+        var ctaStackEl = document.querySelector('#thankyou-form-link .thankyou-cta-stack');
+        if (formSentLineEl) {
+          if (reorderOneOffLoggedIn) {
+            formSentLineEl.innerHTML = leadText;
+            formSentLineEl.style.display = 'block';
+            formSentLineEl.style.margin = '1.25rem 0 0.75rem';
+          } else {
+            formSentLineEl.innerHTML = '';
+            formSentLineEl.style.display = 'none';
+            formSentLineEl.style.margin = '0 0 0.75rem';
+          }
+        }
+        if (formLinkEl && productNudgeEl && ctaStackEl && wrongEmailWrapEl) {
+          if (reorderOneOffLoggedIn) {
+            formLinkEl.insertBefore(ctaStackEl, productNudgeEl);
+            if (formSentLineEl) formLinkEl.insertBefore(formSentLineEl, productNudgeEl);
+          } else {
+            formLinkEl.insertBefore(productNudgeEl, ctaStackEl);
+            if (formSentLineEl) formLinkEl.insertBefore(formSentLineEl, wrongEmailWrapEl);
           }
         }
         var laterHintEl = document.getElementById('thankyou-later-hint');
