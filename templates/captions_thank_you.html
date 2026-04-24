@@ -124,8 +124,7 @@
       <a href="/" class="lumo-nav-logo">Lumo 22</a>
       <a href="/captions" class="lumo-nav-link">Captions</a>
     </div>
-    {# Logged-in: no Account link here — back footer points to /account. Guests: Log In. #}
-    {% if not current_customer %}<a href="/login" class="lumo-nav-cta lumo-nav-login">Log In</a>{% endif %}
+    {# No Account / Log in on this page — primary sign-in is the in-card button after confirmation copy. #}
   </nav>
 
   <!-- Same thank-you page for captions one-off and subscription; intake link is polled via session_id. No template vars required. -->
@@ -144,15 +143,15 @@
         <p id="thankyou-subscription-redirect-notice" class="thankyou-subscription-redirect-notice" style="display: none; margin: 0 0 0.85rem; font-size: 0.9rem; line-height: 1.55; color: var(--lum-text-muted); max-width: 36rem;" role="status" aria-live="polite">
           <span id="thankyou-subscription-redirect-msg"></span><button type="button" id="thankyou-cancel-subscription-redirect" class="thankyou-link-later" style="margin-left: 0.35rem;">Stay on this page</button>
         </p>
+        <div id="thankyou-email-msg" style="margin: 0 0 0.75rem;"></div>
+        <p id="thankyou-product-nudge" class="thankyou-product-nudge" style="display: none; margin: 0 0 1.25rem; max-width: 36rem;"></p>
         <div class="thankyou-cta-stack">
           <p id="thankyou-action-hint" class="thankyou-action-hint" style="display: none;" aria-hidden="true"></p>
           <p id="thankyou-subscription-cta-line" class="thankyou-subscription-cta-line" style="display: none; margin: 0 0 0.65rem; font-size: 0.95rem; line-height: 1.55; color: var(--lum-text-muted); text-align: center; max-width: 34rem; align-self: center;"></p>
           <a href="#" id="intake-link" class="thankyou-cta-swipe" aria-disabled="true">Fill out my form</a>
           <p id="thankyou-later-hint" style="display: none; margin: 0.75rem 0 0; font-size: 0.85rem; line-height: 1.45; color: var(--lum-text-muted); max-width: 34rem;"></p>
         </div>
-        <p id="thankyou-email-msg" style="margin: 1.25rem 0 0.75rem;"></p>
-        <p id="thankyou-product-nudge" class="thankyou-product-nudge" style="display: none; margin: 0 0 1.25rem; max-width: 36rem;"></p>
-        <div id="thankyou-wrong-email-wrap" style="display: none; margin: 0.25rem 0 1.25rem;">
+        <div id="thankyou-wrong-email-wrap" style="display: none; margin: 0.5rem 0 1.25rem;">
           <button type="button" id="thankyou-wrong-email-toggle" class="thankyou-link-wrong-email">Wrong email?</button>
           <div id="thankyou-wrong-email-form" style="display: none; margin-top: 0.75rem; max-width: 420px;">
             <label for="thankyou-new-email" style="display:block; font-size: 0.9rem; margin-bottom: 0.25rem;">Email</label>
@@ -330,9 +329,9 @@
         var d = THANKYOU_ACCT_PANEL_DEFAULTS;
         if (!h || !lead || !hint || !d) return;
         if (showRecovery) {
-          h.textContent = 'Sign in to continue';
-          lead.innerHTML = 'You already used your Lumo account to subscribe. If this page does not show you as signed in, log in with the <strong>same email as your order</strong>, then use <strong>Your account</strong> below.';
-          hint.innerHTML = '<a id="thankyou-login-link" href="/login" style="color: var(--lum-gold); font-weight: 600; text-decoration: none; border-bottom: 1px solid var(--lum-gold);">Log in</a> with that email first. If you are already signed in elsewhere, try refreshing this page.';
+          h.textContent = 'Log in';
+          lead.innerHTML = 'You already used your Lumo account to subscribe. Use the <strong>Log in</strong> button below with the <strong>same email as your order</strong>, then open your form.';
+          hint.innerHTML = 'If you are already signed in elsewhere, refresh this page.';
           if (cap) cap.style.display = 'block';
         } else {
           h.textContent = d.heading;
@@ -390,13 +389,19 @@
           emailMatchesSession = Boolean(sessEm && orderEm && sessEm === orderEm);
         }
         var isLoggedIn = bodyLoggedIn || emailMatchesSession;
+        var nextPath = window.location.pathname + window.location.search;
+        if (!nextPath || nextPath === '/') {
+          nextPath = '/captions-thank-you';
+        }
+        var loginHrefBase = '/login?next=' + encodeURIComponent(nextPath);
+        if (customerEmail && String(customerEmail).indexOf('@') !== -1) {
+          loginHrefBase += '&email=' + encodeURIComponent(String(customerEmail).trim());
+        }
         var subPackTodayLineHidden = !!(firstPackImmediate && isSubscription && isPrefilledFromOneoff);
         var prefilledEditLine = '';
         var timingPart = '';
         var accountSuffix = '';
         var leadText = '';
-
-        var upgradeGuestRecoverySuffix = ' If this page does not show you as signed in, use <strong>Log in</strong> below with the same email you used at checkout, then open your form. <strong>Create your account</strong> there is only if you still need to set a password for that email.';
 
         if (firstPackImmediate && isSubscription && isPrefilledFromOneoff) {
           leadText = customerEmail
@@ -424,7 +429,7 @@
           }
           timingPart = '';
           if (isSubscription && !isLoggedIn) {
-            accountSuffix = upgradeGuestRecoverySuffix;
+            accountSuffix = ' If this page does not show you as signed in, use the <strong>Log in</strong> button below with the same email you used at checkout, then open your form.';
           } else if (!isSubscription) {
             accountSuffix = '';
           }
@@ -451,12 +456,6 @@
           leadText = customerEmail
             ? 'We also sent your form link to <strong>' + escapeHtml(customerEmail) + '</strong>.'
             : 'We also sent your form link by email.';
-        }
-
-        if (firstPackImmediate && isSubscription && isPrefilledFromOneoff) {
-          if (isSubscription && !isLoggedIn) {
-            accountSuffix = upgradeGuestRecoverySuffix;
-          }
         }
 
         if (isSubscription && !subPackTodayLineHidden) {
@@ -499,8 +498,11 @@
           var pRead = hasStoryIdeas
             ? 'We recommend reading through all of your captions and Story Ideas before you start posting, to review and tweak them if you need to.'
             : 'We recommend reading through all of your captions before you start posting, to review and tweak them if you need to.';
-          /* #thankyou-email-msg is a <p>; use a div for the lead so we do not nest <p> inside <p>. */
-          emailMsgEl.innerHTML = '<div class="thankyou-subscription-active-lead" style="' + leadWhite + '">' + leadText + accountSuffix + '</div>'
+          var leadBlock = '<div class="thankyou-subscription-active-lead" style="' + leadWhite + '">' + leadText + '</div>';
+          if (!isLoggedIn) {
+            leadBlock += '<p style="' + epFirst + '">If this page does not show you as signed in, use the <strong>Log in</strong> button below with the same email you used at checkout, then open your form.</p>';
+          }
+          emailMsgEl.innerHTML = leadBlock
             + '<p style="' + epFirst + '">' + pDetails + '</p>'
             + '<p style="' + epBody + '">' + pAcct + '</p>'
             + '<p style="' + epBody + '">' + pRead + '</p>';
@@ -532,12 +534,18 @@
             laterHintEl.style.display = 'block';
           }
         }
-        intakeLinkEl.href = url;
-        intakeLinkEl.removeAttribute('aria-disabled');
         if (subPackTodayLineHidden) {
-          intakeLinkEl.href = '/account';
-          intakeLinkEl.textContent = 'Your account';
+          if (!isLoggedIn) {
+            intakeLinkEl.href = loginHrefBase;
+            intakeLinkEl.textContent = 'Log In';
+          } else {
+            intakeLinkEl.href = '/account';
+            intakeLinkEl.textContent = 'Your account';
+          }
+        } else {
+          intakeLinkEl.href = url;
         }
+        intakeLinkEl.removeAttribute('aria-disabled');
         var subCtaLine = document.getElementById('thankyou-subscription-cta-line');
         if (subCtaLine) {
           if (isSubscription && !subPackTodayLineHidden) {
@@ -567,11 +575,6 @@
         }
         formLinkEl.style.display = 'block';
         formLinkEl.setAttribute('aria-hidden', 'false');
-        if (subPackTodayLineHidden && thankyouBox && emailMsgEl && formLinkEl && formLinkEl.parentNode === thankyouBox) {
-          try {
-            thankyouBox.insertBefore(emailMsgEl, formLinkEl);
-          } catch (e) {}
-        }
         if (wrongEmailWrapEl) {
           wrongEmailWrapEl.style.display = (customerEmail && recoveryToken) ? 'block' : 'none';
           if (wrongEmailFormEl) wrongEmailFormEl.style.display = 'none';
@@ -600,14 +603,6 @@
           }
         }
         var thankyouLoginLink = document.getElementById('thankyou-login-link');
-        var nextPath = window.location.pathname + window.location.search;
-        if (!nextPath || nextPath === '/') {
-          nextPath = '/captions-thank-you';
-        }
-        var loginHrefBase = '/login?next=' + encodeURIComponent(nextPath);
-        if (customerEmail && customerEmail.indexOf('@') !== -1) {
-          loginHrefBase += '&email=' + encodeURIComponent(String(customerEmail).trim());
-        }
         if (thankyouLoginLink) {
           thankyouLoginLink.href = loginHrefBase;
         }
