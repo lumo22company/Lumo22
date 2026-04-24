@@ -703,7 +703,7 @@
             <label class="account-upgrade-cb-label" style="display: inline-flex; align-items: flex-start; gap: 0.5rem; cursor: pointer; font-size: 0.95rem; color: #fff; font-weight: 600;">
               <input type="checkbox" id="upgrade-get-pack-today-cb" class="upgrade-get-pack-today-cb" style="margin-top: 0.2rem;"> Get my first subscription pack today
             </label>
-            <p id="upgrade-get-pack-today-help" style="font-size: 0.85rem; color: rgba(255,255,255,0.8); margin: 0.35rem 0 0 1.75rem; line-height: 1.4;">You'll be charged at checkout and we'll send your first subscription pack right away. Leave unchecked to be charged when your first pack is ready (30 days after your one-off delivery date).</p>
+            <p id="upgrade-get-pack-today-help" style="font-size: 0.85rem; color: rgba(255,255,255,0.8); margin: 0.35rem 0 0 1.75rem; line-height: 1.4;">You'll be charged at checkout and we'll send your first subscription pack right away. Your next billing date will be 30 days from today. Leave unchecked to be charged when your first pack is ready (30 days after your one-off delivery date).</p>
           </div>
           <div style="margin-bottom: 1.25rem;">
             <label class="account-settings-label" style="display: block; font-size: 0.95rem; font-weight: 600; color: #fff; margin-bottom: 0.5rem;">Currency</label>
@@ -743,6 +743,7 @@
         var storiesDefaultFromPrefill = false;
         var storiesTouched = false;
         var currency = 'gbp';
+        var getPackTodayHelpDeliveredMsg = "You'll be charged at checkout and we'll send your first subscription pack right away. Your next billing date will be 30 days from today. Leave unchecked to be charged when your first pack is ready (30 days after your one-off delivery date).";
         function hasInstaFb() {
           var cbs = document.querySelectorAll('.upgrade-which-cb:checked');
           for (var i = 0; i < cbs.length; i++) if (cbs[i].value === 'Instagram & Facebook') return true;
@@ -785,7 +786,7 @@
               getPackTodayCb.disabled = false;
             }
             if (getPackTodayHelp) {
-              getPackTodayHelp.textContent = "You'll be charged at checkout and we'll send your first subscription pack right away. Leave unchecked to be charged when your first pack is ready (30 days after your one-off delivery date).";
+              getPackTodayHelp.textContent = getPackTodayHelpDeliveredMsg;
             }
             syncUpgradeStoriesAddon();
             updatePrice();
@@ -814,7 +815,7 @@
           }
           if (getPackTodayHelp) {
             getPackTodayHelp.textContent = delivered
-              ? "You'll be charged at checkout and we'll send your first subscription pack right away. Leave unchecked to be charged when your first pack is ready (30 days after your one-off delivery date)."
+              ? getPackTodayHelpDeliveredMsg
               : "Available after your one-off pack is delivered. For now, leave this unchecked and your subscription will start 30 days after your one-off delivery.";
           }
           syncUpgradeStoriesAddon(storiesDefaultFromPrefill);
@@ -866,9 +867,15 @@
             }
           }
           if (firstPackCopyEl) {
-            firstPackCopyEl.textContent = getPackToday
-              ? 'You\'ll be charged at checkout and we\'ll send your first pack right away. Your next billing date will be 30 days from today.'
-              : 'Your first subscription pack will be delivered 30 days after your one-off pack—continuous content, no overlap.';
+            if (getPackToday) {
+              firstPackCopyEl.textContent = '';
+              firstPackCopyEl.style.display = 'none';
+              firstPackCopyEl.style.marginBottom = '0';
+            } else {
+              firstPackCopyEl.style.display = '';
+              firstPackCopyEl.style.marginBottom = '1rem';
+              firstPackCopyEl.textContent = 'Your first subscription pack will be delivered 30 days after your one-off pack—continuous content, no overlap.';
+            }
           }
           syncUpgradePlatformAtMax();
         }
