@@ -722,8 +722,11 @@ def captions_intake_page():
     pending_oneoff_intake = bool(order and is_oneoff and order_status == "awaiting_intake")
     # e.g. Account → Upgrade → "Edit form": show full editable form + POST, then continue to checkout (not review-only → Stripe).
     edit_intake_before_subscribe = (request.args.get("edit") or "").strip().lower() in ("1", "true", "yes")
-    # Completed one-off (not yet subscribed): review step → subscription checkout — unless ?view=1 (account "View form"
-    # is read-only only; do not show Upgrade-to-subscription headline / confirm-to-Stripe flow).
+    # Recap + "Confirm and continue" → subscription checkout only when customer explicitly opts in (?subscribe=1 or ?checkout=1).
+    # Bare ?t= after the one-off form is done (e.g. "Complete the form" in the order email) shows the same read-only
+    # snapshot as ?view=1 plus the optional Upgrade CTA — avoids trapping people who already submitted.
+    subscribe_checkout_raw = ((request.args.get("subscribe") or request.args.get("checkout")) or "").strip().lower()
+    explicit_subscribe_checkout = subscribe_checkout_raw in ("1", "true", "yes")
     oneoff_subscribe_checkout_mode = bool(
         token
         and order
@@ -731,12 +734,24 @@ def captions_intake_page():
         and not oneoff_consumed_by_subscription
         and order_status
         and order_status != "awaiting_intake"
-    ) and not edit_intake_before_subscribe and view_raw not in ("1", "true", "yes")
+    ) and explicit_subscribe_checkout and not edit_intake_before_subscribe and view_raw not in ("1", "true", "yes")
+    oneoff_readonly_completed = bool(
+        token
+        and order
+        and is_oneoff
+        and not pending_oneoff_intake
+        and not edit_intake_before_subscribe
+        and order_status
+        and order_status != "awaiting_intake"
+        and not oneoff_consumed_by_subscription
+        and not oneoff_subscribe_checkout_mode
+    )
     intake_view_only = bool(
         (
             view_raw in ("1", "true", "yes")
             or oneoff_consumed_by_subscription
             or oneoff_subscribe_checkout_mode
+            or oneoff_readonly_completed
         )
         and token
         and order
@@ -813,6 +828,7 @@ def captions_intake_page():
             account_upgrade_base_url=account_upgrade_base_url,
             oneoff_upgraded_to_subscription=oneoff_consumed_by_subscription,
             oneoff_subscribe_checkout_mode=oneoff_subscribe_checkout_mode,
+            oneoff_readonly_completed=oneoff_readonly_completed,
             edit_intake_before_subscribe=edit_intake_before_subscribe,
             intake_pack_cover_line=intake_pack_cover_line,
             post_checkout_sub_banner=post_checkout_sub_banner,

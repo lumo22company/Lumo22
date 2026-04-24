@@ -393,6 +393,7 @@ def test_view_form_query_param_shows_readonly_not_subscribe_checkout():
             ):
                 r_view = client.get("/captions-intake?t=tok-oneoff-done&view=1")
                 r_checkout = client.get("/captions-intake?t=tok-oneoff-done")
+                r_subscribe = client.get("/captions-intake?t=tok-oneoff-done&subscribe=1")
 
     assert r_view.status_code == 200
     html_view = r_view.get_data(as_text=True)
@@ -403,8 +404,16 @@ def test_view_form_query_param_shows_readonly_not_subscribe_checkout():
 
     assert r_checkout.status_code == 200
     html_co = r_checkout.get_data(as_text=True)
-    assert "moving from your one-off pack" in html_co
-    assert 'data-oneoff-subscribe-checkout="true"' in html_co
+    assert "moving from your one-off pack" not in html_co
+    assert "Read-only snapshot" in html_co
+    assert 'data-oneoff-subscribe-checkout="false"' in html_co
+    assert 'data-auto-open-review="false"' in html_co
+    assert "Upgrade to subscription" in html_co
+
+    assert r_subscribe.status_code == 200
+    html_sub = r_subscribe.get_data(as_text=True)
+    assert "moving from your one-off pack" in html_sub
+    assert 'data-oneoff-subscribe-checkout="true"' in html_sub
 
 
 if __name__ == "__main__":
