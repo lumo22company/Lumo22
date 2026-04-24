@@ -1267,7 +1267,37 @@ def stripe_webhook():
                     f"(get pack sooner / subscription_update)"
                 )
             else:
-                print(f"[Stripe webhook] invoice.paid: triggering generation for order {order_id} (subscription renewal)")
+                # subscription_cycle (normal renewals + first charge when Stripe uses this reason):
+                # Intake submit often starts delivery first; invoice.paid can arrive minutes later with
+                # force_redeliver=True and would send a duplicate PDF. Mirror pack-sooner guards.
+                fresh_c = order_service.get_by_id(order_id) or order
+                st_c = (fresh_c.get("status") or "").strip().lower()
+                da_c = (fresh_c.get("delivered_at") or "").strip()
+                if st_c == "delivered" and da_c:
+                    try:
+                        from datetime import datetime, timezone, timedelta
+
+                        da = datetime.fromisoformat(da_c.replace("Z", "+00:00"))
+                        if da.tzinfo is None:
+                            da = da.replace(tzinfo=timezone.utc)
+                        if datetime.now(timezone.utc) - da < timedelta(hours=6):
+                            print(
+                                "[Stripe webhook] invoice.paid: subscription_cycle skip — order "
+                                f"{order_id} already delivered at {da_c} (within 6h; intake or checkout path likely won)."
+                            )
+                            return jsonify({"received": True}), 200
+                    except Exception:
+                        pass
+                if _subscription_pack_delivery_recent_duplicate(str(order_id)):
+                    print(
+                        "[Stripe webhook] invoice.paid: subscription_cycle skip — delivery dedupe window "
+                        f"(intake or parallel webhook already claimed this pack for order {order_id})."
+                    )
+                    return jsonify({"received": True}), 200
+                _subscription_pack_delivery_register(str(order_id))
+                print(
+                    f"[Stripe webhook] invoice.paid: triggering generation for order {order_id} (subscription renewal)"
+                )
             thread = threading.Thread(
                 target=_run_generation_and_deliver,
                 args=(order_id,),

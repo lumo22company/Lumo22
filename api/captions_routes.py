@@ -3051,9 +3051,23 @@ def _captions_intake_submit_impl(data):
                 "is_subscription": True,
                 "customer_has_account": customer_has_account,
             }), 200
-        thread = threading.Thread(target=_run_generation_and_deliver, args=(order_id,))
-        thread.daemon = False
-        thread.start()
+        # Register dedupe so invoice.paid (subscription_cycle, force_redeliver) does not start a second
+        # delivery minutes after intake wins the race (resubscribe / first pack).
+        if subscription_id:
+            if _subscription_pack_delivery_recent_duplicate(str(order_id)):
+                print(
+                    f"[captions-intake] skip duplicate delivery thread (dedupe window) order_id={order_id} "
+                    f"token_tail=...{(order.get('token') or '')[-8:]}"
+                )
+            else:
+                _subscription_pack_delivery_register(str(order_id))
+                thread = threading.Thread(target=_run_generation_and_deliver, args=(order_id,))
+                thread.daemon = False
+                thread.start()
+        else:
+            thread = threading.Thread(target=_run_generation_and_deliver, args=(order_id,))
+            thread.daemon = False
+            thread.start()
         is_subscription = bool(order.get("stripe_subscription_id"))
         customer_email = (order.get("customer_email") or "").strip().lower()
         customer_has_account = False
