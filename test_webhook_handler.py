@@ -49,7 +49,7 @@ def main():
 
 Thanks for your order. Your 30 Days of Social Media Captions will be tailored to your business and voice.
 
-Please complete this short form so we can create your captions. It takes about 2 minutes:
+If you haven't already, please complete this short form so we can create your captions. It takes about 2 minutes:
 
 {intake_url}
 
