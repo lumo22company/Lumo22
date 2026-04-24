@@ -315,6 +315,70 @@ def _get_customer_email_from_session(session):
     return None
 
 
+def _email_from_stripe_customer_field(cust: Any) -> str:
+    """Return email from expanded Customer dict, expanded customer id string, or Customer object."""
+    if cust is None:
+        return ""
+    if isinstance(cust, dict):
+        em = cust.get("email")
+        if em and isinstance(em, str) and em.strip():
+            return em.strip()
+        return ""
+    cid = str(cust).strip()
+    if not cid.startswith("cus_"):
+        return ""
+    try:
+        import stripe
+
+        if not (getattr(Config, "STRIPE_SECRET_KEY", None) or "").strip():
+            return ""
+        stripe.api_key = Config.STRIPE_SECRET_KEY.strip()
+        cobj = stripe.Customer.retrieve(cid)
+        em = getattr(cobj, "email", None)
+        if em is None and isinstance(cobj, dict):
+            em = cobj.get("email")
+        if em and isinstance(em, str) and em.strip():
+            return em.strip()
+    except Exception as e:
+        print(f"[Stripe webhook] Customer.retrieve ({cid[:12]}...) for checkout email failed: {e!r}")
+    return ""
+
+
+def _resolve_customer_email_after_checkout_session(
+    subscription_id: Optional[str],
+    customer_id: Optional[str],
+) -> str:
+    """
+    Checkout Session payloads sometimes omit customer_details.email even after Session.retrieve.
+    Without an email we skip create_order entirely — leaving an active Stripe subscription with no caption_orders row.
+    Fall back to Subscription (expand customer) then Customer id.
+    """
+    if not (getattr(Config, "STRIPE_SECRET_KEY", None) or "").strip():
+        return ""
+    sid = (subscription_id or "").strip()
+    cid = (customer_id or "").strip()
+    if not sid and not cid:
+        return ""
+    try:
+        import stripe
+
+        stripe.api_key = Config.STRIPE_SECRET_KEY.strip()
+        if sid:
+            try:
+                sub = stripe.Subscription.retrieve(sid, expand=["customer"])
+                sub_d = sub.to_dict() if hasattr(sub, "to_dict") else dict(sub)
+                em = _email_from_stripe_customer_field(sub_d.get("customer"))
+                if em:
+                    return em
+            except Exception as e:
+                print(f"[Stripe webhook] Subscription.retrieve for checkout email failed: {e!r}")
+        if cid.startswith("cus_"):
+            return _email_from_stripe_customer_field(cid)
+    except Exception as e:
+        print(f"[Stripe webhook] resolve customer email after checkout (non-fatal): {e!r}")
+    return ""
+
+
 def _handle_captions_payment(session):
     """Create caption order and send intake-link email. Used for both one-off (£97) and subscription (£79/mo) captions.
     Idempotent: if we already have an order for this session, resend email and return."""
@@ -322,9 +386,18 @@ def _handle_captions_payment(session):
     from services.notifications import NotificationService
 
     session_id = session.get("id") if isinstance(session, dict) else getattr(session, "id", None)
+    stripe_customer_id = (session.get("customer") or "").strip() or None
+    stripe_subscription_id = (session.get("subscription") or "").strip() or None
     customer_email = _get_customer_email_from_session(session)
     if not customer_email:
-        print("[Stripe webhook] No customer email in session; intake email not sent.")
+        customer_email = _resolve_customer_email_after_checkout_session(
+            stripe_subscription_id, stripe_customer_id
+        )
+    if not customer_email:
+        print(
+            "[Stripe webhook] No customer email in session (and no email on Subscription/Customer); "
+            "caption_orders row NOT created — fix Stripe customer email or replay webhook after setting email."
+        )
         return
     print(f"[Stripe webhook] Customer email from session: {customer_email}")
 
@@ -338,8 +411,6 @@ def _handle_captions_payment(session):
         except Exception as e:
             print(f"[Stripe webhook] self-referral discount refund wrapper: {e!r}")
 
-    stripe_customer_id = (session.get("customer") or "").strip() or None
-    stripe_subscription_id = (session.get("subscription") or "").strip() or None
     if stripe_customer_id:
         print(f"[Stripe webhook] Stripe customer: {stripe_customer_id[:20]}...")
     if stripe_subscription_id:
