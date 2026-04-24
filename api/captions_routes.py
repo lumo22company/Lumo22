@@ -1799,7 +1799,8 @@ def captions_intake_link_by_email():
 
 _SUB_PACK_DELIVERY_DEDUPE: dict[str, float] = {}
 _SUB_PACK_DELIVERY_DEDUPE_LOCK = threading.Lock()
-_SUB_PACK_DELIVERY_DEDUPE_TTL_SEC = 180.0
+# Intake often finishes before Stripe sends invoice.paid; observed duplicate sends ~5m apart when TTL was 3m.
+_SUB_PACK_DELIVERY_DEDUPE_TTL_SEC = 900.0  # 15 minutes
 
 # One in-flight generation per order (duplicate Stripe webhooks / races on delivered → generating).
 _PACK_GEN_LOCKS: dict[str, threading.Lock] = {}
