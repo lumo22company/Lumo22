@@ -2055,11 +2055,21 @@ def try_schedule_upgrade_get_pack_now_delivery(
         if _subscription_pack_delivery_recent_duplicate(str(order["id"])):
             print(f"{log_prefix} delivery dedupe window active for order {order['id']}; skip duplicate thread")
             return
+        if not order_service.try_claim_immediate_pack_dispatch(str(order["id"])):
+            print(
+                f"{log_prefix} immediate pack dispatch already claimed for order {order['id']} "
+                "(another worker or Stripe + thank-you race); skip duplicate thread"
+            )
+            return
         _subscription_pack_delivery_register(str(order["id"]))
-        thread = threading.Thread(target=_run_generation_and_deliver, args=(str(order["id"]),))
-        thread.daemon = False
-        thread.start()
-        print(f"{log_prefix} copied intake, delivery started for order {order['id']}")
+        try:
+            thread = threading.Thread(target=_run_generation_and_deliver, args=(str(order["id"]),))
+            thread.daemon = False
+            thread.start()
+            print(f"{log_prefix} copied intake, delivery started for order {order['id']}")
+        except Exception as thread_err:
+            order_service.clear_immediate_pack_dispatch_claim(str(order["id"]))
+            raise thread_err
     except Exception as e:
         import traceback
 

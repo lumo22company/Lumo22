@@ -57,6 +57,12 @@ def _is_plan_change_confirmation_columns_missing(exc: Exception) -> bool:
     return "PGRST204" in s and "plan_change_confirmation" in s
 
 
+def _is_immediate_pack_dispatch_column_missing(exc: Exception) -> bool:
+    """PostgREST when caption_orders.immediate_pack_dispatch_at was never migrated."""
+    s = str(exc)
+    return "PGRST204" in s and "immediate_pack_dispatch_at" in s
+
+
 def _is_unique_stripe_session_violation(exc: Exception) -> bool:
     """True if insert failed because stripe_session_id already exists (PostgREST / Postgres)."""
     s = str(exc).lower()
@@ -977,8 +983,50 @@ class CaptionOrderService:
             history = history[-12:]
         return self.update(order_id, {"pack_history": history})
 
+    def try_claim_immediate_pack_dispatch(self, order_id: str) -> bool:
+        """
+        Atomically set immediate_pack_dispatch_at when still null.
+        Returns True if this caller won the race and should start the delivery thread; False if another worker did.
+        When the column is missing (migration not applied), returns True so delivery still runs (in-process dedupe only).
+        """
+        if not order_id:
+            return False
+        now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        try:
+            result = (
+                self.client.table(self.table)
+                .update({"immediate_pack_dispatch_at": now_iso})
+                .eq("id", order_id)
+                .is_("immediate_pack_dispatch_at", "null")
+                .execute()
+            )
+            return bool(result.data)
+        except Exception as e:
+            if _is_immediate_pack_dispatch_column_missing(e):
+                print(
+                    "[CaptionOrderService] immediate_pack_dispatch_at missing — run "
+                    "database_caption_orders_immediate_pack_dispatch.sql; cross-worker delivery dedupe disabled."
+                )
+                return True
+            print(f"[CaptionOrderService] try_claim_immediate_pack_dispatch (non-fatal): {e!r}")
+            return True
+
+    def clear_immediate_pack_dispatch_claim(self, order_id: str) -> None:
+        """Clear dispatch claim after a failed run so a retry can claim again."""
+        if not order_id:
+            return
+        try:
+            self.client.table(self.table).update({"immediate_pack_dispatch_at": None}).eq("id", order_id).execute()
+        except Exception as e:
+            if _is_immediate_pack_dispatch_column_missing(e):
+                return
+            print(f"[CaptionOrderService] clear_immediate_pack_dispatch_claim (non-fatal): {e!r}")
+
     def set_failed(self, order_id: str) -> bool:
-        return self.update(order_id, {"status": "failed"})
+        ok = self.update(order_id, {"status": "failed"})
+        if ok:
+            self.clear_immediate_pack_dispatch_claim(order_id)
+        return ok
 
     def record_delivery_failure(self, order_id: str, error_message: str, *, max_error_len: int = 4000) -> bool:
         """Increment delivery_failure_count, store delivery_last_error, set status failed (auto-retry respects cap)."""
@@ -999,6 +1047,8 @@ class CaptionOrderService:
                 "delivery_last_attempt_at": now_iso,
             },
         )
+        if ok:
+            self.clear_immediate_pack_dispatch_claim(order_id)
         if ok and n == CAPTIONS_MAX_AUTO_DELIVERY_FAILURES:
             # Single ops email when auto-retries are exhausted (no per-attempt inbox spam).
             self._notify_delivery_retries_exhausted(order_id, row, err, n)
