@@ -3,6 +3,7 @@ Webhook handlers for third-party integrations.
 Allows external services to send leads to the system.
 """
 import re
+import time
 from typing import Any, Dict, Optional
 
 from flask import Blueprint, request, jsonify, current_app
@@ -11,6 +12,10 @@ webhook_bp = Blueprint('webhooks', __name__, url_prefix='/webhooks')
 
 # --- Stripe (30 Days Captions) ---
 CAPTIONS_AMOUNT_PENCE = 9700  # £97
+
+# Dedupe ops email when Stripe retries checkout.session.completed (same session).
+_CHECKOUT_MISSING_ORDER_ALERT_AT: Dict[str, float] = {}
+_CHECKOUT_MISSING_ORDER_ALERT_TTL_SEC = 300.0
 
 
 def _sanitize_base_url(raw: str) -> str:
@@ -407,11 +412,50 @@ def _stripe_expandable_id(value: Any) -> Optional[str]:
     return None
 
 
+def _normalize_checkout_session_ids_inplace(session: Any) -> Any:
+    """
+    Session.retrieve(..., expand=['customer']) embeds customer (and sometimes subscription) as objects.
+    Downstream code expects cus_/sub_ strings; normalize in place when we can resolve an id.
+    """
+    if not isinstance(session, dict):
+        return session
+    cust = session.get("customer")
+    cid = _stripe_expandable_id(cust)
+    if cid:
+        session["customer"] = cid
+    sub = session.get("subscription")
+    sid = _stripe_expandable_id(sub)
+    if sid:
+        session["subscription"] = sid
+    return session
+
+
+def _should_send_checkout_missing_order_ops_alert(session_id: str) -> bool:
+    """At most one ops email per session per TTL (Stripe may retry the webhook many times)."""
+    sid = (session_id or "").strip()
+    if not sid:
+        return True
+    now = time.time()
+    last = _CHECKOUT_MISSING_ORDER_ALERT_AT.get(sid, 0.0)
+    if now - last < _CHECKOUT_MISSING_ORDER_ALERT_TTL_SEC:
+        return False
+    _CHECKOUT_MISSING_ORDER_ALERT_AT[sid] = now
+    if len(_CHECKOUT_MISSING_ORDER_ALERT_AT) > 600:
+        cutoff = now - _CHECKOUT_MISSING_ORDER_ALERT_TTL_SEC
+        for k, t in list(_CHECKOUT_MISSING_ORDER_ALERT_AT.items()):
+            if t < cutoff:
+                del _CHECKOUT_MISSING_ORDER_ALERT_AT[k]
+    return True
+
+
 def _handle_captions_payment(session):
     """Create caption order and send intake-link email. Used for both one-off (£97) and subscription (£79/mo) captions.
     Idempotent: if we already have an order for this session, resend email and return."""
     from services.caption_order_service import CaptionOrderService
     from services.notifications import NotificationService
+
+    if isinstance(session, dict):
+        _normalize_checkout_session_ids_inplace(session)
 
     session_id = session.get("id") if isinstance(session, dict) else getattr(session, "id", None)
     cust_raw = session.get("customer") if isinstance(session, dict) else getattr(session, "customer", None)
@@ -1522,6 +1566,7 @@ def stripe_webhook():
                         expand=["line_items", "customer_details", "customer"],
                     )
                     session = full.to_dict() if hasattr(full, "to_dict") else dict(full)
+                    session = _normalize_checkout_session_ids_inplace(session)
                 except Exception as re_err:
                     print(f"[Stripe webhook] Session.retrieve failed; using webhook payload only: {re_err!r}")
             amount = session.get("amount_total")
@@ -1554,39 +1599,56 @@ def stripe_webhook():
                     detail = (str(e) or repr(e))[:400]
                     detail = "".join(c for c in detail if ord(c) < 128)
                     return jsonify({"error": "Handler failed", "detail": detail or "Unknown error"}), 500
-                # Upgrade + get pack now: same path as thank-you reconcile (dedupe + bind checks in helper).
-                if is_captions_sub and (meta.get("get_pack_now") == "1") and (meta.get("copy_from") or "").strip():
-                    from services.caption_order_service import CaptionOrderService
-                    from api.captions_routes import try_schedule_upgrade_get_pack_now_delivery
+                # Any captions checkout must persist caption_orders for this session (all one-off + upgrade flows).
+                from services.caption_order_service import CaptionOrderService
+                from api.captions_routes import try_schedule_upgrade_get_pack_now_delivery
+                from services.notifications import NotificationService
 
-                    sid_gp = (session.get("id") or "").strip() if isinstance(session, dict) else ""
-                    order_service_gp = CaptionOrderService()
-                    order_gp = order_service_gp.get_by_stripe_session_id(sid_gp) if sid_gp else None
-                    if not order_gp:
-                        print(
-                            "[Stripe webhook] get_pack_now: no caption_orders row after checkout handler — "
-                            "returning 500 so Stripe retries (webhook race or missing email on session)."
-                        )
+                sid_chk = (session.get("id") or "").strip() if isinstance(session, dict) else ""
+                order_service_chk = CaptionOrderService()
+                order_after = order_service_chk.get_by_stripe_session_id(sid_chk) if sid_chk else None
+                if not order_after:
+                    print(
+                        "[Stripe webhook] CRITICAL: no caption_orders row after captions checkout handler — "
+                        "returning 500 so Stripe retries; ops alert if not deduped."
+                    )
+                    if _should_send_checkout_missing_order_ops_alert(sid_chk):
                         try:
-                            from api.captions_routes import notify_ops_upgrade_get_pack_now_blocked
-
-                            notify_ops_upgrade_get_pack_now_blocked(
-                                "no_order_row_after_checkout_handler",
-                                session_id=sid_gp,
-                                order=None,
+                            cust_alert = _stripe_expandable_id(
+                                session.get("customer") if isinstance(session, dict) else None
+                            )
+                            sub_alert = _stripe_expandable_id(
+                                session.get("subscription") if isinstance(session, dict) else None
+                            )
+                            em_alert = _get_customer_email_from_session(session) or ""
+                            NotificationService().send_caption_checkout_webhook_missing_order_alert(
+                                reason="no_row_after_handle_captions_payment",
+                                session_id=sid_chk,
+                                customer_email=em_alert,
+                                stripe_customer_id=cust_alert or "",
+                                stripe_subscription_id=sub_alert or "",
+                                product_meta=str(meta.get("product") or ""),
+                                is_subscription_checkout=bool(is_captions_sub),
                                 copy_from=(meta.get("copy_from") or "").strip(),
                                 detail=(
-                                    "_handle_captions_payment completed without error but no caption_orders row "
-                                    "for this Checkout Session (get_pack_now=1). Check email on session and Supabase."
+                                    "_handle_captions_payment returned without raising but no caption_orders row "
+                                    "for this Checkout Session. Common causes: missing payer email on session until "
+                                    "Customer is expanded, Supabase write failure, or idempotency mismatch. "
+                                    "Check Railway logs and Stripe session; recovery: "
+                                    "scripts/backfill_caption_order_from_stripe_subscription.py or "
+                                    "scripts/backfill_caption_order_from_checkout_session.py."
                                 ),
-                                session=session if isinstance(session, dict) else None,
                             )
                         except Exception as alert_err:
-                            print(f"[Stripe webhook] get_pack_now ops alert (non-fatal): {alert_err!r}")
-                        return jsonify({"error": "caption order missing for get_pack_now checkout"}), 500
+                            print(f"[Stripe webhook] missing-order ops alert (non-fatal): {alert_err!r}")
+                    else:
+                        print("[Stripe webhook] missing-order ops alert suppressed (dedupe TTL for this session)")
+                    return jsonify({"error": "caption order missing after captions checkout"}), 500
+                # Upgrade + get pack now: same path as thank-you reconcile (dedupe + bind checks in helper).
+                if is_captions_sub and (meta.get("get_pack_now") == "1") and (meta.get("copy_from") or "").strip():
                     try_schedule_upgrade_get_pack_now_delivery(
-                        order_service_gp,
-                        order_gp,
+                        order_service_chk,
+                        order_after,
                         session,
                         log_prefix="[Stripe webhook] get_pack_now",
                     )

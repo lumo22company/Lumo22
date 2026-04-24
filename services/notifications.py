@@ -1851,6 +1851,58 @@ NEXT STEPS
 {self._caption_ops_mail_footer()}"""
         return self._send_ops_alert_email(subj, body)
 
+    def send_caption_checkout_webhook_missing_order_alert(
+        self,
+        *,
+        reason: str,
+        session_id: str,
+        customer_email: str,
+        stripe_customer_id: str,
+        stripe_subscription_id: str,
+        product_meta: str,
+        is_subscription_checkout: bool,
+        copy_from: str,
+        detail: str,
+    ) -> bool:
+        """
+        Notify ops when checkout.session.completed ran the captions handler but no caption_orders row exists.
+        Covers all captions one-off and subscription upgrade paths (not only get_pack_now).
+        """
+        sid = (session_id or "").strip()
+        subj = self._caption_ops_subject(
+            f"Checkout: no order row — {(reason or '').strip()[:28]}",
+            sid or None,
+        )
+        body = f"""WHAT HAPPENED
+—
+Stripe sent checkout.session.completed for a Captions checkout. The handler finished without raising, but there is
+no caption_orders row for this Checkout Session id. Returning HTTP 500 from the webhook so Stripe retries until fixed.
+
+STRIPE / CONTEXT
+—
+Reason code: {(reason or '').strip()}
+Stripe Checkout Session ID: {sid or '(none)'}
+metadata.product: {(product_meta or '').strip() or '(none)'}
+Subscription checkout: {bool(is_subscription_checkout)}
+copy_from (if any): {(copy_from or '').strip() or '(none)'}
+Resolved customer email (best effort): {(customer_email or '').strip() or '(none)'}
+Stripe customer id: {(stripe_customer_id or '').strip() or '(none)'}
+Stripe subscription id: {(stripe_subscription_id or '').strip() or '(none)'}
+
+Detail:
+{(detail or '').strip()[:2000] or '(none)'}
+
+NEXT STEPS
+—
+• Stripe Dashboard: open the Checkout Session; confirm Customer email and metadata.
+• Supabase: caption_orders filtered by stripe_session_id (should be empty until fixed).
+• Recovery: scripts/backfill_caption_order_from_checkout_session.py --session-id … or
+  scripts/backfill_caption_order_from_stripe_subscription.py --subscription-id …
+• Logs: Railway — [Stripe webhook], [Stripe webhook] CRITICAL, _handle_captions_payment
+
+{self._caption_ops_mail_footer()}"""
+        return self._send_ops_alert_email(subj, body)
+
     def send_password_reset_email(self, to_email: str, reset_url: str) -> bool:
         """Send password reset email with plain and HTML body; link is explicit in HTML so it always appears."""
         if not reset_url or not reset_url.startswith("http"):
