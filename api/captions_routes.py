@@ -2365,8 +2365,6 @@ def _run_generation_and_deliver(
                 )
         if has_sub:
             body += (
-                "Billing vs PDF dates: Stripe controls when your subscription renews and you are charged. "
-                "The dates beside each day in the PDF are the posting window for this pack when we built it—not the same as your invoice line-by-line.\n\n"
                 "Deleting this email or the PDF does not cancel your subscription. To cancel, go to your account → Manage subscription.\n\n"
             )
         body += "If attachments don't appear in your inbox, use your backup download link(s):\n"
@@ -3528,8 +3526,6 @@ def captions_resend_delivery():
             )
         if has_sub:
             body += (
-                "Billing vs PDF dates: Stripe controls when your subscription renews and you are charged. "
-                "The dates beside each day in the PDF are the posting window for this pack when we built it—not the same as your invoice line-by-line.\n\n"
                 "Deleting this email or the PDF does not cancel your subscription. To cancel, go to your account → Manage subscription.\n\n"
             )
         body += "If attachments don't appear in your inbox, use your backup download link(s):\n"

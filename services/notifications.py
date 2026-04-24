@@ -369,7 +369,6 @@ def _captions_delivery_email_html(
 <p style="margin:0 0 16px; font-size:15px; color:{BRAND_TEXT};"><strong>Next billing date:</strong> {safe_nb}</p>"""
     if has_subscription:
         content += """
-<p style="margin:0 0 12px; font-size:14px; line-height:1.55; color:#555;"><strong>Billing vs dates in your PDF:</strong> Stripe controls when your subscription renews and you are charged. The calendar dates beside each day in the PDF are the posting window for <em>this</em> pack—the day we generated it—not the same thing as your renewal clock.</p>
 <p style="margin:0 0 16px; font-size:14px; color:#666;">Deleting this email or the PDF does not cancel your subscription. To cancel, go to your account → Manage subscription.</p>"""
     if backup_captions_url:
         safe_captions = backup_captions_url.replace('"', "%22")
@@ -1220,7 +1219,7 @@ def _intake_link_email_html(
     if safe_business:
         business_line = f"<p style=\"margin:0 0 16px;\"><strong>Business:</strong> {safe_business}</p>"
     if is_subscription:
-        timing_tip = f"""<p style="margin:0 0 16px; font-size:14px; line-height:1.55; color:{BRAND_BLACK};">We generate your first pack <strong>after</strong> you submit the form—the sooner you send it, the sooner it reaches your inbox. Pack dates follow your billing cycle, so a few minutes now avoids waiting on this step. <strong>Billing vs PDF:</strong> Stripe sets when you are charged; the dates beside each day in each PDF are the posting window for that pack when we build it—not the same clock.</p>
+        timing_tip = f"""<p style="margin:0 0 16px; font-size:14px; line-height:1.55; color:{BRAND_BLACK};">We generate your first pack <strong>after</strong> you submit the form—the sooner you send it, the sooner it reaches your inbox. Pack dates follow your billing cycle, so a few minutes now avoids waiting on this step.</p>
 """
     else:
         timing_tip = f"""<p style="margin:0 0 16px; font-size:14px; line-height:1.55; color:{BRAND_BLACK};">For <strong>one-off</strong> packs, your 30-day caption calendar starts when you submit the form, not the day you paid.</p>
@@ -2212,8 +2211,7 @@ If you didn't request this, you can ignore this email. Your email address will s
         if is_sub:
             body += (
                 "We generate your first pack after you submit the form—the sooner you send it, the sooner it reaches your inbox. "
-                "Pack dates follow your billing cycle, so completing it now avoids waiting on this step. "
-                "Billing vs PDF: Stripe sets when you are charged; the dates beside each day in each PDF are the posting window for that pack when we build it—not the same clock.\n\n"
+                "Pack dates follow your billing cycle, so completing it now avoids waiting on this step.\n\n"
             )
         else:
             body += "For one-off packs, your 30-day caption calendar starts when you submit the form, not the day you paid.\n\n"
