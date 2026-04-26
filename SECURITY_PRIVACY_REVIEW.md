@@ -113,15 +113,15 @@
 
 2. ~~**Set `CAPTIONS_DELIVER_TEST_SECRET` in production**~~ — **Enforced** (403 until set; then use `?secret=`). **Action for you:** add `CAPTIONS_DELIVER_TEST_SECRET` to Railway/hosting vars if you still use deliver-test in production.
 
-3. **Tighten CORS** to specific origins if any browser client calls your API with credentials.
+3. ~~**Tighten CORS**~~ — **Done in production** (`app.py`): explicit `origins` from `BASE_URL` plus `https://www.lumo22.com`, `https://lumo22.com`, Railway app URL; dev still uses permissive `CORS(app)`.
 
-4. **Re-evaluate `SESSION_COOKIE_SECURE`** with your hosting (Railway + custom domain HTTPS often works with `ProxyFix` + `True`).
+4. ~~**Re-evaluate `SESSION_COOKIE_SECURE`**~~ — **Set in production** (`app.py`): `SESSION_COOKIE_SECURE = True` when `Config.is_production()`.
 
 5. **Reduce PII in prints** — use logging levels and redact emails in production.
 
-6. **Update `_privacy_content.html`** — subprocessors: “OpenAI and/or Anthropic depending on configuration” (or list both with links).
+6. ~~**Update `_privacy_content.html`**~~ — **Done**: subprocessors list **Anthropic and/or OpenAI** with links (see §4 “Who we share data with”).
 
-7. **Non-AI (still do):** `pip-audit` / Dependabot, optional OWASP ZAP on staging, periodic secrets scan.
+7. **Supply chain / DAST:** `pip-audit` runs on **push/PR** via `.github/workflows/tests.yml` (`dependency-audit` job). **Optional:** OWASP ZAP baseline — run manually with `.github/workflows/security-zap-baseline.yml` against staging. Enable **Dependabot** in repo settings if not already. Periodic **secrets scan** (e.g. `gitleaks` locally or pre-commit).
 
 ---
 

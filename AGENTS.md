@@ -6,6 +6,11 @@
 
 **Cursor** (`alwaysApply: true`): **`.cursor/rules/railway-deploy.mdc`** (canonical). See **`docs/RAILWAY_DEPLOY.md`** for GitHub ↔ Railway and CLI notes.
 
+## Security roadmap (quick ref)
+
+- **Dependency audit:** CI job `dependency-audit` in `.github/workflows/tests.yml` (`pip-audit -r requirements.txt`).
+- **ZAP baseline:** run manually — GitHub **Actions → Security — ZAP baseline (manual)** — enter staging `target_url`. See `SECURITY_PRIVACY_REVIEW.md`.
+
 ## Captions reminder / email dedupe (Supabase SQL)
 
 After pulling changes that mention duplicate emails or reminder jobs, confirm these have been run in the **Supabase SQL editor** for production (order matters only where noted):

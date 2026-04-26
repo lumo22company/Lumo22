@@ -37,3 +37,24 @@ jobs:
           OPENAI_API_KEY: sk-ci-openai-placeholder-not-used-in-unit-tests
         run: |
           "${{ steps.setup-py.outputs.python-path }}" -m pytest . --ignore=scripts -v --tb=short
+
+  # Roadmap: dependency CVEs on same Python as production (see SECURITY_PRIVACY_REVIEW.md).
+  dependency-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        id: setup-py
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install pip-audit
+        run: |
+          "${{ steps.setup-py.outputs.python-path }}" -m pip install --upgrade pip
+          "${{ steps.setup-py.outputs.python-path }}" -m pip install pip-audit
+
+      - name: Audit requirements.txt
+        run: |
+          "${{ steps.setup-py.outputs.python-path }}" -m pip_audit -r requirements.txt

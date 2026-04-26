@@ -1,0 +1,29 @@
+# OWASP ZAP baseline scan — passive crawl + rules against a URL you choose (usually staging).
+# Actions → this workflow → Run workflow → enter target URL. Do not point at production without agreement.
+name: Security — ZAP baseline (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: "Full base URL to scan (e.g. https://your-staging.example.com)"
+        required: true
+        type: string
+
+jobs:
+  zap-baseline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.15.0
+        with:
+          target: ${{ inputs.target_url }}
+
+      - name: Upload ZAP report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-baseline-report
+          path: report_html.html
