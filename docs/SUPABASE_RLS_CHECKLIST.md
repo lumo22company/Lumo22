@@ -8,18 +8,20 @@ Use this when you want to verify row-level security without changing anything.
 2. Open file `database_security_rls_audit.sql` from this repo.
 3. Copy/paste into SQL Editor and click **Run**.
 
-The script is read-only. It prints 4 result tables.
+The script is read-only. It returns **one combined results table** with four sections (rows are grouped by the `section` column).
 
 ## 2) How to read results
 
+Columns: `section`, `item`, `result`, `detail`.
+
 - **RLS enabled check**
-  - All sensitive tables should show `PASS` and `rls_enabled=true`.
+  - Each `item` is a table name. `result` should be `PASS` for every expected table. `detail` shows `true`/`false` for whether RLS is enabled on that table.
 - **Policy inventory**
-  - Snapshot of current policies.
+  - One row per policy. `result` is the policy command (`SELECT`, `INSERT`, etc.). `detail` includes roles and the `USING` / `WITH CHECK` expressions.
 - **Broad SELECT policy**
-  - If you see `WARN: broad row visibility` on `caption_orders`/`customers`, anon/authenticated could read too much if those keys are exposed.
+  - Only `SELECT` policies on `caption_orders` and `customers`. If `result` is `WARN: broad row visibility`, anon/authenticated could read too much if those keys are exposed.
 - **Next action**
-  - Gives a plain-English recommendation from current state.
+  - One summary row with a plain-English recommendation from current state.
 
 ## 3) If you get warnings
 

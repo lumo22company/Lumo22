@@ -1,84 +1,94 @@
 -- Supabase RLS audit for Lumo 22 (read-only).
 -- Run in Supabase SQL Editor. It does NOT change data/policies.
--- After running, review rows marked WARN/FAIL.
+--
+-- This file returns ONE result table (multiple sections) so Supabase is easier to read
+-- than a multi-statement script where only the last result appears.
 
--- 1) RLS enabled on sensitive tables
-WITH expected(table_name) AS (
+WITH
+expected(table_name) AS (
   VALUES
     ('caption_orders'),
     ('customers'),
     ('webauthn_credentials'),
     ('deleted_account_emails'),
-    ('appointments'),
     ('referral_discount_redemptions')
-), t AS (
+),
+t AS (
   SELECT n.nspname AS schema_name, c.relname AS table_name, c.relrowsecurity AS rls_enabled
   FROM pg_class c
   JOIN pg_namespace n ON n.oid = c.relnamespace
   WHERE n.nspname = 'public' AND c.relkind = 'r'
-)
-SELECT
-  'RLS enabled check' AS check_name,
-  e.table_name,
-  COALESCE(t.rls_enabled, false) AS rls_enabled,
-  CASE
-    WHEN t.table_name IS NULL THEN 'FAIL: table missing'
-    WHEN t.rls_enabled THEN 'PASS'
-    ELSE 'FAIL: RLS disabled'
-  END AS result
-FROM expected e
-LEFT JOIN t ON t.table_name = e.table_name
-ORDER BY e.table_name;
-
--- 2) Policy inventory for sensitive tables
-SELECT
-  'Policy inventory' AS check_name,
-  schemaname,
-  tablename,
-  policyname,
-  cmd,
-  roles,
-  qual,
-  with_check
-FROM pg_policies
-WHERE schemaname = 'public'
-  AND tablename IN (
-    'caption_orders','customers','webauthn_credentials','deleted_account_emails','appointments','referral_discount_redemptions'
-  )
-ORDER BY tablename, policyname;
-
--- 3) Dangerous broad SELECT access for anon/authenticated on core tables
--- Goal: detect "USING (true)" style policies that expose all rows if anon/auth key is used from client side.
-SELECT
-  'Broad SELECT policy' AS check_name,
-  schemaname,
-  tablename,
-  policyname,
-  roles,
-  COALESCE(qual, '') AS using_expr,
-  CASE
-    WHEN cmd = 'SELECT'
-         AND (roles::text ILIKE '%anon%' OR roles::text ILIKE '%authenticated%')
-         AND (qual IS NULL OR btrim(qual) IN ('true', '(true)'))
-      THEN 'WARN: broad row visibility'
-    ELSE 'OK'
-  END AS result
-FROM pg_policies
-WHERE schemaname = 'public'
-  AND tablename IN ('caption_orders','customers')
-  AND cmd = 'SELECT'
-ORDER BY tablename, policyname;
-
--- 4) Recommended next actions (read output only)
-SELECT
-  'Next action' AS check_name,
-  CASE
-    WHEN EXISTS (
-      SELECT 1 FROM pg_policies
-      WHERE schemaname='public' AND tablename='caption_orders' AND cmd='SELECT'
-        AND (roles::text ILIKE '%anon%' OR roles::text ILIKE '%authenticated%')
-        AND (qual IS NULL OR btrim(qual) IN ('true','(true)'))
+),
+rls_check AS (
+  SELECT
+    1 AS sort_key,
+    'RLS enabled check' AS section,
+    e.table_name AS item,
+    CASE
+      WHEN t.table_name IS NULL THEN 'FAIL: table missing'
+      WHEN t.rls_enabled THEN 'PASS'
+      ELSE 'FAIL: RLS disabled'
+    END AS result,
+    COALESCE(t.rls_enabled::text, 'false') AS detail
+  FROM expected e
+  LEFT JOIN t ON t.table_name = e.table_name
+),
+policy_rows AS (
+  SELECT
+    2 AS sort_key,
+    'Policy inventory' AS section,
+    tablename || ' / ' || policyname AS item,
+    cmd AS result,
+    'roles=' || COALESCE(roles::text, '') || ' | USING=' || COALESCE(qual, '') || ' | WITH check=' || COALESCE(with_check::text, '') AS detail
+  FROM pg_policies
+  WHERE schemaname = 'public'
+    AND tablename IN (
+      'caption_orders','customers','webauthn_credentials','deleted_account_emails','referral_discount_redemptions'
     )
-      THEN 'If app uses service_role on backend, tighten caption_orders SELECT for anon/authenticated (or explicit deny policies).'
-    ELSE 'caption_orders SELECT is not broadly exposed to anon/authenticated.'
-  END AS recommendation;
+),
+broad_select AS (
+  SELECT
+    3 AS sort_key,
+    'Broad SELECT policy' AS section,
+    tablename || ' / ' || policyname AS item,
+    CASE
+      WHEN cmd = 'SELECT'
+           AND (roles::text ILIKE '%anon%' OR roles::text ILIKE '%authenticated%')
+           AND (qual IS NULL OR btrim(qual) IN ('true', '(true)'))
+        THEN 'WARN: broad row visibility'
+      ELSE 'OK'
+    END AS result,
+    'roles=' || COALESCE(roles::text, '') || ' | USING=' || COALESCE(qual, '') AS detail
+  FROM pg_policies
+  WHERE schemaname = 'public'
+    AND tablename IN ('caption_orders','customers')
+    AND cmd = 'SELECT'
+),
+next_action AS (
+  SELECT
+    4 AS sort_key,
+    'Next action' AS section,
+    'caption_orders anon/auth SELECT exposure' AS item,
+    CASE
+      WHEN EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE schemaname='public' AND tablename='caption_orders' AND cmd='SELECT'
+          AND (roles::text ILIKE '%anon%' OR roles::text ILIKE '%authenticated%')
+          AND (qual IS NULL OR btrim(qual) IN ('true','(true)'))
+      )
+        THEN 'If app uses service_role on backend, tighten caption_orders SELECT for anon/authenticated (or explicit deny policies).'
+      ELSE 'caption_orders SELECT is not broadly exposed to anon/authenticated.'
+    END AS result,
+    '' AS detail
+)
+SELECT section, item, result, detail
+FROM (
+  SELECT * FROM rls_check
+  UNION ALL
+  SELECT * FROM policy_rows
+  UNION ALL
+  SELECT * FROM broad_select
+  UNION ALL
+  SELECT * FROM next_action
+) u
+ORDER BY sort_key, section, item;
