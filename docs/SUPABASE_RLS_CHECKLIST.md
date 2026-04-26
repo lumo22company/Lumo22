@@ -24,6 +24,9 @@ The script is read-only. It prints 4 result tables.
 ## 3) If you get warnings
 
 - If your backend can use `SUPABASE_SERVICE_ROLE_KEY`, prefer tighter/deny anon/auth policies on sensitive tables.
+- For the specific warning **\"tighten caption_orders SELECT for anon/authenticated\"**, run:
+  - `database_caption_orders_rls_harden_service_role.sql`
+  - then re-run `database_security_rls_audit.sql` (the warning should clear)
 - Existing helper scripts in repo:
   - `database_customers_rls.sql`
   - `database_rls_policies_anon_authenticated_deny.sql`
