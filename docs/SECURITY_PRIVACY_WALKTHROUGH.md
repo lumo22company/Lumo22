@@ -20,6 +20,9 @@ You do **not** need to understand attack types. Follow the steps in order; check
 
 **Goal:** Your code changes are checked automatically.
 
+0. [ ] *(Optional, on your Mac)* From the project folder, with a `.env` that matches Railway, run:  
+     `FLASK_ENV=production python scripts/verify_security_privacy_readiness.py`  
+     If it prints **OK**, the app’s required production variables are present locally (same checks the server uses at startup). It never prints secrets.
 1. [ ] Open your repo on GitHub → **Actions**.
 2. [ ] Click the latest **Tests** run on `main`. It should be **green** (passed). That run includes **pytest** (logic tests) and **pip-audit** (known vulnerable dependencies).
 3. [ ] If anything is **red**, open the failed job and read the error (often a missing test fix or a dependency that needs upgrading).
