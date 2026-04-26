@@ -102,8 +102,8 @@ You do **not** need to understand attack types. Follow the steps in order; check
 
 **Goal:** Catch misconfigurations before bad actors do.
 
-1. [ ] GitHub → **Actions** → **Security — ZAP baseline (manual)** → **Run workflow** → paste **staging** `https://…` (not production the first time, unless you accept the risk).
-2. [ ] Download the **artifact** report when the job finishes. High-severity items deserve a fix or a written “false positive” note.
+1. [ ] GitHub → **Actions** → **Security — ZAP baseline (manual)** → **Run workflow** → paste **staging** `https://…` (not production the first time, unless you accept the risk). The URL must work from the **public internet** (not `localhost`); if Cloudflare or a firewall blocks datacenters, the preflight step may fail — try another host or allowlist GitHub Actions IPs.
+2. [ ] When the job succeeds, open the run → **Artifacts** → download **`zap_scan`** (HTML report from the official ZAP action). High-severity items deserve a fix or a written “false positive” note.
 3. [ ] **Load / stress:** only against **staging** or a dedicated test deployment (see earlier advice: k6, Loader.io, etc.). Increase traffic slowly.
 
 ---

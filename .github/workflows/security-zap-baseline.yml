@@ -1,29 +1,65 @@
 # OWASP ZAP baseline scan — passive crawl + rules against a URL you choose (usually staging).
-# Actions → this workflow → Run workflow → enter target URL. Do not point at production without agreement.
+# Actions → this workflow → Run workflow → enter target URL.
+#
+# The target must be reachable from the public internet (GitHub’s runners), with a valid
+# https:// or http:// URL. Localhost and private IPs will not work.
+#
+# If the job fails with "exit code 3", ZAP could not finish the scan (connection, TLS, bot
+# blocking, etc.) — fix reachability first; the preflight step prints HTTP headers as a hint.
 name: Security — ZAP baseline (manual)
 
 on:
   workflow_dispatch:
     inputs:
       target_url:
-        description: "Full base URL to scan (e.g. https://your-staging.example.com)"
+        description: "Full URL including scheme, e.g. https://www.example.com (no trailing spaces)"
         required: true
         type: string
+
+permissions:
+  contents: read
 
 jobs:
   zap-baseline:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v6
+
+      - name: Clean URL + preflight (reachable from GitHub)
+        id: target
+        env:
+          RAW: ${{ inputs.target_url }}
+        run: |
+          set -euo pipefail
+          T=$(printf '%s' "$RAW" | tr -d '\r\n' | xargs)
+          if [ -z "$T" ]; then echo "target_url is empty."; exit 1; fi
+          case "$T" in
+            http://*|https://*) ;;
+            *) echo "target_url must start with http:// or https://"; exit 1 ;;
+          esac
+          {
+            echo 'target<<__ZAP_TARGET_EOF__'
+            echo "$T"
+            echo __ZAP_TARGET_EOF__
+          } >> "$GITHUB_OUTPUT"
+          echo "Using target: $T"
+          if ! curl -sS -I --max-time 35 -o /tmp/preflight-headers.txt -w "HTTP:%{http_code}\n" "$T"; then
+            echo "curl failed: DNS, TLS certificate problem, connection refused, or timeout."
+            echo "If the site works in your browser, it may still block datacenter IPs (Cloudflare, WAF)."
+            exit 1
+          fi
+          echo "---- response headers (first 25 lines) ----"
+          head -25 /tmp/preflight-headers.txt || true
 
       - name: ZAP Baseline Scan
         uses: zaproxy/action-baseline@v0.15.0
         with:
-          target: ${{ inputs.target_url }}
+          target: ${{ steps.target.outputs.target }}
+          allow_issue_writing: false
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fail_action: false
 
-      - name: Upload ZAP report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: zap-baseline-report
-          path: report_html.html
+      # On success, the action uploads artifact **zap_scan** (HTML + other reports). Open the
+      # workflow run → Artifacts. If ZAP still exits 3 after a green preflight, check ZAP logs
+      # in the job output (spider blocked, TLS to redirects, etc.).
