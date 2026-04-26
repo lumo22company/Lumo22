@@ -31,7 +31,8 @@ class Config:
     # Flask
     SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
     FLASK_ENV = os.getenv('FLASK_ENV', 'development')
-    FLASK_DEBUG = os.getenv('FLASK_DEBUG', 'True').lower() == 'true'
+    # Secure-by-default: keep debug off unless explicitly enabled in local dev env.
+    FLASK_DEBUG = (os.getenv('FLASK_DEBUG', 'False').strip().lower() in ('1', 'true', 'yes', 'on'))
     # Session cookie: SameSite Lax so login persists after redirect. Secure=True in production (HTTPS).
     SESSION_COOKIE_SECURE = False  # Overridden in app.py when is_production()
     SESSION_COOKIE_SAMESITE = 'Lax'
