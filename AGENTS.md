@@ -8,6 +8,7 @@
 
 ## Security roadmap (quick ref)
 
+- **Beginner walkthrough (checkboxes):** `docs/SECURITY_PRIVACY_WALKTHROUGH.md`
 - **Dependency audit:** CI job `dependency-audit` in `.github/workflows/tests.yml` (`pip-audit -r requirements.txt`).
 - **ZAP baseline:** run manually — GitHub **Actions → Security — ZAP baseline (manual)** — enter staging `target_url`. See `SECURITY_PRIVACY_REVIEW.md`.
 
