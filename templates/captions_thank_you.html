@@ -415,6 +415,7 @@
         }
 
         var reorderOneOffLoggedIn = !isSubscription && isLoggedIn && !isPrefilledFromOneoff && !subPackTodayLineHidden;
+        var reorderOneOffGuest = !isSubscription && !isLoggedIn && !subPackTodayLineHidden;
 
         var actionHintEl = document.getElementById('thankyou-action-hint');
         var actionHintText = '';
@@ -495,14 +496,23 @@
             formSentLineEl.style.margin = '0 0 0.75rem';
           }
         }
-        if (formLinkEl && productNudgeEl && ctaStackEl && wrongEmailWrapEl) {
+        if (formLinkEl && productNudgeEl && ctaStackEl && wrongEmailWrapEl && emailMsgEl) {
           if (reorderOneOffLoggedIn) {
             formLinkEl.insertBefore(ctaStackEl, productNudgeEl);
             if (formSentLineEl) formLinkEl.insertBefore(formSentLineEl, productNudgeEl);
+          } else if (reorderOneOffGuest) {
+            // Keep the "Next step" action first for one-off checkout guests:
+            // action hint -> CTA button -> email sent line -> one-off timing note -> wrong email.
+            formLinkEl.insertBefore(ctaStackEl, emailMsgEl);
+            formLinkEl.insertBefore(emailMsgEl, wrongEmailWrapEl);
+            formLinkEl.insertBefore(productNudgeEl, wrongEmailWrapEl);
           } else {
             formLinkEl.insertBefore(productNudgeEl, ctaStackEl);
             if (formSentLineEl) formLinkEl.insertBefore(formSentLineEl, wrongEmailWrapEl);
           }
+        }
+        if (wrongEmailWrapEl) {
+          wrongEmailWrapEl.style.margin = reorderOneOffGuest ? '1rem 0 1.25rem' : '0.5rem 0 1.25rem';
         }
         var laterHintEl = document.getElementById('thankyou-later-hint');
         if (laterHintEl) {
