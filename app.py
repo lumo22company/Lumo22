@@ -10,6 +10,7 @@ import threading
 import traceback
 from flask import Flask, render_template, request, jsonify, redirect, url_for, send_from_directory, make_response, session
 from flask_cors import CORS
+from flask_wtf.csrf import CSRFProtect
 from config import Config
 from concurrent.futures import ThreadPoolExecutor
 from functools import wraps
@@ -195,6 +196,24 @@ def add_security_headers(response):
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     if request.is_secure or request.headers.get("X-Forwarded-Proto") == "https":
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    # Phased CSP: allows current Google Fonts / Fontshare, self-hosted scripts, Stripe redirects, Google OAuth.
+    # Tighten over time (reduce unsafe-inline) as inline scripts move to external files.
+    if not response.headers.get("Content-Security-Policy"):
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "base-uri 'self'; "
+            "form-action 'self' https://checkout.stripe.com; "
+            "frame-ancestors 'none'; "
+            "object-src 'none'; "
+            "script-src 'self' 'unsafe-inline' https://accounts.google.com https://www.gstatic.com; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://api.fontshare.com; "
+            "font-src 'self' data: https://fonts.gstatic.com https://cdn.fontshare.com; "
+            "img-src 'self' data: https: blob:; "
+            "connect-src 'self' https://api.stripe.com https://checkout.stripe.com https://billing.stripe.com "
+            "https://accounts.google.com https://www.googleapis.com https://oauth2.googleapis.com; "
+            "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://checkout.stripe.com; "
+            "upgrade-insecure-requests"
+        )
     return response
 
 
@@ -243,6 +262,15 @@ init_customer_oauth(app)
 app.register_blueprint(oauth_bp)
 app.register_blueprint(passkey_bp)
 app.register_blueprint(billing_bp)
+
+# CSRF for browser forms and JSON fetch (X-CSRFToken via static/js/csrf-fetch-shim.js). Exempt machine webhooks and legacy API stubs.
+if os.environ.get("DISABLE_CSRF", "").strip().lower() in ("1", "true", "yes"):
+    app.config["WTF_CSRF_ENABLED"] = False
+# Railway terminates TLS at edge; without ProxyFix, strict SSL checks can break token validation.
+app.config["WTF_CSRF_SSL_STRICT"] = False
+csrf = CSRFProtect(app)
+csrf.exempt(webhook_bp)
+csrf.exempt(api_bp)
 
 # Fail fast on mis-set AI_PROVIDER (e.g. API key in Railway variable) and enforce prod API keys.
 # Runs under Gunicorn/Railway, not only `python app.py`.

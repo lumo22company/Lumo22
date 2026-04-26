@@ -6,6 +6,7 @@
   <title>Log in | Lumo 22</title>
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
   <meta name="description" content="Log in to your Lumo 22 account. Access your Captions in one place.">
+  {% include '_csrf_head.html' %}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Encode+Sans+Condensed:wght@400;500;600;700;800;900&family=PT+Sans+Narrow:wght@400;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
@@ -130,6 +131,7 @@
         {% endif %}
 
         <form id="login-form" action="/login" method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="next" value="{{ next_url|default(request.args.get('next', '/account'))|e }}">
           <input type="hidden" name="eph" value="{{ prefill_eph|default('', true)|e }}">
           <label for="email">Email</label>

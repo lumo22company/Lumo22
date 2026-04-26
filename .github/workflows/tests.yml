@@ -26,6 +26,7 @@ jobs:
 
       - name: Run full pytest suite
         env:
+          DISABLE_CSRF: "1"
           # Placeholder Supabase — real client init is mocked in tests that need it (see test_referral_code_check).
           SUPABASE_URL: https://example.supabase.co
           SUPABASE_KEY: ci-placeholder-key

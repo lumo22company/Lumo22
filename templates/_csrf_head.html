@@ -1,0 +1,3 @@
+{# Flask-WTF CSRF: meta for fetch shim + hidden forms use {{ csrf_token() }} inline. #}
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<script src="{{ url_for('static', filename='js/csrf-fetch-shim.js') }}"></script>

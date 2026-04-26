@@ -10,6 +10,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='images/logo.png') }}">
   <meta name="description" content="30 days of social media captions for small businesses. Written for you, planned for the month. Show up consistently without the daily grind.">
   <link rel="preload" as="image" href="{{ url_for('static', filename='images/logo.png') }}">
+  {% include '_csrf_head.html' %}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
@@ -119,8 +120,7 @@
 
   {% include '_footer.html' %}
 
-  <link rel="preconnect" href="https://unpkg.com">
-  <script src="https://unpkg.com/lenis@1.1.13/dist/lenis.min.js" defer></script>
+  <script src="{{ url_for('static', filename='js/vendor/lenis-1.1.13.min.js') }}?v={{ asset_version }}" defer></script>
   <script src="{{ url_for('static', filename='js/lenis-smooth-scroll.js') }}?v={{ asset_version }}" defer></script>
   <script src="{{ url_for('static', filename='js/section-parallax.js') }}?v={{ asset_version }}" defer></script>
   <script src="{{ url_for('static', filename='js/scroll-reveal.js') }}?v={{ asset_version }}" defer></script>
