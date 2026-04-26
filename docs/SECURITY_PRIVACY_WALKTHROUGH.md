@@ -64,6 +64,7 @@ You do **not** need to understand attack types. Follow the steps in order; check
 2. [ ] Open **Authentication** / **Table editor** as needed, but the important part is **SQL** or **Database** → policies for tables that hold **customers** and **caption_orders** (and anything similar).
 3. [ ] Confirm **RLS is enabled** and policies match how your app works (server often uses **service role** for some jobs; the **anon** key must never allow broad `SELECT` on other users’ rows from a browser).
 4. [ ] If you’re unsure, Supabase docs on “Row Level Security” and your table names are the next read — or ask a developer for one focused “RLS review” session.
+5. [ ] Quick audit option: run `database_security_rls_audit.sql` in Supabase SQL Editor, then follow `docs/SUPABASE_RLS_CHECKLIST.md`.
 
 **Rule:** The **service role** key belongs **only** on the server (Railway). Never put it in front-end JavaScript or a mobile app.
 
