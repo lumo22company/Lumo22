@@ -61,7 +61,7 @@ broad_select AS (
     'roles=' || COALESCE(roles::text, '') || ' | USING=' || COALESCE(qual, '') AS detail
   FROM pg_policies
   WHERE schemaname = 'public'
-    AND tablename IN ('caption_orders','customers')
+    AND tablename IN ('caption_orders','customers','deleted_account_emails')
     AND cmd = 'SELECT'
 ),
 next_action AS (
@@ -78,6 +78,22 @@ next_action AS (
       )
         THEN 'If app uses service_role on backend, tighten caption_orders SELECT for anon/authenticated (or explicit deny policies).'
       ELSE 'caption_orders SELECT is not broadly exposed to anon/authenticated.'
+    END AS result,
+    '' AS detail
+  UNION ALL
+  SELECT
+    4 AS sort_key,
+    'Next action' AS section,
+    'deleted_account_emails anon/auth SELECT exposure' AS item,
+    CASE
+      WHEN EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE schemaname='public' AND tablename='deleted_account_emails' AND cmd='SELECT'
+          AND (roles::text ILIKE '%anon%' OR roles::text ILIKE '%authenticated%')
+          AND (qual IS NULL OR btrim(qual) IN ('true','(true)'))
+      )
+        THEN 'If app uses service_role on backend, tighten deleted_account_emails SELECT for anon/authenticated.'
+      ELSE 'deleted_account_emails SELECT is not broadly exposed to anon/authenticated.'
     END AS result,
     '' AS detail
 )

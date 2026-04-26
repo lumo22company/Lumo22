@@ -19,7 +19,7 @@ Columns: `section`, `item`, `result`, `detail`.
 - **Policy inventory**
   - One row per policy. `result` is the policy command (`SELECT`, `INSERT`, etc.). `detail` includes roles and the `USING` / `WITH CHECK` expressions.
 - **Broad SELECT policy**
-  - Only `SELECT` policies on `caption_orders` and `customers`. If `result` is `WARN: broad row visibility`, anon/authenticated could read too much if those keys are exposed.
+  - Only `SELECT` policies on `caption_orders`, `customers`, and `deleted_account_emails`. If `result` is `WARN: broad row visibility`, anon/authenticated could read too much if those keys are exposed.
 - **Next action**
   - One summary row with a plain-English recommendation from current state.
 
@@ -28,6 +28,9 @@ Columns: `section`, `item`, `result`, `detail`.
 - If your backend can use `SUPABASE_SERVICE_ROLE_KEY`, prefer tighter/deny anon/auth policies on sensitive tables.
 - For the specific warning **\"tighten caption_orders SELECT for anon/authenticated\"**, run:
   - `database_caption_orders_rls_harden_service_role.sql`
+  - then re-run `database_security_rls_audit.sql` (the warning should clear)
+- For the specific warning **\"tighten deleted_account_emails SELECT for anon/authenticated\"**, run:
+  - `database_deleted_account_emails_rls_harden_service_role.sql`
   - then re-run `database_security_rls_audit.sql` (the warning should clear)
 - Existing helper scripts in repo:
   - `database_customers_rls.sql`
