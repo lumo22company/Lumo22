@@ -44,6 +44,14 @@ def test_get_pack_now_copies_intake_with_subscription_overrides():
             FakeOrderService.last_saved = {"order_id": order_id, "intake": dict(intake)}
             return True
 
+        # Mirror real CaptionOrderService API used by the route so tests do not
+        # raise and emit false operational alerts.
+        def try_claim_immediate_pack_dispatch(self, order_id):
+            return True
+
+        def clear_immediate_pack_dispatch_claim(self, order_id):
+            return None
+
     event = {
         "type": "checkout.session.completed",
         "data": {
