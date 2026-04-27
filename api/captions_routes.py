@@ -905,6 +905,14 @@ def captions_checkout():
         "cancel_url": cancel_url,
         "metadata": metadata,
         "allow_promotion_codes": True,
+        "custom_text": {
+            "submit": {
+                "message": (
+                    "Receipt and your intake link use the email on this page—edit it if it was pre-filled by "
+                    "Stripe Link or your browser. Use Add promotion code if you have one."
+                )
+            }
+        },
     }
     if checkout_email:
         create_params["customer_email"] = checkout_email
