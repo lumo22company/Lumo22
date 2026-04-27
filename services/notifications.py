@@ -601,20 +601,20 @@ def _build_captions_order_pricing_detail(
     elif disc > 0:
         disc_plain_title = "Discount (promotion)"
 
-    checkout_extra_html = ""
+    checkout_extra_rows = []
     if show_checkout_totals:
         plain_lines.append("")
         if sub_fmt:
             plain_lines.append(f"Subtotal: {sub_fmt}")
-            checkout_extra_html += (
-                f'<p style="margin:0 0 6px;"><strong>Subtotal:</strong> '
-                f"{html_module.escape(sub_fmt)}</p>"
+            checkout_extra_rows.append(
+                f'<tr><td style="padding:4px 8px 4px 0; vertical-align:top;"><strong>Subtotal</strong></td>'
+                f'<td style="padding:4px 0; text-align:right; white-space:nowrap;">{html_module.escape(sub_fmt)}</td></tr>'
             )
         if tax_fmt:
             plain_lines.append(f"Tax: {tax_fmt}")
-            checkout_extra_html += (
-                f'<p style="margin:0 0 6px;"><strong>Tax:</strong> '
-                f"{html_module.escape(tax_fmt)}</p>"
+            checkout_extra_rows.append(
+                f'<tr><td style="padding:4px 8px 4px 0; vertical-align:top;"><strong>Tax</strong></td>'
+                f'<td style="padding:4px 0; text-align:right; white-space:nowrap;">{html_module.escape(tax_fmt)}</td></tr>'
             )
         if d_fmt:
             disc_html_title = "Discount (promotion)"
@@ -622,9 +622,9 @@ def _build_captions_order_pricing_detail(
                 safe_lbl = html_module.escape(discount_label.strip())
                 disc_html_title = f"Discount ({safe_lbl})"
             plain_lines.append(f"{disc_plain_title}: −{d_fmt}")
-            checkout_extra_html += (
-                f'<p style="margin:0 0 6px;"><strong>{disc_html_title}:</strong> '
-                f"−{html_module.escape(d_fmt)}</p>"
+            checkout_extra_rows.append(
+                f'<tr><td style="padding:4px 8px 4px 0; vertical-align:top;"><strong>{disc_html_title}</strong></td>'
+                f'<td style="padding:4px 0; text-align:right; white-space:nowrap;">−{html_module.escape(d_fmt)}</td></tr>'
             )
         plain_lines.append("")
 
@@ -675,12 +675,13 @@ def _build_captions_order_pricing_detail(
         f'<table role="presentation" cellpadding="0" cellspacing="0" width="100%" '
         f'style="font-size:14px; color:{BRAND_TEXT_ON_LIGHT_GREY_PANEL}; margin:0 0 12px;">'
         + "".join(html_rows)
+        + "".join(checkout_extra_rows)
         + "</table>"
     )
     if amount_paid_display:
         paid_label_html = "Total paid" if show_checkout_totals else "Amount paid"
         total_line = (
-            f'<p style="margin:2px 0 12px; font-size:18px; line-height:1.35;"><strong>{paid_label_html}:</strong> '
+            f'<p style="margin:2px 0 12px; font-size:18px; line-height:1.35; text-align:right;"><strong>{paid_label_html}:</strong> '
             f"{html_module.escape(amount_paid_display)}</p>"
         )
     elif is_sub:
@@ -700,7 +701,7 @@ def _build_captions_order_pricing_detail(
         f"{'Monthly subscription' if is_sub else 'One-off purchase'}</p>"
     )
     html_fragment = (
-        table_html + checkout_extra_html + total_line + platforms_html + ongoing_html + mismatch_note_html
+        table_html + total_line + platforms_html + ongoing_html + mismatch_note_html
     )
     plain_text = "\n".join(plain_lines) + mismatch_note_plain
     return plain_text, html_fragment
