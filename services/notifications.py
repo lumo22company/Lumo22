@@ -636,7 +636,7 @@ def _build_captions_order_pricing_detail(
     else:
         plain_lines.append(f"Pack total (at checkout prices): {_fmt_money(computed, False)}")
 
-    plain_lines.extend(["", "Your platforms", platforms_line, "", f"Billing: {'Monthly subscription' if is_sub else 'One-off purchase'}"])
+    plain_lines.extend(["", f"Your platforms: {platforms_line}", "", f"Billing: {'Monthly subscription' if is_sub else 'One-off purchase'}"])
 
     ongoing_html = ""
     if ongoing_monthly_display and is_sub:
@@ -700,8 +700,8 @@ def _build_captions_order_pricing_detail(
             f'{html_module.escape(_fmt_money(computed, False))}</p>'
         )
     platforms_html = (
-        f'<p style="margin:0 0 4px;"><strong>Your platforms</strong></p>'
-        f'<p style="margin:0 0 10px; font-size:14px;">{html_module.escape(platforms_line)}</p>'
+        f'<p style="margin:0 0 10px; font-size:14px;"><strong>Your platforms:</strong> '
+        f"{html_module.escape(platforms_line)}</p>"
         f'<p style="margin:0;"><strong>Billing:</strong> '
         f"{'Monthly subscription' if is_sub else 'One-off purchase'}</p>"
     )
