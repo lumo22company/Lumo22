@@ -973,33 +973,53 @@ def _build_subscription_upgrade_pricing_summary(
     else:
         text_lines.append("- Story Ideas: Not included")
     text_lines.append(f"- Monthly total: {symbol}{monthly_total}/month")
-    html_lines = [
-        "<strong style=\"color:" + BRAND_TEXT + ";\">Upgrade details</strong>",
-        f"Base (includes 1 platform): {symbol}{base}/month",
+    html_rows = [
+        (
+            "Base (includes 1 platform)",
+            f"{symbol}{base}/month",
+        ),
     ]
     if extras >= 1:
         if extras == 1:
-            html_lines.append(
-                f"Additional platform (1 × {symbol}{extra}): {symbol}{extra_monthly}/month"
+            html_rows.append(
+                (
+                    f"Additional platform (1 × {symbol}{extra})",
+                    f"{symbol}{extra_monthly}/month",
+                )
             )
         else:
-            html_lines.append(
-                f"Additional platforms ({extras} × {symbol}{extra}): {symbol}{extra_monthly}/month"
+            html_rows.append(
+                (
+                    f"Additional platforms ({extras} × {symbol}{extra})",
+                    f"{symbol}{extra_monthly}/month",
+                )
             )
     if stories_included:
-        html_lines.append(f"Story Ideas: {symbol}{stories_monthly}/month")
+        html_rows.append(("Story Ideas", f"{symbol}{stories_monthly}/month"))
     else:
-        html_lines.append("Story Ideas: Not included")
-    html_lines.append(f"Monthly total: {symbol}{monthly_total}/month")
+        html_rows.append(("Story Ideas", "Not included"))
+    html_rows.append(("Monthly total", f"{symbol}{monthly_total}/month"))
     if charged_today:
         text_lines.append(f"- Charged today: {charged_today}")
-        html_lines.append(f"Charged today: {html.escape(charged_today)}")
+        html_rows.append(("Charged today", html.escape(charged_today)))
+    html_rows_rendered = "".join(
+        f'<tr><td style="padding:4px 8px 4px 0; vertical-align:top;">'
+        f'{"<strong>" + label + "</strong>" if label in ("Monthly total", "Charged today") else label}'
+        f"</td>"
+        f'<td style="padding:4px 0; text-align:right; white-space:nowrap;">'
+        f'{"<strong>" + value + "</strong>" if label in ("Monthly total", "Charged today") else value}'
+        f"</td></tr>"
+        for label, value in html_rows
+    )
     text_block = "\n".join(text_lines)
     html_block = (
-        f"""<p style="margin:0 0 16px; font-size:14px; color:{BRAND_TEXT_ON_LIGHT_GREY_PANEL}; border:1px solid rgba(0,0,0,0.08); """
-        f"""border-radius:8px; padding:16px; background:#fafafa;">"""
-        + "<br>".join(html_lines)
-        + "</p>"
+        f"""<div style="margin:0 0 16px; font-size:14px; color:{BRAND_TEXT_ON_LIGHT_GREY_PANEL}; """
+        f"""border:1px solid rgba(0,0,0,0.08); border-radius:8px; padding:16px; background:#fafafa;">"""
+        f"""<p style="margin:0 0 8px;"><strong style="color:{BRAND_TEXT};">Upgrade details</strong></p>"""
+        f"""<table role="presentation" cellpadding="0" cellspacing="0" width="100%" """
+        f"""style="font-size:14px; color:{BRAND_TEXT_ON_LIGHT_GREY_PANEL}; margin:0;">"""
+        + html_rows_rendered
+        + "</table></div>"
     )
     return text_block, html_block
 
@@ -1037,7 +1057,14 @@ def _order_receipt_email_html(
     elif amount_paid:
         inner_html = f'<p style="margin:0;"><strong>Amount paid:</strong> {html_module.escape(amount_paid)}</p>'
     if inner_html:
-        receipt_block = f"""<div style="margin:0 0 16px; font-size:14px; color:{BRAND_TEXT_ON_LIGHT_GREY_PANEL}; border:1px solid rgba(0,0,0,0.08); border-radius:8px; padding:16px; background:#fafafa;"><strong>Order details</strong><br><br>{inner_html}</div>
+        receipt_block = f"""<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 16px; border:1px solid rgba(0,0,0,0.08); background:#fafafa;">
+  <tr>
+    <td style="padding:16px; font-size:14px; color:{BRAND_TEXT_ON_LIGHT_GREY_PANEL};">
+      <p style="margin:0 0 8px;"><strong>Order details</strong></p>
+      {inner_html}
+    </td>
+  </tr>
+</table>
 """
     business_line = ""
     safe_business = _sanitize_email_value(business_name or "")
@@ -1211,7 +1238,14 @@ def _intake_link_email_html(
     safe_url = html.escape(intake_url, quote=True)
     summary_block = ""
     if order_detail_html and str(order_detail_html).strip():
-        summary_block = f"""<div style="margin:0 0 16px; font-size:14px; line-height:1.6; color:{BRAND_BLACK};"><strong>Order summary</strong><br><br>{order_detail_html.strip()}</div>
+        summary_block = f"""<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 16px; border:1px solid rgba(0,0,0,0.08); background:#fafafa;">
+  <tr>
+    <td style="padding:16px; font-size:14px; line-height:1.6; color:{BRAND_BLACK};">
+      <p style="margin:0 0 8px;"><strong>Order summary</strong></p>
+      {order_detail_html.strip()}
+    </td>
+  </tr>
+</table>
 """
     elif order_summary and order_summary.strip():
         summary_escaped = html.escape(order_summary.strip()).replace("\n", "<br>\n")
@@ -1222,7 +1256,7 @@ def _intake_link_email_html(
     if safe_business:
         business_line = f"<p style=\"margin:0 0 16px;\"><strong>Business:</strong> {safe_business}</p>"
     if is_subscription:
-        timing_tip = f"""<p style="margin:0 0 16px; font-size:14px; line-height:1.55; color:{BRAND_BLACK};">We generate your first pack <strong>after</strong> you submit the form—the sooner you send it, the sooner it reaches your inbox. Pack dates follow your billing cycle, so a few minutes now avoids waiting on this step.</p>
+        timing_tip = f"""<p style="margin:0 0 16px; font-size:14px; line-height:1.55; color:{BRAND_BLACK};">We generate your first pack <strong>after</strong> you submit the form—the sooner you send it, the sooner it reaches your inbox. Pack dates follow your billing cycle.</p>
 """
     else:
         timing_tip = f"""<p style="margin:0 0 16px; font-size:14px; line-height:1.55; color:{BRAND_BLACK};">For <strong>one-off</strong> packs, your 30-day caption calendar starts when you submit the form, not the day you paid.</p>
@@ -2211,7 +2245,7 @@ If you didn't request this, you can ignore this email. Your email address will s
         if is_sub:
             body += (
                 "We generate your first pack after you submit the form—the sooner you send it, the sooner it reaches your inbox. "
-                "Pack dates follow your billing cycle, so completing it now avoids waiting on this step.\n\n"
+                "Pack dates follow your billing cycle.\n\n"
             )
         else:
             body += "For one-off packs, your 30-day caption calendar starts when you submit the form, not the day you paid.\n\n"
