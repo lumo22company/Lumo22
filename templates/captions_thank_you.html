@@ -26,6 +26,8 @@
       align-items: stretch;
       gap: 0.75rem;
       margin-top: 0.25rem;
+      /* Breathing room after primary CTA before “We also sent…” / timing copy */
+      margin-bottom: 1.75rem;
     }
     .thankyou-cta-stack .thankyou-cta-swipe {
       width: 100%;
@@ -103,6 +105,10 @@
       font-size: 0.95rem;
       line-height: 1.5;
     }
+    .thankyou-card #thankyou-email-msg {
+      margin-top: 0;
+      margin-bottom: 1.35rem;
+    }
     /* Get pack now upgrade: main confirmation line (inside #thankyou-email-msg) */
     .thankyou-card #thankyou-email-msg .thankyou-subscription-active-lead {
       color: #ffffff !important;
@@ -152,15 +158,15 @@
         <p id="thankyou-subscription-redirect-notice" class="thankyou-subscription-redirect-notice" style="display: none; margin: 0 0 0.85rem; font-size: 0.9rem; line-height: 1.55; color: var(--lum-text-muted); max-width: 36rem;" role="status" aria-live="polite">
           <span id="thankyou-subscription-redirect-msg"></span><button type="button" id="thankyou-cancel-subscription-redirect" class="thankyou-link-later" style="margin-left: 0.35rem;">Stay on this page</button>
         </p>
-        <div id="thankyou-email-msg" style="margin: 0 0 0.75rem;"></div>
-        <p id="thankyou-product-nudge" class="thankyou-product-nudge" style="display: none; margin: 0 0 1.25rem; max-width: 36rem;"></p>
+        <div id="thankyou-email-msg" class="thankyou-email-msg"></div>
+        <p id="thankyou-product-nudge" class="thankyou-product-nudge" style="display: none; margin: 1.25rem 0 1.35rem; max-width: 36rem;"></p>
         <div class="thankyou-cta-stack">
           <p id="thankyou-action-hint" class="thankyou-action-hint" style="display: none;" aria-hidden="true"></p>
           <p id="thankyou-subscription-cta-line" class="thankyou-subscription-cta-line" style="display: none; margin: 0 0 0.65rem; font-size: 0.95rem; line-height: 1.55; color: var(--lum-text-muted); text-align: center; max-width: 34rem; align-self: center;"></p>
           <a href="#" id="intake-link" class="thankyou-cta-swipe" aria-disabled="true">Fill out my form</a>
           <p id="thankyou-later-hint" style="display: none; margin: 0.75rem 0 0; font-size: 0.85rem; line-height: 1.45; color: var(--lum-text-muted); max-width: 34rem;"></p>
         </div>
-        <p id="thankyou-form-sent-line" class="thankyou-form-sent-line" style="display: none; margin: 0 0 0.75rem; font-size: 0.95rem; line-height: 1.55; color: var(--lum-text-muted); max-width: 36rem;"></p>
+        <p id="thankyou-form-sent-line" class="thankyou-form-sent-line" style="display: none; margin: 0 0 1rem; font-size: 0.95rem; line-height: 1.55; color: var(--lum-text-muted); max-width: 36rem;"></p>
         <div id="thankyou-wrong-email-wrap" style="display: none; margin: 0.5rem 0 1.25rem;">
           <button type="button" id="thankyou-wrong-email-toggle" class="thankyou-link-wrong-email">Wrong email?</button>
           <div id="thankyou-wrong-email-form" style="display: none; margin-top: 0.75rem; max-width: 420px;">
@@ -489,11 +495,11 @@
           if (reorderOneOffLoggedIn) {
             formSentLineEl.innerHTML = leadText;
             formSentLineEl.style.display = 'block';
-            formSentLineEl.style.margin = '1.25rem 0 0.75rem';
+            formSentLineEl.style.margin = '1.5rem 0 1rem';
           } else {
             formSentLineEl.innerHTML = '';
             formSentLineEl.style.display = 'none';
-            formSentLineEl.style.margin = '0 0 0.75rem';
+            formSentLineEl.style.margin = '0 0 1rem';
           }
         }
         if (formLinkEl && productNudgeEl && ctaStackEl && wrongEmailWrapEl && emailMsgEl) {
