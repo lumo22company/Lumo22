@@ -222,16 +222,27 @@ def _email_wrapper(content: str) -> str:
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light only">
+  <meta name="supported-color-schemes" content="light">
   <title>Lumo 22</title>
+  <style>
+    body, table, td, p, a {{
+      font-family: {BRAND_FONT} !important;
+      color: {BRAND_TEXT};
+    }}
+    a {{
+      color: {BRAND_BLACK};
+    }}
+  </style>
 </head>
 <body style="margin:0; padding:0; background:#e5e5e5; font-family: {BRAND_FONT}; font-size: 16px; line-height: 1.7; color: {BRAND_TEXT};">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#e5e5e5;">
+  <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#e5e5e5" style="background:#e5e5e5;">
     <tr>
-      <td style="padding: 32px 24px;">
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 560px; margin: 0 auto; background: #ffffff; border-radius: 0; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+      <td align="center" valign="top" style="padding:32px 12px;">
+        <table role="presentation" width="560" border="0" cellspacing="0" cellpadding="0" align="center" bgcolor="#ffffff" style="width:560px; max-width:560px; background:#ffffff; border-collapse:collapse;">
           {header}
           <tr>
-            <td style="padding: 40px 32px 36px; color: {BRAND_TEXT};">
+            <td valign="top" style="padding:40px 32px 36px; color:{BRAND_TEXT};">
               {content}
             </td>
           </tr>
@@ -675,7 +686,7 @@ def _build_captions_order_pricing_detail(
     if amount_paid_display:
         paid_label_html = "Total paid" if show_checkout_totals else "Amount paid"
         total_line = (
-            f'<p style="margin:0 0 10px;"><strong>{paid_label_html}:</strong> '
+            f'<p style="margin:2px 0 12px; font-size:18px; line-height:1.35;"><strong>{paid_label_html}:</strong> '
             f"{html_module.escape(amount_paid_display)}</p>"
         )
     elif is_sub:
@@ -1211,7 +1222,6 @@ def _intake_link_email_html(
         summary_escaped = html.escape(order_summary.strip()).replace("\n", "<br>\n")
         summary_block = f"""<p style="margin:0 0 16px; font-size:14px; line-height:1.6; color:{BRAND_BLACK};"><strong>Order summary</strong><br><br>{summary_escaped}</p>
 """
-    account_line = "On the form you can also create an account to access your captions and manage your subscription in one place." if is_subscription else "On the form you can also create an account to access your captions in one place."
     business_line = ""
     safe_business = _sanitize_email_value(business_name or "")
     if safe_business:
@@ -1226,13 +1236,11 @@ def _intake_link_email_html(
 {business_line}
 <p style="margin:0 0 16px;">We've received your payment — thank you.</p>
 {summary_block}<p style="margin:0 0 12px;"><strong>Next step: if you haven&rsquo;t already, complete this short form so we can create your captions. It takes about 2 minutes.</strong></p>
-<p style="margin:0 0 16px;">Your 30 Days of Social Media Captions will be tailored to your business and voice.</p>
 {timing_tip}
 <p style="margin:0 0 24px;"><a href="{safe_url}" style="display:inline-block; padding:14px 28px; background:{BRAND_GOLD}; color:{BRAND_BLACK}; text-decoration:none; border-radius:10px; font-weight:600;">Complete the form</a></p>
 <p style="margin:0 0 8px; font-size:14px; color:{BRAND_MUTED};">Or copy and paste this link into your browser:</p>
 <p style="margin:0 0 24px; font-size:13px; word-break:break-all; color:#333;">{safe_url}</p>
 <p style="margin:0 0 16px;">Once you submit, we'll generate your 30 captions and send them to you by email within a few minutes.</p>
-{_account_history_notice_upcoming_html()}<p style="margin:0 0 16px;">{html.escape(account_line)}</p>
 <p style="margin:0 0 16px;">Thanks for choosing us.</p>
 <p style="margin:0;">— Lumo 22</p>"""
     return _email_wrapper(content)
@@ -2205,7 +2213,6 @@ If you didn't request this, you can ignore this email. Your email address will s
         if order_detail_plain:
             body += "Order summary\n" + order_detail_plain + "\n\n"
         body += "Next step: if you haven't already, complete this short form so we can create your captions. It takes about 2 minutes.\n\n"
-        body += "Your 30 Days of Social Media Captions will be tailored to your business and voice.\n\n"
         if is_sub:
             body += (
                 "We generate your first pack after you submit the form—the sooner you send it, the sooner it reaches your inbox. "
@@ -2214,12 +2221,9 @@ If you didn't request this, you can ignore this email. Your email address will s
         else:
             body += "For one-off packs, your 30-day caption calendar starts when you submit the form, not the day you paid.\n\n"
         body += intake_url
-        account_line = "On the form you can also create an account to access your captions and manage your subscription in one place." if is_sub else "On the form you can also create an account to access your captions in one place."
         body += (
             "\n\nOnce you submit, we'll generate your 30 captions and send them to you by email within a few minutes.\n\n"
-            + _account_history_notice_upcoming_plain()
-            + account_line
-            + "\n\nThanks for choosing us.\n\nLumo 22"
+            + "Thanks for choosing us.\n\nLumo 22"
         )
         html_body = _intake_link_email_html(
             intake_url,
