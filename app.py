@@ -121,6 +121,22 @@ def caption_order_generating_stuck_visible(order: Optional[dict]) -> bool:
 
 app = Flask(__name__)
 app.config.from_object(Config)
+
+
+def _configure_stripe_sdk_from_config() -> None:
+    """Set global Stripe-Version header when STRIPE_API_VERSION is set (matches Workbench / Dashboard behaviour)."""
+    ver = (getattr(Config, "STRIPE_API_VERSION", None) or "").strip()
+    if not ver:
+        return
+    try:
+        import stripe
+
+        stripe.api_version = ver
+    except Exception:
+        pass
+
+
+_configure_stripe_sdk_from_config()
 app.jinja_env.globals["order_includes_stories"] = order_includes_stories_addon
 app.jinja_env.globals["CAPTIONS_MAX_AUTO_DELIVERY_FAILURES"] = CAPTIONS_MAX_AUTO_DELIVERY_FAILURES
 app.jinja_env.globals["caption_pack_help_mailto"] = _caption_pack_help_mailto

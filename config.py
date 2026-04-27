@@ -108,6 +108,13 @@ class Config:
     STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY', '').strip() or None
     # Stripe webhook secret (for captions automation); create in Stripe Dashboard → Developers → Webhooks
     STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', '').strip() or None
+    # Optional: match Stripe Workbench → API version (e.g. 2025-12-15.clover). When unset, the Stripe Python
+    # SDK uses its library default (~2023-10-16), which can prevent Dashboard Checkout branding/colours from applying.
+    STRIPE_API_VERSION = os.getenv('STRIPE_API_VERSION', '').strip() or None
+    # Optional: force Checkout colours / name (hex with #). See https://docs.stripe.com/payments/checkout/customization/appearance
+    STRIPE_CHECKOUT_BRAND_BUTTON_COLOR = os.getenv('STRIPE_CHECKOUT_BRAND_BUTTON_COLOR', '').strip() or None
+    STRIPE_CHECKOUT_BRAND_BACKGROUND_COLOR = os.getenv('STRIPE_CHECKOUT_BRAND_BACKGROUND_COLOR', '').strip() or None
+    STRIPE_CHECKOUT_BRAND_DISPLAY_NAME = os.getenv('STRIPE_CHECKOUT_BRAND_DISPLAY_NAME', '').strip() or None
     # Base URL of your site (for intake/delivery links in emails), e.g. https://lumo22.com
     # Remove any non-printable chars (e.g. newline from env) so URLs are valid
     _base = os.getenv('BASE_URL', 'http://localhost:5001').strip().rstrip('/')

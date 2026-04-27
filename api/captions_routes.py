@@ -16,6 +16,7 @@ from typing import Any, Dict, Optional
 from flask import Blueprint, request, jsonify, redirect, Response, url_for
 from urllib.parse import quote
 from config import Config
+from api.stripe_utils import merge_stripe_checkout_branding_into_params
 
 captions_bp = Blueprint("captions", __name__, url_prefix="/api")
 
@@ -916,6 +917,7 @@ def captions_checkout():
     }
     if checkout_email:
         create_params["customer_email"] = checkout_email
+    merge_stripe_checkout_branding_into_params(create_params)
     try:
         session = stripe.checkout.Session.create(**create_params)
         return redirect(session.url, code=302)
@@ -1219,6 +1221,7 @@ def captions_checkout_subscription():
                 print(f"[captions_checkout_subscription] custom_text for billing anchor: {e}")
     if customer and (customer.get("email") or "").strip():
         create_params["customer_email"] = (customer.get("email") or "").strip()
+    merge_stripe_checkout_branding_into_params(create_params)
     try:
         session = stripe.checkout.Session.create(**create_params)
         return redirect(session.url, code=302)
@@ -4164,6 +4167,7 @@ def captions_get_pack_sooner():
         else:
             create_params["customer_email"] = email
 
+        merge_stripe_checkout_branding_into_params(create_params)
         session = stripe.checkout.Session.create(**create_params)
         url = (getattr(session, "url", None) or "").strip()
         if not url:
