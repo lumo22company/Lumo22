@@ -45,8 +45,8 @@ def main() -> int:
     session = {
         "id": "cs_sample_preview",
         "currency": "gbp",
-        "amount_total": 19885,
-        "amount_subtotal": 20500,
+        "amount_total": 14885,
+        "amount_subtotal": 15500,
         "total_details": {
             "amount_discount": 2000,
             "amount_tax": 1385,

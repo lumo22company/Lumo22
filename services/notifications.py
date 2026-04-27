@@ -603,7 +603,7 @@ def _build_captions_order_pricing_detail(
 
     checkout_extra_html = ""
     if show_checkout_totals:
-        plain_lines.extend(["Checkout totals", ""])
+        plain_lines.append("")
         if sub_fmt:
             plain_lines.append(f"Subtotal: {sub_fmt}")
             checkout_extra_html += (
@@ -677,12 +677,6 @@ def _build_captions_order_pricing_detail(
         + "".join(html_rows)
         + "</table>"
     )
-    totals_heading = ""
-    if show_checkout_totals:
-        totals_heading = (
-            f'<p style="margin:12px 0 6px; font-size:13px; color:{BRAND_TEXT_ON_LIGHT_GREY_PANEL};">'
-            f"<strong>Checkout totals</strong></p>"
-        )
     if amount_paid_display:
         paid_label_html = "Total paid" if show_checkout_totals else "Amount paid"
         total_line = (
@@ -706,7 +700,7 @@ def _build_captions_order_pricing_detail(
         f"{'Monthly subscription' if is_sub else 'One-off purchase'}</p>"
     )
     html_fragment = (
-        table_html + totals_heading + checkout_extra_html + total_line + platforms_html + ongoing_html + mismatch_note_html
+        table_html + checkout_extra_html + total_line + platforms_html + ongoing_html + mismatch_note_html
     )
     plain_text = "\n".join(plain_lines) + mismatch_note_plain
     return plain_text, html_fragment
