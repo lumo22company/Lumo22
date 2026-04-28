@@ -1042,6 +1042,7 @@ def _build_user_prompt(
                     f"IMPORTANT — The client's event window is a single calendar day: Pack Day **{sd}** ({_da.strftime('%a %d %b %Y')}). {pre_w} On-event: Day **{sd}**. {post_w} Follow EVENT_CALENDAR and COUNTDOWN_RULES above; do not contradict DATE_CONTEXT.",
                     "",
                     "KEY_DATE_EVENTS — caption bodies: Most captions in those phases must clearly reference the client's specific event, sale, or launch inside the **Caption:** text—not only in hashtags. Do not leave KEY_DATE_EVENTS only in Story Ideas while captions stay generic.",
+                    "MIN COVERAGE (single-day event): include event-specific copy in at least 2 pre-event captions before the event day (when available), at least 1 on-event caption on the event day, and at least 2 post-event captions after the event day (when available). If fewer days exist in a phase, use all available days in that phase.",
                 ])
             else:
                 pre_w = (
@@ -1059,6 +1060,7 @@ def _build_user_prompt(
                     f"IMPORTANT — The client's event spans **Pack Days {sd}–{ed}** (calendar: {_da.strftime('%a %d %b')}–{_db.strftime('%a %d %b %Y')}). {pre_w} On-event (live / spanning dates): **{sd}**–**{ed}**. {post_w} Do not treat only Day {sd} as “launch” and Day {ed} as after the event. Follow EVENT_CALENDAR and COUNTDOWN_RULES above.",
                     "",
                     "KEY_DATE_EVENTS — caption bodies: Most captions in those phases must clearly reference the client's specific event, sale, or launch inside the **Caption:** text—not only in hashtags. Do not leave KEY_DATE_EVENTS only in Story Ideas while captions stay generic.",
+                    "MIN COVERAGE (multi-day event): include event-specific copy in at least 2 pre-event captions before the event window (when available), at least 2 on-event captions during the event window (when available), and at least 2 post-event captions after the event window (when available). If fewer days exist in a phase, use all available days in that phase.",
                 ])
         elif key_date_day is not None:
             parts.extend([
