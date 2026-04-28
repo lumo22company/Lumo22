@@ -1316,17 +1316,22 @@ def _one_off_upgrade_reminder_email_html(upgrade_url: str, unsubscribe_url: str,
     upgrade_url = (upgrade_url or "").strip()
     unsubscribe_url = (unsubscribe_url or "").strip()
     safe_upgrade = html.escape(upgrade_url, quote=True) if upgrade_url and upgrade_url.startswith("http") else ""
-    safe_unsub = html.escape(unsubscribe_url, quote=True) if unsubscribe_url and unsubscribe_url.startswith("http") else ""
     intro = "Your 30 days of captions are almost up."
     if business_name:
         intro = f"Your 30 days of captions for {html.escape(business_name)} are almost up."
     content = f"""<p style="margin:0 0 16px;">Hi,</p>
 <p style="margin:0 0 16px;">{intro} Want a new pack every month? Upgrade to a subscription and your next pack will be delivered 30 days after your current one—continuous content, no overlap.</p>
-<p style="margin:0 0 12px;">Use the link below to open the <strong>upgrade</strong> page (sign in or create an account when asked—the link carries a short signed hint so we can pre-fill your email to match your purchase). Your one-off pack is pre-selected there with platforms, Story Ideas, and currency carried through—you can adjust anything, then continue to your order summary and checkout. You can update your form from that page or anytime under <strong>Edit form</strong> after you subscribe.</p>
+<p style="margin:0 0 12px;">Your one-off pack is pre-selected with:</p>
+<ul style="margin:0 0 16px; padding-left:20px;">
+  <li style="margin:0 0 6px;">platforms</li>
+  <li style="margin:0 0 6px;">Story Ideas</li>
+  <li style="margin:0;">currency</li>
+</ul>
+<p style="margin:0 0 12px;">You can adjust anything before checkout.</p>
+<p style="margin:0 0 16px;">You can also update your form from that page, or later under <strong>Edit form</strong> after you subscribe.</p>
 <p style="margin:0 0 24px;"><a href="{safe_upgrade}" style="display:inline-block; padding:14px 28px; background:{BRAND_GOLD}; color:{BRAND_BLACK}; text-decoration:none; border-radius:10px; font-weight:600;">Open upgrade page</a></p>
 <p style="margin:0 0 8px; font-size:14px; color:{BRAND_MUTED};">Or copy and paste this link into your browser:</p>
-<p style="margin:0 0 24px; font-size:13px; word-break:break-all; color:#333;">{html.escape(upgrade_url or '')}</p>
-<p style="margin:0 0 24px; font-size:13px; color:{BRAND_MUTED};"><a href="{safe_unsub}" style="color:{BRAND_MUTED}; text-decoration:underline;">Unsubscribe from upgrade reminders</a></p>
+<p style="margin:0 0 24px; font-size:13px; color:#333; word-break:break-word; overflow-wrap:anywhere;">{html.escape(upgrade_url or '')}</p>
 <p style="margin:0;">— Lumo 22</p>"""
     return _email_wrapper(content)
 
@@ -1424,7 +1429,7 @@ def _plan_change_confirmation_email_html(
                 "from your updated form and send them in a <strong>separate email</strong> when they're ready."
             )
         pack_note_block = (
-            f'<p style="margin:0 0 16px;"><strong>Get my pack sooner:</strong> you\'re about to open checkout. '
+            f'<p style="margin:0 0 16px;"><strong>Get my pack sooner:</strong> if you use this option, '
             f"{gen_line}</p>"
         )
     content = f"""<p style="margin:0 0 16px;">Hi,</p>
@@ -2051,7 +2056,7 @@ If you didn't create this account, you can ignore this email.
                     "updated form and send them in a separate email when they're ready."
                 )
             pack_note_plain = (
-                f"\nGet my pack sooner: you're about to open checkout. {gen_plain}\n"
+                f"\nGet my pack sooner: if you use this option, {gen_plain}\n"
             )
         body = f"""Hi,
 
@@ -2372,11 +2377,15 @@ If you have any questions, just reply to this email.
 
 {intro} Want a new pack every month? Upgrade to a subscription and your next pack will be delivered 30 days after your current one—continuous content, no overlap.
 
-Use the link below to open the upgrade page (sign in or create an account when asked—the link includes a short signed hint so we can pre-fill your email to match your purchase). Your one-off pack is pre-selected with platforms, Story Ideas, and currency carried through—you can adjust anything, then continue to checkout. You can update your form from there or anytime under Edit form after you subscribe.
+Your one-off pack is pre-selected with:
+- platforms
+- Story Ideas
+- currency
+
+You can adjust anything before checkout.
+You can also update your form from that page, or later under Edit form after you subscribe.
 
 {upgrade_url}
-
-Unsubscribe from upgrade reminders: {unsubscribe_url}
 
 — Lumo 22
 """
