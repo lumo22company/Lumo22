@@ -407,6 +407,9 @@
         <label for="operating_hours">Operating hours <span style="color:#999;">(optional)</span></label>
         <p class="field-helper intake-helper-before-control">Helps us tailor CTAs (e.g. "pop in", "book a call") to when you're available.</p>
         <input type="text" id="operating_hours" name="operating_hours" data-testid="operating_hours" placeholder="e.g. Mon–Fri 9–5, 24/7, weekends only" value="{{ existing_intake.get('operating_hours', '') }}">
+        <label for="service_area">Service area <span style="color:#999;">(optional)</span></label>
+        <p class="field-helper intake-helper-before-control">Helps us write locally relevant captions when it applies (e.g. city/region or online coverage).</p>
+        <input type="text" id="service_area" name="service_area" data-testid="service_area" placeholder='e.g. Clifton, Bristol; Greater Manchester; UK-wide online' value="{{ existing_intake.get('service_area', '') }}">
       </div>
       <div class="form-section">
         <h2>Audience <span class="intake-h2-meta">(required)</span></h2>
@@ -844,6 +847,7 @@
       reviewContent.appendChild(sect('Business type', gso('business_type', 'business_type_other') || '(not provided)'));
       reviewContent.appendChild(sect('What you offer', gv('offer_one_line')));
       if (gv('operating_hours')) reviewContent.appendChild(sect('Operating hours', gv('operating_hours')));
+      if (gv('service_area')) reviewContent.appendChild(sect('Service area', gv('service_area')));
       reviewContent.appendChild(sect('Primary audience', gv('audience') || '(not provided)'));
       if (gv('consumer_age_range')) reviewContent.appendChild(sect('Consumer age range', gv('consumer_age_range')));
       reviewContent.appendChild(sect('What they care about', gv('audience_cares')));
@@ -928,6 +932,7 @@
         business_type: gso('business_type', 'business_type_other'),
         offer_one_line: gv('offer_one_line'),
         operating_hours: gv('operating_hours'),
+        service_area: gv('service_area'),
         audience: gv('audience'),
         consumer_age_range: gv('consumer_age_range'),
         audience_cares: gv('audience_cares'),
@@ -1464,6 +1469,7 @@
         reviewContent.appendChild(sect('Business type', getSelectOrOther('business_type', 'business_type_other') || '(not provided)'));
         reviewContent.appendChild(sect('What you offer', getVal('offer_one_line')));
         if (getVal('operating_hours')) reviewContent.appendChild(sect('Operating hours', getVal('operating_hours')));
+        if (getVal('service_area')) reviewContent.appendChild(sect('Service area', getVal('service_area')));
         reviewContent.appendChild(sect('Primary audience', getVal('audience') || '(not provided)'));
         var ageRange = getVal('consumer_age_range');
         if (ageRange) reviewContent.appendChild(sect('Consumer age range', ageRange));
@@ -1538,6 +1544,7 @@
           business_type: getSelectOrOther('business_type', 'business_type_other'),
           offer_one_line: getVal('offer_one_line'),
           operating_hours: getVal('operating_hours'),
+          service_area: getVal('service_area'),
           audience: getVal('audience'),
           consumer_age_range: getVal('consumer_age_range'),
           audience_cares: getVal('audience_cares'),

@@ -2888,6 +2888,7 @@ def _captions_intake_submit_impl(data):
         "business_type": (data.get("business_type") or "").strip(),
         "offer_one_line": (data.get("offer_one_line") or "").strip(),
         "operating_hours": (data.get("operating_hours") or "").strip(),
+        "service_area": (data.get("service_area") or "").strip(),
         "audience": (data.get("audience") or "").strip(),
         "consumer_age_range": (data.get("consumer_age_range") or "").strip(),
         "audience_cares": (data.get("audience_cares") or "").strip(),

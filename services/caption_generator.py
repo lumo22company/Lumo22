@@ -937,6 +937,7 @@ def _build_user_prompt(
     business_type = n(intake.get("business_type") or "", sentence_case=False)
     offer_one_line = n(intake.get("offer_one_line") or "", sentence_case=True)
     operating_hours = n(intake.get("operating_hours") or "", sentence_case=True)
+    service_area = n(intake.get("service_area") or "", sentence_case=True)
     audience = n(intake.get("audience") or "", sentence_case=False) or "Not specified"
     consumer_age = n(intake.get("consumer_age_range") or "", sentence_case=False) or "Not specified"
     audience_cares = n(intake.get("audience_cares") or "", sentence_case=True)
@@ -958,6 +959,7 @@ def _build_user_prompt(
         f"- Business type: {business_type}",
         f"- What they offer (one sentence): {offer_one_line}",
         f"- Operating hours: {operating_hours or 'Not specified'}",
+        f"- Service area: {service_area or 'Not specified'}",
         f"- Primary audience: {audience}",
         f"- Consumer age range (if applicable): {consumer_age}",
         f"- What audience cares about: {audience_cares}",
