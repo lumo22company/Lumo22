@@ -17,9 +17,17 @@ EXPECTED_NAME = "Extra platform"
 EXPECTED_DESCRIPTION = "Extra platform for your 30 Days Captions pack. Content delivered with your next pack."
 
 
+def _ci_placeholder_stripe() -> bool:
+    key = (os.getenv("STRIPE_SECRET_KEY") or "").lower()
+    return "placeholder" in key or "ci_" in key or key.startswith("sk_test_ci")
+
+
 @pytest.mark.skipif(
-    os.getenv("GITHUB_ACTIONS") == "true",
-    reason="Live Stripe Price.retrieve for extra-platform prices; CI has no real price IDs.",
+    os.getenv("GITHUB_ACTIONS", "").lower() == "true"
+    or os.getenv("CI", "").lower() == "true" and _ci_placeholder_stripe()
+    or not (os.getenv("STRIPE_CAPTIONS_EXTRA_PLATFORM_PRICE_ID") or "").strip()
+    or not (os.getenv("STRIPE_CAPTIONS_EXTRA_PLATFORM_SUBSCRIPTION_PRICE_ID") or "").strip(),
+    reason="Live Stripe Price.retrieve for extra-platform prices; skip when CI placeholders or price IDs missing.",
 )
 def test_extra_platform_stripe_setup():
     stripe_key = os.getenv("STRIPE_SECRET_KEY", "").strip()

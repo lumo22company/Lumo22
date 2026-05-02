@@ -44,9 +44,10 @@ def test_config():
 
 
 @pytest.mark.skipif(
-    os.getenv("GITHUB_ACTIONS") == "true"
-    or (os.getenv("SUPABASE_KEY") or "").strip() == "ci-placeholder-key",
-    reason="GitHub Actions uses placeholder Supabase credentials; run this test locally with a real key.",
+    os.getenv("GITHUB_ACTIONS", "").lower() == "true"
+    or (os.getenv("SUPABASE_KEY") or "").strip() == "ci-placeholder-key"
+    or "example.supabase.co" in (os.getenv("SUPABASE_URL") or ""),
+    reason="GitHub Actions / CI uses placeholder Supabase; run this test locally with a real project.",
 )
 def test_supabase():
     """Test Supabase connection via caption order service."""

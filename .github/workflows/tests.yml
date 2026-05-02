@@ -36,6 +36,8 @@ jobs:
           STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID: price_ci_placeholder_subscription_gbp
           # Story / caption prompt tests construct CaptionGenerator (no real API calls when chat_completion is patched).
           OPENAI_API_KEY: sk-ci-openai-placeholder-not-used-in-unit-tests
+          # App default when unset is anthropic; CI only supplies an OpenAI-shaped placeholder, so pin OpenAI here.
+          AI_PROVIDER: openai
         run: |
           "${{ steps.setup-py.outputs.python-path }}" -m pytest . --ignore=scripts -v --tb=short
 
