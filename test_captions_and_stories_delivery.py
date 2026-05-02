@@ -27,7 +27,7 @@ def main():
     from services.caption_pdf import build_caption_pdf, build_stories_pdf, get_logo_path
     from services.notifications import NotificationService
 
-    provider = (getattr(Config, "AI_PROVIDER", None) or "openai").strip().lower()
+    provider = (getattr(Config, "AI_PROVIDER", None) or "anthropic").strip().lower()
     if provider == "anthropic":
         if not Config.ANTHROPIC_API_KEY:
             print("ERROR: ANTHROPIC_API_KEY not set (AI_PROVIDER=anthropic)")

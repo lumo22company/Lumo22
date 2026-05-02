@@ -8,7 +8,7 @@ Usage:
   python3 test_captions_delivery.py your@email.com
   python3 test_captions_delivery.py your@email.com TOKEN   # use existing order by token
 
-Uses your .env (OpenAI, SendGrid, Supabase). If it fails here, it fails on Railway too.
+Uses your .env (Anthropic or OpenAI, SendGrid, Supabase). If it fails here, it fails on Railway too.
 """
 import sys
 from dotenv import load_dotenv
@@ -23,7 +23,7 @@ def main():
     from services.caption_generator import CaptionGenerator
     from services.notifications import NotificationService
 
-    provider = (getattr(Config, 'AI_PROVIDER', None) or 'openai').strip().lower()
+    provider = (getattr(Config, "AI_PROVIDER", None) or "anthropic").strip().lower()
     if provider == 'anthropic':
         if not Config.ANTHROPIC_API_KEY:
             print("ERROR: ANTHROPIC_API_KEY not set (AI_PROVIDER=anthropic)")

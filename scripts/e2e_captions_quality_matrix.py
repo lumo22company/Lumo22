@@ -182,7 +182,7 @@ def main() -> None:
     from services.caption_generator import CaptionGenerator
     from services.caption_pdf import build_caption_pdf, build_stories_pdf, get_logo_path
 
-    provider = (getattr(Config, "AI_PROVIDER", None) or "openai").strip().lower()
+    provider = (getattr(Config, "AI_PROVIDER", None) or "anthropic").strip().lower()
     if provider == "anthropic" and not getattr(Config, "ANTHROPIC_API_KEY", None):
         print("ERROR: ANTHROPIC_API_KEY not set", file=sys.stderr)
         sys.exit(1)

@@ -8,7 +8,7 @@ Caption and Story generation use a **single abstraction** (`services/ai_provider
 
 | What | Where |
 |------|--------|
-| Which provider | `config.py`: `AI_PROVIDER` (env `AI_PROVIDER`, default `openai`) |
+| Which provider | `config.py`: `AI_PROVIDER` (env `AI_PROVIDER`, default `anthropic`) |
 | OpenAI model | `config.py`: `OPENAI_MODEL` (env `OPENAI_MODEL`, default `gpt-4o-mini`) |
 | Anthropic model | `config.py`: `ANTHROPIC_MODEL` (env `ANTHROPIC_MODEL`, default `claude-haiku-4-5-20251001`) |
 | API keys | `config.py`: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY` |
@@ -24,7 +24,7 @@ On **every** app load (including Gunicorn on Railway), `app.py` calls `Config.va
 
 - If `AI_PROVIDER` is set to anything other than **`anthropic`** or **`openai`** (case-insensitive), the process **exits** with a clear error — e.g. if an API key was pasted into `AI_PROVIDER`.
 - If `AI_PROVIDER` looks like a key (`sk-ant…` or a long `sk-…` string), the error message explains to use **`ANTHROPIC_API_KEY`** / **`OPENAI_API_KEY`** instead.
-- In **production** (`Config.is_production()`): **`ANTHROPIC_API_KEY`** is required when using Anthropic; **`OPENAI_API_KEY`** when using OpenAI or when `AI_PROVIDER` is unset (default is OpenAI). If you only use Anthropic, set **`AI_PROVIDER=anthropic`**.
+- In **production** (`Config.is_production()`): **`ANTHROPIC_API_KEY`** is required when `AI_PROVIDER` is **`anthropic`** or unset (default is Anthropic). **`OPENAI_API_KEY`** is required when **`AI_PROVIDER=openai`**. For OpenAI-only local dev, set **`AI_PROVIDER=openai`** explicitly.
 
 `Config.validate()` (e.g. when running `python app.py`) also runs this check first.
 

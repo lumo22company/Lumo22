@@ -96,7 +96,7 @@ def chat_completion(
     Call the configured AI provider. Returns the assistant's text content.
     Raises on API error.
     """
-    provider = (Config.AI_PROVIDER or "openai").strip().lower()
+    provider = (Config.AI_PROVIDER or "anthropic").strip().lower()
 
     if provider == "anthropic":
         return _anthropic_completion(system=system, user=user, temperature=temperature, max_tokens=max_tokens)

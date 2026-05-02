@@ -40,7 +40,8 @@ class Config:
     PERMANENT_SESSION_LIFETIME = timedelta(hours=1)  # Inactivity logout: session expires after 1 hour of no requests
     
     # AI Provider: "openai" or "anthropic". When anthropic, caption generation uses Claude.
-    AI_PROVIDER = (os.getenv('AI_PROVIDER') or 'openai').strip().lower()
+    # Default anthropic when unset (matches .env.example / production; set AI_PROVIDER=openai for OpenAI-only dev).
+    AI_PROVIDER = (os.getenv('AI_PROVIDER') or 'anthropic').strip().lower()
     # OpenAI (sanitize key so no newline breaks the client)
     OPENAI_API_KEY = _sanitize_header_value(os.getenv('OPENAI_API_KEY', '') or '')
     OPENAI_MODEL = (os.getenv('OPENAI_MODEL') or 'gpt-4o-mini').strip()  # Using mini for cost efficiency
@@ -162,7 +163,7 @@ class Config:
         Fail fast on common Railway/host mistakes: API key pasted into AI_PROVIDER.
         Called on app import (Gunicorn/Railway), not only when running `python app.py`.
 
-        AI_PROVIDER must be exactly 'anthropic' or 'openai' (case-insensitive), or unset (defaults to openai).
+        AI_PROVIDER must be exactly 'anthropic' or 'openai' (case-insensitive), or unset (defaults to anthropic).
         In production, the matching API key must be set.
         """
         raw = (os.getenv("AI_PROVIDER") or "").strip()
@@ -183,25 +184,24 @@ class Config:
                     f"Must be exactly 'anthropic' or 'openai', not a secret key.{hint}"
                 )
 
-        effective = (raw or "openai").strip().lower()
+        effective = (raw or "anthropic").strip().lower()
         if Config.is_production():
             if effective == "anthropic":
                 if not (Config.ANTHROPIC_API_KEY or "").strip():
                     raise ValueError(
-                        "Production: ANTHROPIC_API_KEY is required when AI_PROVIDER=anthropic."
+                        "Production: ANTHROPIC_API_KEY is required when AI_PROVIDER=anthropic or unset (default)."
                     )
             else:
                 if not (Config.OPENAI_API_KEY or "").strip():
                     raise ValueError(
-                        "Production: OPENAI_API_KEY is required when AI_PROVIDER is openai or unset (default). "
-                        "If you use Anthropic only, set AI_PROVIDER=anthropic and ANTHROPIC_API_KEY."
+                        "Production: OPENAI_API_KEY is required when AI_PROVIDER=openai."
                     )
 
     @staticmethod
     def validate_ai_vendor_optional():
         """
         Optional Railway sanity variable: AI_VENDOR=anthropic|openai (plain text, not secret).
-        If set, must match the effective provider from AI_PROVIDER (or default openai when unset).
+        If set, must match the effective provider from AI_PROVIDER (or default anthropic when unset).
         Logs WARNING only — does not exit (AI_PROVIDER validation already ran).
         """
         import sys
@@ -216,7 +216,7 @@ class Config:
             )
             return
         raw_ap = (os.getenv("AI_PROVIDER") or "").strip()
-        effective = (raw_ap or "openai").strip().lower()
+        effective = (raw_ap or "anthropic").strip().lower()
         if v != effective:
             print(
                 f"[Config] WARNING: AI_VENDOR={v!r} does not match effective AI provider {effective!r} "
@@ -228,11 +228,11 @@ class Config:
     def log_ai_provider_summary():
         """One startup line for deploy logs: effective provider and which keys are set (never prints secrets)."""
         raw_ap = (os.getenv("AI_PROVIDER") or "").strip()
-        effective = (raw_ap or "openai").strip().lower()
+        effective = (raw_ap or "anthropic").strip().lower()
         v = (os.getenv("AI_VENDOR") or "").strip()
         has_ant = bool((os.getenv("ANTHROPIC_API_KEY") or "").strip())
         has_oai = bool((os.getenv("OPENAI_API_KEY") or "").strip())
-        ap_note = repr(raw_ap) if raw_ap else "(unset — defaults to openai)"
+        ap_note = repr(raw_ap) if raw_ap else "(unset — defaults to anthropic)"
         vendor_note = repr(v) if v else "(optional, not set)"
         print(
             f"[Config] AI summary: AI_PROVIDER={ap_note} → effective={effective!r} | "

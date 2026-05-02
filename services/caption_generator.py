@@ -2299,7 +2299,7 @@ class CaptionGenerator:
     MAX_TOKENS_MULTI_PLATFORM_CHUNK = 8192
 
     def __init__(self):
-        provider = (Config.AI_PROVIDER or "openai").strip().lower()
+        provider = (Config.AI_PROVIDER or "anthropic").strip().lower()
         if provider == "anthropic":
             if not Config.ANTHROPIC_API_KEY:
                 raise ValueError("ANTHROPIC_API_KEY not configured (set AI_PROVIDER=anthropic)")

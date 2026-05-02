@@ -123,7 +123,7 @@ def main():
     from config import Config
     from services.ai_provider import chat_completion as ai_chat
 
-    provider = (getattr(Config, "AI_PROVIDER", None) or "openai").strip().lower()
+    provider = (getattr(Config, "AI_PROVIDER", None) or "anthropic").strip().lower()
     if provider == "anthropic" and not getattr(Config, "ANTHROPIC_API_KEY", None):
         print("ANTHROPIC_API_KEY not set. Skipping live run.")
         sys.exit(0)
