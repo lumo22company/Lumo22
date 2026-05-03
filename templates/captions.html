@@ -65,6 +65,7 @@
     /* “What you get” — prose width on desktop */
     .captions-what-you-get-list { max-width: 560px; margin: 0 0 2rem; text-align: left; }
     .captions-what-you-get-intro { margin: 0 0 1.5rem; font-size: 1rem; color: var(--text-on-light, #1a1a1a); max-width: 560px; text-align: left; }
+    .captions-testimonials.dfd-section { padding-top: 2rem; }
     /* Mobile only: full-width section, wider cards, tighter headings */
     @media (max-width: 768px) {
       .product-page-captions .captions-what-you-get.dfd-section {
@@ -117,6 +118,32 @@
       }
       .product-page-captions .captions-what-you-get .captions-examples-grid > div > p[data-reveal]:last-child {
         margin-top: 0.65rem;
+      }
+      /* “What people say” — match What you get mobile treatment */
+      .product-page-captions .captions-testimonials.dfd-section {
+        padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
+        padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
+        padding-top: 1.25rem;
+      }
+      .product-page-captions .captions-testimonials .dfd-section-inner {
+        max-width: 100%;
+        padding-left: 0;
+        padding-right: 0;
+      }
+      .product-page-captions .captions-testimonials .dfd-heading {
+        margin-bottom: 0.3rem;
+      }
+      .product-page-captions .captions-testimonials .dfd-testimonials {
+        gap: 1rem;
+        margin-top: 0.15rem;
+      }
+      .product-page-captions .captions-testimonials .dfd-testimonial {
+        padding: 1rem 1.1rem;
+      }
+      .product-page-captions .captions-testimonials .dfd-testimonial-text {
+        font-size: 0.98rem;
+        line-height: 1.58;
+        margin-bottom: 0.65rem;
       }
     }
   </style>
@@ -263,7 +290,7 @@
   </section>
 
   <!-- 3. TESTIMONIALS — social proof -->
-  <section class="dfd-section dfd-section--light dfd-testimonials-section captions-reveal" id="testimonials" style="padding-top: 2rem;" data-reveal>
+  <section class="dfd-section dfd-section--light dfd-testimonials-section captions-reveal captions-testimonials" id="testimonials" data-reveal>
     <div class="dfd-section-inner">
       <h2 class="dfd-heading" data-reveal>What people say</h2>
       <div class="dfd-testimonials dfd-testimonials--two">
