@@ -68,15 +68,6 @@
     .captions-testimonials.dfd-section { padding-top: 2rem; }
     /* Mobile only: full-width section, wider cards, tighter headings */
     @media (max-width: 768px) {
-      .product-page-captions .captions-what-you-get.dfd-section {
-        padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
-        padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
-      }
-      .product-page-captions .captions-what-you-get .dfd-section-inner {
-        max-width: 100%;
-        padding-left: 0;
-        padding-right: 0;
-      }
       .product-page-captions .captions-what-you-get .dfd-heading:first-of-type {
         margin-bottom: 0.3rem;
       }
@@ -119,16 +110,9 @@
       .product-page-captions .captions-what-you-get .captions-examples-grid > div > p[data-reveal]:last-child {
         margin-top: 0.65rem;
       }
-      /* “What people say” — match What you get mobile treatment */
+      /* “What people say” — tighter than desktop; gutters from product.css */
       .product-page-captions .captions-testimonials.dfd-section {
-        padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
-        padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
         padding-top: 1.25rem;
-      }
-      .product-page-captions .captions-testimonials .dfd-section-inner {
-        max-width: 100%;
-        padding-left: 0;
-        padding-right: 0;
       }
       .product-page-captions .captions-testimonials .dfd-heading {
         margin-bottom: 0.3rem;

@@ -722,11 +722,26 @@
 
 .dfd-section--dark .dfd-lead { color: var(--lum-text-muted); }
 
-/* Voice section copy + how-it-works: relax gutters on mobile so it isn't cramped */
+/* Captions mobile: one horizontal gutter (match hero 1.5rem), most of viewport width */
 @media (max-width: 768px) {
+  .product-page-captions .dfd-hero {
+    padding-top: 4rem;
+    padding-bottom: 3.5rem;
+    padding-left: max(1.5rem, env(safe-area-inset-left, 0px));
+    padding-right: max(1.5rem, env(safe-area-inset-right, 0px));
+  }
+  .product-page-captions .dfd-section {
+    padding-left: max(1.5rem, env(safe-area-inset-left, 0px)) !important;
+    padding-right: max(1.5rem, env(safe-area-inset-right, 0px)) !important;
+  }
   .product-page-captions .dfd-section-inner {
-    padding-left: 1.5rem;
-    padding-right: 1.5rem;
+    max-width: 100%;
+    padding-left: 0;
+    padding-right: 0;
+  }
+  .product-page-captions .product-section {
+    padding-left: max(1.5rem, env(safe-area-inset-left, 0px)) !important;
+    padding-right: max(1.5rem, env(safe-area-inset-right, 0px)) !important;
   }
   .product-page-captions .dfd-heading-voice,
   .product-page-captions .dfd-voice-lead,
