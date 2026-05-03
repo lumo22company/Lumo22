@@ -1,6 +1,8 @@
 /**
  * Dayos-style section parallax — scroll-driven translateY for blocks.
  * Content moves at a slightly different rate to create depth (parallax).
+ * Landing: .block[data-reveal] .block-inner. Captions (/captions): .dfd-section-inner
+ * in .product-page-captions .dfd-section.captions-reveal (hero is .dfd-hero, excluded).
  * Respects prefers-reduced-motion.
  */
 (function () {
@@ -8,7 +10,10 @@
 
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
-  var blocks = document.querySelectorAll('.block[data-reveal] .block-inner');
+  /* Landing: .block inner. Captions product: .dfd-section-inner inside scrolled sections. */
+  var blocks = document.querySelectorAll(
+    '.block[data-reveal] .block-inner, .product-page-captions .dfd-section.captions-reveal .dfd-section-inner'
+  );
   if (!blocks.length) return;
 
   var MAX_LAG = 24;
