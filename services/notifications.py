@@ -2319,13 +2319,25 @@ If you didn't request this, you can ignore this email. Your email address will s
             f"Like what you see? Get the full 30-day pack (feed posts, optional Story prompts):\n{upgrade_url}\n\n"
             "— Lumo 22"
         )
-        md_html = html.escape(plain_body).replace("\n\n", "</p><p style=\"margin:0 0 12px;\">").replace("\n", "<br>")
+        import re
+
+        day_blocks: list[str] = []
+        for block in re.split(r"\n{2,}", plain_body):
+            block = block.strip()
+            if not block:
+                continue
+            escaped = html.escape(block).replace("\n", "<br>")
+            if re.match(r"^Day \d+ — ", block):
+                day_blocks.append(f"<p style=\"margin:18px 0 6px; font-weight:700;\">{escaped}</p>")
+            else:
+                day_blocks.append(f"<p style=\"margin:0 0 12px;\">{escaped}</p>")
+        md_html = "".join(day_blocks)
         business_line = f"<p style=\"margin:0 0 12px;\"><strong>{bn}</strong></p>" if bn else ""
         content = f"""<p style="margin:0 0 16px;">Hi,</p>
 <p style="margin:0 0 16px;">Here are your <strong>3 sample captions</strong> — a taste of how we write in your voice.</p>
 {business_line}
-<div style="margin:0 0 20px; padding:16px; background:#fafafa; border:1px solid rgba(0,0,0,0.08); border-radius:8px; font-size:14px; line-height:1.55; color:{BRAND_BLACK};">
-<p style="margin:0 0 12px;">{md_html}</p>
+<div style="margin:0 0 20px; padding:16px 18px; background:#fafafa; border:1px solid rgba(0,0,0,0.08); border-radius:8px; font-size:14px; line-height:1.55; color:{BRAND_BLACK};">
+{md_html}
 </div>
 <p style="margin:0 0 16px;">Want a full month of content? The 30-day pack includes daily captions (and optional Story prompts).</p>
 <p style="margin:0 0 24px;"><a href="{safe_upgrade}" style="display:inline-block; padding:14px 28px; background:{BRAND_GOLD}; color:{BRAND_BLACK}; text-decoration:none; border-radius:10px; font-weight:600;">Get 30 days of captions</a></p>

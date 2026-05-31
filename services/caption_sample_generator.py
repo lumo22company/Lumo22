@@ -81,7 +81,7 @@ Business brief:
         cat = (item.get("category") or "Caption").strip()
         cap = (item.get("caption") or "").strip()
         tags = (item.get("hashtags") or "").strip()
-        md_lines.append(f"## Day {day} — {cat}")
+        md_lines.append(f"Day {day} — {cat}")
         md_lines.append("")
         md_lines.append(cap)
         if tags:
