@@ -2299,6 +2299,7 @@ If you didn't request this, you can ignore this email. Your email address will s
         to_email: str,
         captions_md: str,
         business_name: Optional[str] = None,
+        platform: Optional[str] = None,
     ) -> bool:
         """Deliver 3-caption sample in email body with upgrade CTA."""
         import html
@@ -2309,12 +2310,20 @@ If you didn't request this, you can ignore this email. Your email address will s
         upgrade_url = f"{base}/captions"
         safe_upgrade = html.escape(upgrade_url, quote=True)
         bn = _sanitize_email_value(business_name or "")
+        plat = _sanitize_email_value(platform or "")
         subject = f"Your 3 sample captions{f' — {bn}' if bn else ''}"
-        # Plain text: strip markdown headings lightly
         plain_body = (captions_md or "").strip()
+        plain_meta = ""
+        if bn and plat:
+            plain_meta = f"Business: {bn}\nPlatform: {plat}\n\n"
+        elif bn:
+            plain_meta = f"Business: {bn}\n\n"
+        elif plat:
+            plain_meta = f"Platform: {plat}\n\n"
         plain = (
             f"Hi,\n\n"
             f"Here are your 3 sample captions{f' for {bn}' if bn else ''}.\n\n"
+            f"{plain_meta}"
             f"{plain_body}\n\n"
             f"Like what you see? Get the full 30-day pack (feed posts, optional Story prompts):\n{upgrade_url}\n\n"
             "— Lumo 22"
@@ -2332,10 +2341,17 @@ If you didn't request this, you can ignore this email. Your email address will s
             else:
                 day_blocks.append(f"<p style=\"margin:0 0 12px;\">{escaped}</p>")
         md_html = "".join(day_blocks)
-        business_line = f"<p style=\"margin:0 0 12px;\"><strong>{bn}</strong></p>" if bn else ""
+        meta_lines: list[str] = []
+        if bn:
+            meta_lines.append(f"<strong>{bn}</strong>")
+        if plat:
+            meta_lines.append(f"<span style=\"color:{BRAND_MUTED}; font-size:13px;\">For: {plat}</span>")
+        meta_block = ""
+        if meta_lines:
+            meta_block = "<p style=\"margin:0 0 14px; line-height:1.5;\">" + "<br>".join(meta_lines) + "</p>"
         content = f"""<p style="margin:0 0 16px;">Hi,</p>
 <p style="margin:0 0 16px;">Here are your <strong>3 sample captions</strong> — a taste of how we write in your voice.</p>
-{business_line}
+{meta_block}
 <div style="margin:0 0 20px; padding:16px 18px; background:#fafafa; border:1px solid rgba(0,0,0,0.08); border-radius:8px; font-size:14px; line-height:1.55; color:{BRAND_BLACK};">
 {md_html}
 </div>

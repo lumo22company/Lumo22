@@ -2157,7 +2157,13 @@ def _run_sample_generation_and_deliver(order_id: str) -> None:
     to_email = (row.get("customer_email") or "").strip()
     business_name = (intake.get("business_name") or "").strip()
     try:
-        NotificationService().send_sample_caption_delivery_email(to_email, md, business_name=business_name or None)
+        platform = (intake.get("platform") or "").strip()
+        NotificationService().send_sample_caption_delivery_email(
+            to_email,
+            md,
+            business_name=business_name or None,
+            platform=platform or None,
+        )
         print(f"[Captions sample] Delivered order {order_id} to {to_email}")
     except Exception as e:
         print(f"[Captions sample] Email failed order {order_id}: {e}")
