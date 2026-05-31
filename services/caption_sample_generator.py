@@ -35,9 +35,10 @@ def _brief_block(intake: Dict[str, Any]) -> str:
 
 _PLATFORM_GUIDANCE = {
     "instagram & facebook": (
-        "Instagram & Facebook (feed post). Open with a strong hook line, then 3–6 short paragraphs "
-        "of storytelling, value, or specifics. Add a clear call to action at the end. "
-        "Aim for ~120–220 words. Use line breaks between paragraphs for scannability."
+        "Instagram & Facebook (feed post). Open with a strong hook line, then keep the copy tight: "
+        "usually 2–4 short sentences or a few short lines. Make it concrete enough that a stranger "
+        "understands the offer; do not write a long essay unless the client's platform habits ask for it. "
+        "End with a clear, low-pressure next step where natural."
     ),
     "linkedin": (
         "LinkedIn. Professional but human. Open with a hook line, then 4–7 short paragraphs of "
