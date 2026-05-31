@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3 free sample captions | Lumo 22</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
+  <meta name="description" content="Get 3 social media captions written in your brand voice. Free, no card required.">
+  {% include '_csrf_head.html' %}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Encode+Sans+Condensed:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v={{ asset_version }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/product.css') }}?v={{ asset_version }}">
+  <style>
+    .sample-section { padding: 7rem 1.25rem 4rem; max-width: 520px; margin: 0 auto; }
+    .sample-section h1 { font-family: 'Bebas Neue', sans-serif; font-size: 2.25rem; letter-spacing: -0.02em; margin: 0 0 0.75rem; color: #fff; }
+    .sample-section .lead { color: var(--lum-text-muted, #9a9a96); line-height: 1.6; margin-bottom: 1.5rem; }
+    .sample-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; }
+    .sample-card label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem; color: #f5f5f2; }
+    .sample-card input[type="email"] { width: 100%; box-sizing: border-box; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: #111; color: #fff; font-size: 1rem; margin-bottom: 1rem; }
+    .sample-error { color: #ff6b6b; font-size: 0.9rem; margin: 0 0 1rem; display: none; }
+    .sample-success { display: none; margin-top: 1rem; padding: 1rem; background: rgba(255,242,0,0.12); border-radius: 8px; color: #f5f5f2; line-height: 1.55; }
+    .sample-back { margin-top: 1.5rem; font-size: 0.9rem; }
+    .sample-back a { color: var(--lum-gold, #fff200); }
+  </style>
+</head>
+<body class="lumo-landing product-page-captions">
+  {% include '_lumo_nav.html' %}
+  <section class="sample-section">
+    <h1>3 free sample captions</h1>
+    <p class="lead">See how we write in your voice before you buy. Enter your email — we'll send a link to a short form (about 2 minutes). Your 3 captions arrive by email. No card required.</p>
+    <div class="sample-card">
+      <form id="sample-start-form" novalidate>
+        <label for="sample-email">Email</label>
+        <input type="email" id="sample-email" name="email" required autocomplete="email" placeholder="you@yourbusiness.com">
+        <p id="sample-error" class="sample-error" role="alert"></p>
+        <button type="submit" class="dfd-btn dfd-btn-hero-cta" id="sample-submit-btn" style="width: 100%;">Continue</button>
+      </form>
+      <div id="sample-success" class="sample-success">
+        <p style="margin: 0 0 0.5rem;"><strong>Check your inbox.</strong> We sent a link to complete your short form.</p>
+        <p style="margin: 0; font-size: 0.9rem;">Didn't get it? Check spam, or <a href="#" id="sample-open-intake" style="color: var(--lum-gold);">open your form here</a>.</p>
+      </div>
+    </div>
+    <p class="sample-back"><a href="/captions">← Full 30-day pack</a></p>
+  </section>
+  <script>
+    (function () {
+      var form = document.getElementById('sample-start-form');
+      var errEl = document.getElementById('sample-error');
+      var okEl = document.getElementById('sample-success');
+      var btn = document.getElementById('sample-submit-btn');
+      var intakeLink = document.getElementById('sample-open-intake');
+      var lastIntakeUrl = '';
+      function showError(msg) {
+        errEl.textContent = msg || '';
+        errEl.style.display = msg ? 'block' : 'none';
+      }
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        showError('');
+        var email = (document.getElementById('sample-email').value || '').trim();
+        if (!email || email.indexOf('@') < 1) {
+          showError('Please enter a valid email address.');
+          return;
+        }
+        btn.disabled = true;
+        btn.textContent = 'Sending…';
+        fetch('/api/captions-sample/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email })
+        })
+          .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, status: r.status, body: j }; }); })
+          .then(function (res) {
+            if (!res.ok) {
+              showError((res.body && res.body.error) || 'Something went wrong. Please try again.');
+              btn.disabled = false;
+              btn.textContent = 'Continue';
+              return;
+            }
+            lastIntakeUrl = (res.body && res.body.intake_url) || '';
+            form.style.display = 'none';
+            okEl.style.display = 'block';
+            if (lastIntakeUrl && intakeLink) {
+              intakeLink.href = lastIntakeUrl;
+            }
+          })
+          .catch(function () {
+            showError('Network error. Please try again.');
+            btn.disabled = false;
+            btn.textContent = 'Continue';
+          });
+      });
+    })();
+  </script>
+</body>
+</html>

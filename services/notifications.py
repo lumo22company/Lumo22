@@ -2268,6 +2268,70 @@ If you didn't request this, you can ignore this email. Your email address will s
         )
         return self.send_email(to_email, subject, body, html_body=html_body)
 
+    def send_sample_intake_link_email(self, to_email: str, intake_url: str) -> bool:
+        """After free sample signup: link to short intake form (no payment)."""
+        if not intake_url or not str(intake_url).strip().startswith("http"):
+            print("[SendGrid] Sample intake email NOT sent: invalid intake_url")
+            return False
+        import html
+
+        safe_url = html.escape(intake_url.strip(), quote=True)
+        subject = "Your 3 free sample captions — next step"
+        body = (
+            "Hi,\n\n"
+            "Thanks for requesting a free sample from Lumo 22.\n\n"
+            "Complete this short form (about 2 minutes) and we'll email you 3 captions written in your brand voice:\n\n"
+            f"{intake_url.strip()}\n\n"
+            "No card required.\n\n— Lumo 22"
+        )
+        content = f"""<p style="margin:0 0 16px;">Hi,</p>
+<p style="margin:0 0 16px;">Thanks for requesting a <strong>free 3-caption sample</strong> from Lumo 22. No card required.</p>
+<p style="margin:0 0 12px;"><strong>Next step:</strong> complete this short form (about 2 minutes) so we can write in your voice.</p>
+<p style="margin:0 0 24px;"><a href="{safe_url}" style="display:inline-block; padding:14px 28px; background:{BRAND_GOLD}; color:{BRAND_BLACK}; text-decoration:none; border-radius:10px; font-weight:600;">Complete the form</a></p>
+<p style="margin:0 0 8px; font-size:14px; color:{BRAND_MUTED};">Or copy this link:</p>
+<p style="margin:0 0 24px; font-size:13px; word-break:break-all; color:#333;">{safe_url}</p>
+<p style="margin:0 0 16px;">Once you submit, your 3 sample captions arrive by email within a few minutes.</p>
+<p style="margin:0;">— Lumo 22</p>"""
+        return self.send_email(to_email, subject, body, html_body=_email_wrapper(content))
+
+    def send_sample_caption_delivery_email(
+        self,
+        to_email: str,
+        captions_md: str,
+        business_name: Optional[str] = None,
+    ) -> bool:
+        """Deliver 3-caption sample in email body with upgrade CTA."""
+        import html
+
+        base = (Config.BASE_URL or "https://www.lumo22.com").strip().rstrip("/")
+        if not base.startswith("http"):
+            base = "https://" + base
+        upgrade_url = f"{base}/captions"
+        safe_upgrade = html.escape(upgrade_url, quote=True)
+        bn = _sanitize_email_value(business_name or "")
+        subject = f"Your 3 sample captions{f' — {bn}' if bn else ''}"
+        # Plain text: strip markdown headings lightly
+        plain_body = (captions_md or "").strip()
+        plain = (
+            f"Hi,\n\n"
+            f"Here are your 3 sample captions{f' for {bn}' if bn else ''}.\n\n"
+            f"{plain_body}\n\n"
+            f"Like what you see? Get the full 30-day pack (feed posts, optional Story prompts):\n{upgrade_url}\n\n"
+            "— Lumo 22"
+        )
+        md_html = html.escape(plain_body).replace("\n\n", "</p><p style=\"margin:0 0 12px;\">").replace("\n", "<br>")
+        business_line = f"<p style=\"margin:0 0 12px;\"><strong>{bn}</strong></p>" if bn else ""
+        content = f"""<p style="margin:0 0 16px;">Hi,</p>
+<p style="margin:0 0 16px;">Here are your <strong>3 sample captions</strong> — a taste of how we write in your voice.</p>
+{business_line}
+<div style="margin:0 0 20px; padding:16px; background:#fafafa; border:1px solid rgba(0,0,0,0.08); border-radius:8px; font-size:14px; line-height:1.55; color:{BRAND_BLACK};">
+<p style="margin:0 0 12px;">{md_html}</p>
+</div>
+<p style="margin:0 0 16px;">Want a full month of content? The 30-day pack includes daily captions (and optional Story prompts).</p>
+<p style="margin:0 0 24px;"><a href="{safe_upgrade}" style="display:inline-block; padding:14px 28px; background:{BRAND_GOLD}; color:{BRAND_BLACK}; text-decoration:none; border-radius:10px; font-weight:600;">Get 30 days of captions</a></p>
+<p style="margin:0;">— Lumo 22</p>"""
+        return self.send_email(to_email, subject, plain, html_body=_email_wrapper(content))
+
     def send_subscription_welcome_prefilled_email(
         self, to_email: str, intake_url: str, order: Optional[Dict[str, Any]] = None, amount_paid: Optional[str] = None
     ) -> bool:

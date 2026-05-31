@@ -14,6 +14,21 @@ import secrets
 from config import Config
 from services.caption_delivery_recovery import CAPTIONS_MAX_AUTO_DELIVERY_FAILURES
 
+SAMPLE_PRODUCT_TYPE = "sample_3"
+STANDARD_PRODUCT_TYPE = "standard"
+
+
+def is_sample_pack_order(order: Optional[Dict[str, Any]]) -> bool:
+    """True when order is a free 3-caption snapshot (no Stripe)."""
+    if not order:
+        return False
+    return (order.get("product_type") or STANDARD_PRODUCT_TYPE).strip() == SAMPLE_PRODUCT_TYPE
+
+
+def _is_product_type_column_missing(exc: Exception) -> bool:
+    s = str(exc)
+    return "PGRST204" in s and "product_type" in s
+
 
 def _is_checkout_claim_column_missing(exc: Exception) -> bool:
     """PostgREST when caption_orders.checkout_confirmation_email_sent_at was never migrated."""
@@ -309,6 +324,57 @@ class CaptionOrderService:
             raise RuntimeError("Failed to create caption order")
         self.remove_from_deleted_blocklist(customer_email_normalized)
         return result.data[0]
+
+    def create_sample_order(self, customer_email: str) -> Dict[str, Any]:
+        """Free 3-caption sample: no Stripe, product_type=sample_3, single platform."""
+        token = _token()
+        customer_email_normalized = (customer_email or "").strip().lower()
+        row = {
+            "token": token,
+            "customer_email": customer_email_normalized,
+            "status": "awaiting_intake",
+            "product_type": SAMPLE_PRODUCT_TYPE,
+            "platforms_count": 1,
+            "selected_platforms": "Instagram & Facebook",
+            "include_stories": False,
+            "currency": "gbp",
+        }
+        try:
+            result = self.client.table(self.table).insert(row).execute()
+        except Exception as e:
+            if _is_product_type_column_missing(e):
+                row.pop("product_type", None)
+                result = self.client.table(self.table).insert(row).execute()
+            else:
+                raise
+        if not result.data:
+            raise RuntimeError("Failed to create sample caption order")
+        self.remove_from_deleted_blocklist(customer_email_normalized)
+        return result.data[0]
+
+    def has_sample_order_for_email(self, customer_email: str) -> bool:
+        """True if this email has ever started the free sample flow (one sample per email, ever)."""
+        email = (customer_email or "").strip().lower()
+        if not email or "@" not in email:
+            return False
+        try:
+            result = (
+                self.client.table(self.table)
+                .select("id")
+                .eq("customer_email", email)
+                .eq("product_type", SAMPLE_PRODUCT_TYPE)
+                .limit(1)
+                .execute()
+            )
+            return bool(result.data)
+        except Exception as e:
+            if _is_product_type_column_missing(e):
+                return False
+            raise
+
+    def has_recent_sample_order(self, customer_email: str, *, days: int = 90) -> bool:
+        """Deprecated alias: sample limit is lifetime-only via has_sample_order_for_email."""
+        return self.has_sample_order_for_email(customer_email)
 
     def get_by_token(self, token: str) -> Optional[Dict[str, Any]]:
         """Get order by intake token."""

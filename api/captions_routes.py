@@ -2111,6 +2111,59 @@ def try_schedule_upgrade_get_pack_now_delivery(
         )
 
 
+def _base_url() -> str:
+    base = (Config.BASE_URL or "").strip().rstrip("/")
+    if base and not base.startswith("http"):
+        base = "https://" + base
+    if not base:
+        base = "https://www.lumo22.com"
+    return base
+
+
+def _run_sample_generation_and_deliver(order_id: str) -> None:
+    """Background: generate 3 sample captions and email (no PDF)."""
+    import traceback
+
+    from services.caption_order_service import CaptionOrderService, is_sample_pack_order
+    from services.caption_sample_generator import generate_sample_captions
+    from services.notifications import NotificationService
+
+    print(f"[Captions sample] Starting generation for order {order_id}")
+    order_service = CaptionOrderService()
+    row = order_service.get_by_id(order_id)
+    if not row or not is_sample_pack_order(row):
+        print(f"[Captions sample] Order {order_id} missing or not sample_3")
+        return
+    status = (row.get("status") or "").strip()
+    if status == "delivered":
+        print(f"[Captions sample] Order {order_id} already delivered")
+        return
+    intake = row.get("intake") if isinstance(row.get("intake"), dict) else {}
+    if not intake:
+        print(f"[Captions sample] Order {order_id} has no intake")
+        order_service.set_failed(order_id)
+        return
+    if not order_service.set_generating(order_id):
+        print(f"[Captions sample] Could not set generating for {order_id}")
+        return
+    md, err = generate_sample_captions(intake)
+    if err or not md:
+        print(f"[Captions sample] Generation failed order {order_id}: {err}")
+        order_service.record_delivery_failure(order_id, err or "empty captions")
+        return
+    if not order_service.set_delivered(order_id, md):
+        print(f"[Captions sample] set_delivered failed order {order_id}")
+        return
+    to_email = (row.get("customer_email") or "").strip()
+    business_name = (intake.get("business_name") or "").strip()
+    try:
+        NotificationService().send_sample_caption_delivery_email(to_email, md, business_name=business_name or None)
+        print(f"[Captions sample] Delivered order {order_id} to {to_email}")
+    except Exception as e:
+        print(f"[Captions sample] Email failed order {order_id}: {e}")
+        traceback.print_exc()
+
+
 def _run_generation_and_deliver(
     order_id: str,
     *,
@@ -2800,6 +2853,47 @@ def captions_redeliver_order():
         return jsonify({"ok": False, "error": _normalize_error(e)}), 500
 
 
+@captions_bp.route("/captions-sample/start", methods=["POST"])
+def captions_sample_start():
+    """Create a free sample order and email the intake link. One sample per email, ever."""
+    try:
+        data = request.get_json(silent=True, force=True) or {}
+    except Exception:
+        return jsonify({"error": "Invalid request body."}), 400
+    email = (data.get("email") or "").strip().lower()
+    if not email or "@" not in email or len(email) > 254:
+        return jsonify({"error": "Please enter a valid email address."}), 400
+    try:
+        from services.caption_order_service import CaptionOrderService
+
+        order_service = CaptionOrderService()
+    except ValueError:
+        return jsonify({"error": "Service unavailable. Please try again later."}), 503
+    if order_service.has_sample_order_for_email(email):
+        return jsonify({
+            "error": "This email has already been used for a free sample. Check your inbox for your captions, or get the full 30-day pack on our website.",
+            "already_claimed": True,
+        }), 429
+    try:
+        order = order_service.create_sample_order(email)
+    except Exception as e:
+        print(f"[captions-sample/start] create failed: {e}")
+        return jsonify({"error": "Could not start your sample. Please try again."}), 500
+    token = (order.get("token") or "").strip()
+    intake_url = f"{_base_url()}/captions-intake?t={quote(token)}"
+    try:
+        from services.notifications import NotificationService
+
+        NotificationService().send_sample_intake_link_email(email, intake_url)
+    except Exception as e:
+        print(f"[captions-sample/start] intake email failed: {e}")
+    return jsonify({
+        "ok": True,
+        "intake_url": intake_url,
+        "token": token,
+    }), 200
+
+
 @captions_bp.route("/captions-intake", methods=["POST"])
 def captions_intake_submit():
     """
@@ -2825,6 +2919,70 @@ def captions_intake_submit():
         if os.environ.get("SHOW_500_DETAIL") == "1" and not Config.is_production():
             payload["detail"] = f"{type(e).__name__}: {detail}"
         return jsonify(payload), 500
+
+
+def _captions_intake_submit_sample(data, order, order_service):
+    """Short path for product_type=sample_3: save intake, generate 3 captions, email."""
+    import threading
+
+    token = (data.get("token") or data.get("t") or "").strip()
+    business_name = (data.get("business_name") or "").strip()
+    if not business_name:
+        return jsonify({"error": "Business name is required."}), 400
+    voice_words_raw = (data.get("voice_words") or "").strip()
+    if not voice_words_raw:
+        return jsonify({"error": "Voice is required. Choose at least one tone or add words in Other."}), 400
+
+    include_hashtags = data.get("include_hashtags")
+    if isinstance(include_hashtags, bool):
+        pass
+    elif isinstance(include_hashtags, str):
+        include_hashtags = include_hashtags.strip().lower() in ("true", "1", "yes", "on")
+    else:
+        include_hashtags = True
+
+    intake = {
+        "business_name": business_name,
+        "business_type": (data.get("business_type") or "").strip(),
+        "offer_one_line": (data.get("offer_one_line") or "").strip(),
+        "audience": (data.get("audience") or "").strip(),
+        "audience_cares": (data.get("audience_cares") or "").strip(),
+        "voice_words": voice_words_raw,
+        "voice_avoid": (data.get("voice_avoid") or "").strip(),
+        "platform": (data.get("platform") or "Instagram & Facebook").strip() or "Instagram & Facebook",
+        "goal": (data.get("goal") or "").strip(),
+        "usual_topics": (data.get("usual_topics") or "").strip(),
+        "launch_event_description": (data.get("launch_event_description") or "").strip(),
+        "include_hashtags": include_hashtags,
+        "caption_language": (data.get("caption_language") or "English (UK)").strip(),
+        "include_stories": False,
+    }
+
+    order_id = order["id"]
+    status = (order.get("status") or "").strip()
+    if status not in ("awaiting_intake", "intake_completed", "failed"):
+        if status == "delivered":
+            return jsonify({
+                "error": "Your sample was already delivered. Check your email, or get the full 30-day pack on our website.",
+                "sample_delivered": True,
+            }), 400
+        return jsonify({"error": "This sample request is no longer available."}), 400
+
+    from datetime import datetime, timezone
+
+    pack_start_iso = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    if not order_service.save_intake(order_id, intake, pack_start_date=pack_start_iso):
+        return jsonify({"error": "Failed to save. Please try again."}), 500
+
+    thread = threading.Thread(target=_run_sample_generation_and_deliver, args=(order_id,))
+    thread.daemon = False
+    thread.start()
+    return jsonify({
+        "success": True,
+        "message": "Thanks. We're generating your 3 sample captions now. You'll receive them by email within a few minutes.",
+        "customer_email": order.get("customer_email") or "",
+        "is_sample_pack": True,
+    }), 200
 
 
 def _captions_intake_submit_impl(data):
@@ -2853,6 +3011,11 @@ def _captions_intake_submit_impl(data):
     order = order_service.get_by_token(token)
     if not order:
         return jsonify({"error": "Invalid or expired link. Use the link from your order email."}), 404
+
+    from services.caption_order_service import is_sample_pack_order
+
+    if is_sample_pack_order(order):
+        return _captions_intake_submit_sample(data, order, order_service)
 
     order_has_stories = bool(order.get("include_stories"))
     order_platforms_count = max(1, int(order.get("platforms_count", 1)))

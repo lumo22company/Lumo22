@@ -451,6 +451,15 @@ def _format_checkout_money(symbol: str, amount) -> str:
     return f"{symbol}{x:.2f}"
 
 
+@app.route('/captions-sample')
+def captions_sample_page():
+    """Free 3-caption sample — email signup, then intake form."""
+    r = make_response(render_template('captions_sample.html'))
+    r.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    r.headers['Pragma'] = 'no-cache'
+    return r
+
+
 @app.route('/captions')
 def captions_page():
     """30 Days of Social Media Captions product page. Subscription and one-off options. Supports GBP, USD, EUR."""
@@ -585,43 +594,50 @@ def captions_intake_page():
             svc = CaptionOrderService()
             order = svc.get_by_token(token)
             if order:
-                # Stripe metadata may arrive before webhook seeds DB — fetch session once so the form prefills on first paint.
-                order = enrich_order_intake_from_checkout_session(svc, order)
-                if order.get("intake"):
+                from services.caption_order_service import is_sample_pack_order
+
+                _order_is_sample = is_sample_pack_order(order)
+                if not _order_is_sample:
+                    # Stripe metadata may arrive before webhook seeds DB — fetch session once so the form prefills on first paint.
+                    order = enrich_order_intake_from_checkout_session(svc, order)
+                if order.get("intake") or _order_is_sample:
                     existing_intake = order.get("intake") or {}
-                    platforms_count = max(1, int(order.get("platforms_count", 1)))
-                    selected_platforms = (order.get("selected_platforms") or "").strip() or ""
-                    stories_paid = bool(order.get("include_stories"))
-                    is_oneoff = not bool((order.get("stripe_subscription_id") or "").strip())
-                    if is_oneoff and token:
-                        oneoff_consumed_by_subscription = svc.has_subscription_upgraded_from_oneoff_token(token)
-                # copy_from: only prefill when this order was explicitly upgraded from that one-off (one-off→subscription flow).
-                # If account was deleted and user resubscribes, order has no upgraded_from_token so we do not prefill.
-                # Also merge when Stripe only seeded business_name (existing_intake truthy but not a real brief).
-                if (not existing_intake or _intake_missing_substantive_brief_fields(existing_intake)) and copy_from:
-                    upgraded_from = (order.get("upgraded_from_token") or "").strip()
-                    if upgraded_from and upgraded_from == copy_from:
-                        src_order = svc.get_by_token(copy_from)
-                        if src_order:
-                            src_email = (src_order.get("customer_email") or "").strip().lower()
-                            cur_email = (order.get("customer_email") or "").strip().lower()
-                            if src_email and cur_email and src_email == cur_email:
-                                src_i = src_order.get("intake") if isinstance(src_order.get("intake"), dict) else {}
-                                existing_intake = {**src_i, **(existing_intake or {})}
-                # Subscription upgraded from one-off: prefill from base order even without ?copy_from=…
-                # (e.g. account "Edit form" only passes ?t=sub_token). Merge if intake empty or seed-only.
-                if (not existing_intake or _intake_missing_substantive_brief_fields(existing_intake)) and (
-                    order.get("stripe_subscription_id") or ""
-                ).strip():
-                    upgraded_from = (order.get("upgraded_from_token") or "").strip()
-                    if upgraded_from:
-                        src_order = svc.get_by_token(upgraded_from)
-                        if src_order:
-                            src_email = (src_order.get("customer_email") or "").strip().lower()
-                            cur_email = (order.get("customer_email") or "").strip().lower()
-                            if src_email and cur_email and src_email == cur_email:
-                                src_i = src_order.get("intake") if isinstance(src_order.get("intake"), dict) else {}
-                                existing_intake = {**src_i, **(existing_intake or {})}
+                    if _order_is_sample:
+                        platforms_count = 1
+                        selected_platforms = "Instagram & Facebook"
+                        stories_paid = False
+                        is_oneoff = True
+                    else:
+                        platforms_count = max(1, int(order.get("platforms_count", 1)))
+                        selected_platforms = (order.get("selected_platforms") or "").strip() or ""
+                        stories_paid = bool(order.get("include_stories"))
+                        is_oneoff = not bool((order.get("stripe_subscription_id") or "").strip())
+                        if is_oneoff and token:
+                            oneoff_consumed_by_subscription = svc.has_subscription_upgraded_from_oneoff_token(token)
+                if not _order_is_sample:
+                    # copy_from: only prefill when this order was explicitly upgraded from that one-off (one-off→subscription flow).
+                    if (not existing_intake or _intake_missing_substantive_brief_fields(existing_intake)) and copy_from:
+                        upgraded_from = (order.get("upgraded_from_token") or "").strip()
+                        if upgraded_from and upgraded_from == copy_from:
+                            src_order = svc.get_by_token(copy_from)
+                            if src_order:
+                                src_email = (src_order.get("customer_email") or "").strip().lower()
+                                cur_email = (order.get("customer_email") or "").strip().lower()
+                                if src_email and cur_email and src_email == cur_email:
+                                    src_i = src_order.get("intake") if isinstance(src_order.get("intake"), dict) else {}
+                                    existing_intake = {**src_i, **(existing_intake or {})}
+                    if (not existing_intake or _intake_missing_substantive_brief_fields(existing_intake)) and (
+                        order.get("stripe_subscription_id") or ""
+                    ).strip():
+                        upgraded_from = (order.get("upgraded_from_token") or "").strip()
+                        if upgraded_from:
+                            src_order = svc.get_by_token(upgraded_from)
+                            if src_order:
+                                src_email = (src_order.get("customer_email") or "").strip().lower()
+                                cur_email = (order.get("customer_email") or "").strip().lower()
+                                if src_email and cur_email and src_email == cur_email:
+                                    src_i = src_order.get("intake") if isinstance(src_order.get("intake"), dict) else {}
+                                    existing_intake = {**src_i, **(existing_intake or {})}
         except Exception:
             pass
     # Subscription orders: require login and session email must match order
@@ -790,16 +806,20 @@ def captions_intake_page():
         and not oneoff_consumed_by_subscription
         and not oneoff_subscribe_checkout_mode
     )
+    from services.caption_order_service import is_sample_pack_order
+
+    is_sample_pack = is_sample_pack_order(order) if order else False
     intake_view_only = bool(
         (
             view_raw in ("1", "true", "yes")
             or oneoff_consumed_by_subscription
             or oneoff_subscribe_checkout_mode
             or oneoff_readonly_completed
+            or (is_sample_pack and order and (order.get("status") or "").strip() == "delivered")
         )
         and token
         and order
-        and is_oneoff
+        and (is_oneoff or is_sample_pack)
         and not pending_oneoff_intake
     )
     from urllib.parse import urlencode as _up_urlencode
@@ -876,6 +896,7 @@ def captions_intake_page():
             edit_intake_before_subscribe=edit_intake_before_subscribe,
             intake_pack_cover_line=intake_pack_cover_line,
             post_checkout_sub_banner=post_checkout_sub_banner,
+            is_sample_pack=is_sample_pack,
         )
     )
     r.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
