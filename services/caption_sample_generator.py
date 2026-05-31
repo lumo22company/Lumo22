@@ -83,9 +83,13 @@ def generate_sample_captions(intake: Dict[str, Any]) -> Tuple[Optional[str], Opt
     system = (
         "You write ready-to-post social media captions for local businesses, tailored to each "
         "platform's conventions and length norms. "
-        "Tone: confident, editorial, modern, premium. Smart, human, intelligent. "
-        "When the client specifies a Voice / tone or Words / style to avoid, match those preferences — they override the default. "
-        "No emojis. No buzzwords or marketing clichés. Avoid hype and generic AI language. "
+        "Default tone (used only when the client has not specified otherwise): "
+        "confident, editorial, modern, premium; smart, human, intelligent; "
+        "no emojis; no buzzwords or marketing clichés; avoid hype and generic AI language. "
+        "**The client's intake takes priority over these defaults.** "
+        "When the brief lists a Voice / tone to use, write in that voice — even if it means using "
+        "emojis, playful language, or other things the default would avoid. "
+        "When the brief lists Words / style to avoid, never use them. "
         "Output valid JSON only, no markdown fences."
     )
     tiktok_hashtags = "TikTok: 3–5 platform-appropriate hashtags."
@@ -113,9 +117,8 @@ Return JSON:
 Rules:
 - Vary the angle across the 3 days (e.g. welcome / story / value tip / behind-the-scenes / member spotlight / clear CTA). Do not repeat the same structure each day.
 - Conversational, specific to the business — reference real details from the brief.
-- Match the client's Voice / tone if provided; avoid any Words / style listed as "to avoid".
-- When the client's goal is leads or inquiries, include a clear, low-pressure next step (e.g. link in bio, DM, book a call) where it fits naturally — never pushy.
-- No emojis. No buzzwords or marketing clichés.
+- The client's intake (Voice / tone, Words / style to avoid, Goal, Audience, etc.) is authoritative — match it precisely. Their voice overrides the default house style above.
+- When the client's goal is leads or inquiries, include a clear, low-pressure next step (e.g. link in bio, DM, book a call) where it fits naturally — never pushy. If the intake describes a different goal or CTA style, follow that instead.
 - Hashtags by platform: {instagram_hashtags} {linkedin_hashtags} {tiktok_hashtags} {pinterest_hashtags}
 - No invented prices, dates, or claims not supported by the brief.
 - Do not mention this is a sample or free trial.
