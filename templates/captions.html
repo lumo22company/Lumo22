@@ -35,6 +35,36 @@
       box-shadow: 0 0 0 2px rgba(255,242,0,0.4) !important;
     }
     @media (max-width: 640px) { .captions-checkbox-group { flex-wrap: wrap; } }
+    .captions-try-before-buy {
+      max-width: 640px;
+      margin: 0 auto 2.75rem;
+      padding: 1.5rem 1.35rem 1.65rem;
+      text-align: center;
+      background: rgba(255, 242, 0, 0.08);
+      border: 1px solid rgba(255, 242, 0, 0.28);
+      border-radius: 12px;
+    }
+    .captions-try-before-buy-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(1.5rem, 4vw, 1.85rem);
+      font-weight: 400;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin: 0 0 0.5rem;
+      color: var(--lum-text, #f5f5f2);
+      line-height: 1.1;
+    }
+    .captions-try-before-buy-desc {
+      margin: 0 auto 1.25rem !important;
+      max-width: 34em;
+      color: var(--lum-text-muted, #9a9a96);
+    }
+    .captions-try-before-buy-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: min(100%, 280px);
+    }
     .dfd-btn.btn-disabled { opacity: 0.6; pointer-events: none; cursor: not-allowed; }
     .dfd-btn.btn-disabled:hover { opacity: 0.6; }
     /* Example blocks — match PDF layout: black header, white content, gold labels */
@@ -146,7 +176,6 @@
         <li>We capture your tone, audience, and goals so every caption sounds like you—not like every other tool. One short form, 30 posts—ready in 15 minutes. Cancel anytime.</li>
       </ul>
       <p class="dfd-hero-cta" data-reveal><a href="#pricing" class="dfd-btn dfd-btn-hero-cta captions-btn-swipe">View options</a></p>
-      <p class="dfd-hero-hook" data-reveal style="margin-top: 1.25rem; font-size: 0.95rem;">Not ready to buy? <a href="/captions-sample" style="color: var(--lum-gold, #fff200); font-weight: 600;">Get 3 free sample captions</a> — no card required.</p>
     </div>
   </section>
 
@@ -294,6 +323,11 @@
   <!-- 4. PRICING -->
   <section class="product-section product-section--dark captions-reveal" id="pricing" data-reveal>
     <div class="product-section-inner">
+      <div class="captions-try-before-buy captions-reveal" data-reveal>
+        <h2 class="captions-try-before-buy-title">Try before you buy</h2>
+        <p class="product-section-desc captions-try-before-buy-desc">Get 3 captions written in your voice — delivered by email in minutes. No card required.</p>
+        <a href="/captions-sample" class="dfd-btn dfd-btn-accent captions-btn-swipe captions-try-before-buy-btn">Get 3 free sample captions</a>
+      </div>
       <h2 class="product-section-title" data-reveal>Choose your plan</h2>
       <p class="product-section-desc" data-reveal>One-off pack or monthly subscription. Same form and delivery. Cancel anytime on subscription. <a href="#refer-a-friend" style="color: var(--lum-gold); text-decoration: none;">Refer a friend</a> — they enter your code at checkout (Add promotion code) for 10% off their first purchase; you get 10% off your next subscription month when they buy.</p>
       <p id="pricing-outcome-copy" class="product-section-desc" data-reveal style="margin-top: 0.4rem; color: var(--lum-text);">Most clients use this to save hours each month and keep posting consistently with 30 post-ready captions (plus optional Story Ideas).</p>
