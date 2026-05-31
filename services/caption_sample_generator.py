@@ -41,17 +41,18 @@ _PLATFORM_GUIDANCE = {
         "End with a clear, low-pressure next step where natural."
     ),
     "linkedin": (
-        "LinkedIn. Professional but human. Open with a hook line, then 4–7 short paragraphs of "
-        "insight, story, or specifics relevant to the audience. End with a question or soft CTA. "
-        "Aim for ~150–280 words. Avoid emojis."
+        "LinkedIn. Professional but human. Multiple sentences and depth are fine — usually 2–6 "
+        "short paragraphs when appropriate. Open with a hook line, then insight, story, or specifics "
+        "relevant to the audience. End with a question or soft CTA."
     ),
     "tiktok": (
-        "TikTok caption. 1–3 short lines maximum. Hook-led, punchy, conversational. "
-        "Aim for under 150 characters. Hashtags carry weight here — use trending and niche tags."
+        "TikTok caption. 1–3 short lines. Hook in the first line, clear CTA, conversational. "
+        "Use fewer hashtags than Instagram and TikTok-appropriate tag style."
     ),
     "pinterest": (
-        "Pinterest pin description. 1–2 sentences, keyword-rich, descriptive. "
-        "Aim for ~100–200 characters. Focus on what the pin shows and who it helps."
+        "Pinterest pin. Search-friendly, keyword-rich description with a clear title and a clear "
+        "description that includes relevant keywords and a CTA / link cue where appropriate. Focus "
+        "on what the pin shows and who it helps."
     ),
 }
 
@@ -81,8 +82,16 @@ def generate_sample_captions(intake: Dict[str, Any]) -> Tuple[Optional[str], Opt
     platform_rules = _platform_guidance(platform)
     system = (
         "You write ready-to-post social media captions for local businesses, tailored to each "
-        "platform's conventions and length norms. Output valid JSON only, no markdown fences."
+        "platform's conventions and length norms. "
+        "Tone: confident, editorial, modern, premium. Smart, human, intelligent. "
+        "When the client specifies a Voice / tone or Words / style to avoid, match those preferences — they override the default. "
+        "No emojis. No buzzwords or marketing clichés. Avoid hype and generic AI language. "
+        "Output valid JSON only, no markdown fences."
     )
+    tiktok_hashtags = "TikTok: 3–5 platform-appropriate hashtags."
+    linkedin_hashtags = "LinkedIn: 2–4 hashtags."
+    instagram_hashtags = "Instagram & Facebook: 3–8 relevant hashtags."
+    pinterest_hashtags = "Pinterest: 3–6 keyword-led hashtags."
     user = f"""Write exactly 3 social media captions for this business (Days 1–3 of a sample pack).
 
 Target platform: {platform}
@@ -104,7 +113,10 @@ Return JSON:
 Rules:
 - Vary the angle across the 3 days (e.g. welcome / story / value tip / behind-the-scenes / member spotlight / clear CTA). Do not repeat the same structure each day.
 - Conversational, specific to the business — reference real details from the brief.
-- Hashtags: 3–8 relevant tags as one string. For LinkedIn keep to 2–4. For TikTok and Pinterest 4–8 trending and niche tags work well.
+- Match the client's Voice / tone if provided; avoid any Words / style listed as "to avoid".
+- When the client's goal is leads or inquiries, include a clear, low-pressure next step (e.g. link in bio, DM, book a call) where it fits naturally — never pushy.
+- No emojis. No buzzwords or marketing clichés.
+- Hashtags by platform: {instagram_hashtags} {linkedin_hashtags} {tiktok_hashtags} {pinterest_hashtags}
 - No invented prices, dates, or claims not supported by the brief.
 - Do not mention this is a sample or free trial.
 
