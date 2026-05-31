@@ -757,7 +757,10 @@ def captions_intake_page():
         p = CAPTIONS_DISPLAY_PRICES.get(order_currency, CAPTIONS_DISPLAY_PRICES["gbp"])
         intake_add_platform_text = "+{symbol}{extra_oneoff} one-off / +{symbol}{extra_sub} monthly".format(symbol=p["symbol"], extra_oneoff=p["extra_oneoff"], extra_sub=p["extra_sub"])
         intake_add_stories_text = "+{symbol}{stories_oneoff} one-off / +{symbol}{stories_sub} monthly".format(symbol=p["symbol"], stories_oneoff=p["stories_oneoff"], stories_sub=p["stories_sub"])
-    if token and is_oneoff:
+    from services.caption_order_service import is_sample_pack_order
+
+    is_sample_pack = is_sample_pack_order(order) if order else False
+    if token and is_oneoff and not is_sample_pack:
         from urllib.parse import urlencode
         sub_selected = (selected_platforms or "").strip()
         if not sub_selected and isinstance(existing_intake, dict):
@@ -806,9 +809,8 @@ def captions_intake_page():
         and not oneoff_consumed_by_subscription
         and not oneoff_subscribe_checkout_mode
     )
-    from services.caption_order_service import is_sample_pack_order
-
-    is_sample_pack = is_sample_pack_order(order) if order else False
+    if is_sample_pack:
+        subscribe_url = None
     intake_view_only = bool(
         (
             view_raw in ("1", "true", "yes")
