@@ -478,7 +478,18 @@
         </select>
       </div>
       {% if is_sample_pack|default(false) %}
-      <input type="hidden" id="platform" name="platform" value="Instagram & Facebook">
+      <div class="form-section">
+        <h2>Platform</h2>
+        <p class="field-helper" style="margin-bottom: 0.5rem; line-height: 1.45;">Pick one — we'll write your 3 sample captions for that platform.</p>
+        <div class="intake-checkbox-group" role="group" aria-label="Platform selection" id="platform-btn-group" data-testid="platform" data-max-platforms="1" data-platforms-locked="false">
+          <button type="button" class="platform-btn" data-platform="Instagram & Facebook">Instagram &amp; Facebook</button>
+          <button type="button" class="platform-btn" data-platform="LinkedIn">LinkedIn</button>
+          <button type="button" class="platform-btn" data-platform="TikTok">TikTok</button>
+          <button type="button" class="platform-btn" data-platform="Pinterest">Pinterest</button>
+        </div>
+        <input type="hidden" id="platform" name="platform" value="{{ existing_intake.get('platform', '') or 'Instagram & Facebook' }}">
+        <p class="field-helper" style="margin: 0.75rem 0 0; font-size: 0.85rem; color: #555;">Want Story prompts too? Stories are part of the full <a href="/captions" style="color: #000; font-weight: 600;">30-day pack</a> — not included in the sample.</p>
+      </div>
       {% else %}
       <div class="form-section">
         <h2>Platform selection</h2>
@@ -1278,6 +1289,8 @@
           btn.classList.toggle('selected', isSel);
           if (locked) {
             btn.disabled = true;
+          } else if (maxPlatforms === 1) {
+            btn.disabled = false;
           } else {
             btn.disabled = !isSel && selected.length >= maxPlatforms;
           }
@@ -1294,6 +1307,8 @@
               selected.splice(idx, 1);
             } else if (selected.length < maxPlatforms) {
               selected.push(val);
+            } else if (maxPlatforms === 1) {
+              selected = [val];
             }
             render();
           });
