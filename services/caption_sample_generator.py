@@ -75,15 +75,9 @@ Business brief:
     if not captions:
         return None, "Could not parse AI response"
 
-    business = (intake.get("business_name") or "Your business").strip()
-    md_lines = [
-        f"# 3 sample captions — {business}",
-        "",
-        "_A taste of how Lumo 22 writes in your voice. Upgrade to the full 30-day pack when you're ready._",
-        "",
-    ]
-    for item in captions[:3]:
-        day = item.get("day") or len(md_lines)
+    md_lines: list[str] = []
+    for idx, item in enumerate(captions[:3], start=1):
+        day = item.get("day") or idx
         cat = (item.get("category") or "Caption").strip()
         cap = (item.get("caption") or "").strip()
         tags = (item.get("hashtags") or "").strip()
