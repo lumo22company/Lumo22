@@ -2320,12 +2320,29 @@ If you didn't request this, you can ignore this email. Your email address will s
             plain_meta = f"Business: {bn}\n\n"
         elif plat:
             plain_meta = f"Platform: {plat}\n\n"
+        platform_lower = plat.lower()
+        is_instagram_facebook_sample = "instagram" in platform_lower or "facebook" in platform_lower
+        if is_instagram_facebook_sample:
+            plain_upgrade_line = (
+                "Like what you see? Get the full 30-day pack with daily captions, "
+                "plus optional Story prompts as an add-on:"
+            )
+            html_upgrade_line = (
+                "Want a full month of content? The 30-day pack includes daily captions, "
+                "with optional Story prompts as an add-on."
+            )
+        elif plat:
+            plain_upgrade_line = f"Like what you see? Get 30 days of captions tailored to {plat}:"
+            html_upgrade_line = f"Want a full month of content? The 30-day pack includes 30 days of captions tailored to {html.escape(plat)}."
+        else:
+            plain_upgrade_line = "Like what you see? Get the full 30-day caption pack:"
+            html_upgrade_line = "Want a full month of content? The 30-day pack includes daily captions tailored to your selected platform."
         plain = (
             f"Hi,\n\n"
             f"Here are your 3 sample captions{f' for {bn}' if bn else ''}.\n\n"
             f"{plain_meta}"
             f"{plain_body}\n\n"
-            f"Like what you see? Get the full 30-day pack (feed posts, optional Story prompts):\n{upgrade_url}\n\n"
+            f"{plain_upgrade_line}\n{upgrade_url}\n\n"
             "— Lumo 22"
         )
         import re
@@ -2355,7 +2372,7 @@ If you didn't request this, you can ignore this email. Your email address will s
 <div style="margin:0 0 20px; padding:16px 18px; background:#fafafa; border:1px solid rgba(0,0,0,0.08); border-radius:8px; font-size:14px; line-height:1.55; color:{BRAND_BLACK};">
 {md_html}
 </div>
-<p style="margin:0 0 16px;">Want a full month of content? The 30-day pack includes daily captions (and optional Story prompts).</p>
+<p style="margin:0 0 16px;">{html_upgrade_line}</p>
 <p style="margin:0 0 24px;"><a href="{safe_upgrade}" style="display:inline-block; padding:14px 28px; background:{BRAND_GOLD}; color:{BRAND_BLACK}; text-decoration:none; border-radius:10px; font-weight:600;">Get 30 days of captions</a></p>
 <p style="margin:0;">— Lumo 22</p>"""
         return self.send_email(to_email, subject, plain, html_body=_email_wrapper(content))
