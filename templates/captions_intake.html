@@ -488,7 +488,8 @@
           <button type="button" class="platform-btn" data-platform="Pinterest">Pinterest</button>
         </div>
         <input type="hidden" id="platform" name="platform" value="{{ existing_intake.get('platform', '') or 'Instagram & Facebook' }}">
-        <p class="field-helper" style="margin: 0.75rem 0 0; font-size: 0.85rem; color: #555;">Want Story prompts too? Stories are part of the full <a href="/captions" style="color: #000; font-weight: 600;">30-day pack</a> — not included in the sample.</p>
+        {% set _sample_default_platform = (existing_intake.get('platform', '') or 'Instagram & Facebook') %}
+        <p id="sample-stories-note" class="field-helper" style="margin: 0.75rem 0 0; font-size: 0.85rem; color: #555;{% if 'Instagram & Facebook' not in _sample_default_platform %} display: none;{% endif %}">Want Story prompts too? Stories are available as an add-on with the full <a href="/captions" style="color: #000; font-weight: 600;">30-day pack</a> — not included in the sample.</p>
       </div>
       {% else %}
       <div class="form-section">
@@ -1327,11 +1328,23 @@
         if (!showSection) { wrap.style.display = 'none'; return; }
         wrap.style.display = 'block';
       }
+      function toggleSampleStoriesNote() {
+        // Stories only apply to Instagram & Facebook on the sample form. Hide the
+        // "Want Story prompts too?" note for LinkedIn / TikTok / Pinterest selections
+        // so the copy never contradicts the chosen platform.
+        var note = document.getElementById('sample-stories-note');
+        if (!note) return;
+        var pe = document.getElementById('platform');
+        var val = (pe && pe.value || '').trim();
+        var hasIgFb = val.indexOf('Instagram & Facebook') !== -1;
+        note.style.display = hasIgFb ? '' : 'none';
+      }
       toggleStories();
-      btns.forEach(function(btn) { btn.addEventListener('click', toggleStories); });
+      toggleSampleStoriesNote();
+      btns.forEach(function(btn) { btn.addEventListener('click', function() { toggleStories(); toggleSampleStoriesNote(); }); });
       var platformSelect = document.getElementById('platform');
       if (platformSelect && platformSelect.tagName === 'SELECT') {
-        platformSelect.addEventListener('change', toggleStories);
+        platformSelect.addEventListener('change', function() { toggleStories(); toggleSampleStoriesNote(); });
       }
       window.lumoSyncVaryIgFbLengthOption = syncVaryIgFbLengthOption;
     })();
