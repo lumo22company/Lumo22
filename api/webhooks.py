@@ -545,6 +545,22 @@ def _handle_captions_payment(session):
             and not (existing.get("upgraded_from_token") or "").strip()
         ):
             updates["upgraded_from_token"] = copy_from_meta
+        # Sample → paid one-off upgrade: persist the source sample token as upgraded_from_token so
+        # the intake URL (added by _one_off_intake_url_with_copy_from) carries copy_from and the
+        # intake form prefill same-email guard can read the source sample's intake.
+        if (
+            copy_from_meta
+            and not is_sub_checkout
+            and not (existing.get("upgraded_from_token") or "").strip()
+        ):
+            try:
+                src_order = order_service.get_by_token(copy_from_meta)
+            except Exception:
+                src_order = None
+            from services.caption_order_service import is_sample_pack_order
+
+            if src_order and is_sample_pack_order(src_order):
+                updates["upgraded_from_token"] = copy_from_meta
         if updates:
             order_service.update(existing["id"], updates)
             order = {**existing, **updates}
@@ -564,6 +580,21 @@ def _handle_captions_payment(session):
                 else str(getattr(session, "mode", "") or "").strip().lower()
             )
             is_sub_checkout = bool(stripe_subscription_id) or session_mode == "subscription"
+            # Sample → paid one-off carries copy_from too. We persist upgraded_from_token whenever
+            # copy_from points to a sample order (sub upgrade keeps its existing one-off path).
+            upgraded_from_token_for_create: Optional[str] = None
+            if copy_from:
+                if is_sub_checkout:
+                    upgraded_from_token_for_create = copy_from
+                else:
+                    try:
+                        src_order = order_service.get_by_token(copy_from)
+                    except Exception:
+                        src_order = None
+                    from services.caption_order_service import is_sample_pack_order
+
+                    if src_order and is_sample_pack_order(src_order):
+                        upgraded_from_token_for_create = copy_from
             order = order_service.create_order(
                 customer_email=customer_email,
                 stripe_session_id=session_id,
@@ -573,7 +604,7 @@ def _handle_captions_payment(session):
                 selected_platforms=selected_platforms,
                 include_stories=include_stories,
                 currency=currency,
-                upgraded_from_token=(copy_from if copy_from and is_sub_checkout else None),
+                upgraded_from_token=upgraded_from_token_for_create,
             )
         except Exception as e:
             print(f"[Stripe webhook] Failed to create order in Supabase: {e}")

@@ -2300,14 +2300,25 @@ If you didn't request this, you can ignore this email. Your email address will s
         captions_md: str,
         business_name: Optional[str] = None,
         platform: Optional[str] = None,
+        sample_token: Optional[str] = None,
     ) -> bool:
-        """Deliver 3-caption sample in email body with upgrade CTA."""
+        """Deliver 3-caption sample in email body with upgrade CTA.
+
+        sample_token, when provided, points the upgrade button at /captions-sample-upgrade?token=...
+        so the customer continues from their sample (platforms / Stories / plan picker, intake prefill
+        on the next form) instead of landing on the cold product page.
+        """
         import html
+        from urllib.parse import quote
 
         base = (Config.BASE_URL or "https://www.lumo22.com").strip().rstrip("/")
         if not base.startswith("http"):
             base = "https://" + base
-        upgrade_url = f"{base}/captions"
+        token_clean = (sample_token or "").strip()
+        if token_clean:
+            upgrade_url = f"{base}/captions-sample-upgrade?token={quote(token_clean, safe='')}"
+        else:
+            upgrade_url = f"{base}/captions"
         safe_upgrade = html.escape(upgrade_url, quote=True)
         bn = _sanitize_email_value(business_name or "")
         plat = _sanitize_email_value(platform or "")

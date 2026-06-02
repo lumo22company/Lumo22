@@ -460,6 +460,63 @@ def captions_sample_page():
     return r
 
 
+@app.route('/captions-sample-upgrade')
+def captions_sample_upgrade_page():
+    """Token-gated upgrade hub for sample customers.
+
+    Lets a sample customer pick platforms, Stories add-on, one-off vs monthly, and currency, then
+    routes to /captions-checkout (one-off) or /captions-checkout-subscription with copy_from set
+    to the sample token so the new paid order's intake form prefills from the sample's answers.
+    """
+    from services.caption_order_service import CaptionOrderService, is_sample_pack_order
+
+    token = (request.args.get('token') or '').strip()
+    if not token:
+        return redirect(url_for('captions_page'))
+    try:
+        sample_order = CaptionOrderService().get_by_token(token)
+    except Exception:
+        sample_order = None
+    if not sample_order or not is_sample_pack_order(sample_order):
+        return redirect(url_for('captions_page'))
+    sample_intake = sample_order.get('intake') if isinstance(sample_order.get('intake'), dict) else {}
+    sample_platform = (sample_intake.get('platform') or '').strip() if sample_intake else ''
+    if not sample_platform:
+        sample_platform = (sample_order.get('selected_platforms') or '').strip() or 'Instagram & Facebook'
+    sample_business = (sample_intake.get('business_name') or '').strip() if sample_intake else ''
+
+    use_checkout_redirect = bool(Config.STRIPE_SECRET_KEY and Config.STRIPE_CAPTIONS_PRICE_ID)
+    subscription_available = bool(
+        Config.STRIPE_SECRET_KEY and getattr(Config, 'STRIPE_CAPTIONS_SUBSCRIPTION_PRICE_ID', None)
+    )
+    extra_oneoff = bool((getattr(Config, 'STRIPE_CAPTIONS_EXTRA_PLATFORM_PRICE_ID', None) or '').strip())
+    extra_sub = bool((getattr(Config, 'STRIPE_CAPTIONS_EXTRA_PLATFORM_SUBSCRIPTION_PRICE_ID', None) or '').strip())
+    supports_multi_platform = use_checkout_redirect and (extra_oneoff or (subscription_available and extra_sub))
+    stories_oneoff = bool((getattr(Config, 'STRIPE_CAPTIONS_STORIES_PRICE_ID', None) or '').strip())
+    stories_sub = bool((getattr(Config, 'STRIPE_CAPTIONS_STORIES_SUBSCRIPTION_PRICE_ID', None) or '').strip())
+    stories_addon_available = stories_oneoff and stories_sub
+    currencies_available = [{"code": "gbp", "label": "GBP", "symbol": "£"}]
+    if (getattr(Config, 'STRIPE_CAPTIONS_PRICE_ID_USD', None) or '').strip():
+        currencies_available.append({"code": "usd", "label": "USD", "symbol": "$"})
+    if (getattr(Config, 'STRIPE_CAPTIONS_PRICE_ID_EUR', None) or '').strip():
+        currencies_available.append({"code": "eur", "label": "EUR", "symbol": "€"})
+
+    r = make_response(render_template(
+        'captions_sample_upgrade.html',
+        sample_token=token,
+        sample_platform=sample_platform,
+        sample_business=sample_business,
+        captions_prices=CAPTIONS_DISPLAY_PRICES,
+        captions_subscription_available=subscription_available,
+        supports_multi_platform=supports_multi_platform,
+        stories_addon_available=stories_addon_available,
+        currencies_available=currencies_available,
+    ))
+    r.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    r.headers['Pragma'] = 'no-cache'
+    return r
+
+
 @app.route('/captions')
 def captions_page():
     """30 Days of Social Media Captions product page. Subscription and one-off options. Supports GBP, USD, EUR."""
@@ -600,20 +657,24 @@ def captions_intake_page():
                 if not _order_is_sample:
                     # Stripe metadata may arrive before webhook seeds DB — fetch session once so the form prefills on first paint.
                     order = enrich_order_intake_from_checkout_session(svc, order)
+                # Always seed plan + is_oneoff from the order row so downstream flags (pending_oneoff_intake,
+                # subscribe_url, prefilled_from_sample_review_mode) work even when intake is still empty
+                # (e.g. fresh paid one-off awaiting first form submission). Sample rows are coerced to
+                # the canonical 1-platform Instagram & Facebook one-off shape, matching the sample form.
+                if _order_is_sample:
+                    platforms_count = 1
+                    selected_platforms = "Instagram & Facebook"
+                    stories_paid = False
+                    is_oneoff = True
+                else:
+                    platforms_count = max(1, int(order.get("platforms_count", 1)))
+                    selected_platforms = (order.get("selected_platforms") or "").strip() or ""
+                    stories_paid = bool(order.get("include_stories"))
+                    is_oneoff = not bool((order.get("stripe_subscription_id") or "").strip())
+                    if is_oneoff and token:
+                        oneoff_consumed_by_subscription = svc.has_subscription_upgraded_from_oneoff_token(token)
                 if order.get("intake") or _order_is_sample:
                     existing_intake = order.get("intake") or {}
-                    if _order_is_sample:
-                        platforms_count = 1
-                        selected_platforms = "Instagram & Facebook"
-                        stories_paid = False
-                        is_oneoff = True
-                    else:
-                        platforms_count = max(1, int(order.get("platforms_count", 1)))
-                        selected_platforms = (order.get("selected_platforms") or "").strip() or ""
-                        stories_paid = bool(order.get("include_stories"))
-                        is_oneoff = not bool((order.get("stripe_subscription_id") or "").strip())
-                        if is_oneoff and token:
-                            oneoff_consumed_by_subscription = svc.has_subscription_upgraded_from_oneoff_token(token)
                 if not _order_is_sample:
                     # copy_from: only prefill when this order was explicitly upgraded from that one-off (one-off→subscription flow).
                     if (not existing_intake or _intake_missing_substantive_brief_fields(existing_intake)) and copy_from:
@@ -811,6 +872,29 @@ def captions_intake_page():
     )
     if is_sample_pack:
         subscribe_url = None
+    # Sample → paid one-off: when the customer's just-paid order is upgraded from a sample and the
+    # form already has prefilled answers, open the intake in review state (same UX as completed
+    # one-off review). They can hit Edit if they want to change anything before submitting.
+    prefilled_from_sample_review_mode = False
+    if (
+        token
+        and order
+        and is_oneoff
+        and not is_sample_pack
+        and pending_oneoff_intake
+        and (order.get("upgraded_from_token") or "").strip()
+        and existing_intake
+        and not _intake_missing_substantive_brief_fields(existing_intake)
+    ):
+        try:
+            from services.caption_order_service import CaptionOrderService as _SvcSrc
+            from services.caption_order_service import is_sample_pack_order as _is_sample_src
+
+            _src = _SvcSrc().get_by_token((order.get("upgraded_from_token") or "").strip())
+            if _src and _is_sample_src(_src):
+                prefilled_from_sample_review_mode = True
+        except Exception:
+            prefilled_from_sample_review_mode = False
     intake_view_only = bool(
         (
             view_raw in ("1", "true", "yes")
@@ -899,6 +983,7 @@ def captions_intake_page():
             intake_pack_cover_line=intake_pack_cover_line,
             post_checkout_sub_banner=post_checkout_sub_banner,
             is_sample_pack=is_sample_pack,
+            prefilled_from_sample_review_mode=prefilled_from_sample_review_mode,
         )
     )
     r.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
@@ -936,7 +1021,11 @@ def _parse_platforms_from_request():
 
 @app.route('/captions-checkout')
 def captions_checkout_page():
-    """Pre-checkout page: agree to T&Cs then continue to Stripe (one-off). Supports GBP, USD, EUR."""
+    """Pre-checkout page: agree to T&Cs then continue to Stripe (one-off). Supports GBP, USD, EUR.
+
+    Accepts optional copy_from=TOKEN. When the source is a free sample order, copy_from is passed
+    through to /api/captions-checkout so the new paid order's intake form prefills from the sample.
+    """
     from urllib.parse import urlencode, quote
     platforms = _parse_platforms_from_request()
     selected = (request.args.get("selected") or request.args.get("selected_platforms") or "").strip()
@@ -957,6 +1046,24 @@ def captions_checkout_page():
         params["ref"] = ref
     business_name = (request.args.get("business_name") or "").strip()
     business_key = (request.args.get("business_key") or "").strip()
+    # Sample → paid one-off upgrade: pass copy_from through to the API checkout endpoint, but only
+    # when the token genuinely points to a sample order (defensive: ignores stale / invalid tokens
+    # so paid one-off→one-off flows aren't accidentally reusing intake data).
+    sample_copy_from = (request.args.get("copy_from") or "").strip()
+    if sample_copy_from:
+        try:
+            from services.caption_order_service import CaptionOrderService, is_sample_pack_order
+
+            _src = CaptionOrderService().get_by_token(sample_copy_from)
+        except Exception:
+            _src = None
+        if _src and is_sample_pack_order(_src):
+            params["copy_from"] = sample_copy_from
+            if not business_name:
+                _si = _src.get("intake") if isinstance(_src.get("intake"), dict) else {}
+                _bn = (_si.get("business_name") or "").strip() if _si else ""
+                if _bn:
+                    business_name = _bn
     if business_name:
         params["business_name"] = business_name
     if business_key:

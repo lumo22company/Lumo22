@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Continue from your sample | Lumo 22</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
+  <meta name="description" content="Continue from your free sample. Pick platforms, add Story Ideas, choose one-off or monthly, then checkout.">
+  {% include '_csrf_head.html' %}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Encode+Sans+Condensed:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v={{ asset_version }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/product.css') }}?v={{ asset_version }}">
+  <style>
+    .upgrade-section { padding: 6rem 1.25rem 4rem; max-width: 560px; margin: 0 auto; }
+    .upgrade-section h1 { font-family: 'Bebas Neue', sans-serif; font-size: 2.25rem; letter-spacing: -0.02em; margin: 0 0 0.5rem; color: #fff; }
+    .upgrade-section .lead { color: var(--lum-text-muted, #9a9a96); line-height: 1.6; margin-bottom: 2rem; }
+    .upgrade-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem 1.5rem 1.75rem; }
+    .upgrade-card .field { margin-bottom: 1.25rem; }
+    .upgrade-card label.field-label { display: block; font-size: 0.95rem; font-weight: 600; color: #fff; margin-bottom: 0.5rem; }
+    .upgrade-card select.upgrade-select { width: 100%; box-sizing: border-box; padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: #fff; color: #1a1a1a; font-size: 1rem; }
+    .upgrade-card .platform-choices { display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem; }
+    .upgrade-card .cb-label { display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.95rem; color: #fff; }
+    .upgrade-card .stories-row { display: flex; align-items: flex-start; gap: 0.5rem; cursor: pointer; font-size: 0.95rem; color: #fff; font-weight: 600; }
+    .upgrade-card .stories-help { font-size: 0.85rem; color: rgba(255,255,255,0.7); margin: 0.35rem 0 0 1.75rem; line-height: 1.4; font-weight: 400; }
+    .plan-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    .plan-toggle button { padding: 0.85rem 1rem; border-radius: 10px; border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.06); color: #fff; cursor: pointer; font-size: 0.95rem; font-weight: 600; text-align: left; line-height: 1.35; }
+    .plan-toggle button .plan-sub { display: block; font-weight: 400; font-size: 0.82rem; color: rgba(255,255,255,0.7); margin-top: 0.15rem; }
+    .plan-toggle button[aria-pressed="true"] { border: 2px solid var(--lum-gold, #fff200); background: rgba(255,242,0,0.08); }
+    .currency-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .currency-btn { padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.08); color: #fff; cursor: pointer; font-size: 0.95rem; }
+    .currency-btn[aria-pressed="true"] { border: 2px solid var(--lum-gold, #fff200); background: rgba(255,242,0,0.08); }
+    .price-display { font-size: 1.35rem; font-weight: 600; color: var(--lum-gold, #fff200); margin: 1.25rem 0 0.25rem; }
+    .price-cadence { font-size: 0.9rem; color: rgba(255,255,255,0.7); margin: 0 0 1.25rem; }
+    .checkout-btn { display: block; width: 100%; box-sizing: border-box; text-align: center; padding: 0.9rem 1.25rem; border-radius: 10px; background: var(--lum-gold, #fff200); color: #000; text-decoration: none; font-weight: 700; font-size: 1rem; }
+    .checkout-btn[aria-disabled="true"] { opacity: 0.5; pointer-events: none; }
+    .upgrade-error { color: #ff6b6b; font-size: 0.9rem; margin: 0.75rem 0 0; display: none; }
+    .upgrade-back { margin-top: 1.5rem; font-size: 0.9rem; }
+    .upgrade-back a { color: var(--lum-gold, #fff200); }
+  </style>
+</head>
+<body class="lumo-landing product-page-captions">
+  {% include '_lumo_nav.html' %}
+  <section class="upgrade-section">
+    <h1>Continue from your sample</h1>
+    <p class="lead">{% if sample_business %}Welcome back{% if sample_business %}, {{ sample_business }}{% endif %}.{% else %}Welcome back.{% endif %} Pick your platforms, add Story Ideas if you want them, and choose one-off or monthly. Your form answers are saved — we'll prefill them on the next page so you can review and submit in seconds.</p>
+    <div class="upgrade-card">
+      <div id="sample-token" data-token="{{ sample_token|e }}" data-platform="{{ sample_platform|e }}" hidden></div>
+
+      <div class="field">
+        <label class="field-label" for="upgrade-platforms-select">Number of platforms</label>
+        <select id="upgrade-platforms-select" class="upgrade-select">
+          <option value="1">1 platform</option>
+          {% if supports_multi_platform %}
+          <option value="2">2 platforms</option>
+          <option value="3">3 platforms</option>
+          <option value="4">4 platforms</option>
+          {% endif %}
+        </select>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Which platforms?</label>
+        <div class="platform-choices">
+          <label class="cb-label"><input type="checkbox" name="upgrade_platform" value="Instagram & Facebook" class="platform-cb"> Instagram &amp; Facebook</label>
+          <label class="cb-label"><input type="checkbox" name="upgrade_platform" value="LinkedIn" class="platform-cb"> LinkedIn</label>
+          <label class="cb-label"><input type="checkbox" name="upgrade_platform" value="TikTok" class="platform-cb"> TikTok</label>
+          <label class="cb-label"><input type="checkbox" name="upgrade_platform" value="Pinterest" class="platform-cb"> Pinterest</label>
+        </div>
+        <p id="platform-hint" style="font-size:0.85rem; color: rgba(255,255,255,0.65); margin: 0.5rem 0 0;"></p>
+      </div>
+
+      {% if stories_addon_available %}
+      <div class="field" id="stories-wrap" style="display: none;">
+        <label class="stories-row">
+          <input type="checkbox" id="stories-cb"> Add 30 Days Story Ideas <span id="stories-price-suffix" style="font-weight: 400; color: rgba(255,255,255,0.7);">(+£29 one-off / +£17 monthly)</span>
+        </label>
+        <p class="stories-help">One-line prompts for Instagram &amp; Facebook Stories each day. You'll choose aligned-vs-separate on the form after checkout.</p>
+      </div>
+      {% endif %}
+
+      {% if currencies_available|length > 1 %}
+      <div class="field">
+        <label class="field-label">Currency</label>
+        <div class="currency-row">
+          {% for c in currencies_available %}
+          <button type="button" class="currency-btn" data-currency="{{ c.code }}" aria-pressed="{% if loop.first %}true{% else %}false{% endif %}">{{ c.symbol }} {{ c.label }}</button>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="field">
+        <label class="field-label">Plan</label>
+        <div class="plan-toggle">
+          <button type="button" id="plan-oneoff-btn" data-plan="oneoff" aria-pressed="true">One-off pack
+            <span class="plan-sub">One pack, one payment</span>
+          </button>
+          {% if captions_subscription_available %}
+          <button type="button" id="plan-sub-btn" data-plan="sub" aria-pressed="false">Monthly subscription
+            <span class="plan-sub">A new pack every month, cancel anytime</span>
+          </button>
+          {% endif %}
+        </div>
+      </div>
+
+      <p class="price-display" id="price-display">£97</p>
+      <p class="price-cadence" id="price-cadence">one-time</p>
+
+      <a href="#" id="checkout-btn" class="checkout-btn" aria-disabled="false">Continue to checkout</a>
+      <p id="upgrade-error" class="upgrade-error" role="alert"></p>
+    </div>
+    <p class="upgrade-back"><a href="/captions">See full plan details on the product page</a></p>
+  </section>
+
+  <script>
+    (function () {
+      var prices = {{ captions_prices|tojson }};
+      var samplePlatform = (document.getElementById('sample-token').dataset.platform || 'Instagram & Facebook').trim();
+      var sampleToken = document.getElementById('sample-token').dataset.token || '';
+      var platformsSelect = document.getElementById('upgrade-platforms-select');
+      var platformCbs = document.querySelectorAll('.platform-cb');
+      var storiesWrap = document.getElementById('stories-wrap');
+      var storiesCb = document.getElementById('stories-cb');
+      var storiesPriceSuffix = document.getElementById('stories-price-suffix');
+      var planOneoffBtn = document.getElementById('plan-oneoff-btn');
+      var planSubBtn = document.getElementById('plan-sub-btn');
+      var currencyBtns = document.querySelectorAll('.currency-btn');
+      var priceEl = document.getElementById('price-display');
+      var cadenceEl = document.getElementById('price-cadence');
+      var checkoutBtn = document.getElementById('checkout-btn');
+      var errEl = document.getElementById('upgrade-error');
+      var hintEl = document.getElementById('platform-hint');
+      var plan = 'oneoff';
+      var currency = 'gbp';
+
+      function ensureSamplePlatformChecked() {
+        var matched = false;
+        platformCbs.forEach(function (cb) {
+          if (cb.value === samplePlatform) { cb.checked = true; matched = true; }
+        });
+        if (!matched && samplePlatform.toLowerCase().indexOf('instagram') !== -1) {
+          platformCbs.forEach(function (cb) { if (cb.value === 'Instagram & Facebook') cb.checked = true; });
+        }
+      }
+
+      function getSelectedPlatforms() {
+        var arr = [];
+        platformCbs.forEach(function (cb) { if (cb.checked) arr.push(cb.value); });
+        return arr;
+      }
+
+      function hasInstaFb() {
+        var sel = getSelectedPlatforms();
+        for (var i = 0; i < sel.length; i++) if (sel[i] === 'Instagram & Facebook') return true;
+        return false;
+      }
+
+      function showError(msg) {
+        errEl.textContent = msg || '';
+        errEl.style.display = msg ? 'block' : 'none';
+      }
+
+      function syncPlatformCount() {
+        var n = parseInt(platformsSelect.value, 10) || 1;
+        var selected = getSelectedPlatforms();
+        if (selected.length > n) {
+          var keep = selected.slice(0, n);
+          platformCbs.forEach(function (cb) { cb.checked = keep.indexOf(cb.value) !== -1; });
+        }
+      }
+
+      function syncStoriesVisibility() {
+        if (!storiesWrap || !storiesCb) return;
+        var ig = hasInstaFb();
+        storiesWrap.style.display = ig ? 'block' : 'none';
+        if (!ig) storiesCb.checked = false;
+      }
+
+      function setPlatformHint() {
+        if (!hintEl) return;
+        var n = parseInt(platformsSelect.value, 10) || 1;
+        var selected = getSelectedPlatforms();
+        if (selected.length === 0) {
+          hintEl.textContent = 'Pick at least 1 platform.';
+        } else if (selected.length !== n) {
+          hintEl.textContent = 'Pick exactly ' + n + ' platform' + (n === 1 ? '' : 's') + ' to match the count above.';
+        } else {
+          hintEl.textContent = '';
+        }
+      }
+
+      function updatePrice() {
+        var p = prices[currency] || prices.gbp;
+        var n = parseInt(platformsSelect.value, 10) || 1;
+        var stories = storiesCb && storiesCb.checked;
+        var total;
+        if (plan === 'oneoff') {
+          total = p.oneoff + (n - 1) * p.extra_oneoff + (stories ? p.stories_oneoff : 0);
+          cadenceEl.textContent = 'one-time';
+        } else {
+          total = p.sub + (n - 1) * p.extra_sub + (stories ? p.stories_sub : 0);
+          cadenceEl.textContent = '/month, cancel anytime';
+        }
+        priceEl.textContent = p.symbol + total;
+        if (storiesPriceSuffix) storiesPriceSuffix.textContent = '(+' + p.symbol + p.stories_oneoff + ' one-off / +' + p.symbol + p.stories_sub + ' monthly)';
+      }
+
+      function updateCheckoutHref() {
+        var n = parseInt(platformsSelect.value, 10) || 1;
+        var selected = getSelectedPlatforms();
+        var stories = storiesCb && storiesCb.checked;
+        var valid = selected.length === n && selected.length >= 1;
+        var qs = 'platforms=' + n + '&currency=' + currency + '&copy_from=' + encodeURIComponent(sampleToken);
+        if (selected.length) qs += '&selected=' + encodeURIComponent(selected.join(', '));
+        if (stories) qs += '&stories=1';
+        var path = plan === 'oneoff' ? '/captions-checkout' : '/captions-checkout-subscription';
+        checkoutBtn.href = valid ? (path + '?' + qs) : '#';
+        checkoutBtn.setAttribute('aria-disabled', valid ? 'false' : 'true');
+        showError(valid ? '' : '');
+      }
+
+      function refresh() {
+        syncPlatformCount();
+        syncStoriesVisibility();
+        setPlatformHint();
+        updatePrice();
+        updateCheckoutHref();
+      }
+
+      platformsSelect.addEventListener('change', refresh);
+      platformCbs.forEach(function (cb) { cb.addEventListener('change', refresh); });
+      if (storiesCb) storiesCb.addEventListener('change', refresh);
+
+      function setPlan(next) {
+        plan = next;
+        if (planOneoffBtn) planOneoffBtn.setAttribute('aria-pressed', plan === 'oneoff' ? 'true' : 'false');
+        if (planSubBtn) planSubBtn.setAttribute('aria-pressed', plan === 'sub' ? 'true' : 'false');
+        refresh();
+      }
+      if (planOneoffBtn) planOneoffBtn.addEventListener('click', function () { setPlan('oneoff'); });
+      if (planSubBtn) planSubBtn.addEventListener('click', function () { setPlan('sub'); });
+
+      currencyBtns.forEach(function (b) {
+        b.addEventListener('click', function () {
+          currency = b.dataset.currency || 'gbp';
+          currencyBtns.forEach(function (bb) { bb.setAttribute('aria-pressed', bb === b ? 'true' : 'false'); });
+          refresh();
+        });
+      });
+
+      checkoutBtn.addEventListener('click', function (e) {
+        if (checkoutBtn.getAttribute('aria-disabled') === 'true') {
+          e.preventDefault();
+          showError('Pick the platforms you want before continuing.');
+        }
+      });
+
+      ensureSamplePlatformChecked();
+      refresh();
+    })();
+  </script>
+</body>
+</html>

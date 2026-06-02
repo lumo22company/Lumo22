@@ -296,7 +296,7 @@
     .intake-page-body .lumo-nav { background: #000; border-bottom: 1px solid rgba(255,255,255,0.06); box-shadow: 0 4px 24px rgba(0,0,0,0.2); }
   </style>
 </head>
-<body class="lumo-landing intake-page-body" data-current-customer-email="{{ (current_customer.email or '')|lower if current_customer else '' }}" data-return-url="{{ return_url or '' }}" data-intake-view-only="{{ 'true' if intake_view_only else 'false' }}" data-oneoff-subscribe-checkout="{{ 'true' if oneoff_subscribe_checkout_mode|default(false) else 'false' }}" data-subscribe-url="{{ subscribe_url or '' }}" data-auto-open-review="{{ 'true' if oneoff_subscribe_checkout_mode|default(false) else 'false' }}" data-oneoff-upgrade-edit="{{ 'true' if edit_intake_before_subscribe|default(false) else 'false' }}" data-is-upgrade-flow="{{ 'true' if is_upgrade_flow|default(false) else 'false' }}" data-pack-sooner-hub-return="{{ 'true' if is_prepare_pack_sooner_return|default(false) else 'false' }}" data-prepare-pack-sooner-edit="{{ 'true' if is_prepare_pack_sooner_return|default(false) and edit_intake_before_subscribe|default(false) else 'false' }}">
+<body class="lumo-landing intake-page-body" data-current-customer-email="{{ (current_customer.email or '')|lower if current_customer else '' }}" data-return-url="{{ return_url or '' }}" data-intake-view-only="{{ 'true' if intake_view_only else 'false' }}" data-oneoff-subscribe-checkout="{{ 'true' if oneoff_subscribe_checkout_mode|default(false) else 'false' }}" data-subscribe-url="{{ subscribe_url or '' }}" data-auto-open-review="{{ 'true' if oneoff_subscribe_checkout_mode|default(false) or prefilled_from_sample_review_mode|default(false) else 'false' }}" data-prefilled-from-sample-review="{{ 'true' if prefilled_from_sample_review_mode|default(false) else 'false' }}" data-oneoff-upgrade-edit="{{ 'true' if edit_intake_before_subscribe|default(false) else 'false' }}" data-is-upgrade-flow="{{ 'true' if is_upgrade_flow|default(false) else 'false' }}" data-pack-sooner-hub-return="{{ 'true' if is_prepare_pack_sooner_return|default(false) else 'false' }}" data-prepare-pack-sooner-edit="{{ 'true' if is_prepare_pack_sooner_return|default(false) and edit_intake_before_subscribe|default(false) else 'false' }}">
   {% include '_lumo_nav.html' %}
 
   <main class="intake-page">
@@ -387,7 +387,7 @@
     {% endif %}
     <div id="intake-upgrade-cta" style="display: none; margin: 0 0 2rem; padding: 1rem 0;"></div>
 
-    <form id="captions-intake-form" action="#" method="post" data-platforms-count="{{ platforms_count }}" data-oneoff-subscribe-checkout="{{ 'true' if oneoff_subscribe_checkout_mode|default(false) else 'false' }}"{% if oneoff_subscribe_checkout_mode|default(false) %} style="display: none;"{% endif %}>
+    <form id="captions-intake-form" action="#" method="post" data-platforms-count="{{ platforms_count }}" data-oneoff-subscribe-checkout="{{ 'true' if oneoff_subscribe_checkout_mode|default(false) else 'false' }}"{% if oneoff_subscribe_checkout_mode|default(false) or prefilled_from_sample_review_mode|default(false) %} style="display: none;"{% endif %}>
       {% if intake_view_only %}<fieldset class="intake-readonly-fieldset" disabled aria-label="Your saved details (read only)">{% endif %}
       <input type="hidden" name="token" id="intake_token" value="{{ intake_token }}" data-testid="intake_token">
       <p id="intake-validation-hint" style="display: none; margin: -0.5rem 0 1rem; font-size: 0.9rem; color: #c00;"></p>
@@ -614,15 +614,18 @@
       {% endif %}
     </form>
 
-    {% if not intake_view_only or oneoff_subscribe_checkout_mode|default(false) %}
-    <div id="review-step" class="review-step{% if oneoff_subscribe_checkout_mode|default(false) %} show{% endif %}" style="{% if oneoff_subscribe_checkout_mode|default(false) %}display: block;{% endif %}">
-      <h2 class="form-section" style="margin-bottom: 1rem; font-size: 1.75rem;">Double-check your answers</h2>
-      {% if not oneoff_subscribe_checkout_mode|default(false) %}
+    {% set _review_default_open = oneoff_subscribe_checkout_mode|default(false) or prefilled_from_sample_review_mode|default(false) %}
+    {% if not intake_view_only or _review_default_open %}
+    <div id="review-step" class="review-step{% if _review_default_open %} show{% endif %}" style="{% if _review_default_open %}display: block;{% endif %}">
+      <h2 class="form-section" style="margin-bottom: 1rem; font-size: 1.75rem;">{% if prefilled_from_sample_review_mode|default(false) %}Check your answers{% else %}Double-check your answers{% endif %}</h2>
+      {% if prefilled_from_sample_review_mode|default(false) %}
+      <p class="sub" style="margin-bottom: 1.5rem;">Your answers from your free sample are below. Tap <strong>Edit</strong> if anything needs updating, or <strong>Send details</strong> to start your pack.</p>
+      {% elif not oneoff_subscribe_checkout_mode|default(false) %}
       <p class="sub" style="margin-bottom: 1.5rem;">Review before sending. Click Edit at the bottom of the form to change anything.</p>
       {% endif %}
       <div id="review-content"></div>
       <div class="review-actions">
-        {% if not oneoff_subscribe_checkout_mode|default(false) %}
+        {% if prefilled_from_sample_review_mode|default(false) or not oneoff_subscribe_checkout_mode|default(false) %}
         <button type="button" class="btn-submit btn-secondary account-btn-swipe-light" id="btn-edit">Edit</button>
         {% endif %}
         <button type="button" class="btn-submit account-btn-swipe-light" id="btn-confirm">{% if oneoff_subscribe_checkout_mode|default(false) %}Confirm and continue{% elif is_upgrade_flow|default(false) %}Next step{% elif is_prepare_pack_sooner_return|default(false) and edit_intake_before_subscribe|default(false) %}Checkout{% else %}Send details{% endif %}</button>
@@ -1528,8 +1531,9 @@
       }
       window.doShowReview = showReview;
       var checkoutModeEarly = (document.body.getAttribute('data-oneoff-subscribe-checkout') === 'true');
+      var autoOpenReviewEarly = (document.body.getAttribute('data-auto-open-review') === 'true');
       if (!form || !reviewStep || !reviewContent) return;
-      if (!btnReview && !checkoutModeEarly) return;
+      if (!btnReview && !checkoutModeEarly && !autoOpenReviewEarly) return;
 
       function showForm() {
         var reviewStep = document.getElementById('review-step');

@@ -899,6 +899,30 @@ def captions_checkout():
         metadata["business_key"] = _normalize_business_key(explicit_business_key)
     if business_name_raw:
         metadata["business_name"] = business_name_raw[:120]
+    # Sample → paid one-off upgrade: copy_from points to a sample order whose intake should
+    # prefill the new paid order's intake form. Stripe metadata.copy_from is read by the webhook
+    # to set upgraded_from_token. We validate the source is the customer's own sample row and
+    # prefill the Stripe checkout email so the same-email guard on intake prefill matches.
+    copy_from_raw = (request.args.get("copy_from") or "").strip()
+    if copy_from_raw:
+        try:
+            from services.caption_order_service import CaptionOrderService, is_sample_pack_order
+
+            src_order = CaptionOrderService().get_by_token(copy_from_raw)
+        except Exception:
+            src_order = None
+        if src_order and is_sample_pack_order(src_order):
+            metadata["copy_from"] = copy_from_raw
+            src_email = (src_order.get("customer_email") or "").strip().lower()
+            if not checkout_email and src_email and "@" in src_email:
+                checkout_email = src_email
+            if not business_name_raw:
+                src_intake = src_order.get("intake") if isinstance(src_order.get("intake"), dict) else {}
+                src_business = (src_intake.get("business_name") or "").strip() if src_intake else ""
+                if src_business:
+                    metadata["business_name"] = src_business[:120]
+                    if not metadata.get("business_key"):
+                        metadata["business_key"] = _normalize_business_key(src_business)
     create_params = {
         "mode": "payment",
         "line_items": line_items,
@@ -2156,6 +2180,7 @@ def _run_sample_generation_and_deliver(order_id: str) -> None:
         return
     to_email = (row.get("customer_email") or "").strip()
     business_name = (intake.get("business_name") or "").strip()
+    sample_token = (row.get("token") or "").strip() or None
     try:
         platform = (intake.get("platform") or "").strip()
         NotificationService().send_sample_caption_delivery_email(
@@ -2163,6 +2188,7 @@ def _run_sample_generation_and_deliver(order_id: str) -> None:
             md,
             business_name=business_name or None,
             platform=platform or None,
+            sample_token=sample_token,
         )
         print(f"[Captions sample] Delivered order {order_id} to {to_email}")
     except Exception as e:
