@@ -1365,11 +1365,25 @@ class CaptionOrderService:
         return result.data or []
 
     def get_awaiting_intake_orders(self) -> list:
-        """Get recent orders that are still awaiting intake (for one-off intake reminders)."""
-        result = self.client.table(self.table).select(
+        """Get recent orders that are still awaiting intake (for one-off intake reminders).
+
+        Includes product_type so callers can distinguish free sample (sample_3) from paid (standard) orders
+        before sending paid-pack reminder copy.
+        """
+        select_cols = (
             "id, token, customer_email, status, created_at, stripe_subscription_id, intake, captions_md, "
-            "intake_early_reminder_sent_at, one_off_intake_reminder_sent_at"
-        ).eq("status", "awaiting_intake").execute()
+            "intake_early_reminder_sent_at, one_off_intake_reminder_sent_at, product_type"
+        )
+        try:
+            result = self.client.table(self.table).select(select_cols).eq("status", "awaiting_intake").execute()
+        except Exception as e:
+            if _is_product_type_column_missing(e):
+                result = self.client.table(self.table).select(
+                    "id, token, customer_email, status, created_at, stripe_subscription_id, intake, captions_md, "
+                    "intake_early_reminder_sent_at, one_off_intake_reminder_sent_at"
+                ).eq("status", "awaiting_intake").execute()
+            else:
+                raise
         return result.data or []
 
     def set_intake_early_reminder_sent(self, order_id: str) -> bool:
@@ -1426,10 +1440,23 @@ class CaptionOrderService:
         is within the last 24 hours. E.g. days_before_end=5 => 25 days after delivery; 3 => 27 days.
         Excludes orders that already had the reminder sent or opted out.
         """
-        # One-off = no stripe_subscription_id; must be delivered with delivered_at set
-        result = self.client.table(self.table).select(
-            "id, token, customer_email, delivered_at, platforms_count, selected_platforms, include_stories, currency, intake, upgrade_reminder_sent_at, upgrade_reminder_opt_out"
-        ).is_("stripe_subscription_id", "null").eq("status", "delivered").not_.is_("delivered_at", "null").execute()
+        # One-off = no stripe_subscription_id; must be delivered with delivered_at set.
+        # Includes product_type so callers can exclude free sample (sample_3) orders from upgrade nudges.
+        select_cols = (
+            "id, token, customer_email, delivered_at, platforms_count, selected_platforms, include_stories, "
+            "currency, intake, upgrade_reminder_sent_at, upgrade_reminder_opt_out, product_type"
+        )
+        try:
+            result = self.client.table(self.table).select(select_cols).is_(
+                "stripe_subscription_id", "null"
+            ).eq("status", "delivered").not_.is_("delivered_at", "null").execute()
+        except Exception as e:
+            if _is_product_type_column_missing(e):
+                result = self.client.table(self.table).select(
+                    "id, token, customer_email, delivered_at, platforms_count, selected_platforms, include_stories, currency, intake, upgrade_reminder_sent_at, upgrade_reminder_opt_out"
+                ).is_("stripe_subscription_id", "null").eq("status", "delivered").not_.is_("delivered_at", "null").execute()
+            else:
+                raise
         rows = result.data or []
         now = datetime.now(timezone.utc)
         days_after_delivery = 30 - days_before_end  # 25 or 27

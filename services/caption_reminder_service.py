@@ -20,7 +20,7 @@ from datetime import datetime, timezone
 from typing import List, Dict, Any
 from urllib.parse import urlencode, quote
 from config import Config
-from services.caption_order_service import CaptionOrderService
+from services.caption_order_service import CaptionOrderService, is_sample_pack_order
 from services.account_prefill_token import sign_prefill_email
 from services.notifications import (
     NotificationService,
@@ -416,6 +416,11 @@ Lumo 22
             if (order.get("stripe_subscription_id") or "").strip():
                 skipped += 1
                 continue
+            # Free 3-caption sample orders must never receive paid-pack reminder copy
+            # ("Thanks for your order of 30 Days of Social Media Captions" etc.).
+            if is_sample_pack_order(order):
+                skipped += 1
+                continue
             if _has_other_ready_or_completed_orders(order_service, order):
                 skipped += 1
                 continue
@@ -503,6 +508,10 @@ This takes about 5–10 minutes. Once it's done, we'll generate your captions an
         base = _safe_base_url()
         notif = NotificationService()
         for order in one_off_orders:
+            # Sample-pack rows are never paid one-offs; never send "your 30 days are almost up" upgrade copy.
+            if is_sample_pack_order(order):
+                skipped += 1
+                continue
             email = (order.get("customer_email") or "").strip()
             token = (order.get("token") or "").strip()
             if not email or "@" not in email or not token:
