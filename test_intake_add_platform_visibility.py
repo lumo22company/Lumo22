@@ -4,8 +4,14 @@ Test intake template: first-time vs returning editor (button + edit notice).
 Platform billing changes are explained via Manage subscription → Change plan (not an in-form add-platform link).
 """
 from datetime import datetime, timezone
+import os
 import sys
 from unittest.mock import MagicMock, patch
+
+# This file is often run directly (`python3 test_intake_add_platform_visibility.py`),
+# so it does not benefit from conftest.py. Match the repo's pytest config and disable
+# CSRF for test-client POSTs only; production behavior is unchanged.
+os.environ.setdefault("DISABLE_CSRF", "1")
 
 _INTAKE_TEMPLATE_KWARGS = {
     "intake_view_only": False,
