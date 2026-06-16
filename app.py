@@ -221,15 +221,56 @@ def add_security_headers(response):
             "form-action 'self' https://checkout.stripe.com; "
             "frame-ancestors 'none'; "
             "object-src 'none'; "
-            "script-src 'self' 'unsafe-inline' https://accounts.google.com https://www.gstatic.com; "
+            "script-src 'self' 'unsafe-inline' https://accounts.google.com https://www.gstatic.com "
+            "https://static.cloudflareinsights.com; "
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://api.fontshare.com; "
             "font-src 'self' data: https://fonts.gstatic.com https://cdn.fontshare.com; "
             "img-src 'self' data: https: blob:; "
             "connect-src 'self' https://api.stripe.com https://checkout.stripe.com https://billing.stripe.com "
-            "https://accounts.google.com https://www.googleapis.com https://oauth2.googleapis.com; "
+            "https://accounts.google.com https://www.googleapis.com https://oauth2.googleapis.com "
+            "https://cloudflareinsights.com; "
             "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://checkout.stripe.com; "
             "upgrade-insecure-requests"
         )
+    return response
+
+
+# Cloudflare Web Analytics (cookieless, no PII). The token is public — it appears
+# in the page HTML — so a hardcoded default is fine; env can override per environment.
+CLOUDFLARE_WEB_ANALYTICS_TOKEN = os.getenv(
+    "CLOUDFLARE_WEB_ANALYTICS_TOKEN", "97556a5dd04145ad8601dcc5e8b63ffe"
+)
+_CF_ANALYTICS_BEACON = (
+    "<script defer src=\"https://static.cloudflareinsights.com/beacon.min.js\" "
+    "data-cf-beacon='{\"token\": \"%s\"}'></script>" % CLOUDFLARE_WEB_ANALYTICS_TOKEN
+    if CLOUDFLARE_WEB_ANALYTICS_TOKEN
+    else ""
+)
+
+
+@app.after_request
+def inject_web_analytics(response):
+    """Inject the Cloudflare Web Analytics beacon before </head> on HTML pages.
+
+    Single injection point (there is no shared base template), so every current
+    and future page is covered consistently and identically. Safe no-op for
+    non-HTML, streamed (send_file), or already-injected responses, and never
+    raises into the response path.
+    """
+    if not _CF_ANALYTICS_BEACON:
+        return response
+    try:
+        if getattr(response, "direct_passthrough", False):
+            return response
+        if not (response.content_type or "").startswith("text/html"):
+            return response
+        body = response.get_data(as_text=True)
+        if "</head>" not in body or "static.cloudflareinsights.com/beacon" in body:
+            return response
+        response.set_data(body.replace("</head>", _CF_ANALYTICS_BEACON + "</head>", 1))
+    except Exception:
+        # Analytics must never break a page response.
+        pass
     return response
 
 
