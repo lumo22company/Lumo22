@@ -1,0 +1,139 @@
+{
+  "defaults": {
+    "country": "GB",
+    "drop_wix_sentry": true,
+    "use_ai": true,
+    "vertical": "auto",
+    "daily_import_cap": 15
+  },
+  "niches": [
+    {
+      "slug": "fitness_bristol",
+      "enabled": true,
+      "apify_task_id": "XwZJtbsmiISqWJpuk",
+      "smartlead_campaign_id": "3271458",
+      "daily_import_cap": 15
+    },
+    {
+      "slug": "fitness_bath",
+      "enabled": true,
+      "apify_task_id": "yn7ejlbz6xyeJVVQo",
+      "smartlead_campaign_id": "3293642",
+      "daily_import_cap": 15
+    },
+    {
+      "slug": "aesthetic_clinics_bristol",
+      "enabled": true,
+      "apify_task_id": "5TEx8UCcxcM8ZyLKd",
+      "smartlead_campaign_id": "3501217",
+      "daily_import_cap": 15,
+      "include_keywords": [
+        "aesthetic",
+        "aesthetics",
+        "skin",
+        "skincare",
+        "laser",
+        "cosmetic",
+        "clinic",
+        "med spa",
+        "medical spa",
+        "facial",
+        "beauty",
+        "salon",
+        "lash",
+        "brow",
+        "spa"
+      ],
+      "exclude_keywords": [
+        "hospital",
+        "doctor",
+        "gp",
+        "dentist",
+        "veterinary",
+        "pharmacy",
+        "training provider",
+        "school",
+        "college",
+        "restaurant",
+        "cafe",
+        "hotel"
+      ]
+    },
+    {
+      "slug": "aesthetic_clinics_manchester",
+      "enabled": true,
+      "apify_task_id": "XrwgiAX1CtSBbK5Zp",
+      "smartlead_campaign_id": "3502896",
+      "daily_import_cap": 15,
+      "include_keywords": [
+        "aesthetic",
+        "aesthetics",
+        "skin",
+        "skincare",
+        "laser",
+        "cosmetic",
+        "clinic",
+        "med spa",
+        "medical spa",
+        "facial",
+        "beauty",
+        "salon",
+        "lash",
+        "brow",
+        "spa"
+      ],
+      "exclude_keywords": [
+        "hospital",
+        "doctor",
+        "gp",
+        "dentist",
+        "veterinary",
+        "pharmacy",
+        "training provider",
+        "school",
+        "college",
+        "restaurant",
+        "cafe",
+        "hotel"
+      ]
+    },
+    {
+      "slug": "aesthetic_clinics_bath",
+      "enabled": false,
+      "apify_task_id": "REPLACE_WITH_APIFY_TASK_ID",
+      "smartlead_campaign_id": "REPLACE_WITH_SMARTLEAD_CAMPAIGN_ID",
+      "daily_import_cap": 15,
+      "include_keywords": [
+        "aesthetic",
+        "aesthetics",
+        "skin",
+        "skincare",
+        "laser",
+        "cosmetic",
+        "clinic",
+        "med spa",
+        "medical spa",
+        "facial",
+        "beauty",
+        "salon",
+        "lash",
+        "brow",
+        "spa"
+      ],
+      "exclude_keywords": [
+        "hospital",
+        "doctor",
+        "gp",
+        "dentist",
+        "veterinary",
+        "pharmacy",
+        "training provider",
+        "school",
+        "college",
+        "restaurant",
+        "cafe",
+        "hotel"
+      ]
+    }
+  ]
+}
