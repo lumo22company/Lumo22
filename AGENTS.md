@@ -11,6 +11,7 @@
 - **Beginner walkthrough (checkboxes):** `docs/SECURITY_PRIVACY_WALKTHROUGH.md`
 - **Dependency audit:** CI job `dependency-audit` in `.github/workflows/tests.yml` (`pip-audit -r requirements.txt`).
 - **ZAP baseline:** run manually — GitHub **Actions → Security — ZAP baseline (manual)** — enter staging `target_url`. See `SECURITY_PRIVACY_REVIEW.md`.
+- **Supabase Data API grants:** From October 30, 2026, every new `public` table in existing projects needs explicit `GRANT` statements before PostgREST / GraphQL / `supabase-js` can access it. Use `docs/supabase_data_api_grants.md` when creating new table migrations.
 
 ## Captions reminder / email dedupe (Supabase SQL)
 

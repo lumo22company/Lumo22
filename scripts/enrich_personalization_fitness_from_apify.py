@@ -85,15 +85,52 @@ def _personalization(name: str, city: str, blob: str, niche: str = "") -> str:
             f"Saw {n} in {c} — design-led studios that keep Instagram tied to projects and "
             f"process tend to stay top-of-mind when people start planning work at home."
         )
-    if any(k in comb for k in ("hair", "beauty", "salon", "nail", "lash", "brow", "spa", "barber")):
+    if any(
+        k in comb
+        for k in (
+            "aesthetic",
+            "aesthetics",
+            "skin",
+            "skincare",
+            "laser",
+            "cosmetic",
+            "clinic",
+            "med spa",
+            "medical spa",
+            "facial",
+            "hair",
+            "beauty",
+            "salon",
+            "nail",
+            "lash",
+            "brow",
+            "spa",
+            "barber",
+        )
+    ):
         return (
-            f"Saw {n} in {c} — salons that align posts with services, offers, and real client outcomes "
-            f"usually fill the diary more steadily than occasional generic drops."
+            f"Saw {n} in {c} — clinics and salons that keep posts tied to treatments, availability, "
+            f"and real client questions usually make booking decisions feel easier."
         )
     if "crossfit" in comb:
         return (
             f"Saw {n} in {c} — CrossFit boxes that post consistently around timetables "
             f"and member wins usually fill trial spots faster than sporadic drops."
+        )
+    if "hyrox" in comb:
+        return (
+            f"Saw {n} in {c} — HYROX-focused programmes tend to convert better when content tracks "
+            f"training blocks, event dates, and member milestones."
+        )
+    if "pole" in comb:
+        return (
+            f"Saw {n} in {c} — pole studios usually get steadier bookings when posts rotate "
+            f"class levels, intro offers, and real student progress."
+        )
+    if "boxing" in comb or "kickboxing" in comb:
+        return (
+            f"Saw {n} in {c} — boxing gyms usually keep trial flow steadier when content highlights "
+            f"sessions, coach style, and beginner entry points."
         )
     if "yoga" in comb or "pilates" in comb:
         return (
@@ -127,6 +164,8 @@ _AI_RULES_TAIL = """
 - Exactly one sentence. No greeting (no "Hi" or name at the start) — the email template adds that.
 - Use the business name naturally. You may mention the city once if it reads smoothly.
 - Only use the facts provided (name, city, niche label, website, Google Maps categories). Do not invent review scores, awards, or specific claims about their marketing you cannot verify.
+- If niche label or categories include a subtype (e.g., Pilates, yoga, boxing, CrossFit, pole, PT), reference that subtype explicitly.
+- Avoid generic phrases like "built something special", "top-of-mind", "one-off bursts", "go quiet for weeks", "show up week after week".
 - Aim under 220 characters. No hashtags, no bullet points, no markdown."""
 
 _AI_SYSTEM_FITNESS = (
@@ -141,10 +180,18 @@ _AI_SYSTEM_GENERAL = (
     + _AI_RULES_TAIL
 )
 
+_AI_SYSTEM_BEAUTY = (
+    "You write one opening icebreaker sentence for a cold B2B email to an aesthetics, beauty, skin, salon, or med-spa business.\n"
+    "Angle: treatments, trust, availability, client questions, consultations, seasonal offers, and making booking decisions easier — without implying you audited their social feed."
+    + _AI_RULES_TAIL
+)
+
 
 def _ai_system_for_row(vertical: str, niche: str, maps_categories: str) -> str:
     if vertical == "fitness":
         return _AI_SYSTEM_FITNESS
+    if vertical == "beauty":
+        return _AI_SYSTEM_BEAUTY
     if vertical == "general":
         return _AI_SYSTEM_GENERAL
     blob = f"{(niche or '').lower()} {(maps_categories or '').lower()}"
@@ -162,6 +209,27 @@ def _ai_system_for_row(vertical: str, niche: str, maps_categories: str) -> str:
         )
     ):
         return _AI_SYSTEM_FITNESS
+    if any(
+        x in blob
+        for x in (
+            "aesthetic",
+            "aesthetics",
+            "beauty",
+            "skin",
+            "skincare",
+            "laser",
+            "cosmetic",
+            "med spa",
+            "medical spa",
+            "facial",
+            "salon",
+            "nail",
+            "lash",
+            "brow",
+            "spa",
+        )
+    ):
+        return _AI_SYSTEM_BEAUTY
     return _AI_SYSTEM_GENERAL
 
 
@@ -218,7 +286,7 @@ def main() -> None:
     ap.add_argument("--out", required=True, help="Output CSV path")
     ap.add_argument(
         "--vertical",
-        choices=("auto", "fitness", "general"),
+        choices=("auto", "fitness", "beauty", "general"),
         default="auto",
         help="AI prompt flavour (auto uses niche + Maps categories)",
     )

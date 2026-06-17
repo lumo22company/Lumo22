@@ -119,16 +119,43 @@ def fetch_text(session: requests.Session, url: str, timeout: int) -> str | None:
         return None
 
 
+SHARED_INBOX_LOCALS = frozenset(
+    {
+        "info", "hello", "hi", "hey", "ask",
+        "contact", "contactus",
+        "enquiries", "enquiry", "inquiries", "inquiry",
+        "bookings", "booking", "reservations",
+        "office", "reception", "frontdesk",
+        "sales", "team", "admin", "support",
+        "membership", "members",
+    }
+)
+
+
 def score_email(email: str, host_domain: str) -> int:
+    """
+    Rank candidate emails for cold-outreach reliability.
+
+    For B2B outbound, shared/role inboxes (info@, hello@, enquiries@, etc.) are usually
+    safer than first-name-only personal locals: they're less likely to bounce when staff
+    leave, more likely to be monitored, and less likely to be a partial guess. Personal
+    first-name-only locals (e.g. 'susie@', 'tom@') carry a small penalty; compound
+    addresses (firstname.lastname) sit between the two.
+    """
     edom = email.rsplit("@", 1)[-1]
     local = email.split("@", 1)[0]
     score = 0
+
     if host_domain and (edom == host_domain or edom.endswith("." + host_domain)):
         score += 100
-    if local in ("info", "hello", "contact", "sales", "enquiries", "enquiry", "bookings", "office"):
-        score -= 8
-    if local not in ("info", "contact", "hello"):
-        score += 15
+
+    if local in SHARED_INBOX_LOCALS:
+        score += 20
+    elif any(sep in local for sep in (".", "_", "-")) or any(ch.isdigit() for ch in local):
+        score += 5
+    elif local.isalpha() and len(local) <= 8:
+        score -= 10
+
     return score
 
 

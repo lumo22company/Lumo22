@@ -66,6 +66,9 @@ htmlcov/
 .env.bak
 *.bak
 
+# Lead pipeline output (regenerable; contains PII — keep local only)
+exports/
+
 # Large assets
 *.pdf
 # Operator reference PDF (regenerate: python3 scripts/generate_caption_delivery_troubleshoot_pdf.py)
