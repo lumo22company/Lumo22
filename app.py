@@ -429,6 +429,22 @@ def favicon():
     """Serve logo as favicon."""
     return send_from_directory(os.path.join(app.root_path, 'static', 'images'), 'logo.png', mimetype='image/png')
 
+
+_SECURITY_TXT = (
+    "Contact: mailto:hello@lumo22.com\n"
+    "Expires: 2027-07-06T00:00:00.000Z\n"
+    "Preferred-Languages: en\n"
+    "Canonical: https://www.lumo22.com/.well-known/security.txt\n"
+)
+
+
+@app.route('/.well-known/security.txt')
+@app.route('/security.txt')
+def security_txt():
+    """RFC 9116 security contact file for scanners and researchers."""
+    return app.response_class(_SECURITY_TXT, mimetype='text/plain; charset=utf-8')
+
+
 @app.route('/')
 def index():
     """Public landing page - businesses sign up here"""
