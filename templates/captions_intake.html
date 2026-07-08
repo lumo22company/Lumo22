@@ -562,8 +562,8 @@
         </div>
       </div>
       <div class="form-section">
-        <h2>Goal for this month <span class="intake-h2-meta">(required)</span></h2>
-        <label for="goal">What's the main outcome you want from this 30 days?</label>
+        <h2>{% if is_sample_pack|default(false) %}Goal for these captions{% else %}Goal for this month{% endif %} <span class="intake-h2-meta">(required)</span></h2>
+        <label for="goal">{% if is_sample_pack|default(false) %}What's the main outcome you want from these 3 captions?{% else %}What's the main outcome you want from this 30 days?{% endif %}</label>
         <select id="goal" name="goal" required data-testid="goal">
           <option value="">— Select one —</option>
           <option value="More inquiries / leads" {% if existing_intake.get('goal') == 'More inquiries / leads' %}selected{% endif %}>More inquiries / leads</option>
@@ -579,6 +579,12 @@
         </div>
       </div>
       <div class="form-section">
+        {% if is_sample_pack|default(false) %}
+        <h2>Anything happening soon? <span class="intake-h2-meta">(optional)</span></h2>
+        <p class="field-helper">Your sample is <strong>3 captions</strong>, not a full month. If you have a launch, sale, or event coming up, mention it — we’ll weave it into those three posts where it fits. Skip dates that don’t help the sample.</p>
+        <label for="launch_event_description">Include any relevant launch, sale, or event (optional).</label>
+        <textarea id="launch_event_description" name="launch_event_description" data-testid="launch_event_description" placeholder="e.g. spring sale this weekend, new class starts Monday, weekly tips every Tuesday" rows="4" style="min-height: 96px; resize: vertical;">{{ existing_intake.get('launch_event_description', '') }}</textarea>
+        {% else %}
         <h2>What's happening this month? <span class="intake-h2-meta">(optional)</span></h2>
         {% if intake_pack_cover_line %}
         <p class="intake-edit-notice intake-pack-cover-line" style="margin: 0 0 1.25rem; padding: 0.75rem 1rem; background: rgba(0,0,0,0.06); border-radius: 8px; border: 2px solid var(--lum-gold, #c9a227); font-size: 0.9rem; color: #1a1a1a;"><strong>{{ intake_pack_cover_line }}</strong></p>
@@ -586,6 +592,7 @@
         <p class="field-helper">If you have a product launch, event, sale, or regular recurring event, we'll tailor captions: before the date we build anticipation; on the day we announce; during we promote; after we shift to thank-you.</p>
         <label for="launch_event_description">Include dates or regular events — each dated line must sit inside your 30-day pack window.</label>
         <textarea id="launch_event_description" name="launch_event_description" data-testid="launch_event_description" placeholder="e.g. Valentine's sale 10–14 Feb (dates inside your next 30-day pack), product launch 20 Feb, weekly tips every Tuesday" rows="4" style="min-height: 96px; resize: vertical;">{{ existing_intake.get('launch_event_description', '') }}</textarea>
+        {% endif %}
         <p id="launch-date-hint" class="field-helper" style="display:none; color:#b45309; font-weight:600;"></p>
       </div>
       <div class="form-section">

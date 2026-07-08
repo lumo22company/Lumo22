@@ -982,7 +982,8 @@ def captions_intake_page():
     else:
         account_upgrade_base_url = ""
     intake_pack_cover_line = None
-    if order:
+    # Sample packs are 3 captions, not a 30-day calendar — don't show the full-pack date window.
+    if order and not is_sample_pack:
         from api.captions_routes import compute_intake_pack_day1_anchor, format_pack_cover_line_ordinal_utc
 
         _d1, _, _ = compute_intake_pack_day1_anchor(
