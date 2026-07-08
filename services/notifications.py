@@ -2297,21 +2297,25 @@ If you didn't request this, you can ignore this email. Your email address will s
         import html
 
         safe_url = html.escape(intake_url.strip(), quote=True)
-        subject = "Your 3 free sample captions — next step"
+        # Avoid spammy subject patterns ("free", excess punctuation) for better inbox placement.
+        subject = "Your 3 sample captions — next step"
         body = (
             "Hi,\n\n"
-            "Thanks for requesting a free sample from Lumo 22.\n\n"
+            "Thanks for requesting a 3-caption sample from Lumo 22.\n\n"
             "Complete this short form (about 2 minutes) and we'll email you 3 captions written in your brand voice:\n\n"
             f"{intake_url.strip()}\n\n"
-            "No card required.\n\n— Lumo 22"
+            "No card required.\n\n"
+            "If this landed in spam or promotions, mark it as Not spam so your captions email arrives in your inbox.\n\n"
+            "— Lumo 22"
         )
         content = f"""<p style="margin:0 0 16px;">Hi,</p>
-<p style="margin:0 0 16px;">Thanks for requesting a <strong>free 3-caption sample</strong> from Lumo 22. No card required.</p>
+<p style="margin:0 0 16px;">Thanks for requesting a <strong>3-caption sample</strong> from Lumo 22. No card required.</p>
 <p style="margin:0 0 12px;"><strong>Next step:</strong> complete this short form (about 2 minutes) so we can write in your voice.</p>
 {_email_cta_button(intake_url.strip(), "Complete the form")}
 <p style="margin:0 0 8px; font-size:14px; color:{BRAND_MUTED};">Or copy and paste this link into your browser:</p>
 <p style="margin:0 0 24px; font-size:13px; word-break:break-all; color:#333;"><a href="{safe_url}" target="_blank" rel="noopener noreferrer" style="color:#333; text-decoration:underline;">{safe_url}</a></p>
 <p style="margin:0 0 16px;">Once you submit, your 3 sample captions arrive by email within a few minutes.</p>
+<p style="margin:0 0 16px; font-size:14px; color:{BRAND_MUTED};">If this message was in spam or promotions, mark it as Not spam so the next email reaches your inbox.</p>
 <p style="margin:0;">— Lumo 22</p>"""
         # Disable SendGrid click tracking so the form URL is not rewritten (breaks some clients).
         return self.send_email(
@@ -2320,6 +2324,7 @@ If you didn't request this, you can ignore this email. Your email address will s
             body,
             html_body=_email_wrapper(content),
             disable_click_tracking=True,
+            categories=["captions-sample-intake"],
         )
 
     def send_sample_caption_delivery_email(
@@ -2548,11 +2553,13 @@ You can also update your form from that page, or later under Edit form after you
         html_body: Optional[str] = None,
         *,
         disable_click_tracking: bool = False,
+        categories: Optional[list] = None,
     ) -> bool:
         """
         Send email using SendGrid.
 
         disable_click_tracking: when True, leave hrefs as-is (important for intake CTAs).
+        categories: optional SendGrid categories for Activity / suppressions.
         
         Returns:
             bool indicating success
@@ -2580,6 +2587,23 @@ You can also update your form from that page, or later under Edit form after you
                 plain_text_content=body,
                 html_content=html_content
             )
+            # Reply-To helps inbox providers and makes it easy for recipients to respond.
+            try:
+                from sendgrid.helpers.mail import ReplyTo
+
+                message.reply_to = ReplyTo(from_addr, from_name)
+            except Exception as reply_err:
+                print(f"[SendGrid] Could not set Reply-To: {reply_err}")
+            if categories:
+                try:
+                    from sendgrid.helpers.mail import Category
+
+                    for cat in categories:
+                        c = (cat or "").strip()
+                        if c:
+                            message.add_category(Category(c[:255]))
+                except Exception as cat_err:
+                    print(f"[SendGrid] Could not set categories: {cat_err}")
             if disable_click_tracking:
                 try:
                     from sendgrid.helpers.mail import ClickTracking, TrackingSettings
