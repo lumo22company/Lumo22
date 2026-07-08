@@ -2965,6 +2965,18 @@ def _captions_intake_submit_sample(data, order, order_service):
     if not voice_words_raw:
         return jsonify({"error": "Voice is required. Choose at least one tone or add words in Other."}), 400
 
+    allowed_sample_platforms = (
+        "Instagram & Facebook",
+        "LinkedIn",
+        "TikTok",
+        "Pinterest",
+    )
+    platform_raw = (data.get("platform") or "").strip()
+    if platform_raw in ("Instagram", "Facebook"):
+        platform_raw = "Instagram & Facebook"
+    if not platform_raw or platform_raw not in allowed_sample_platforms:
+        return jsonify({"error": "Please select a platform."}), 400
+
     include_hashtags = data.get("include_hashtags")
     if isinstance(include_hashtags, bool):
         pass
@@ -2981,7 +2993,7 @@ def _captions_intake_submit_sample(data, order, order_service):
         "audience_cares": (data.get("audience_cares") or "").strip(),
         "voice_words": voice_words_raw,
         "voice_avoid": (data.get("voice_avoid") or "").strip(),
-        "platform": (data.get("platform") or "Instagram & Facebook").strip() or "Instagram & Facebook",
+        "platform": platform_raw,
         "goal": (data.get("goal") or "").strip(),
         "usual_topics": (data.get("usual_topics") or "").strip(),
         "launch_event_description": (data.get("launch_event_description") or "").strip(),
@@ -3005,6 +3017,10 @@ def _captions_intake_submit_sample(data, order, order_service):
     pack_start_iso = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     if not order_service.save_intake(order_id, intake, pack_start_date=pack_start_iso):
         return jsonify({"error": "Failed to save. Please try again."}), 500
+    try:
+        order_service.update(order_id, {"selected_platforms": platform_raw, "platforms_count": 1})
+    except Exception as e:
+        print(f"[captions-sample] selected_platforms update note: {e}")
 
     thread = threading.Thread(target=_run_sample_generation_and_deliver, args=(order_id,))
     thread.daemon = False

@@ -479,17 +479,19 @@
       </div>
       {% if is_sample_pack|default(false) %}
       <div class="form-section">
-        <h2>Platform</h2>
+        <h2>Platform <span class="intake-h2-meta">(required)</span></h2>
         <p class="field-helper" style="margin-bottom: 0.5rem; line-height: 1.45;">Pick one — we'll write your 3 sample captions for that platform.</p>
-        <div class="intake-checkbox-group" role="group" aria-label="Platform selection" id="platform-btn-group" data-testid="platform" data-max-platforms="1" data-platforms-locked="false">
+        <div class="intake-checkbox-group" role="group" aria-label="Platform selection" aria-required="true" id="platform-btn-group" data-testid="platform" data-max-platforms="1" data-platforms-locked="false" data-platform-required="true">
           <button type="button" class="platform-btn" data-platform="Instagram & Facebook">Instagram &amp; Facebook</button>
           <button type="button" class="platform-btn" data-platform="LinkedIn">LinkedIn</button>
           <button type="button" class="platform-btn" data-platform="TikTok">TikTok</button>
           <button type="button" class="platform-btn" data-platform="Pinterest">Pinterest</button>
         </div>
-        <input type="hidden" id="platform" name="platform" value="{{ existing_intake.get('platform', '') or 'Instagram & Facebook' }}">
-        {% set _sample_default_platform = (existing_intake.get('platform', '') or 'Instagram & Facebook') %}
-        <p id="sample-stories-note" class="field-helper" style="margin: 0.75rem 0 0; font-size: 0.85rem; color: #555;{% if 'Instagram & Facebook' not in _sample_default_platform %} display: none;{% endif %}">Want Story prompts too? Stories are available as an add-on with the full <a href="/captions" style="color: #000; font-weight: 600;">30-day pack</a> — not included in the sample.</p>
+        {# No default platform for samples — customer must choose before submit. #}
+        <input type="hidden" id="platform" name="platform" value="{{ existing_intake.get('platform', '') }}" required>
+        <p id="platform-required-hint" class="field-helper" style="display:none; color:#c00; font-weight:600; margin: 0.5rem 0 0;">Please select a platform.</p>
+        {% set _sample_saved_platform = existing_intake.get('platform', '') %}
+        <p id="sample-stories-note" class="field-helper" style="margin: 0.75rem 0 0; font-size: 0.85rem; color: #555;{% if 'Instagram & Facebook' not in (_sample_saved_platform or '') %} display: none;{% endif %}">Want Story prompts too? Stories are available as an add-on with the full <a href="/captions" style="color: #000; font-weight: 600;">30-day pack</a> — not included in the sample.</p>
       </div>
       {% else %}
       <div class="form-section">
@@ -1314,6 +1316,8 @@
               selected = [val];
             }
             render();
+            var reqHint = document.getElementById('platform-required-hint');
+            if (reqHint && selected.length) reqHint.style.display = 'none';
           });
         });
       }
@@ -1488,6 +1492,20 @@
         syncAudience();
         syncVoiceWords();
         if (document.querySelectorAll('.platform-btn, input[name="platform_cb"]').length) syncPlatforms();
+        var platformGroup = document.getElementById('platform-btn-group');
+        var platformRequired = platformGroup && platformGroup.getAttribute('data-platform-required') === 'true';
+        var platformHint = document.getElementById('platform-required-hint');
+        var platformElCheck = document.getElementById('platform');
+        if (platformRequired) {
+          var platformVal = (platformElCheck && platformElCheck.value || '').trim();
+          if (!platformVal) {
+            if (platformHint) { platformHint.style.display = 'block'; }
+            if (platformGroup && platformGroup.scrollIntoView) platformGroup.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            if (hintEl) { hintEl.textContent = 'Please select a platform.'; hintEl.style.display = 'block'; if (typeof window.lumoIntakeScrollTo === 'function') window.lumoIntakeScrollTo(hintEl); }
+            return;
+          }
+          if (platformHint) { platformHint.style.display = 'none'; }
+        }
         var vwoReview = document.getElementById('voice_words_other');
         if (vwoReview) {
           if (!getVal('voice_words')) {
@@ -1572,6 +1590,15 @@
         syncAudience();
         syncVoiceWords();
         if (document.querySelectorAll('.platform-btn, input[name="platform_cb"]').length) syncPlatforms();
+        var platformGroupSubmit = document.getElementById('platform-btn-group');
+        var platformRequiredSubmit = platformGroupSubmit && platformGroupSubmit.getAttribute('data-platform-required') === 'true';
+        if (platformRequiredSubmit && !getVal('platform')) {
+          var platformHintSubmit = document.getElementById('platform-required-hint');
+          if (platformHintSubmit) { platformHintSubmit.style.display = 'block'; }
+          showForm();
+          if (platformGroupSubmit && platformGroupSubmit.scrollIntoView) platformGroupSubmit.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return;
+        }
         var vwoSubmit = document.getElementById('voice_words_other');
         if (vwoSubmit) {
           if (!getVal('voice_words')) {

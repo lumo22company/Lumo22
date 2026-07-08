@@ -335,7 +335,8 @@ class CaptionOrderService:
             "status": "awaiting_intake",
             "product_type": SAMPLE_PRODUCT_TYPE,
             "platforms_count": 1,
-            "selected_platforms": "Instagram & Facebook",
+            # Customer must choose platform on the sample form — no default preselection.
+            "selected_platforms": "",
             "include_stories": False,
             "currency": "gbp",
         }

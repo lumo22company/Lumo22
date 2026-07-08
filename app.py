@@ -716,11 +716,15 @@ def captions_intake_page():
                     order = enrich_order_intake_from_checkout_session(svc, order)
                 # Always seed plan + is_oneoff from the order row so downstream flags (pending_oneoff_intake,
                 # subscribe_url, prefilled_from_sample_review_mode) work even when intake is still empty
-                # (e.g. fresh paid one-off awaiting first form submission). Sample rows are coerced to
-                # the canonical 1-platform Instagram & Facebook one-off shape, matching the sample form.
+                # (e.g. fresh paid one-off awaiting first form submission). Samples are 1-platform;
+                # the customer picks the platform on the form (no default preselection).
                 if _order_is_sample:
                     platforms_count = 1
-                    selected_platforms = "Instagram & Facebook"
+                    _sample_intake = order.get("intake") if isinstance(order.get("intake"), dict) else {}
+                    selected_platforms = (
+                        (_sample_intake.get("platform") or "").strip()
+                        or (order.get("selected_platforms") or "").strip()
+                    )
                     stories_paid = False
                     is_oneoff = True
                 else:
@@ -841,7 +845,15 @@ def captions_intake_page():
     if not prefilled_platform and selected_platforms:
         prefilled_platform = selected_platforms
     # Checkout links often use ?platforms=1 without ?selected=; Stripe metadata then omits selected_platforms.
-    if not prefilled_platform and order and platforms_count == 1:
+    # Samples intentionally have no default — customer must pick a platform on the form.
+    from services.caption_order_service import is_sample_pack_order as _is_sample_for_prefill
+
+    if (
+        not prefilled_platform
+        and order
+        and platforms_count == 1
+        and not _is_sample_for_prefill(order)
+    ):
         prefilled_platform = "Instagram & Facebook"
     if account_hub_plan_picker and upgrade_selected:
         prefilled_platform = upgrade_selected
