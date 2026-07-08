@@ -2304,12 +2304,11 @@ If you didn't request this, you can ignore this email. Your email address will s
             "Thanks for requesting a 3-caption sample from Lumo 22.\n\n"
             "Complete this short form (about 2 minutes) and we'll email you 3 captions written in your brand voice:\n\n"
             f"{intake_url.strip()}\n\n"
-            "No card required.\n\n"
             "If this landed in spam or promotions, mark it as Not spam so your captions email arrives in your inbox.\n\n"
             "— Lumo 22"
         )
         content = f"""<p style="margin:0 0 16px;">Hi,</p>
-<p style="margin:0 0 16px;">Thanks for requesting a <strong>3-caption sample</strong> from Lumo 22. No card required.</p>
+<p style="margin:0 0 16px;">Thanks for requesting a <strong>3-caption sample</strong> from Lumo 22.</p>
 <p style="margin:0 0 12px;"><strong>Next step:</strong> complete this short form (about 2 minutes) so we can write in your voice.</p>
 {_email_cta_button(intake_url.strip(), "Complete the form")}
 <p style="margin:0 0 8px; font-size:14px; color:{BRAND_MUTED};">Or copy and paste this link into your browser:</p>
