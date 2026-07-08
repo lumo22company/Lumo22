@@ -20,7 +20,7 @@
     .sample-card label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem; color: #f5f5f2; }
     .sample-card input[type="email"] { width: 100%; box-sizing: border-box; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: #111; color: #fff; font-size: 1rem; margin-bottom: 1rem; }
     .sample-error { color: #ff6b6b; font-size: 0.9rem; margin: 0 0 1rem; display: none; }
-    .sample-success { display: none; margin-top: 1rem; padding: 1rem; background: rgba(255,242,0,0.12); border-radius: 8px; color: #f5f5f2; line-height: 1.55; }
+    .sample-success { display: none; margin-top: 1rem; padding: 1rem; background: transparent; border-radius: 8px; color: #f5f5f2; line-height: 1.55; }
     .sample-back { margin-top: 1.5rem; font-size: 0.9rem; }
     .sample-back a { color: var(--lum-gold, #fff200); }
   </style>
@@ -39,7 +39,7 @@
       </form>
       <div id="sample-success" class="sample-success">
         <p style="margin: 0 0 0.5rem;"><strong>Check your inbox.</strong> We sent a link to complete your short form.</p>
-        <p style="margin: 0; font-size: 0.9rem;">Didn't get it? Check spam, or <a href="#" id="sample-open-intake" style="color: var(--lum-gold);">open your form here</a>.</p>
+        <p style="margin: 0; font-size: 0.9rem;">Didn't get it? Check spam, or <a href="#" id="sample-open-intake" target="_blank" rel="noopener noreferrer" style="color: var(--lum-gold); position: relative; z-index: 2;">open your form here</a>.</p>
       </div>
     </div>
     <p class="sample-back"><a href="/captions">← Full 30-day pack</a></p>

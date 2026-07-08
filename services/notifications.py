@@ -213,6 +213,27 @@ def _email_footer_html() -> str:
     </tr>"""
 
 
+def _email_cta_button(url: str, label: str) -> str:
+    """Outlook-safe gold CTA. Prefer table + bgcolor so the full button area stays clickable."""
+    import html
+
+    safe_href = html.escape((url or "").strip(), quote=True)
+    safe_label = html.escape((label or "").strip())
+    if not safe_href:
+        return f'<p style="margin:0 0 24px; font-weight:600;">{safe_label}</p>'
+    return f"""<table role="presentation" border="0" cellspacing="0" cellpadding="0" style="margin:0 0 24px;">
+  <tr>
+    <td align="left" bgcolor="{BRAND_GOLD}" style="border-radius:10px; background:{BRAND_GOLD};">
+      <a href="{safe_href}" target="_blank" rel="noopener noreferrer" style="display:inline-block; padding:14px 28px; font-family:{BRAND_FONT}; font-size:16px; font-weight:600; line-height:1.25; color:{BRAND_BLACK}; text-decoration:none; border-radius:10px; background:{BRAND_GOLD}; mso-padding-alt:0;">
+        <!--[if mso]><i style="letter-spacing:28px; mso-font-width:-100%; mso-text-raise:21pt;">&nbsp;</i><![endif]-->
+        <span style="color:{BRAND_BLACK}; text-decoration:none;">{safe_label}</span>
+        <!--[if mso]><i style="letter-spacing:28px; mso-font-width:-100%;">&nbsp;</i><![endif]-->
+      </a>
+    </td>
+  </tr>
+</table>"""
+
+
 def _email_wrapper(content: str) -> str:
     """Wrap content in PDF-cohesive email shell (header + content + footer)."""
     header = _email_header_html()
@@ -1266,9 +1287,9 @@ def _intake_link_email_html(
 <p style="margin:0 0 16px;">We've received your payment — thank you.</p>
 {summary_block}<p style="margin:0 0 12px;"><strong>Next step: if you haven&rsquo;t already, complete this short form so we can create your captions. It takes about 2 minutes.</strong></p>
 {timing_tip}
-<p style="margin:0 0 24px;"><a href="{safe_url}" style="display:inline-block; padding:14px 28px; background:{BRAND_GOLD}; color:{BRAND_BLACK}; text-decoration:none; border-radius:10px; font-weight:600;">Complete the form</a></p>
+{_email_cta_button(intake_url, "Complete the form")}
 <p style="margin:0 0 8px; font-size:14px; color:{BRAND_MUTED};">Or copy and paste this link into your browser:</p>
-<p style="margin:0 0 24px; font-size:13px; word-break:break-all; color:#333;">{safe_url}</p>
+<p style="margin:0 0 24px; font-size:13px; word-break:break-all; color:#333;"><a href="{safe_url}" target="_blank" rel="noopener noreferrer" style="color:#333; text-decoration:underline;">{safe_url}</a></p>
 <p style="margin:0 0 16px;">Once you submit, we'll generate your 30 captions and send them to you by email within a few minutes.</p>
 <p style="margin:0 0 16px;">Thanks for choosing us.</p>
 <p style="margin:0;">— Lumo 22</p>"""
@@ -1302,7 +1323,7 @@ def _captions_intake_reminder_email_html(
 {business_line}
 {thanks_block}
 <p style="margin:0 0 12px;">Complete this short form so we can create your pack:</p>
-<p style="margin:0 0 24px;"><a href="{safe_url}" style="display:inline-block; padding:14px 28px; background:{BRAND_GOLD}; color:{BRAND_BLACK}; text-decoration:none; border-radius:10px; font-weight:600;">Complete your form</a></p>
+{_email_cta_button(intake_url, "Complete your form")}
 <p style="margin:0 0 8px; font-size:14px; color:{BRAND_MUTED};">Or copy and paste this link into your browser:</p>
 <p style="margin:0 0 24px; font-size:13px; word-break:break-all; color:#333;">{safe_url}</p>
 <p style="margin:0 0 16px;">This takes about 5–10 minutes. Once it's done, we'll generate your captions and email your pack.</p>
@@ -2287,12 +2308,19 @@ If you didn't request this, you can ignore this email. Your email address will s
         content = f"""<p style="margin:0 0 16px;">Hi,</p>
 <p style="margin:0 0 16px;">Thanks for requesting a <strong>free 3-caption sample</strong> from Lumo 22. No card required.</p>
 <p style="margin:0 0 12px;"><strong>Next step:</strong> complete this short form (about 2 minutes) so we can write in your voice.</p>
-<p style="margin:0 0 24px;"><a href="{safe_url}" style="display:inline-block; padding:14px 28px; background:{BRAND_GOLD}; color:{BRAND_BLACK}; text-decoration:none; border-radius:10px; font-weight:600;">Complete the form</a></p>
-<p style="margin:0 0 8px; font-size:14px; color:{BRAND_MUTED};">Or copy this link:</p>
-<p style="margin:0 0 24px; font-size:13px; word-break:break-all; color:#333;">{safe_url}</p>
+{_email_cta_button(intake_url.strip(), "Complete the form")}
+<p style="margin:0 0 8px; font-size:14px; color:{BRAND_MUTED};">Or copy and paste this link into your browser:</p>
+<p style="margin:0 0 24px; font-size:13px; word-break:break-all; color:#333;"><a href="{safe_url}" target="_blank" rel="noopener noreferrer" style="color:#333; text-decoration:underline;">{safe_url}</a></p>
 <p style="margin:0 0 16px;">Once you submit, your 3 sample captions arrive by email within a few minutes.</p>
 <p style="margin:0;">— Lumo 22</p>"""
-        return self.send_email(to_email, subject, body, html_body=_email_wrapper(content))
+        # Disable SendGrid click tracking so the form URL is not rewritten (breaks some clients).
+        return self.send_email(
+            to_email,
+            subject,
+            body,
+            html_body=_email_wrapper(content),
+            disable_click_tracking=True,
+        )
 
     def send_sample_caption_delivery_email(
         self,
@@ -2517,10 +2545,14 @@ You can also update your form from that page, or later under Edit form after you
         to_email: str,
         subject: str,
         body: str,
-        html_body: Optional[str] = None
+        html_body: Optional[str] = None,
+        *,
+        disable_click_tracking: bool = False,
     ) -> bool:
         """
         Send email using SendGrid.
+
+        disable_click_tracking: when True, leave hrefs as-is (important for intake CTAs).
         
         Returns:
             bool indicating success
@@ -2548,6 +2580,15 @@ You can also update your form from that page, or later under Edit form after you
                 plain_text_content=body,
                 html_content=html_content
             )
+            if disable_click_tracking:
+                try:
+                    from sendgrid.helpers.mail import ClickTracking, TrackingSettings
+
+                    tracking = TrackingSettings()
+                    tracking.click_tracking = ClickTracking(enable=False, enable_text=False)
+                    message.tracking_settings = tracking
+                except Exception as track_err:
+                    print(f"[SendGrid] Could not disable click tracking: {track_err}")
             response = self.sendgrid_client.send(message)
             status = getattr(response, "status_code", None)
             ok = status in [200, 201, 202]
