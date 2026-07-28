@@ -296,17 +296,19 @@
   color: var(--lum-text-muted);
 }
 
-/* Captions page — slide in from left (same as landing intro) ——— */
-.captions-reveal[data-reveal] .dfd-heading,
-.captions-reveal .dfd-heading[data-reveal],
-.captions-reveal .dfd-hero-title[data-reveal],
-.captions-reveal .product-section-title[data-reveal],
-.captions-reveal .product-section-desc[data-reveal],
-.captions-reveal .dfd-lead[data-reveal],
-.captions-reveal p[data-reveal],
-.captions-reveal li[data-reveal],
-.captions-reveal blockquote[data-reveal],
-.captions-reveal div[data-reveal] {
+/* Captions page — slide in from left (same as landing intro).
+   Scoped to .js-reveal (set by scroll-reveal.js once it can actually reveal) so that a
+   blocked or failed script degrades to plain visible text instead of a blank page. */
+.js-reveal .captions-reveal[data-reveal] .dfd-heading,
+.js-reveal .captions-reveal .dfd-heading[data-reveal],
+.js-reveal .captions-reveal .dfd-hero-title[data-reveal],
+.js-reveal .captions-reveal .product-section-title[data-reveal],
+.js-reveal .captions-reveal .product-section-desc[data-reveal],
+.js-reveal .captions-reveal .dfd-lead[data-reveal],
+.js-reveal .captions-reveal p[data-reveal],
+.js-reveal .captions-reveal li[data-reveal],
+.js-reveal .captions-reveal blockquote[data-reveal],
+.js-reveal .captions-reveal div[data-reveal] {
   opacity: 0;
   transform: translateX(-48px);
   transition: opacity 1.2s var(--ease-out), transform 1.2s var(--ease-out);
@@ -481,9 +483,11 @@
 }
 
 /* Hero — full-width dark, left-aligned, bold condensed, vertically centered */
+/* Hero sizing is tuned so the CTA clears the fold on a laptop. It previously landed at ~719px
+   in a 720px viewport — present in the DOM, invisible to the visitor without scrolling. */
 .dfd-hero {
   position: relative;
-  padding: 6rem var(--space-xl) 5rem;
+  padding: 4.5rem var(--space-xl) 4rem;
   min-height: 70vh;
   display: flex;
   align-items: center;
@@ -498,13 +502,13 @@
   max-width: var(--max-width);
   margin: 0 auto;
   width: 100%;
-  padding-top: 3rem;
+  padding-top: 1.25rem;
 }
 
 .dfd-hero-title {
   font-family: var(--dfd-font-condensed);
   font-weight: 700;
-  font-size: clamp(4rem, 12vw, 7.5rem);
+  font-size: clamp(3.5rem, 10vw, 6.25rem);
   letter-spacing: -0.02em;
   line-height: 1.1;
   color: var(--lum-text);

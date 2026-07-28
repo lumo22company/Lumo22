@@ -29,6 +29,8 @@
     .sample-proof .captions-example-block .example-label { color: var(--lum-gold, #fff200); }
     .sample-proof .captions-example-block .example-hashtags { color: #8f8f8b; }
     .sample-proof-note { margin: 0.85rem 0 0; font-size: 0.85rem; color: var(--lum-text-muted, #9a9a96); }
+    /* Trade label under each card — identifies whose voice it is without a full intro line. */
+    .sample-proof-caption { margin: 0.5rem 0 0; font-size: 0.8rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--lum-text-subtle, #7a7a76); }
     /* Mirrors the mobile label treatment /captions applies to the same component, so the
        caption column gets the width instead of a fixed label gutter. */
     @media (max-width: 768px) {
@@ -48,9 +50,39 @@
     .sample-success { display: none; margin-top: 1rem; padding: 1rem; background: transparent; border-radius: 8px; color: #f5f5f2; line-height: 1.55; }
     .sample-back { margin-top: 1.5rem; font-size: 0.9rem; }
     .sample-back a { color: var(--lum-gold, #fff200); }
+    .sample-reassure { margin: 0.75rem 0 0; font-size: 0.85rem; color: var(--lum-text-muted, #9a9a96); text-align: center; }
+    /* Solid yellow rather than another outline: the card already has a border, and a yellow
+       box around a yellow outlined button makes two rings that compete. Filled matches the
+       solid day-header on the caption cards below, so the loudest thing here is the action. */
+    .sample-page .sample-card .sample-cta-filled {
+      background: var(--lum-gold, #fff200) !important;
+      border-color: var(--lum-gold, #fff200) !important;
+      color: #000 !important;
+    }
+    .sample-page .sample-card .sample-cta-filled:hover { filter: brightness(1.08); }
+    .sample-page .sample-card { border-color: rgba(255, 242, 0, 0.28); }
+    /* This page exists to capture one email. Log in / Sign up are outlined yellow buttons by
+       default, which made the two least useful links for a first-time visitor the brightest
+       things on screen and put them in competition with the form. Quiet text here only. */
+    /* !important mirrors landing.css, which sets these button styles the same way. */
+    .sample-page .lumo-nav .lumo-nav-cta.lumo-nav-login,
+    .sample-page .lumo-nav .lumo-nav-cta.lumo-nav-signup {
+      border-color: transparent !important;
+      background: transparent !important;
+      color: var(--lum-text-muted, #9a9a96) !important;
+      box-shadow: none !important;
+      font-weight: 500;
+    }
+    .sample-page .lumo-nav .lumo-nav-cta.lumo-nav-login:hover,
+    .sample-page .lumo-nav .lumo-nav-cta.lumo-nav-signup:hover {
+      color: #f5f5f2 !important;
+      background: transparent !important;
+      border-color: transparent !important;
+    }
   </style>
 </head>
-<body class="lumo-landing product-page-captions">
+<body class="lumo-landing product-page-captions sample-page">
+  {% set nav_solid = true %}
   {% include '_lumo_nav.html' %}
   {# .captions-reveal + data-reveal + scroll-reveal.js reveal content on scroll, matching
      /captions. Deliberately NOT applied to .sample-card: the reveal CSS starts elements at
@@ -59,8 +91,28 @@
   <section class="sample-section captions-reveal">
     <h1>3 free sample captions</h1>
     <p class="lead" data-reveal>See how we write in your voice before you buy. A short form on the next page — mostly tick-boxes, about two minutes — then your 3 captions land in your inbox within minutes. No card required.</p>
-    <div class="sample-proof">
-      <p class="sample-proof-intro" data-reveal>This is the kind of thing you'll get back — written for one business, in its voice:</p>
+    {# The ask sits directly under the lead: campaign traffic landed here to hand over an email,
+       and on a phone the proof cards pushed it more than a screen down. Proof follows it. #}
+    <div class="sample-card">
+      <form id="sample-start-form" novalidate>
+        <label for="sample-email">Email</label>
+        <input type="email" id="sample-email" name="email" required autocomplete="email" placeholder="you@yourbusiness.com">
+        <p id="sample-error" class="sample-error" role="alert"></p>
+        <div id="sample-suggest" class="sample-suggest" role="alert"></div>
+        <button type="submit" class="dfd-btn dfd-btn-hero-cta captions-btn-swipe sample-cta-filled" id="sample-submit-btn" style="width: 100%;">Get my 3 free captions</button>
+        <p class="sample-reassure">No card required. One email, then a two-minute form.</p>
+      </form>
+      <div id="sample-success" class="sample-success">
+        <p style="margin: 0 0 0.75rem;"><strong>Check your inbox</strong> — we've emailed you a link to your short form.</p>
+        <p style="margin: 0; font-size: 0.9rem; color: var(--lum-text-muted, #9a9a96);">Look for an email from <strong style="color: #f5f5f2;">Lumo 22</strong> (hello@lumo22.com).</p>
+      </div>
+    </div>
+    <div class="sample-proof" style="margin: 2rem 0 0;">
+      {# Both examples share one intro and one note. Each card previously carried its own
+         framing line, and the repetition read as clutter more than the second card did. The
+         pair has to stay: one card looks like a sample, two different trades in two different
+         voices is the only on-page evidence that it adapts to your business. #}
+      <p class="sample-proof-intro" data-reveal>Two businesses, two completely different voices. This is what comes back:</p>
       <div class="captions-example-block example-block-captions" data-reveal>
         <div class="example-day-header">Day 5 — Soft Promotion</div>
         <div class="example-content">
@@ -78,24 +130,8 @@
           </div>
         </div>
       </div>
-      <p class="sample-proof-note" data-reveal>Written for a coach / consultant. Yours will sound like your business, not this one.</p>
-    </div>
-    <div class="sample-card">
-      <form id="sample-start-form" novalidate>
-        <label for="sample-email">Email</label>
-        <input type="email" id="sample-email" name="email" required autocomplete="email" placeholder="you@yourbusiness.com">
-        <p id="sample-error" class="sample-error" role="alert"></p>
-        <div id="sample-suggest" class="sample-suggest" role="alert"></div>
-        <button type="submit" class="dfd-btn dfd-btn-hero-cta captions-btn-swipe" id="sample-submit-btn" style="width: 100%;">Continue</button>
-      </form>
-      <div id="sample-success" class="sample-success">
-        <p style="margin: 0 0 0.75rem;"><strong>Check your inbox</strong> — we've emailed you a link to your short form.</p>
-        <p style="margin: 0; font-size: 0.9rem; color: var(--lum-text-muted, #9a9a96);">Look for an email from <strong style="color: #f5f5f2;">Lumo 22</strong> (hello@lumo22.com).</p>
-      </div>
-    </div>
-    <div class="sample-proof" style="margin: 2rem 0 0;">
-      <p class="sample-proof-intro" data-reveal>Another one, different business, different voice:</p>
-      <div class="captions-example-block example-block-captions" data-reveal>
+      <p class="sample-proof-caption" data-reveal>A coach / consultant.</p>
+      <div class="captions-example-block example-block-captions" data-reveal style="margin-top: 1.25rem;">
         <div class="example-day-header">Day 12 — Authority</div>
         <div class="example-content">
           <div class="example-row">
@@ -112,9 +148,13 @@
           </div>
         </div>
       </div>
+      <p class="sample-proof-caption" data-reveal>A hair salon.</p>
+      <p class="sample-proof-note" data-reveal>Yours will sound like your business, not either of these.</p>
     </div>
     <p class="sample-back"><a href="/captions#pricing">← Full 30-day pack</a></p>
   </section>
+  {% include '_footer.html' %}
+  <script src="{{ url_for('static', filename='js/attribution.js') }}?v={{ asset_version }}"></script>
   <script>
     (function () {
       var form = document.getElementById('sample-start-form');
@@ -186,7 +226,12 @@
         fetch('/api/captions-sample/start', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: email, confirm_email: confirmedEmail })
+          body: JSON.stringify({
+            email: email,
+            confirm_email: confirmedEmail,
+            // Campaign that brought them here; see static/js/attribution.js.
+            source: (window.lumoAttribution ? window.lumoAttribution() : '')
+          })
         })
           .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, status: r.status, body: j }; }); })
           .then(function (res) {
