@@ -765,6 +765,12 @@ def captions_intake_page():
                     existing_intake = order.get("intake") or {}
                 if not _order_is_sample:
                     # copy_from: only prefill when this order was explicitly upgraded from that one-off (one-off→subscription flow).
+                    # The src_email == cur_email checks below stay even though checkout now proves the
+                    # requester owns the source before writing upgraded_from_token: rows written before
+                    # that check existed, and scripts/backfill_caption_order_from_checkout_session.py
+                    # replaying an old session's metadata, can still carry a token nobody proved they
+                    # owned. Dropping the guard would reopen those retroactively. The cost of keeping it
+                    # is only a blank form for someone who pays with a different address than they sampled with.
                     if (not existing_intake or _intake_missing_substantive_brief_fields(existing_intake)) and copy_from:
                         upgraded_from = (order.get("upgraded_from_token") or "").strip()
                         if upgraded_from and upgraded_from == copy_from:
@@ -1143,24 +1149,36 @@ def captions_checkout_page():
         params["ref"] = ref
     business_name = (request.args.get("business_name") or "").strip()
     business_key = (request.args.get("business_key") or "").strip()
-    # Sample → paid one-off upgrade: pass copy_from through to the API checkout endpoint, but only
-    # when the token genuinely points to a sample order (defensive: ignores stale / invalid tokens
-    # so paid one-off→one-off flows aren't accidentally reusing intake data).
+    # Sample → paid one-off upgrade: pass copy_from through to the API checkout endpoint, which
+    # honours it only for a sample the requester has proved is theirs. This page shows nothing
+    # from the sample (business name included) unless the visitor is logged in as its owner —
+    # the token travels in a URL, so on its own it proves nothing about who is holding it.
+    # Everyone else is asked for the address they used for the sample, and the checkout API
+    # re-checks it; see owned_sample_order_for_upgrade.
     sample_copy_from = (request.args.get("copy_from") or "").strip()
+    sample_upgrade_needs_email = False
     if sample_copy_from:
+        from api.captions_routes import owned_sample_order_for_upgrade
+
         try:
             from services.caption_order_service import CaptionOrderService, is_sample_pack_order
 
-            _src = CaptionOrderService().get_by_token(sample_copy_from)
+            _is_sample_token = is_sample_pack_order(CaptionOrderService().get_by_token(sample_copy_from))
         except Exception:
-            _src = None
-        if _src and is_sample_pack_order(_src):
+            _is_sample_token = False
+        if _is_sample_token:
             params["copy_from"] = sample_copy_from
-            if not business_name:
-                _si = _src.get("intake") if isinstance(_src.get("intake"), dict) else {}
-                _bn = (_si.get("business_name") or "").strip() if _si else ""
-                if _bn:
-                    business_name = _bn
+            current_customer = get_current_customer()
+            account_email = (current_customer.get("email") or "").strip().lower() if current_customer else ""
+            _src = owned_sample_order_for_upgrade(sample_copy_from, account_email)
+            if _src:
+                if not business_name:
+                    _si = _src.get("intake") if isinstance(_src.get("intake"), dict) else {}
+                    _bn = (_si.get("business_name") or "").strip() if _si else ""
+                    if _bn:
+                        business_name = _bn
+            else:
+                sample_upgrade_needs_email = True
     if business_name:
         params["business_name"] = business_name
     if business_key:
@@ -1188,6 +1206,7 @@ def captions_checkout_page():
         add_platforms_url=add_platforms_url,
         back_to_captions_url=back_to_captions_url,
         checkout_business_name=business_name,
+        sample_upgrade_needs_email=sample_upgrade_needs_email,
     )
 
 

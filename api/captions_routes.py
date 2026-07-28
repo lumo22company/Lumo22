@@ -551,6 +551,40 @@ def _order_business_keys(order: dict) -> set:
     return keys
 
 
+def owned_sample_order_for_upgrade(copy_from: str, *proven_emails: Optional[str]) -> Optional[dict]:
+    """
+    Return the source sample order for a sample → paid upgrade, but only when the requester
+    proved they own it. Returns None otherwise (including for non-sample tokens).
+
+    copy_from arrives in a URL, so possession of the token is not ownership: sample links are
+    emailed, forwarded and pasted around. Ownership is proved by an email the requester supplied
+    to us on this request — a logged-in account, or the address typed into the checkout page —
+    matching the sample's own customer_email. Callers must not derive that email from the sample
+    row itself, which would make the token self-authorising again and disclose the sample
+    owner's address.
+
+    Mismatches are dropped silently by the caller rather than reported, so this cannot be used
+    as an "is this address on that sample?" oracle.
+    """
+    token = (copy_from or "").strip()
+    if not token:
+        return None
+    try:
+        from services.caption_order_service import CaptionOrderService, is_sample_pack_order
+
+        src_order = CaptionOrderService().get_by_token(token)
+    except Exception:
+        return None
+    if not src_order or not is_sample_pack_order(src_order):
+        return None
+    src_email = (src_order.get("customer_email") or "").strip().lower()
+    if not src_email:
+        return None
+    claimed = {(e or "").strip().lower() for e in proven_emails}
+    claimed.discard("")
+    return src_order if src_email in claimed else None
+
+
 def _target_business_key_from_request(copy_from: str, explicit_business_key: str, business_name_raw: str) -> str:
     """Build canonical business key for duplicate-subscription guard."""
     if copy_from:
@@ -834,16 +868,17 @@ def captions_checkout():
     if not selected and platforms == 1:
         selected = "Instagram & Facebook"
     stories = _parse_stories(request)
-    checkout_email, email_error = _parse_checkout_email(request)
+    submitted_email, email_error = _parse_checkout_email(request)
     if email_error:
         return redirect(f"{request.host_url.rstrip('/')}/captions?error=checkout_email_invalid#pricing", code=302)
-    # Match subscription checkout: prefill Stripe email when logged in (one-off page has no email fields).
-    if not checkout_email:
-        from api.auth_routes import get_current_customer
+    from api.auth_routes import get_current_customer
 
-        cust = get_current_customer()
-        if cust and (cust.get("email") or "").strip():
-            checkout_email = (cust.get("email") or "").strip().lower()
+    cust = get_current_customer()
+    account_email = (cust.get("email") or "").strip().lower() if cust else ""
+    # Match subscription checkout: prefill Stripe email when logged in (the one-off page only asks
+    # for an email when upgrading from a sample). Both of these come from the requester, so they
+    # are the only addresses that can prove ownership of a copy_from sample below.
+    checkout_email = submitted_email or account_email
     extra_price_id = (getattr(Config, "STRIPE_CAPTIONS_EXTRA_PLATFORM_PRICE_ID", None) or "").strip()
     stories_price_id = (getattr(Config, "STRIPE_CAPTIONS_STORIES_PRICE_ID", None) or "").strip()
     amounts = _CURRENCY_ADDON_AMOUNTS.get(currency, _CURRENCY_ADDON_AMOUNTS["gbp"])
@@ -892,6 +927,13 @@ def captions_checkout():
     metadata = {"product": "captions", "platforms": str(platforms), "include_stories": "1" if stories else "0"}
     if selected:
         metadata["selected_platforms"] = selected
+    # Campaign attribution rides along in Stripe metadata so the webhook can stamp it on the paid
+    # order — the only link between "clicked the ad" and "paid".
+    from services.caption_order_service import normalize_attribution_source
+
+    attribution_source = normalize_attribution_source(request.args.get("source"))
+    if attribution_source:
+        metadata["source"] = attribution_source
     normalized_business_name = _normalize_business_key(business_name_raw)
     if normalized_business_name and not explicit_business_key:
         metadata["business_key"] = normalized_business_name
@@ -901,21 +943,15 @@ def captions_checkout():
         metadata["business_name"] = business_name_raw[:120]
     # Sample → paid one-off upgrade: copy_from points to a sample order whose intake should
     # prefill the new paid order's intake form. Stripe metadata.copy_from is read by the webhook
-    # to set upgraded_from_token. We validate the source is the customer's own sample row and
-    # prefill the Stripe checkout email so the same-email guard on intake prefill matches.
+    # to set upgraded_from_token, so it is only honoured when the requester proved the sample is
+    # theirs (logged in as its owner, or typed its address on the checkout page). An unproven
+    # token is dropped whole: it must not seed metadata, and it must never pull the sample's
+    # customer_email or business name into a stranger's checkout session.
     copy_from_raw = (request.args.get("copy_from") or "").strip()
     if copy_from_raw:
-        try:
-            from services.caption_order_service import CaptionOrderService, is_sample_pack_order
-
-            src_order = CaptionOrderService().get_by_token(copy_from_raw)
-        except Exception:
-            src_order = None
-        if src_order and is_sample_pack_order(src_order):
+        src_order = owned_sample_order_for_upgrade(copy_from_raw, submitted_email, account_email)
+        if src_order:
             metadata["copy_from"] = copy_from_raw
-            src_email = (src_order.get("customer_email") or "").strip().lower()
-            if not checkout_email and src_email and "@" in src_email:
-                checkout_email = src_email
             if not business_name_raw:
                 src_intake = src_order.get("intake") if isinstance(src_order.get("intake"), dict) else {}
                 src_business = (src_intake.get("business_name") or "").strip() if src_intake else ""
@@ -923,6 +959,8 @@ def captions_checkout():
                     metadata["business_name"] = src_business[:120]
                     if not metadata.get("business_key"):
                         metadata["business_key"] = _normalize_business_key(src_business)
+        else:
+            print("[captions-checkout] copy_from ignored: sample ownership not proven for this checkout")
     create_params = {
         "mode": "payment",
         "line_items": line_items,
@@ -1083,6 +1121,11 @@ def captions_checkout_subscription():
     cancel_url = f"{base}/captions"
     metadata = {"product": "captions_subscription", "platforms": str(platforms), "include_stories": "1" if stories else "0"}
     metadata["reminder_opt_out"] = "0" if reminders_on else "1"
+    from services.caption_order_service import normalize_attribution_source
+
+    _sub_source = normalize_attribution_source(request.args.get("source"))
+    if _sub_source:
+        metadata["source"] = _sub_source
     resubscribe_restart_checkout_day = False
     if selected:
         metadata["selected_platforms"] = selected
@@ -1696,6 +1739,12 @@ def captions_intake_link():
                 session_mode = str(_get_session_attr(session, "mode") or "").strip().lower()
                 is_sub_checkout = bool(stripe_subscription_id) or session_mode == "subscription"
                 upgraded_from = (copy_from if (copy_from and is_sub_checkout) else None)
+                # This path races the webhook to create the order, so it has to carry the campaign
+                # tag too — otherwise attribution depends on which one wins.
+                if hasattr(meta, "get"):
+                    _meta_source = (meta.get("source") or "").strip() or None
+                else:
+                    _meta_source = (getattr(meta, "source", None) or "").strip() or None
                 order = order_service.create_order(
                     customer_email=customer_email,
                     stripe_session_id=session_id,
@@ -1706,6 +1755,7 @@ def captions_intake_link():
                     include_stories=include_stories,
                     currency=currency,
                     upgraded_from_token=upgraded_from,
+                    source=_meta_source,
                 )
                 # Persist business context early (before full intake) so emails and duplicate guard have stable keys.
                 order = seed_intake_business_from_stripe_metadata(order_service, order, meta)
@@ -2954,7 +3004,11 @@ def captions_sample_start():
         if (getattr(Config, "STRIPE_CAPTIONS_PRICE_ID_EUR", None) or "").strip():
             sample_currency_options.append("eur")
         order = order_service.create_sample_order(
-            email, currency=resolve_default_currency(request, sample_currency_options)
+            email,
+            currency=resolve_default_currency(request, sample_currency_options),
+            # First-touch campaign tag from the landing page (static/js/attribution.js), so a
+            # campaign's signups can be counted directly instead of inferred from currency.
+            source=data.get("source"),
         )
     except Exception as e:
         print(f"[captions-sample/start] create failed: {e}")

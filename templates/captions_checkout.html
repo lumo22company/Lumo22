@@ -95,6 +95,13 @@
       <p style="color: var(--lum-text-muted); margin: 0.65rem 0 0; font-size: 0.9rem; line-height: 1.5;">For one-off packs, your 30-day caption calendar starts when you submit the form, not the day you paid.</p>
 
       {% if not platforms_invalid|default(false) %}
+      {% if sample_upgrade_needs_email %}
+      <div class="checkout-business-field">
+        <label for="checkout-sample-email">Email you used for your free sample <span style="font-weight:400;opacity:.85;">(optional)</span></label>
+        <input type="email" id="checkout-sample-email" name="email" maxlength="200" autocomplete="email" placeholder="you@example.com">
+        <p style="font-size: 0.85rem; color: var(--lum-text-muted); margin: 0.4rem 0 0; line-height: 1.5;">Enter it and we'll carry your sample answers over so the form after payment is already filled in. Leave it blank and you'll just fill the short form from scratch.</p>
+      </div>
+      {% endif %}
       <div class="checkout-business-field">
         <label for="checkout-business-name">Business or brand name <span style="font-weight:400;opacity:.85;">(optional)</span></label>
         <input type="text" id="checkout-business-name" name="business_name" maxlength="120" autocomplete="organization" placeholder="Shown in your order confirmation emails" value="{{ checkout_business_name|default('')|e }}">
@@ -115,10 +122,12 @@
   {% include '_footer.html' %}
   {% if not platforms_invalid|default(false) %}
   {% include '_terms_modal.html' %}
+  <script src="{{ url_for('static', filename='js/attribution.js') }}?v={{ asset_version }}"></script>
   <script>
     (function() {
       var btn = document.getElementById('btn-continue');
       var input = document.getElementById('checkout-business-name');
+      var sampleEmail = document.getElementById('checkout-sample-email');
       if (!btn || !input) return;
       var baseUrl = (btn.getAttribute('data-api-url') || btn.getAttribute('href') || '').trim();
       var REF_SESSION_KEY = 'lumo_captions_ref';
@@ -126,6 +135,9 @@
         return url
           .replace(/[&?]business_name=[^&]*/g, '')
           .replace(/[&?]business_key=[^&]*/g, '')
+          .replace(/[&?]email=[^&]*/g, '')
+          .replace(/[&?]email_confirm=[^&]*/g, '')
+          .replace(/[&?]source=[^&]*/g, '')
           .replace(/\?&/g, '?')
           .replace(/[?&]$/, '');
       }
@@ -142,17 +154,36 @@
           return u;
         }
       }
+      function mergeAttributionSource(u) {
+        var src = window.lumoAttribution ? window.lumoAttribution() : '';
+        if (!src) return u;
+        var sep = u.indexOf('?') !== -1 ? '&' : '?';
+        return u + sep + 'source=' + encodeURIComponent(src);
+      }
       function updateLink() {
-        var u = mergeStoredReferralRef(stripBusinessParams(baseUrl));
+        var u = mergeAttributionSource(mergeStoredReferralRef(stripBusinessParams(baseUrl)));
         var name = (input.value || '').trim();
         if (name) {
           var sep = u.indexOf('?') !== -1 ? '&' : '?';
           u = u + sep + 'business_name=' + encodeURIComponent(name.slice(0, 120));
         }
+        // Sample upgrade only: the address proves the sample is theirs (checked again server-side)
+        // and prefills Stripe. email_confirm matches the API's two-field format.
+        // Half-typed addresses are left off the link: the API rejects a malformed email by
+        // bouncing back to /captions, which would throw away the checkout they were mid-way through.
+        var em = sampleEmail ? (sampleEmail.value || '').trim() : '';
+        if (em && em.indexOf('@') > 0 && em.indexOf('.', em.indexOf('@')) > 0) {
+          var sepEmail = u.indexOf('?') !== -1 ? '&' : '?';
+          u = u + sepEmail + 'email=' + encodeURIComponent(em) + '&email_confirm=' + encodeURIComponent(em);
+        }
         btn.setAttribute('href', u);
       }
       input.addEventListener('input', updateLink);
       input.addEventListener('change', updateLink);
+      if (sampleEmail) {
+        sampleEmail.addEventListener('input', updateLink);
+        sampleEmail.addEventListener('change', updateLink);
+      }
       updateLink();
     })();
   </script>
