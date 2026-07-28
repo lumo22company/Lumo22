@@ -596,6 +596,19 @@ def captions_page():
         currencies_available.append({"code": "usd", "label": "USD", "symbol": "$"})
     if has_eur:
         currencies_available.append({"code": "eur", "label": "EUR", "symbol": "€"})
+    # Default the displayed currency to the visitor's region (US outreach was landing on
+    # GBP prices). An explicit ?currency= and a previously chosen currency both win over
+    # this; see services/request_geo.py.
+    from services.request_geo import resolve_default_currency
+
+    explicit_currency = (request.args.get('currency') or '').strip().lower()
+    available_codes = [c["code"] for c in currencies_available]
+    if explicit_currency in available_codes:
+        default_currency = explicit_currency
+    else:
+        default_currency = resolve_default_currency(request, available_codes)
+    # Selector renders the first entry as pressed, so lead with the default.
+    currencies_available.sort(key=lambda c: c["code"] != default_currency)
     r = make_response(render_template(
         'captions.html',
         captions_payment_link=Config.CAPTIONS_PAYMENT_LINK,
@@ -605,6 +618,7 @@ def captions_page():
         stories_addon_available=stories_addon_available,
         checkout_error=checkout_error,
         currencies_available=currencies_available,
+        default_currency=default_currency,
         captions_prices=CAPTIONS_DISPLAY_PRICES,
     ))
     r.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'

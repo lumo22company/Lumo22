@@ -409,12 +409,14 @@
         <input type="text" id="business_type_other" name="business_type_other" placeholder="Specify your business type" class="intake-other-field" style="display: none; margin-top: 0.5rem;" value="{{ existing_intake.get('business_type', '') if existing_intake.get('business_type') and existing_intake.get('business_type') not in ['Consultancy', 'Agency', 'Coach / Mentor', 'Product brand / E-commerce', 'Product brand', 'E-commerce', 'Service business', 'Creative / Freelancer'] else '' }}">
         <label for="offer_one_line">In one sentence, what do you offer and to whom? <span style="color:#999;">(required)</span></label>
         <textarea id="offer_one_line" name="offer_one_line" required placeholder="e.g. We help busy founders build a content habit without the daily grind" data-testid="offer_one_line">{{ existing_intake.get('offer_one_line', '') }}</textarea>
+        {% if not is_sample_pack|default(false) %}
         <label for="operating_hours">Operating hours <span style="color:#999;">(optional)</span></label>
         <p class="field-helper intake-helper-before-control">Helps us tailor CTAs (e.g. "pop in", "book a call") to when you're available.</p>
         <input type="text" id="operating_hours" name="operating_hours" data-testid="operating_hours" placeholder="e.g. Mon–Fri 9–5, 24/7, weekends only" value="{{ existing_intake.get('operating_hours', '') }}">
         <label for="service_area">Service area <span style="color:#999;">(optional)</span></label>
         <p class="field-helper intake-helper-before-control">Helps us write locally relevant captions when it applies (e.g. city/region or online coverage).</p>
         <input type="text" id="service_area" name="service_area" data-testid="service_area" placeholder='e.g. Bristol; Austin, TX; UK-wide online; US-wide online' value="{{ existing_intake.get('service_area', '') }}">
+        {% endif %}
       </div>
       <div class="form-section">
         <h2>Audience <span class="intake-h2-meta">(required)</span></h2>
@@ -430,9 +432,13 @@
           <label for="consumer_age_range">What age range is your consumer audience? <span style="color:#999;">(optional)</span></label>
           <input type="text" id="consumer_age_range" name="consumer_age_range" placeholder="e.g. 18-24 or 30+" value="{{ existing_intake.get('consumer_age_range', '') }}" autocomplete="off">
         </div>
+        {% if not is_sample_pack|default(false) %}
         <label for="audience_other">Other audience <span style="color:#999;">(optional)</span></label>
         <input type="text" id="audience_other" name="audience_other" placeholder="e.g. coaches, agencies" value="">
+        {% endif %}
         <input type="hidden" id="audience" name="audience" value="{{ existing_intake.get('audience', '') }}">
+        {# Kept on the sample form too: this is the only field the paid form requires, so collecting
+           it here is what lets the sample → paid upgrade be pure review-and-confirm. #}
         <label for="audience_cares">What do they care about most when they land on your content? <span style="color:#999;">(required)</span></label>
         <textarea id="audience_cares" name="audience_cares" required placeholder="e.g. quick wins, feeling less overwhelmed, practical tips" data-testid="audience_cares">{{ existing_intake.get('audience_cares', '') }}</textarea>
       </div>
@@ -455,8 +461,10 @@
         <label for="voice_words_other">Other voice words</label>
         <input type="text" id="voice_words_other" name="voice_words_other" placeholder="e.g. witty, empathetic, no-fluff" value="">
         <input type="hidden" id="voice_words" name="voice_words" value="{{ existing_intake.get('voice_words', '') }}">
+        {% if not is_sample_pack|default(false) %}
         <label for="voice_avoid">Any words, phrases, or tones to avoid?</label>
         <textarea id="voice_avoid" name="voice_avoid" placeholder="e.g. jargon, hype, overly formal" data-testid="voice_avoid">{{ existing_intake.get('voice_avoid', '') }}</textarea>
+        {% endif %}
       </div>
       <div class="form-section">
         <h2>Language <span class="intake-h2-meta">(required)</span></h2>
@@ -549,6 +557,8 @@
         </div>
       </div>
       {% endif %}
+      {# Sample packs use the hashtag defaults (on, 3–10); the controls only appear on paid forms. #}
+      {% if not is_sample_pack|default(false) %}
       <div class="form-section">
         <h2 style="display: flex; align-items: center;">Hashtags <span class="intake-h2-meta" style="margin-left: 0.35rem;">(optional)</span><span class="help-trigger" tabindex="0" role="button" aria-label="Hashtag guidelines"><span aria-hidden="true">?</span><span class="help-tooltip"><strong>Recommended by platform:</strong><br>Instagram &amp; Facebook 2–5 (or up to 30 on Instagram)<br>LinkedIn 2–5<br>TikTok 2–5<br>Pinterest 2–5<br><br>Quality over quantity. 3–10 is a safe range for most posts.</span></span></h2>
         <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; margin-bottom: 0.5rem;">
@@ -563,6 +573,7 @@
           <input type="number" id="hashtag_max" name="hashtag_max" min="0" max="30" value="{{ existing_intake.get('hashtag_max', 10) }}" placeholder="10">
         </div>
       </div>
+      {% endif %}
       <div class="form-section">
         <h2>{% if is_sample_pack|default(false) %}Goal for these captions{% else %}Goal for this month{% endif %} <span class="intake-h2-meta">(required)</span></h2>
         <label for="goal">{% if is_sample_pack|default(false) %}What's the main outcome you want from these 3 captions?{% else %}What's the main outcome you want from this 30 days?{% endif %}</label>
@@ -597,6 +608,9 @@
         {% endif %}
         <p id="launch-date-hint" class="field-helper" style="display:none; color:#b45309; font-weight:600;"></p>
       </div>
+      {# The long-tail context questions below only appear on paid forms — the free sample keeps
+         the form short enough to finish in one sitting. #}
+      {% if not is_sample_pack|default(false) %}
       <div class="form-section">
         <h2>What do you usually talk about? <span class="intake-h2-meta">(optional)</span></h2>
         <p class="field-helper">Helps us pick themes and angles that fit your content mix.</p>
@@ -614,6 +628,7 @@
         <p class="field-helper intake-helper-before-control">If you leave this blank, we’ll keep specifics general and avoid inventing names, distances, product lines, or sourcing stories that aren’t in your other answers.</p>
         <textarea id="facts_guardrails" name="facts_guardrails" data-testid="facts_guardrails" rows="4" placeholder="e.g. Don’t name our mill or imply organic certification. Our boxes ship UK-wide — don’t say ‘local delivery only’." style="min-height: 96px; resize: vertical;">{{ existing_intake.get('facts_guardrails', '') }}</textarea>
       </div>
+      {% endif %}
       {% if intake_view_only %}</fieldset>{% endif %}
       {% if not intake_view_only or oneoff_subscribe_checkout_mode|default(false) %}
       {% if not oneoff_subscribe_checkout_mode|default(false) %}
@@ -1609,9 +1624,11 @@
           }
           vwoSubmit.setCustomValidity('');
         }
-        var incHashtags = document.getElementById('include_hashtags').checked;
-        var minH = parseInt(document.getElementById('hashtag_min').value, 10) || 3;
-        var maxH = parseInt(document.getElementById('hashtag_max').value, 10) || 10;
+        // Null-safe: the hashtag section is omitted on the free-sample form, which uses defaults.
+        var incHashtagsEl = document.getElementById('include_hashtags');
+        var incHashtags = incHashtagsEl ? incHashtagsEl.checked : true;
+        var minH = parseInt(document.getElementById('hashtag_min') ? document.getElementById('hashtag_min').value : 3, 10) || 3;
+        var maxH = parseInt(document.getElementById('hashtag_max') ? document.getElementById('hashtag_max').value : 10, 10) || 10;
         if (minH > maxH) maxH = minH;
         var payload = {
           token: getVal('intake_token'),

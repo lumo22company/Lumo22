@@ -144,6 +144,14 @@ class Config:
     # One-off upgrade reminder: days before "day 30" to send (3 or 5). Pack "finishes" 30 days after delivery; we send at 27 or 25 days after delivery.
     ONE_OFF_UPGRADE_REMINDER_DAYS_BEFORE = max(1, min(14, int(os.getenv('ONE_OFF_UPGRADE_REMINDER_DAYS_BEFORE', '5'))))
 
+    # Free-sample spend cap: max free 3-caption samples generated in any rolling 24h window.
+    # A safety valve on AI spend, not a user-facing limit — set well above real demand.
+    # Rolling rather than calendar-day on purpose: outreach runs in the US, and a UTC
+    # midnight reset lands at 7pm ET / 4pm PT, so a cap hit in the US morning would block
+    # the rest of the US business day. A rolling window has no bad reset moment.
+    # Set to 0 to disable the cap entirely.
+    CAPTIONS_SAMPLE_DAILY_LIMIT = max(0, int(os.getenv('CAPTIONS_SAMPLE_DAILY_LIMIT', '50')))
+
     # Cron job auth: shared secret for /api/captions-send-reminders (Railway cron). Generate with: openssl rand -hex 32
     CRON_SECRET = _sanitize_header_value(os.getenv('CRON_SECRET', '').strip() or '')
     # Test endpoint: secret for /api/captions-deliver-test (triggers generation). If set, ?secret=XXX required. In production, set this.

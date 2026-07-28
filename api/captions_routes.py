@@ -2892,15 +2892,52 @@ def captions_sample_start():
         data = request.get_json(silent=True, force=True) or {}
     except Exception:
         return jsonify({"error": "Invalid request body."}), 400
-    email = (data.get("email") or "").strip().lower()
-    if not email or "@" not in email or len(email) > 254:
-        return jsonify({"error": "Please enter a valid email address."}), 400
+    from services.email_validation import normalize_email, validate_signup_email
+
+    email = normalize_email(data.get("email"))
+    # confirm_email is the user's second pass: they saw "did you mean…" and told us the
+    # address they typed is correct. Skips the deliverability check so an unusual but
+    # genuine domain is never a dead end.
+    confirmed = bool(data.get("confirm_email"))
+    ok, err, suggestion = validate_signup_email(email, allow_override=confirmed)
+    if not ok:
+        payload = {"error": err or "Please enter a valid email address."}
+        if suggestion:
+            payload["suggestion"] = suggestion
+        return jsonify(payload), 400
+    if suggestion and not confirmed:
+        # Not an error — a typo'd domain can still resolve (typosquats usually do), so a
+        # clean MX result is not enough on its own. Ask before spending a generation.
+        return jsonify({
+            "needs_confirmation": True,
+            "suggestion": suggestion,
+            "email": email,
+        }), 200
     try:
         from services.caption_order_service import CaptionOrderService
 
         order_service = CaptionOrderService()
     except ValueError:
         return jsonify({"error": "Service unavailable. Please try again later."}), 503
+    # Spend cap. Checked before the uniqueness lookup and before any row is created, so a
+    # scripted run can't drive AI cost past a known ceiling. Fails open: if the count can't
+    # be read we allow the signup rather than block real customers on a Supabase blip.
+    sample_cap = getattr(Config, "CAPTIONS_SAMPLE_DAILY_LIMIT", 0) or 0
+    if sample_cap > 0:
+        cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+        used = order_service.count_sample_orders_since(cutoff)
+        if used is not None and used >= sample_cap:
+            print(
+                f"[captions-sample/start] SAMPLE CAP REACHED: {used}/{sample_cap} in the last 24h. "
+                f"Blocking new samples until the window clears. If this is real demand rather than "
+                f"abuse, raise CAPTIONS_SAMPLE_DAILY_LIMIT."
+            )
+            return jsonify({
+                "error": "We've hit our limit for free samples today. Please try again tomorrow — "
+                         "or skip the wait and get the full 30-day pack.",
+                "cap_reached": True,
+            }), 429
+
     if order_service.has_sample_order_for_email(email):
         return jsonify({
             "error": "This email has already been used for a free sample. Check your inbox for your captions, or get the full 30-day pack on our website.",

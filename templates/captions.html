@@ -37,25 +37,8 @@
     @media (max-width: 640px) { .captions-checkbox-group { flex-wrap: wrap; } }
     .dfd-btn.btn-disabled { opacity: 0.6; pointer-events: none; cursor: not-allowed; }
     .dfd-btn.btn-disabled:hover { opacity: 0.6; }
-    /* Example blocks — match PDF layout: black header, white content, gold labels */
-    .captions-example-block { max-width: 520px; margin: 0 auto; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.08); }
-    .captions-example-block .example-day-header { background: #000; color: #fff; padding: 0.6rem 1rem; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
-    .captions-example-block .example-content { background: #fff; padding: 0.75rem 1.25rem; font-size: 0.9rem; line-height: 1.6; color: #1a1a1a; border-top: none; }
-    .captions-example-block .example-row { display: flex; gap: 0.75rem; margin-bottom: 0.75rem; align-items: baseline; }
-    .captions-example-block .example-row:last-child { margin-bottom: 0; }
-    .captions-example-block .example-label { flex-shrink: 0; width: 8.5rem; font-weight: 600; font-size: 0.8rem; color: #000; }
-    /* Captions block only — tighter spacing between label and content */
-    .example-block-captions .example-row { gap: 0; }
-    .example-block-captions .example-label { width: 7rem; }
-    /* Stories block — labels on one line desktop; can wrap on mobile */
-    .example-block-stories .example-label { white-space: nowrap; width: 9.5rem; min-width: 9.5rem; }
-    @media (max-width: 640px) {
-      .example-block-stories .example-row { align-items: flex-start; }
-      .example-block-stories .example-label { white-space: normal; width: auto; min-width: 0; }
-    }
-    .captions-example-block .example-value { flex: 1; }
-    .captions-example-block .example-caption { margin: 0; font-size: inherit; line-height: 1.6; }
-    .captions-example-block .example-hashtags { font-size: 0.85rem; color: #555; }
+    /* Example block component (.captions-example-block) now lives in static/css/product.css
+       so the free-sample page can render identical cards. Page-specific layout stays below. */
     /* Example blocks: side-by-side on desktop, stacked on mobile, story matches caption height */
     .captions-examples-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: stretch; margin-top: 2rem; }
     @media (max-width: 900px) { .captions-examples-grid { grid-template-columns: 1fr; } }
@@ -354,8 +337,13 @@
           <h3 style="margin-bottom: 0.5rem;">Subscription</h3>
           <p class="lumo-pricing-subtitle" style="color: var(--lum-text-muted); font-size: 0.95rem; margin-bottom: 1rem;">New 30-day pack each month</p>
           <p id="pricing-sub-bestfor" style="margin: -0.35rem 0 0.85rem; font-size: 0.86rem; color: var(--lum-gold);">Best for: staying visible every month without planning from scratch</p>
-          <div class="lumo-offer-price" id="captions-sub-price" style="margin: 1rem 0;">£79 <span>/month</span></div>
-          <p class="lumo-pricing-save" id="captions-sub-save">Save £18 vs one-off</p>
+          {# Server-rendered from the visitor's default currency so US traffic never sees a
+             flash of GBP (or permanent GBP if the pricing JS fails). JS keeps it in sync
+             after that. #}
+          {% set _dc = default_currency|default('gbp') %}
+          {% set _p = captions_prices.get(_dc, captions_prices['gbp']) %}
+          <div class="lumo-offer-price" id="captions-sub-price" style="margin: 1rem 0;">{{ _p.symbol }}{{ _p.sub }} <span>/month</span></div>
+          <p class="lumo-pricing-save" id="captions-sub-save">Save {{ _p.symbol }}{{ (_p.oneoff - _p.sub) }} vs one-off</p>
           <ul class="lumo-offer-includes" style="margin: 1rem 0;">
             <li>30 captions every month (feed posts & Reels)</li>
             <li>Algorithm-optimised hashtags for each post</li>
@@ -371,7 +359,9 @@
           <h3 style="margin-bottom: 0.5rem;">One-off</h3>
           <p class="lumo-pricing-subtitle" style="color: var(--lum-text-muted); font-size: 0.95rem; margin-bottom: 1rem;">Single 30-day pack</p>
           <p id="pricing-oneoff-bestfor" style="margin: -0.35rem 0 0.85rem; font-size: 0.86rem; color: var(--lum-gold);">Best for: a one-time content reset or testing the service first</p>
-          <div class="lumo-offer-price" id="captions-oneoff-price" style="margin: 1rem 0;">£97 <span>one-time</span></div>
+          {% set _dc2 = default_currency|default('gbp') %}
+          {% set _p2 = captions_prices.get(_dc2, captions_prices['gbp']) %}
+          <div class="lumo-offer-price" id="captions-oneoff-price" style="margin: 1rem 0;">{{ _p2.symbol }}{{ _p2.oneoff }} <span>one-time</span></div>
           <ul class="lumo-offer-includes" style="margin: 1rem 0;">
             <li>30 captions, one delivery (feed posts & Reels)</li>
             <li>Algorithm-optimised hashtags for each post</li>
@@ -560,7 +550,10 @@
   (function() {
     var CAPTIONS_PRICES = {{ captions_prices|tojson }};
     var CURRENCIES_AVAILABLE = {{ currencies_available|tojson }};
-    function getCurrency() { try { var c = sessionStorage.getItem('captions_currency'); if (c && CAPTIONS_PRICES[c]) return c; } catch(e) {} return 'gbp'; }
+    // Server-resolved from the visitor's region (Cloudflare CF-IPCountry). A currency the
+    // visitor already picked still wins over it.
+    var DEFAULT_CURRENCY = {{ (default_currency|default('gbp'))|tojson }};
+    function getCurrency() { try { var c = sessionStorage.getItem('captions_currency'); if (c && CAPTIONS_PRICES[c]) return c; } catch(e) {} return CAPTIONS_PRICES[DEFAULT_CURRENCY] ? DEFAULT_CURRENCY : 'gbp'; }
     function setCurrency(code) { try { if (CAPTIONS_PRICES[code]) sessionStorage.setItem('captions_currency', code); } catch(e) {} }
     var sel = document.getElementById('captions-platforms');
     var oneoffPrice = document.getElementById('captions-oneoff-price');

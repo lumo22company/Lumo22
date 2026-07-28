@@ -16,10 +16,35 @@
     .sample-section { padding: 7rem 1.25rem 4rem; max-width: 520px; margin: 0 auto; }
     .sample-section h1 { font-family: 'Bebas Neue', sans-serif; font-size: 2.25rem; letter-spacing: -0.02em; margin: 0 0 0.75rem; color: #fff; }
     .sample-section .lead { color: var(--lum-text-muted, #9a9a96); line-height: 1.6; margin-bottom: 1.5rem; }
+    /* Card itself is the shared .captions-example-block component (product.css) — these
+       only handle the surrounding copy on this page. */
+    .sample-proof { margin: 0 0 2rem; }
+    .sample-proof-intro { color: var(--lum-text-muted, #9a9a96); font-size: 0.9rem; margin: 0 0 0.85rem; line-height: 1.5; }
+    /* Dark variant of the shared .captions-example-block. Same structure, rows and type
+       scale as /captions; recoloured for this page's black background, where the stock
+       white panel reads as foreign. */
+    .sample-proof .captions-example-block { max-width: none; margin: 0; border-color: rgba(255,255,255,0.14); box-shadow: none; }
+    .sample-proof .captions-example-block .example-day-header { background: var(--lum-gold, #fff200); color: #000; }
+    .sample-proof .captions-example-block .example-content { background: #111; color: #e9e9e6; }
+    .sample-proof .captions-example-block .example-label { color: var(--lum-gold, #fff200); }
+    .sample-proof .captions-example-block .example-hashtags { color: #8f8f8b; }
+    .sample-proof-note { margin: 0.85rem 0 0; font-size: 0.85rem; color: var(--lum-text-muted, #9a9a96); }
+    /* Mirrors the mobile label treatment /captions applies to the same component, so the
+       caption column gets the width instead of a fixed label gutter. */
+    @media (max-width: 768px) {
+      .sample-proof .example-block-captions .example-row { flex-direction: column; align-items: flex-start; gap: 0.15rem; margin-bottom: 0.65rem; }
+      .sample-proof .example-block-captions .example-label { width: auto; min-width: 0; flex-shrink: 0; }
+      .sample-proof .captions-example-block .example-content { padding: 0.85rem 1rem; font-size: 0.95rem; line-height: 1.58; }
+    }
     .sample-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; }
     .sample-card label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem; color: #f5f5f2; }
     .sample-card input[type="email"] { width: 100%; box-sizing: border-box; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: #111; color: #fff; font-size: 1rem; margin-bottom: 1rem; }
     .sample-error { color: #ff6b6b; font-size: 0.9rem; margin: 0 0 1rem; display: none; }
+    .sample-suggest { display: none; margin: 0 0 1rem; font-size: 0.9rem; color: #f5f5f2; line-height: 1.6; }
+    .sample-suggest strong { color: var(--lum-gold, #fff200); }
+    .sample-suggest > span { display: block; }
+    .sample-suggest-btn { display: inline-block; margin: 0.5rem 0.5rem 0 0; padding: 0.4rem 0.85rem; font: inherit; font-size: 0.85rem; font-weight: 600; color: #000; background: var(--lum-gold, #fff200); border: 1px solid var(--lum-gold, #fff200); border-radius: 6px; cursor: pointer; }
+    .sample-suggest-btn-plain { color: #f5f5f2; background: transparent; border-color: rgba(255,255,255,0.35); }
     .sample-success { display: none; margin-top: 1rem; padding: 1rem; background: transparent; border-radius: 8px; color: #f5f5f2; line-height: 1.55; }
     .sample-back { margin-top: 1.5rem; font-size: 0.9rem; }
     .sample-back a { color: var(--lum-gold, #fff200); }
@@ -27,20 +52,65 @@
 </head>
 <body class="lumo-landing product-page-captions">
   {% include '_lumo_nav.html' %}
-  <section class="sample-section">
+  {# .captions-reveal + data-reveal + scroll-reveal.js reveal content on scroll, matching
+     /captions. Deliberately NOT applied to .sample-card: the reveal CSS starts elements at
+     opacity 0, so if the script ever fails to load the email form would be invisible. The
+     conversion point stays visible regardless of JS. #}
+  <section class="sample-section captions-reveal">
     <h1>3 free sample captions</h1>
-    <p class="lead">See how we write in your voice before you buy. Enter your email — we'll send a link to a short form (about 2 minutes). Your 3 captions arrive by email. No card required.</p>
+    <p class="lead" data-reveal>See how we write in your voice before you buy. A short form on the next page — mostly tick-boxes, about two minutes — then your 3 captions land in your inbox within minutes. No card required.</p>
+    <div class="sample-proof">
+      <p class="sample-proof-intro" data-reveal>This is the kind of thing you'll get back — written for one business, in its voice:</p>
+      <div class="captions-example-block example-block-captions" data-reveal>
+        <div class="example-day-header">Day 5 — Soft Promotion</div>
+        <div class="example-content">
+          <div class="example-row">
+            <span class="example-label">Platform:</span>
+            <span class="example-value">Instagram &amp; Facebook</span>
+          </div>
+          <div class="example-row">
+            <span class="example-label">Caption:</span>
+            <span class="example-value example-caption">You don't need another course or a bigger inbox. You need one clear next step. If that's a call to talk through your strategy, we've got a slot this week. Reply or DM and we'll send the link.</span>
+          </div>
+          <div class="example-row">
+            <span class="example-label">Hashtags:</span>
+            <span class="example-value example-hashtags">#strategy #smallbusiness #founder #nextstep</span>
+          </div>
+        </div>
+      </div>
+      <p class="sample-proof-note" data-reveal>Written for a coach / consultant. Yours will sound like your business, not this one.</p>
+    </div>
     <div class="sample-card">
       <form id="sample-start-form" novalidate>
         <label for="sample-email">Email</label>
         <input type="email" id="sample-email" name="email" required autocomplete="email" placeholder="you@yourbusiness.com">
         <p id="sample-error" class="sample-error" role="alert"></p>
+        <div id="sample-suggest" class="sample-suggest" role="alert"></div>
         <button type="submit" class="dfd-btn dfd-btn-hero-cta captions-btn-swipe" id="sample-submit-btn" style="width: 100%;">Continue</button>
       </form>
       <div id="sample-success" class="sample-success">
-        <p style="margin: 0 0 0.75rem;"><strong>Check your inbox</strong> — we sent a link to complete your short form.</p>
-        <p style="margin: 0 0 0.75rem; font-size: 0.9rem; color: var(--lum-text-muted, #9a9a96);">It sometimes lands in <strong style="color: #f5f5f2;">Spam</strong> or <strong style="color: #f5f5f2;">Promotions</strong>. Look for an email from <strong style="color: #f5f5f2;">Lumo 22</strong> (hello@lumo22.com). Mark it as “Not spam” so your captions email arrives next.</p>
-        <p style="margin: 0; font-size: 0.9rem;">Still no email? <a href="#" id="sample-open-intake" target="_blank" rel="noopener noreferrer" style="color: var(--lum-gold); position: relative; z-index: 2;">Open your form here</a>.</p>
+        <p style="margin: 0 0 0.75rem;"><strong>Check your inbox</strong> — we've emailed you a link to your short form.</p>
+        <p style="margin: 0; font-size: 0.9rem; color: var(--lum-text-muted, #9a9a96);">Look for an email from <strong style="color: #f5f5f2;">Lumo 22</strong> (hello@lumo22.com).</p>
+      </div>
+    </div>
+    <div class="sample-proof" style="margin: 2rem 0 0;">
+      <p class="sample-proof-intro" data-reveal>Another one, different business, different voice:</p>
+      <div class="captions-example-block example-block-captions" data-reveal>
+        <div class="example-day-header">Day 12 — Authority</div>
+        <div class="example-content">
+          <div class="example-row">
+            <span class="example-label">Platform:</span>
+            <span class="example-value">Instagram &amp; Facebook</span>
+          </div>
+          <div class="example-row">
+            <span class="example-label">Caption:</span>
+            <span class="example-value example-caption">Most colour fades because of what happens in the first 72 hours, not the dye. Skip the hot water, skip the clarifying shampoo, and book your gloss at week six. That's it. That's the whole secret.</span>
+          </div>
+          <div class="example-row">
+            <span class="example-label">Hashtags:</span>
+            <span class="example-value example-hashtags">#haircare #colourcare #salonlife</span>
+          </div>
+        </div>
       </div>
     </div>
     <p class="sample-back"><a href="/captions#pricing">← Full 30-day pack</a></p>
@@ -51,16 +121,62 @@
       var errEl = document.getElementById('sample-error');
       var okEl = document.getElementById('sample-success');
       var btn = document.getElementById('sample-submit-btn');
-      var intakeLink = document.getElementById('sample-open-intake');
+      var emailEl = document.getElementById('sample-email');
+      var suggestEl = document.getElementById('sample-suggest');
       var lastIntakeUrl = '';
+      // Set once the user has told us the address they typed is right, so the server
+      // skips the deliverability check on the retry.
+      var confirmedEmail = false;
       function showError(msg) {
         errEl.textContent = msg || '';
         errEl.style.display = msg ? 'block' : 'none';
       }
-      form.addEventListener('submit', function (e) {
-        e.preventDefault();
+      function hideSuggestion() {
+        suggestEl.style.display = 'none';
+        suggestEl.innerHTML = '';
+      }
+      function resetBtn() {
+        btn.disabled = false;
+        btn.textContent = 'Continue';
+      }
+      // "Did you mean gmail.com?" — a typo'd domain often still resolves, so this is the
+      // check that actually catches gmial.com. Either button resubmits immediately;
+      // the user is never left without a way forward.
+      function showSuggestion(suggested) {
+        suggestEl.innerHTML = '';
+        var q = document.createElement('span');
+        q.textContent = 'Did you mean ';
+        var strong = document.createElement('strong');
+        strong.textContent = suggested;
+        q.appendChild(strong);
+        q.appendChild(document.createTextNode('?'));
+        var useIt = document.createElement('button');
+        useIt.type = 'button';
+        useIt.className = 'sample-suggest-btn';
+        useIt.textContent = 'Yes, use that';
+        useIt.addEventListener('click', function () {
+          emailEl.value = suggested;
+          confirmedEmail = false;
+          hideSuggestion();
+          submit();
+        });
+        var keep = document.createElement('button');
+        keep.type = 'button';
+        keep.className = 'sample-suggest-btn sample-suggest-btn-plain';
+        keep.textContent = 'No, mine is correct';
+        keep.addEventListener('click', function () {
+          confirmedEmail = true;
+          hideSuggestion();
+          submit();
+        });
+        suggestEl.appendChild(q);
+        suggestEl.appendChild(useIt);
+        suggestEl.appendChild(keep);
+        suggestEl.style.display = 'block';
+      }
+      function submit() {
         showError('');
-        var email = (document.getElementById('sample-email').value || '').trim();
+        var email = (emailEl.value || '').trim();
         if (!email || email.indexOf('@') < 1) {
           showError('Please enter a valid email address.');
           return;
@@ -70,29 +186,60 @@
         fetch('/api/captions-sample/start', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: email })
+          body: JSON.stringify({ email: email, confirm_email: confirmedEmail })
         })
           .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, status: r.status, body: j }; }); })
           .then(function (res) {
             if (!res.ok) {
               showError((res.body && res.body.error) || 'Something went wrong. Please try again.');
-              btn.disabled = false;
-              btn.textContent = 'Continue';
+              if (res.body && res.body.suggestion) showSuggestion(res.body.suggestion);
+              resetBtn();
+              return;
+            }
+            // 200 but nothing created yet — server wants the address confirmed first.
+            if (res.body && res.body.needs_confirmation && res.body.suggestion) {
+              showSuggestion(res.body.suggestion);
+              resetBtn();
               return;
             }
             lastIntakeUrl = (res.body && res.body.intake_url) || '';
+            // Go straight to the form. The link is also emailed as a backup so they can
+            // finish later, but nobody should have to dig through an inbox to start.
+            if (lastIntakeUrl) {
+              btn.textContent = 'Opening your form…';
+              window.location.href = lastIntakeUrl;
+              return;
+            }
             form.style.display = 'none';
             okEl.style.display = 'block';
-            if (lastIntakeUrl && intakeLink) {
-              intakeLink.href = lastIntakeUrl;
-            }
           })
           .catch(function () {
             showError('Network error. Please try again.');
-            btn.disabled = false;
-            btn.textContent = 'Continue';
+            resetBtn();
           });
+      }
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        // A fresh manual submit means a possibly-different address; re-check it.
+        confirmedEmail = false;
+        hideSuggestion();
+        submit();
       });
+    })();
+  </script>
+  <script src="{{ url_for('static', filename='js/scroll-reveal.js') }}?v={{ asset_version }}" defer></script>
+  <script>
+    // Safety net. The reveal CSS starts [data-reveal] at opacity 0 and relies on
+    // scroll-reveal.js adding .revealed via IntersectionObserver. If that never runs —
+    // script blocked, IO unsupported, observer callbacks not delivered — the copy and
+    // example cards would stay invisible on the page cold traffic lands on. Reveal
+    // everything unconditionally shortly after load; when the observer works it has
+    // already fired well before this and the animation plays as normal.
+    (function () {
+      setTimeout(function () {
+        var els = document.querySelectorAll('.captions-reveal [data-reveal]:not(.revealed)');
+        for (var i = 0; i < els.length; i++) els[i].classList.add('revealed');
+      }, 1200);
     })();
   </script>
 </body>

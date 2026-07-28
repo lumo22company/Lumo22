@@ -373,6 +373,33 @@ class CaptionOrderService:
                 return False
             raise
 
+    def count_sample_orders_since(self, cutoff_iso: str) -> Optional[int]:
+        """Free samples created since cutoff_iso, or None when it can't be determined.
+
+        Counted in the database rather than in process memory on purpose: the app runs
+        under `gunicorn -w 2`, so a module-level counter would allow twice the intended
+        cap and reset on every deploy.
+
+        Returns None (not 0) on any failure so callers fail open — a Supabase blip must
+        never block signups.
+        """
+        try:
+            result = (
+                self.client.table(self.table)
+                .select("id", count="exact")
+                .eq("product_type", SAMPLE_PRODUCT_TYPE)
+                .gte("created_at", cutoff_iso)
+                .execute()
+            )
+            if getattr(result, "count", None) is not None:
+                return int(result.count)
+            return len(result.data or [])
+        except Exception as e:
+            if _is_product_type_column_missing(e):
+                return None
+            print(f"[CaptionOrderService] sample cap count failed: {e}")
+            return None
+
     def has_recent_sample_order(self, customer_email: str, *, days: int = 90) -> bool:
         """Deprecated alias: sample limit is lifetime-only via has_sample_order_for_email."""
         return self.has_sample_order_for_email(customer_email)
