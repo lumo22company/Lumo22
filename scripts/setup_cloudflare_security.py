@@ -14,9 +14,13 @@ Intentionally DNS-only (do not proxy — breaks email / tracking):
 
 security.txt is served by the app at /.well-known/security.txt (deploy required).
 
+Opt-in (--origin-guard): Transform Rule stamping a shared secret on proxied requests
+so the app can reject direct hits to the Railway origin (see services/origin_guard.py).
+
 Requires in .env:
   CLOUDFLARE_API_TOKEN   — API token for lumo22.com zone
   CLOUDFLARE_ZONE_ID     — optional; looked up if omitted
+  ORIGIN_GUARD_SECRET    — only for --origin-guard; same value goes in Railway
 
 Create token: Cloudflare → My Profile → API Tokens → Create Token
   → Edit zone DNS → zone = lumo22.com
@@ -29,6 +33,7 @@ Manual (not API): Cloudflare account MFA, Turnstile on forms.
 Usage:
   python3 scripts/setup_cloudflare_security.py
   python3 scripts/setup_cloudflare_security.py --dry-run
+  python3 scripts/setup_cloudflare_security.py --origin-guard --dry-run
 """
 
 from __future__ import annotations
@@ -47,6 +52,21 @@ ROOT = Path(__file__).resolve().parent.parent
 DOMAIN = "lumo22.com"
 WWW = f"www.{DOMAIN}"
 CF = "https://api.cloudflare.com/client/v4"
+
+# Origin guard: Transform Rule that stamps a shared secret on every proxied request,
+# so the app can reject traffic that reached the Railway origin directly. See services/origin_guard.py.
+TRANSFORM_PHASE = "http_request_late_transform"
+ORIGIN_GUARD_RULE_DESC = "lumo22 origin guard — stamp shared secret for origin verification"
+_RULE_WRITABLE_KEYS = (
+    "id",
+    "action",
+    "action_parameters",
+    "expression",
+    "description",
+    "enabled",
+    "logging",
+    "ratelimit",
+)
 
 # Hostnames that must stay DNS-only (email / domain-connect / tracking)
 DNS_ONLY_PREFIXES = (
@@ -137,6 +157,104 @@ def _apply_bot_management(token: str, zone_id: str, *, dry_run: bool = False) ->
     if not dry_run:
         _cf_request(token, "PUT", f"/zones/{zone_id}/bot_management", want)
         print("[cloudflare] updated bot_management (Bot Fight Mode + AI bot block)")
+
+
+def _origin_guard_header() -> str:
+    return _env("ORIGIN_GUARD_HEADER") or "X-Origin-Auth"
+
+
+def _sanitise_rule(rule: dict) -> dict:
+    """Drop server-managed fields (version, ref, last_updated) before re-submitting."""
+    return {k: v for k, v in rule.items() if k in _RULE_WRITABLE_KEYS}
+
+
+def _origin_guard_rule(header: str, secret: str) -> dict:
+    return {
+        "action": "rewrite",
+        "action_parameters": {
+            "headers": {header: {"operation": "set", "value": secret}}
+        },
+        "expression": "true",
+        "description": ORIGIN_GUARD_RULE_DESC,
+        "enabled": True,
+    }
+
+
+def apply_origin_guard(token: str, *, dry_run: bool = False) -> None:
+    """
+    Install the Transform Rule that stamps ORIGIN_GUARD_SECRET on proxied requests.
+
+    Existing rules in the phase are preserved — only our own rule (matched by
+    description) is added or updated.
+    """
+    secret = _env("ORIGIN_GUARD_SECRET")
+    if not secret:
+        print(
+            "[skip] origin guard: ORIGIN_GUARD_SECRET not in .env\n"
+            "       Generate one:  python3 -c \"import secrets; print(secrets.token_urlsafe(32))\"\n"
+            "       Add it to .env AND to Railway → Variables (same value), then re-run."
+        )
+        return
+
+    zone_id = _zone_id(token)
+    header = _origin_guard_header()
+
+    try:
+        res = _cf_request(
+            token, "GET", f"/zones/{zone_id}/rulesets/phases/{TRANSFORM_PHASE}/entrypoint"
+        )
+        ruleset = res.get("result") or {}
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            ruleset = {}  # phase has no ruleset yet; PUT creates it
+        elif e.code == 403:
+            print(
+                "[skip] origin guard: token lacks Zone → Transform Rules → Edit.\n"
+                "       Add that permission and re-run."
+            )
+            return
+        else:
+            raise
+
+    existing = ruleset.get("rules") or []
+    ours = [r for r in existing if r.get("description") == ORIGIN_GUARD_RULE_DESC]
+    others = [r for r in existing if r.get("description") != ORIGIN_GUARD_RULE_DESC]
+
+    wanted = _origin_guard_rule(header, secret)
+    if len(ours) == 1:
+        current = ours[0]
+        current_headers = (current.get("action_parameters") or {}).get("headers") or {}
+        current_value = (current_headers.get(header) or {}).get("value")
+        if current_value == secret and current.get("enabled", True):
+            print(f"[ok] origin guard rule already stamps {header} (secret matches .env)")
+            return
+        print(f"[patch] origin guard rule → refresh {header} value")
+        wanted["id"] = current.get("id")
+    else:
+        print(f"[patch] origin guard rule → add (stamps {header} on all proxied requests)")
+
+    merged = [_sanitise_rule(r) for r in others] + [wanted]
+    if others:
+        print(f"[note] preserving {len(others)} other rule(s) in {TRANSFORM_PHASE}")
+
+    if dry_run:
+        print("[dry-run] no changes written")
+        return
+
+    _cf_request(
+        token,
+        "PUT",
+        f"/zones/{zone_id}/rulesets/phases/{TRANSFORM_PHASE}/entrypoint",
+        {"rules": merged},
+    )
+    print(f"[cloudflare] origin guard rule installed ({header})")
+    print(
+        "\nNext, on the origin (Railway → Variables):\n"
+        f"  ORIGIN_GUARD_SECRET = <same value as .env>\n"
+        "  ORIGIN_GUARD_MODE   = report        ← log-only; watch deploy logs first\n"
+        "Once the logs show no legitimate traffic being flagged, set ORIGIN_GUARD_MODE=enforce.\n"
+        "Webhook paths (/webhooks/*) stay exempt in both modes."
+    )
 
 
 def _should_stay_dns_only(name: str) -> bool:
@@ -237,6 +355,11 @@ def main() -> None:
     load_dotenv(ROOT / ".env")
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--dry-run", action="store_true", help="Print planned changes only")
+    ap.add_argument(
+        "--origin-guard",
+        action="store_true",
+        help="Also install the Transform Rule that stamps ORIGIN_GUARD_SECRET (opt-in)",
+    )
     args = ap.parse_args()
 
     token = _env("CLOUDFLARE_API_TOKEN")
@@ -255,6 +378,9 @@ def main() -> None:
         sys.exit(1)
 
     apply_security(token, dry_run=args.dry_run)
+    if args.origin_guard:
+        print()
+        apply_origin_guard(token, dry_run=args.dry_run)
 
 
 if __name__ == "__main__":

@@ -4,6 +4,7 @@ Auth routes for Lumo 22 customer accounts (DFD, Chat, Captions).
 import logging
 from flask import Blueprint, request, jsonify, session, redirect, url_for, g, has_request_context
 from config import Config
+from services.client_ip import get_client_ip
 from services.customer_auth_service import CustomerAuthService
 from services.login_guard import check_locked, record_failure, clear_failures
 from services.notifications import NotificationService
@@ -195,7 +196,7 @@ def login():
         data = request.get_json(silent=True) or request.form or {}
         email = (data.get("email") or "").strip().lower()
         password = (data.get("password") or "").strip()
-        client_ip = (request.headers.get("X-Forwarded-For") or request.remote_addr or "").split(",")[0].strip()
+        client_ip = get_client_ip()
 
         if not email or not password:
             return jsonify({"ok": False, "error": "Email and password required"}), 400

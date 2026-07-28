@@ -54,6 +54,8 @@ from api.passkey_routes import passkey_bp
 from api.billing_routes import billing_bp
 from api.oauth_routes import oauth_bp, init_customer_oauth, google_oauth_redirect_uri
 from services.login_guard import check_locked, record_failure, clear_failures
+from services.client_ip import get_client_ip
+from services.origin_guard import init_app as init_origin_guard
 from services.caption_delivery_recovery import (
     CAPTIONS_MAX_AUTO_DELIVERY_FAILURES,
     order_generating_attempt_reference,
@@ -319,6 +321,9 @@ init_customer_oauth(app)
 app.register_blueprint(oauth_bp)
 app.register_blueprint(passkey_bp)
 app.register_blueprint(billing_bp)
+
+# Reject direct-to-origin requests that bypassed Cloudflare (inert unless ORIGIN_GUARD_SECRET is set).
+init_origin_guard(app)
 
 # CSRF for browser forms and JSON fetch (X-CSRFToken via static/js/csrf-fetch-shim.js). Exempt machine webhooks and legacy API stubs.
 if os.environ.get("DISABLE_CSRF", "").strip().lower() in ("1", "true", "yes"):
@@ -1511,7 +1516,7 @@ def customer_login_page():
         email = (request.form.get('email') or '').strip().lower()
         password = (request.form.get('password') or '').strip()
         next_url = _normalize_next_url(request.form.get('next') or request.args.get('next')) or '/account'
-        client_ip = (request.headers.get("X-Forwarded-For") or request.remote_addr or "").split(",")[0].strip()
+        client_ip = get_client_ip()
         prefill_eph = (request.form.get("eph") or "").strip() or None
         if not email or not password:
             return render_template(

@@ -17,6 +17,7 @@ from flask import Blueprint, request, jsonify, redirect, Response, url_for
 from urllib.parse import quote
 from config import Config
 from api.stripe_utils import merge_stripe_checkout_branding_into_params
+from services.client_ip import get_client_ip
 
 captions_bp = Blueprint("captions", __name__, url_prefix="/api")
 
@@ -980,7 +981,7 @@ def captions_correct_email():
         return jsonify({"status": "error", "error": "Order not found."}), 404
     if not _verify_email_recovery_token(recovery_token, order_id, session_id):
         return jsonify({"status": "error", "error": "Email correction link expired. Please refresh this page and try again."}), 403
-    client_ip = (request.headers.get("X-Forwarded-For") or request.remote_addr or "").split(",")[0].strip()
+    client_ip = get_client_ip()
     if not _email_change_allowed(order_id, client_ip):
         return jsonify({"status": "error", "error": "Too many attempts. Please try again later."}), 429
     if not _email_resend_allowed(order_id):
