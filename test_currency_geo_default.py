@@ -87,6 +87,54 @@ def test_explicit_currency_param_overrides_geo():
     assert prices and all(p.startswith("£") for p in prices), prices
 
 
+def test_sample_order_records_the_visitor_currency():
+    """A US lead's sample is stored as USD so the upgrade page opens in USD."""
+    from unittest.mock import MagicMock, patch
+
+    from app import app
+
+    app.config["TESTING"] = True
+
+    class _Svc:
+        def __init__(self):
+            self.currency = None
+
+        def count_sample_orders_since(self, cutoff):
+            return 0
+
+        def has_sample_order_for_email(self, email):
+            return False
+
+        def create_sample_order(self, email, currency="gbp"):
+            self.currency = currency
+            return {"token": "tok-1"}
+
+    def _start(country):
+        svc = _Svc()
+        with patch("services.caption_order_service.CaptionOrderService", return_value=svc), \
+             patch("services.notifications.NotificationService") as notify:
+            notify.return_value.send_sample_intake_link_email = MagicMock()
+            resp = app.test_client().post(
+                "/api/captions-sample/start",
+                json={"email": "someone@gmail.com"},
+                headers={"CF-IPCountry": country} if country else {},
+            )
+        return resp, svc
+
+    resp, svc = _start("US")
+    assert resp.status_code == 200, resp.get_data(as_text=True)
+    assert svc.currency == "usd"
+
+    resp, svc = _start("GB")
+    assert resp.status_code == 200
+    assert svc.currency == "gbp"
+
+    # No geolocation header -> unchanged behaviour.
+    resp, svc = _start(None)
+    assert resp.status_code == 200
+    assert svc.currency == "gbp"
+
+
 if __name__ == "__main__":
     for name, fn in sorted(globals().items()):
         if name.startswith("test_") and callable(fn):

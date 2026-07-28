@@ -2944,7 +2944,18 @@ def captions_sample_start():
             "already_claimed": True,
         }), 429
     try:
-        order = order_service.create_sample_order(email)
+        # Carry the visitor's regional currency onto the sample so the upgrade page later
+        # opens in the currency they were quoted, rather than defaulting to GBP.
+        from services.request_geo import resolve_default_currency
+
+        sample_currency_options = ["gbp"]
+        if (getattr(Config, "STRIPE_CAPTIONS_PRICE_ID_USD", None) or "").strip():
+            sample_currency_options.append("usd")
+        if (getattr(Config, "STRIPE_CAPTIONS_PRICE_ID_EUR", None) or "").strip():
+            sample_currency_options.append("eur")
+        order = order_service.create_sample_order(
+            email, currency=resolve_default_currency(request, sample_currency_options)
+        )
     except Exception as e:
         print(f"[captions-sample/start] create failed: {e}")
         return jsonify({"error": "Could not start your sample. Please try again."}), 500

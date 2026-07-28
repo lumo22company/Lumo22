@@ -325,10 +325,18 @@ class CaptionOrderService:
         self.remove_from_deleted_blocklist(customer_email_normalized)
         return result.data[0]
 
-    def create_sample_order(self, customer_email: str) -> Dict[str, Any]:
-        """Free 3-caption sample: no Stripe, product_type=sample_3, single platform."""
+    def create_sample_order(self, customer_email: str, currency: str = "gbp") -> Dict[str, Any]:
+        """Free 3-caption sample: no Stripe, product_type=sample_3, single platform.
+
+        currency is the visitor's regional default, carried so the sample -> paid upgrade
+        page opens in the same currency they were quoted. A US lead who sampled should not
+        meet GBP prices at the point of upgrading.
+        """
         token = _token()
         customer_email_normalized = (customer_email or "").strip().lower()
+        currency_normalized = (currency or "gbp").strip().lower()
+        if currency_normalized not in ("gbp", "usd", "eur"):
+            currency_normalized = "gbp"
         row = {
             "token": token,
             "customer_email": customer_email_normalized,
@@ -338,7 +346,7 @@ class CaptionOrderService:
             # Customer must choose platform on the sample form — no default preselection.
             "selected_platforms": "",
             "include_stories": False,
-            "currency": "gbp",
+            "currency": currency_normalized,
         }
         try:
             result = self.client.table(self.table).insert(row).execute()

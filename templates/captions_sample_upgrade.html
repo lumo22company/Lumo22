@@ -133,7 +133,8 @@
       var errEl = document.getElementById('upgrade-error');
       var hintEl = document.getElementById('platform-hint');
       var plan = 'oneoff';
-      var currency = 'gbp';
+      // Currency the sample was created in, so a US lead who sampled is not quoted GBP here.
+      var currency = {{ (default_currency|default('gbp'))|tojson }};
 
       function ensureSamplePlatformChecked() {
         var matched = false;

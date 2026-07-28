@@ -558,11 +558,24 @@ def captions_sample_upgrade_page():
     if (getattr(Config, 'STRIPE_CAPTIONS_PRICE_ID_EUR', None) or '').strip():
         currencies_available.append({"code": "eur", "label": "EUR", "symbol": "€"})
 
+    # Open in the currency the sample was created in (their region at signup); fall back to
+    # resolving from this request for samples created before currency was carried.
+    from services.request_geo import resolve_default_currency
+
+    available_codes = [c["code"] for c in currencies_available]
+    sample_currency = (sample_order.get("currency") or "").strip().lower()
+    if sample_currency in available_codes:
+        default_currency = sample_currency
+    else:
+        default_currency = resolve_default_currency(request, available_codes)
+    currencies_available.sort(key=lambda c: c["code"] != default_currency)
+
     r = make_response(render_template(
         'captions_sample_upgrade.html',
         sample_token=token,
         sample_platform=sample_platform,
         sample_business=sample_business,
+        default_currency=default_currency,
         captions_prices=CAPTIONS_DISPLAY_PRICES,
         captions_subscription_available=subscription_available,
         supports_multi_platform=supports_multi_platform,
