@@ -30,6 +30,25 @@ def _is_product_type_column_missing(exc: Exception) -> bool:
     return "PGRST204" in s and "product_type" in s
 
 
+def _is_source_column_missing(exc: Exception) -> bool:
+    """PostgREST when caption_orders.source was never migrated (database_caption_orders_source.sql)."""
+    s = str(exc)
+    return "PGRST204" in s and "source" in s
+
+
+def normalize_attribution_source(value: Optional[str]) -> Optional[str]:
+    """
+    Clean a campaign tag for storage: strip anything that isn't plain tag punctuation and cap length.
+    The value reaches us from a query string, so treat it as untrusted display text.
+    """
+    s = (value or "").strip()
+    if not s:
+        return None
+    s = re.sub(r"[^\w .:/@+-]", "", s)
+    s = s.strip()[:120]
+    return s or None
+
+
 def _is_checkout_claim_column_missing(exc: Exception) -> bool:
     """PostgREST when caption_orders.checkout_confirmation_email_sent_at was never migrated."""
     s = str(exc)
@@ -285,13 +304,15 @@ class CaptionOrderService:
         include_stories: bool = False,
         currency: Optional[str] = None,
         upgraded_from_token: Optional[str] = None,
+        source: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Create order after payment. Returns dict with id, token, customer_email, status.
         platforms_count: number of platforms paid for (1 = base, 2+ = base + add-ons).
         selected_platforms: comma-separated platforms chosen at checkout (e.g. Instagram, LinkedIn).
         include_stories: True when customer paid for 30 Days Story Ideas add-on at checkout.
         currency: payment currency (gbp, usd, eur). Used for subscribe_url so subscription checkout shows correct currency.
-        upgraded_from_token: For subscription orders upgraded from one-off; first pack delivered 30 days after one-off."""
+        upgraded_from_token: For subscription orders upgraded from one-off; first pack delivered 30 days after one-off.
+        source: first-touch campaign tag carried through Stripe metadata (see database_caption_orders_source.sql)."""
         token = _token()
         curr = (currency or "gbp").strip().lower()
         if curr not in ("gbp", "usd", "eur"):
@@ -310,6 +331,7 @@ class CaptionOrderService:
             "include_stories": bool(include_stories),
             "currency": curr,
             "upgraded_from_token": (upgraded_from_token or "").strip() or None,
+            "source": normalize_attribution_source(source),
         }
         try:
             result = self.client.table(self.table).insert(row).execute()
@@ -319,18 +341,29 @@ class CaptionOrderService:
                 existing = self.get_by_stripe_session_id(sid)
                 if existing:
                     return existing
-            raise
+            # Attribution is reporting data: never lose a paid order because the column
+            # hasn't been migrated yet (run_caption_orders_source_migration.py).
+            if _is_source_column_missing(e):
+                row.pop("source", None)
+                result = self.client.table(self.table).insert(row).execute()
+            else:
+                raise
         if not result.data:
             raise RuntimeError("Failed to create caption order")
         self.remove_from_deleted_blocklist(customer_email_normalized)
         return result.data[0]
 
-    def create_sample_order(self, customer_email: str, currency: str = "gbp") -> Dict[str, Any]:
+    def create_sample_order(
+        self, customer_email: str, currency: str = "gbp", source: Optional[str] = None
+    ) -> Dict[str, Any]:
         """Free 3-caption sample: no Stripe, product_type=sample_3, single platform.
 
         currency is the visitor's regional default, carried so the sample -> paid upgrade
         page opens in the same currency they were quoted. A US lead who sampled should not
         meet GBP prices at the point of upgrading.
+
+        source is the first-touch campaign tag from the landing page, so sample signups can be
+        counted per campaign rather than guessed at from currency.
         """
         token = _token()
         customer_email_normalized = (customer_email or "").strip().lower()
@@ -347,16 +380,24 @@ class CaptionOrderService:
             "selected_platforms": "",
             "include_stories": False,
             "currency": currency_normalized,
+            "source": normalize_attribution_source(source),
         }
-        try:
-            result = self.client.table(self.table).insert(row).execute()
-        except Exception as e:
-            if _is_product_type_column_missing(e):
-                row.pop("product_type", None)
+        # Either column may be missing on an un-migrated database, and PostgREST only names one
+        # per error, so drop whichever it complains about and retry rather than fail the signup —
+        # both are reporting metadata, not part of delivering the sample.
+        result = None
+        for _attempt in range(3):
+            try:
                 result = self.client.table(self.table).insert(row).execute()
-            else:
-                raise
-        if not result.data:
+                break
+            except Exception as e:
+                if _is_product_type_column_missing(e) and "product_type" in row:
+                    row.pop("product_type", None)
+                elif _is_source_column_missing(e) and "source" in row:
+                    row.pop("source", None)
+                else:
+                    raise
+        if result is None or not result.data:
             raise RuntimeError("Failed to create sample caption order")
         self.remove_from_deleted_blocklist(customer_email_normalized)
         return result.data[0]

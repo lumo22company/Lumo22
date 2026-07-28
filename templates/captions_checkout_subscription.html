@@ -150,6 +150,7 @@
   {% include '_terms_modal.html' %}
   {% endif %}
   {% if api_url %}
+  <script src="{{ url_for('static', filename='js/attribution.js') }}?v={{ asset_version }}"></script>
   <script>
     (function() {
       var btn = document.getElementById('btn-continue');
@@ -189,6 +190,8 @@
         }
         var bn = businessInput && (businessInput.value || '').trim();
         if (bn) parts.push('business_name=' + encodeURIComponent(bn.slice(0, 120)));
+        var src = window.lumoAttribution ? window.lumoAttribution() : '';
+        if (src) parts.push('source=' + encodeURIComponent(src));
         var u = apiUrl + (parts.length ? ((apiUrl.indexOf('?') !== -1 ? '&' : '?') + parts.join('&')) : '');
         u = mergeStoredReferralRef(u);
         btn.href = u;

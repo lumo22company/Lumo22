@@ -25,9 +25,10 @@ class _FakeOrderService:
     def has_sample_order_for_email(self, email):
         return self._has_sample
 
-    def create_sample_order(self, email, currency="gbp"):
+    def create_sample_order(self, email, currency="gbp", source=None):
         self.created = True
         self.currency = currency
+        self.source = source
         return {"token": "tok-123"}
 
 

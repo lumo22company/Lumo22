@@ -595,6 +595,13 @@ def _handle_captions_payment(session):
 
                     if src_order and is_sample_pack_order(src_order):
                         upgraded_from_token_for_create = copy_from
+            # Campaign tag set on the checkout session by the checkout routes; this is where a
+            # paid order gets attributed back to the campaign that produced the click.
+            attribution_source = (
+                (meta.get("source") or "").strip()
+                if isinstance(meta, dict)
+                else str(getattr(meta, "source", "") or "").strip()
+            )
             order = order_service.create_order(
                 customer_email=customer_email,
                 stripe_session_id=session_id,
@@ -605,6 +612,7 @@ def _handle_captions_payment(session):
                 include_stories=include_stories,
                 currency=currency,
                 upgraded_from_token=upgraded_from_token_for_create,
+                source=attribution_source or None,
             )
         except Exception as e:
             print(f"[Stripe webhook] Failed to create order in Supabase: {e}")

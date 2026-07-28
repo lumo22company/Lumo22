@@ -105,8 +105,9 @@ def test_sample_order_records_the_visitor_currency():
         def has_sample_order_for_email(self, email):
             return False
 
-        def create_sample_order(self, email, currency="gbp"):
+        def create_sample_order(self, email, currency="gbp", source=None):
             self.currency = currency
+            self.source = source
             return {"token": "tok-1"}
 
     def _start(country):
