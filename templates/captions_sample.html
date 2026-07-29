@@ -38,7 +38,10 @@
       .sample-proof .example-block-captions .example-label { width: auto; min-width: 0; flex-shrink: 0; }
       .sample-proof .captions-example-block .example-content { padding: 0.85rem 1rem; font-size: 0.95rem; line-height: 1.58; }
     }
-    .sample-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; }
+    /* Yellow border matches .lumo-pricing-card.featured on /captions — same 1px solid gold used
+       to mark the panel you're meant to act on. That card holds a .captions-btn-swipe button
+       too, so a gold panel around a gold outlined button is the site's existing pattern. */
+    .sample-card { background: rgba(255,255,255,0.04); border: 1px solid var(--lum-gold, #fff200); border-radius: 12px; padding: 1.5rem; }
     .sample-card label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem; color: #f5f5f2; }
     .sample-card input[type="email"] { width: 100%; box-sizing: border-box; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: #111; color: #fff; font-size: 1rem; margin-bottom: 1rem; }
     .sample-error { color: #ff6b6b; font-size: 0.9rem; margin: 0 0 1rem; display: none; }
