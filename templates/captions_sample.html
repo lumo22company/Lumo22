@@ -59,7 +59,18 @@
       border-color: var(--lum-gold, #fff200) !important;
       color: #000 !important;
     }
-    .sample-page .sample-card .sample-cta-filled:hover { filter: brightness(1.08); }
+    /* Inverted .captions-btn-swipe: the shared effect sweeps yellow across a transparent
+       button, which is invisible on a button that is already yellow. Same motion, reversed —
+       black sweeps in from the left, text goes yellow — so the CTA still animates on hover
+       and stays distinguishable from the static yellow day-headers on the cards below. */
+    .sample-page .sample-card .sample-cta-filled::before {
+      background-color: #000 !important;
+    }
+    .sample-page .sample-card .sample-cta-filled:hover {
+      background: var(--lum-gold, #fff200) !important;
+      border-color: var(--lum-gold, #fff200) !important;
+      color: var(--lum-gold, #fff200) !important;
+    }
     .sample-page .sample-card { border-color: rgba(255, 242, 0, 0.28); }
     /* This page exists to capture one email. Log in / Sign up are outlined yellow buttons by
        default, which made the two least useful links for a first-time visitor the brightest
