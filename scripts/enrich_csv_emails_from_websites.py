@@ -106,17 +106,17 @@ def extract_emails(html: str) -> set[str]:
     return found
 
 
-def fetch_text(session: requests.Session, url: str, timeout: int) -> str | None:
+def fetch_text(session: requests.Session, url: str, timeout: int) -> tuple[str | None, int | None]:
     try:
         r = session.get(url, timeout=timeout, allow_redirects=True)
         if r.status_code >= 400:
-            return None
+            return None, r.status_code
         if len(r.content) > 2_000_000:
-            return None
+            return None, r.status_code
         r.encoding = r.apparent_encoding or "utf-8"
-        return r.text
+        return r.text, r.status_code
     except Exception:
-        return None
+        return None, None
 
 
 SHARED_INBOX_LOCALS = frozenset(
@@ -192,8 +192,12 @@ def run(
     session = requests.Session()
     session.headers.update(
         {
-            "User-Agent": "LUMO22-email-probe/1.0 (+local outreach QA; polite fetch)",
+            "User-Agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+            ),
             "Accept": "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
         }
     )
 
@@ -208,15 +212,27 @@ def run(
             )
 
         extras = ["enrichment_best_email", "enrichment_emails_seen", "enrichment_status"]
+        all_rows = list(reader)
+        total = len(all_rows) if limit is None else min(len(all_rows), limit)
+        print(
+            f"Email probe: {total} row(s) from {input_path} (delay={delay}s, timeout={timeout}s)",
+            flush=True,
+        )
 
         rows_out: list[dict[str, str]] = []
         n = 0
-        for row in reader:
+        for row in all_rows:
             if limit is not None and n >= limit:
                 break
             n += 1
 
             row = _normalize_row_keys(row)
+            company = (
+                row.get("business_name")
+                or row.get("company")
+                or row.get("name")
+                or f"row {n}"
+            )
             url_raw = normalize_url(row.get(website_col, "") or "")
             merged_emails: set[str] = set()
             status_bits: list[str] = []
@@ -225,6 +241,7 @@ def run(
                 row = {**row, **dict.fromkeys(extras, "")}
                 row["enrichment_status"] = "skipped_no_website"
                 rows_out.append(row)
+                print(f"[{n}/{total}] [skip] {company} (no website)", flush=True)
                 continue
 
             host = site_domain(url_raw)
@@ -232,16 +249,20 @@ def run(
                 row = {**row, **dict.fromkeys(extras, "")}
                 row["enrichment_status"] = "skipped_social_only_url"
                 rows_out.append(row)
+                print(f"[{n}/{total}] [skip] {company} (social URL)", flush=True)
                 time.sleep(delay)
                 continue
 
             for u in urls_to_try(url_raw):
-                html = fetch_text(session, u, timeout=timeout)
+                html, code = fetch_text(session, u, timeout=timeout)
                 if html:
                     merged_emails |= extract_emails(html)
                     status_bits.append(f"ok:{urlparse(u).path or '/'}")
                 else:
-                    status_bits.append(f"fail:{urlparse(u).path or '/'}")
+                    bit = f"fail:{urlparse(u).path or '/'}"
+                    if code:
+                        bit += f":{code}"
+                    status_bits.append(bit)
 
             best, _ = pick_best(merged_emails, host)
             row = {
@@ -253,6 +274,10 @@ def run(
                 ),
             }
             rows_out.append(row)
+            if best:
+                print(f"[{n}/{total}] [ok] {company} -> {best}", flush=True)
+            else:
+                print(f"[{n}/{total}] [miss] {company} ({url_raw})", flush=True)
             time.sleep(delay)
 
     fieldnames = clean_fields + extras
