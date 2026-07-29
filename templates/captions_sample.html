@@ -51,27 +51,11 @@
     .sample-back { margin-top: 1.5rem; font-size: 0.9rem; }
     .sample-back a { color: var(--lum-gold, #fff200); }
     .sample-reassure { margin: 0.75rem 0 0; font-size: 0.85rem; color: var(--lum-text-muted, #9a9a96); text-align: center; }
-    /* Solid yellow rather than another outline: the card already has a border, and a yellow
-       box around a yellow outlined button makes two rings that compete. Filled matches the
-       solid day-header on the caption cards below, so the loudest thing here is the action. */
-    .sample-page .sample-card .sample-cta-filled {
-      background: var(--lum-gold, #fff200) !important;
-      border-color: var(--lum-gold, #fff200) !important;
-      color: #000 !important;
-    }
-    /* Inverted .captions-btn-swipe: the shared effect sweeps yellow across a transparent
-       button, which is invisible on a button that is already yellow. Same motion, reversed —
-       black sweeps in from the left, text goes yellow — so the CTA still animates on hover
-       and stays distinguishable from the static yellow day-headers on the cards below. */
-    .sample-page .sample-card .sample-cta-filled::before {
-      background-color: #000 !important;
-    }
-    .sample-page .sample-card .sample-cta-filled:hover {
-      background: var(--lum-gold, #fff200) !important;
-      border-color: var(--lum-gold, #fff200) !important;
-      color: var(--lum-gold, #fff200) !important;
-    }
-    .sample-page .sample-card { border-color: rgba(255, 242, 0, 0.28); }
+    /* The CTA deliberately carries no colour overrides: it uses the shared .captions-btn-swipe
+       treatment exactly as every other button on the site does (yellow outline, yellow label,
+       yellow sweeping in from the left on hover). A filled variant was tried and removed — it
+       had to disable the shared sweep to stay legible, which left the page's only interactive
+       element behaving differently from the rest of the site. */
     /* This page exists to capture one email. Log in / Sign up are outlined yellow buttons by
        default, which made the two least useful links for a first-time visitor the brightest
        things on screen and put them in competition with the form. Quiet text here only. */
@@ -110,7 +94,7 @@
         <input type="email" id="sample-email" name="email" required autocomplete="email" placeholder="you@yourbusiness.com">
         <p id="sample-error" class="sample-error" role="alert"></p>
         <div id="sample-suggest" class="sample-suggest" role="alert"></div>
-        <button type="submit" class="dfd-btn dfd-btn-hero-cta captions-btn-swipe sample-cta-filled" id="sample-submit-btn" style="width: 100%;">Get my 3 free captions</button>
+        <button type="submit" class="dfd-btn dfd-btn-hero-cta captions-btn-swipe" id="sample-submit-btn" style="width: 100%;">Get my 3 free captions</button>
         <p class="sample-reassure">No card required. One email, then a two-minute form.</p>
       </form>
       <div id="sample-success" class="sample-success">
