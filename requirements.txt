@@ -11,7 +11,7 @@ requests==2.33.0
 python-dateutil==2.8.2
 twilio==8.10.0
 sendgrid==6.11.0
-stripe==8.0.0
+stripe==15.1.0
 gunicorn==23.0.0
 werkzeug==3.1.6
 webauthn>=2.0.0
