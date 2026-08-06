@@ -14,6 +14,7 @@ from flask import Blueprint, jsonify, request, session
 
 from api.auth_routes import get_current_customer
 from config import Config
+from services.client_ip import get_client_ip
 from services.customer_auth_service import CustomerAuthService
 from services.login_guard import clear_failures
 from services.webauthn_config import get_webauthn_settings
@@ -46,7 +47,7 @@ def _pop_challenge(key: str) -> Optional[bytes]:
 
 
 def _client_ip() -> str:
-    return (request.headers.get("X-Forwarded-For") or request.remote_addr or "").split(",")[0].strip()
+    return get_client_ip()
 
 
 def _credential_service() -> Optional[WebAuthnCredentialService]:

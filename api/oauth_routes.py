@@ -13,6 +13,7 @@ from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
 from api.auth_routes import _is_safe_next, clear_failures, set_customer_session
 from config import Config
+from services.client_ip import get_client_ip
 from services.customer_auth_service import CustomerAuthService
 
 oauth_bp = Blueprint("oauth", __name__, url_prefix="/api/auth/oauth")
@@ -114,7 +115,7 @@ def _finish_google_oauth(subject: str, email: str, referral: str, next_url: str)
         return redirect("/login?oauth_error=profile")
 
     svc = CustomerAuthService()
-    client_ip = (request.headers.get("X-Forwarded-For") or request.remote_addr or "").split(",")[0].strip()
+    client_ip = get_client_ip()
 
     row = svc.get_by_google_sub(subject)
     if row:
